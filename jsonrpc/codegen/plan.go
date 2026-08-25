@@ -93,16 +93,15 @@ type (
 	// viewedRepresentation lists the JSON body type and constructor used for
 	// each view that a method may return.
 	viewedRepresentation struct {
-		variable      bool
-		fixedView     string
-		branches      []viewBranch
-		decode        *codegen.NameDeclaration
-		encode        *codegen.NameDeclaration
-		streamEncode  *codegen.NameDeclaration
-		writeMetadata *codegen.NameDeclaration
-		viewedResult  httpcodegen.JSONRPCViewedResultData
-		servicePkg    string
-		resultRef     string
+		variable     bool
+		fixedView    string
+		branches     []viewBranch
+		decode       *codegen.NameDeclaration
+		encode       *codegen.NameDeclaration
+		streamEncode *codegen.NameDeclaration
+		viewedResult httpcodegen.JSONRPCViewedResultData
+		servicePkg   string
+		resultRef    string
 	}
 
 	// viewBranch stores the mapped service field, JSON body types, and client
@@ -113,17 +112,14 @@ type (
 		serverBody *httpcodegen.JSONRPCBodyData
 		clientBody *httpcodegen.JSONRPCBodyData
 		resultInit httpcodegen.InitData
-		headers    []httpcodegen.JSONRPCHeaderData
-		cookies    []httpcodegen.JSONRPCCookieData
 	}
 
 	// viewedHelperDeclarations stores the client decoder and server encoder names
 	// written for one method result.
 	viewedHelperDeclarations struct {
-		decode        *codegen.NameDeclaration
-		encode        *codegen.NameDeclaration
-		streamEncode  *codegen.NameDeclaration
-		writeMetadata *codegen.NameDeclaration
+		decode       *codegen.NameDeclaration
+		encode       *codegen.NameDeclaration
+		streamEncode *codegen.NameDeclaration
 	}
 
 	// jsonRPCNameOrder gives the same Go names the same order on every run.
@@ -140,7 +136,6 @@ const (
 	viewedResultDecoderRole
 	viewedResultEncoderRole
 	viewedStreamEncoderRole
-	viewedMetadataWriterRole
 	jsonRPCBufferPoolRole
 	jsonRPCBatchWriterRole
 	jsonRPCEncodeErrorRole
@@ -319,15 +314,14 @@ func planViewedRepresentation(endpoint *httpcodegen.JSONRPCEndpointSnapshot, vie
 		panic(fmt.Sprintf("JSON-RPC viewed endpoint %q has no helper names declared by NewPlans", endpoint.Method.Name))
 	}
 	representation := &viewedRepresentation{
-		variable:      viewed.Variable,
-		fixedView:     viewed.FixedView,
-		decode:        helpers.decode,
-		encode:        helpers.encode,
-		streamEncode:  helpers.streamEncode,
-		writeMetadata: helpers.writeMetadata,
-		viewedResult:  viewed.Service,
-		servicePkg:    endpoint.ServicePkgName,
-		resultRef:     endpoint.Result.Ref,
+		variable:     viewed.Variable,
+		fixedView:    viewed.FixedView,
+		decode:       helpers.decode,
+		encode:       helpers.encode,
+		streamEncode: helpers.streamEncode,
+		viewedResult: viewed.Service,
+		servicePkg:   endpoint.ServicePkgName,
+		resultRef:    endpoint.Result.Ref,
 	}
 	for _, branch := range viewed.Representations {
 		representation.branches = append(representation.branches, viewBranch{
@@ -336,8 +330,6 @@ func planViewedRepresentation(endpoint *httpcodegen.JSONRPCEndpointSnapshot, vie
 			serverBody: branch.ServerBody,
 			clientBody: branch.ClientBody,
 			resultInit: branch.ResultInit,
-			headers:    branch.Headers,
-			cookies:    branch.Cookies,
 		})
 	}
 	return representation
@@ -601,18 +593,14 @@ func collectServicePlan(generation *codegen.Generation, input PlanInput, transpo
 				codegen.UnexportedName,
 				jsonRPCNameOrder{api: planned.api, service: planned.name, method: method.Name, role: viewedResultEncoderRole},
 			),
-			streamEncode: codegen.NewPreferredName(
+		}
+		if method.IsResultStreaming() {
+			helpers.streamEncode = codegen.NewPreferredName(
 				codegen.NameFunction,
 				"encode"+methodName+"Result",
 				codegen.UnexportedName,
 				jsonRPCNameOrder{api: planned.api, service: planned.name, method: method.Name, role: viewedStreamEncoderRole},
-			),
-			writeMetadata: codegen.NewPreferredName(
-				codegen.NameFunction,
-				"write"+methodName+"ViewedResponseMetadata",
-				codegen.UnexportedName,
-				jsonRPCNameOrder{api: planned.api, service: planned.name, method: method.Name, role: viewedMetadataWriterRole},
-			),
+			)
 		}
 		if err := client.DeclareName(helpers.decode); err != nil {
 			return nil, err
@@ -620,11 +608,10 @@ func collectServicePlan(generation *codegen.Generation, input PlanInput, transpo
 		if err := server.DeclareName(helpers.encode); err != nil {
 			return nil, err
 		}
-		if err := server.DeclareName(helpers.streamEncode); err != nil {
-			return nil, err
-		}
-		if err := server.DeclareName(helpers.writeMetadata); err != nil {
-			return nil, err
+		if helpers.streamEncode != nil {
+			if err := server.DeclareName(helpers.streamEncode); err != nil {
+				return nil, err
+			}
 		}
 		planned.helpers[method.Name] = helpers
 	}

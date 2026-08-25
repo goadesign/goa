@@ -71,11 +71,7 @@ var ValidationTypesDSL = func() {
 		_ = Type("UserType", func() {
 			Attribute("required_integer", IntegerT)
 			Attribute("default_string", StringT, func() {
-				Default(map[string]any{
-					"required_string": "Atoz",
-					"default_string":  "bar",
-					"string":          "2018-12-18T13:22:53.108Z",
-				})
+				Default(struct{ RequiredString, DefaultString, String string }{RequiredString: "Atoz", DefaultString: "bar", String: "2018-12-18T13:22:53.108Z"})
 			})
 			Attribute("float", FloatT)
 			Required("required_integer")

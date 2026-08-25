@@ -447,9 +447,13 @@ func linkExternalConversion(
 	if err != nil {
 		return err
 	}
+	receiverLayout, err := serviceResolver.GoTypeLayout(operation.receiverAttribute, serviceContext.LayoutPolicy())
+	if err != nil {
+		return err
+	}
 	operation.data = &convertData{
 		Name:            operation.methodName,
-		ReceiverTypeRef: "*" + operation.receiverType.Name(),
+		ReceiverTypeRef: receiverLayout.Ref(),
 		TypeRef: externalResolver.Ref(
 			operation.externalAttribute,
 			externalResolver.Package(operation.externalAttribute),

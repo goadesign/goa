@@ -162,15 +162,16 @@ func (sds *ServicesData) initSSEData(ed *EndpointData, e *expr.HTTPEndpointExpr,
 
 	// Convert attribute names to Go field names
 	var (
-		dataFieldVar     string
-		dataFieldTypeRef string
-		dataField        *expr.AttributeExpr
-		idFieldVar       string
-		idField          *expr.AttributeExpr
-		eventFieldVar    string
-		eventField       *expr.AttributeExpr
-		retryFieldVar    string
-		retryField       *expr.AttributeExpr
+		dataFieldVar           string
+		dataFieldTypeRef       string
+		dataFieldParamsTypeRef string
+		dataField              *expr.AttributeExpr
+		idFieldVar             string
+		idField                *expr.AttributeExpr
+		eventFieldVar          string
+		eventField             *expr.AttributeExpr
+		retryFieldVar          string
+		retryField             *expr.AttributeExpr
 	)
 	svcctx := sds.serviceTypeContext(sd, "server").Enter(eventAttr)
 	if obj := expr.AsObject(eventAttr.Type); obj != nil {
@@ -189,7 +190,16 @@ func (sds *ServicesData) initSSEData(ed *EndpointData, e *expr.HTTPEndpointExpr,
 				dataFieldVar = codegen.GoifyAtt(nat.Attribute, nat.Name, true)
 				dataField = nat.Attribute
 				fieldctx := svcctx.Enter(nat.Attribute)
-				dataFieldTypeRef = fieldctx.Scope.Ref(nat.Attribute, fieldctx.Pkg(nat.Attribute))
+				layout, err := fieldctx.Scope.(codegen.GoTypeLayoutResolver).GoTypeLayout(nat.Attribute, fieldctx.LayoutPolicy())
+				if err != nil {
+					sds.recordLinkError(err)
+					return
+				}
+				dataFieldTypeRef = layout.Ref()
+				dataFieldParamsTypeRef = dataFieldTypeRef
+				if eventAttr.IsPrimitivePointer(nat.Name, true) {
+					dataFieldParamsTypeRef = layout.RefWithPointer(true)
+				}
 			}
 		}
 	}
@@ -302,10 +312,11 @@ func (sds *ServicesData) initSSEData(ed *EndpointData, e *expr.HTTPEndpointExpr,
 			if serverBody != nil {
 				dataFieldTypeRef = serverBody.Ref
 			}
+			dataFieldParamsTypeRef = dataFieldTypeRef
 		}
 		ed.SSE.Data = sseValueData(eventAttr, dataField, dataFieldTypeRef, e.SSE.DataField)
 		setSSEClientField(&ed.SSE.Data, clientObject, e.SSE.DataField)
-		setJSONRPCSSEParams(ed, e, eventAttr, dataField)
+		setJSONRPCSSEParams(ed, e, eventAttr, dataField, dataFieldParamsTypeRef)
 		return
 	}
 	if len(ed.Result.Responses) > 0 {
@@ -339,13 +350,13 @@ func (sds *ServicesData) initSSEData(ed *EndpointData, e *expr.HTTPEndpointExpr,
 	if len(e.Responses) > 0 {
 		setSSEClientField(&ed.SSE.Data, expr.AsObject(sd.bodies.response(e.Responses[0]).Type), e.SSE.DataField)
 	}
-	setJSONRPCSSEParams(ed, e, eventAttr, dataField)
+	setJSONRPCSSEParams(ed, e, eventAttr, dataField, dataFieldParamsTypeRef)
 }
 
 // setJSONRPCSSEParams records the one-element params array used for a string,
 // number, boolean, byte slice, or Any result. Objects, arrays, maps, and unions
 // keep their JSON shape.
-func setJSONRPCSSEParams(endpoint *EndpointData, expression *expr.HTTPEndpointExpr, event, data *expr.AttributeExpr) {
+func setJSONRPCSSEParams(endpoint *EndpointData, expression *expr.HTTPEndpointExpr, event, data *expr.AttributeExpr, dataTypeRef string) {
 	if !expression.IsJSONRPC() {
 		return
 	}
@@ -353,10 +364,7 @@ func setJSONRPCSSEParams(endpoint *EndpointData, expression *expr.HTTPEndpointEx
 	typeRef := endpoint.SSE.EventTypeRef
 	if data != nil {
 		params = data
-		typeRef = endpoint.SSE.Data.TypeRef
-		if endpoint.SSE.Data.Pointer {
-			typeRef = "*" + typeRef
-		}
+		typeRef = dataTypeRef
 	} else if endpoint.SSE.HasResponseBody && endpoint.SSE.Response != nil && len(endpoint.SSE.Response.ServerBody) > 0 {
 		body := endpoint.SSE.Response.ServerBody[0]
 		if body.Init != nil {

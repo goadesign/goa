@@ -116,11 +116,11 @@ Generated servers accept encoded JSON that uses CR, LF, or CRLF and prefix
 every resulting physical line with `data:`. They reject event IDs containing
 CR, LF, or NUL, event names containing a line break, and negative retry values.
 
-JSON-RPC rejects a method that defines different `Result` and
-`StreamingResult` types because its client stream has no separate operation
-that could return the final `Result`. Use one method for the stream and another
-method for the final resource. gRPC has the same restriction. Ordinary HTTP
-keeps mixed-result support.
+JSON-RPC rejects a method that defines both `Result` and `StreamingResult`,
+even when both declarations use the same Goa type. Its client stream has no
+separate operation that could return the final `Result`. Use one method for the
+stream and another method for the final resource. gRPC has the same
+restriction. Ordinary HTTP keeps mixed-result support.
 
 A request without an `id` receives no HTTP output. The generated server still
 runs the service and lets every `Send` perform its normal encoding work, but a

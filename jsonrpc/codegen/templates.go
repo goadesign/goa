@@ -40,8 +40,6 @@ const (
 	queryTypeConversionP    = "query_type_conversion"
 	elementSliceConversionP = "element_slice_conversion"
 	sliceItemConversionP    = "slice_item_conversion"
-	headerConversionP       = "header_conversion"
-	viewedResultMetadataP   = "viewed_result_metadata"
 )
 
 //go:embed templates/*

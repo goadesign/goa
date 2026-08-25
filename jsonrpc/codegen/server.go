@@ -100,7 +100,7 @@ func serverFile(planned *servicePlan) *codegen.File {
 		&codegen.ImportSpec{Path: "path"},
 		&codegen.ImportSpec{Path: "strings"},
 	)
-	if serviceNeedsMetadataStrconv(planned) || planned.hasHTTP && planned.hasSSE {
+	if planned.hasHTTP && planned.hasSSE {
 		imports = append(imports, &codegen.ImportSpec{Path: "strconv"})
 	}
 	if planned.hasSSE {

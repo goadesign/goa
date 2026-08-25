@@ -409,4 +409,3 @@ func ParseEndpoint(
 
 	return endpoint, data, nil
 }
-

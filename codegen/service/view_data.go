@@ -198,9 +198,9 @@ func buildViewedResultType(facts *viewedResultFacts, viewspkg string, serviceRes
 	resvar, serviceRef := declaration.Name(), serviceType.Ref()
 	projT := facts.wrapped
 	wrapperViewType := facts.wrappedLayout.Link(viewResolver.outputPath, qualifier)
-	resref := wrapperViewType.Name()
-	if !isarr {
-		resref = "*" + resref
+	resref := wrapperViewType.Ref()
+	if isarr {
+		resref = wrapperViewType.RefWithPointer(false)
 	}
 	validationCalls := make([]*ValidationCallData, len(facts.views))
 	for index, view := range facts.views {
@@ -229,9 +229,9 @@ func buildViewedResultType(facts *viewedResultFacts, viewspkg string, serviceRes
 
 	// build constructor to initialize viewed result type from result type
 	wrapperServiceType := facts.wrappedLayout.Link(serviceResolver.outputPath, qualifier)
-	vresref := wrapperServiceType.Name()
-	if !isarr {
-		vresref = "*" + vresref
+	vresref := wrapperServiceType.Ref()
+	if isarr {
+		vresref = wrapperServiceType.RefWithPointer(false)
 	}
 	data = map[string]any{
 		"ToViewed":      true,

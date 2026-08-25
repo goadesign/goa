@@ -14,6 +14,28 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
+type (
+	structDefault struct {
+		Profile structDefaultProfile
+	}
+
+	structDefaultProfile struct {
+		Name            string
+		Limit           int
+		CustomProfileID string
+	}
+
+	invalidStructDefault struct {
+		Profile invalidStructDefaultProfile
+	}
+
+	invalidStructDefaultProfile struct {
+		Name  string
+		Limit int
+		Count string
+	}
+)
+
 func TestValidDefaultValues(t *testing.T) {
 	for _, test := range []struct {
 		name string
@@ -58,6 +80,33 @@ func TestValidDefaultValues(t *testing.T) {
 								"type":  "inactive",
 								"value": map[string]any{},
 							},
+						},
+					})
+					Required("profile")
+				})
+			},
+		},
+		{
+			name: "nested Go struct",
+			dsl: func() {
+				Type("Defaults", func() {
+					Attribute("profile", func() {
+						Attribute("name", String, func() {
+							Pattern("^[a-z]+$")
+						})
+						Attribute("limit", Int, func() {
+							Minimum(1)
+						})
+						Attribute("profile_id", String, func() {
+							Meta("struct:field:name", "custom_profile_id")
+						})
+						Required("name", "limit", "profile_id")
+					})
+					Default(structDefault{
+						Profile: structDefaultProfile{
+							Name:            "valid",
+							Limit:           2,
+							CustomProfileID: "profile-1",
 						},
 					})
 					Required("profile")
@@ -110,6 +159,34 @@ func TestValidDefaultValues(t *testing.T) {
 			expr.RunDSL(t, test.dsl)
 		})
 	}
+}
+
+func TestInvalidNestedStructDefault(t *testing.T) {
+	err := expr.RunInvalidDSL(t, func() {
+		Type("Defaults", func() {
+			Attribute("profile", func() {
+				Attribute("name", String, func() {
+					Pattern("^[a-z]+$")
+				})
+				Attribute("limit", Int, func() {
+					Minimum(1)
+				})
+				Attribute("count", Int)
+				Required("name", "limit", "count")
+			})
+			Default(invalidStructDefault{
+				Profile: invalidStructDefaultProfile{
+					Name:  "INVALID",
+					Limit: 0,
+					Count: "many",
+				},
+			})
+			Required("profile")
+		})
+	})
+	require.ErrorContains(t, err, `default value field "profile" field "name" does not match pattern`)
+	require.ErrorContains(t, err, `default value field "profile" field "limit" must be at least 1`)
+	require.ErrorContains(t, err, `default value field "profile" field "count" has type string, expected int`)
 }
 
 func TestDeclaredDefaultReportsOnceWhenTypeIsReferenced(t *testing.T) {

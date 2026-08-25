@@ -140,11 +140,14 @@ func TestPlannedServiceNamesUsedAcrossTransports(t *testing.T) {
 	}
 
 	var source strings.Builder
-	for _, section := range sections {
+	for index, section := range sections {
+		if index > 0 {
+			source.WriteString("\n")
+		}
 		source.WriteString("===== ")
 		source.WriteString(section.label)
 		source.WriteString(" =====\n")
-		source.WriteString(plannedNameSectionCode(t, section))
+		source.WriteString(strings.TrimSuffix(plannedNameSectionCode(t, section), "\n"))
 		source.WriteString("\n")
 	}
 	testutil.AssertString(t, "testdata/golden/planned_service_name_uses.go.golden", source.String())

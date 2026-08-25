@@ -2381,9 +2381,15 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 					paramsAttribute = expr.AsObject(payload.Type).Attribute(origin)
 				}
 				paramsContext := svcclictx.Enter(paramsAttribute)
-				paramsTypeRef = paramsContext.Scope.Ref(paramsAttribute, paramsContext.Pkg(paramsAttribute))
-				if origin != "" && payload.IsPrimitivePointer(origin, true) {
-					paramsTypeRef = "*" + paramsTypeRef
+				paramsLayout, layoutErr := paramsContext.Scope.(codegen.GoTypeLayoutResolver).GoTypeLayout(paramsAttribute, paramsContext.LayoutPolicy())
+				if layoutErr != nil {
+					sds.recordLinkError(layoutErr)
+					return nil
+				}
+				if bodyFieldPointer {
+					paramsTypeRef = paramsLayout.RefWithPointer(true)
+				} else {
+					paramsTypeRef = paramsLayout.Ref()
 				}
 			}
 			request.JSONRPCParams = jsonRPCParams(httpBody.Type, paramsTypeRef, mustHaveBody, !mustHaveBody)
@@ -2535,11 +2541,16 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 				if sc.Type == "Basic" {
 					uatt := e.MethodExpr.Payload.Find(sc.UsernameAttr)
 					uctx := svcclictx.Enter(uatt)
-					uref := uctx.Scope.Ref(uatt, uctx.Pkg(uatt))
+					ulayout, layoutErr := uctx.Scope.(codegen.GoTypeLayoutResolver).GoTypeLayout(uatt, uctx.LayoutPolicy())
+					if layoutErr != nil {
+						sds.recordLinkError(layoutErr)
+						return nil
+					}
+					uref := ulayout.Ref()
 					uvalueRef := uref
 					uvalidate := codegen.ValidationCode(uatt, nil, httpsvrctx, sc.UsernameRequired, expr.IsAlias(uatt.Type), false, sc.UsernameAttr)
 					if sc.UsernamePointer {
-						uref = "*" + uref
+						uref = ulayout.RefWithPointer(true)
 					}
 					uarg := &InitArgData{
 						Ref: sc.UsernameAttr,
@@ -2567,11 +2578,16 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 					}
 					patt := e.MethodExpr.Payload.Find(sc.PasswordAttr)
 					pctx := svcclictx.Enter(patt)
-					pref := pctx.Scope.Ref(patt, pctx.Pkg(patt))
+					playout, layoutErr := pctx.Scope.(codegen.GoTypeLayoutResolver).GoTypeLayout(patt, pctx.LayoutPolicy())
+					if layoutErr != nil {
+						sds.recordLinkError(layoutErr)
+						return nil
+					}
+					pref := playout.Ref()
 					pvalueRef := pref
 					pvalidate := codegen.ValidationCode(patt, nil, httpsvrctx, sc.PasswordRequired, expr.IsAlias(patt.Type), false, sc.PasswordAttr)
 					if sc.PasswordPointer {
-						pref = "*" + pref
+						pref = playout.RefWithPointer(true)
 					}
 					parg := &InitArgData{
 						Ref: sc.PasswordAttr,
@@ -2793,10 +2809,15 @@ func (sds *ServicesData) jsonRPCRequestIDInitArg(policy *jsonRPCRequestIDPolicy,
 	attribute := field.Attribute
 	required := policy.required
 	pointer := policy.pointer
-	valueTypeRef := context.Scope.Ref(attribute, context.Pkg(attribute))
+	layout, err := context.Scope.(codegen.GoTypeLayoutResolver).GoTypeLayout(attribute, context.LayoutPolicy())
+	if err != nil {
+		sds.recordLinkError(err)
+		return nil
+	}
+	valueTypeRef := layout.Ref()
 	typeRef := valueTypeRef
 	if pointer {
-		typeRef = "*" + typeRef
+		typeRef = layout.RefWithPointer(true)
 	}
 	data := &AttributeData{
 		Name:         field.Name,
@@ -3943,9 +3964,14 @@ func (sds *ServicesData) extractElements(kind httpElementKind, a *expr.MappedAtt
 			}
 		}
 		att := makeHTTPType(attr)
+		layout, err := svcCtx.Scope.(codegen.GoTypeLayoutResolver).GoTypeLayout(att, svcCtx.LayoutPolicy())
+		if err != nil {
+			sds.recordLinkError(err)
+			return err
+		}
 		var (
 			varn        = scope.Name(codegen.Goify(name, false))
-			typeRef     = scope.GoTypeRef(att)
+			typeRef     = layout.Ref()
 			elemTypeRef string
 			ft          = svcAtt.Type
 
@@ -3965,7 +3991,7 @@ func (sds *ServicesData) extractElements(kind httpElementKind, a *expr.MappedAtt
 		}
 		valueTypeRef := typeRef
 		if pointer {
-			typeRef = "*" + typeRef
+			typeRef = layout.RefWithPointer(true)
 		}
 		fieldName := codegen.GoifyAtt(att, name, true)
 		if !expr.IsObject(svcAtt.Type) {

@@ -146,9 +146,6 @@ func {{ .HandlerInit }}(
 		if err != nil {
 			return err
 		}
-		{{- if viewedHasMetadata .Method.Name }}
-		{{ viewedMetadataName .Method.Name }}(w, viewedRes)
-		{{- end }}
 		response := jsonrpc.MakeSuccessResponse(req.ID, body)
 		{{- else if and .Result.Ref (index .Result.Responses 0).ServerBody (index (index .Result.Responses 0).ServerBody 0).Init }}
 		// Build the response body with the fields and JSON names declared by the service.

@@ -39,10 +39,3 @@ func encodeFetchViewedResult(viewed *viewedviews.ViewedGolden) (any, error) {
 		panic("validated viewed result has no JSON-RPC representation")
 	}
 }
-
-// encodeFetchResult builds and validates the selected result view before
-// JSON-RPC encoding.
-func encodeFetchResult(result *viewed.ViewedGolden, view string) (any, error) {
-	viewed := viewed.NewViewedViewedGolden(result, view)
-	return encodeFetchViewedResult(viewed)
-}

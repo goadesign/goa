@@ -61,6 +61,28 @@ func TestSSEClientFieldPlan(t *testing.T) {
 	}
 }
 
+// TestJSONRPCSSEParamsUsesPlannedDataReference checks that JSON-RPC rendering
+// receives the complete service field type chosen during SSE planning.
+func TestJSONRPCSSEParamsUsesPlannedDataReference(t *testing.T) {
+	data := &expr.AttributeExpr{Type: expr.String}
+	eventObject := expr.Object{{Name: "data", Attribute: data}}
+	event := &expr.AttributeExpr{Type: &eventObject}
+	endpoint := &EndpointData{SSE: &SSEData{
+		EventTypeRef: "*service.Event",
+		Data:         SSEValueData{TypeRef: "service.EventText", Pointer: true},
+	}}
+	expression := &expr.HTTPEndpointExpr{
+		SSE:  &expr.HTTPSSEExpr{DataField: "data"},
+		Meta: expr.MetaExpr{"jsonrpc": {}},
+	}
+
+	setJSONRPCSSEParams(endpoint, expression, event, data, "*service.PlannedEventText")
+
+	require.NotNil(t, endpoint.SSE.JSONRPCParams)
+	require.Equal(t, "*service.PlannedEventText", endpoint.SSE.JSONRPCParams.TypeRef)
+	require.True(t, endpoint.SSE.JSONRPCParams.Positional)
+}
+
 // TestGeneratedSSEFieldWireFormat checks both sides of the generated SSE
 // connection for primitive, declared primitive, object, and array fields.
 func TestGeneratedSSEFieldWireFormat(t *testing.T) {

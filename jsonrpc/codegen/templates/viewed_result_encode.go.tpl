@@ -48,30 +48,10 @@ func {{ .Encode.Name }}(viewed {{ .ViewedTypeRef }}) (any, error) {
 	{{- end }}
 }
 
+{{- if .StreamEncode }}
 {{ printf "%s builds and validates the selected result view before JSON-RPC encoding." .StreamEncode.Name | comment }}
 func {{ .StreamEncode.Name }}(result {{ .ResultRef }}{{ if .Variable }}, view string{{ end }}) (any, error) {
 	viewed := {{ .ServicePkg }}.{{ .ServiceViewedConstructor }}(result, {{ if .Variable }}view{{ else }}{{ printf "%q" .FixedView }}{{ end }})
 	return {{ .Encode.Name }}(viewed)
-}
-
-{{- if .HasResponseMetadata }}
-{{ printf "%s writes the HTTP response headers and cookies selected by the validated result view." .WriteMetadata.Name | comment }}
-func {{ .WriteMetadata.Name }}(w http.ResponseWriter, viewed {{ .ViewedTypeRef }}) {
-	{{- if .Variable }}
-	switch viewed.View {
-	{{- range .Branches }}
-	case {{ printf "%q" .View }}:
-		res := viewed
-		{{- template "partial_viewed_result_metadata" . }}
-	{{- end }}
-	default:
-		panic("validated viewed result has an unknown result view")
-	}
-	{{- else }}
-	{{- with index .Branches 0 }}
-	res := viewed
-	{{- template "partial_viewed_result_metadata" . }}
-	{{- end }}
-	{{- end }}
 }
 {{- end }}

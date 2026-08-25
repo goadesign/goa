@@ -645,7 +645,8 @@ performing that step; the run or the owning retained plan now performs it once.
 | `http/codegen` | `SSEData.DataFieldTypeRef`; `ServiceData.ServerTypeNames`, `ClientTypeNames`, and `UnionTypes` | `DataFieldTypeRef` remains as a deprecated copy of `SSEData.Data.TypeRef` for an explicitly mapped data field. The three service-wide type lists are removed; read the generated type declarations supplied by the linked HTTP plan. `AttributeData` now contains a validation function, so it cannot be compared with `==` or used as a map key. |
 | `jsonrpc/codegen` | `ClientFiles`, `ServerFiles`, and `ExampleServerFiles` | Create and link a JSON-RPC plan; call its `ClientFiles` and `ServerFiles` methods. Use `NewExamplePlan` for example files. |
 | `jsonrpc/codegen` | `CreateJSONRPCServices` testing helper | Use `CreateJSONRPCPlan` when a test needs the linked production plan. |
-| `jsonrpc` | Positional literals for `RawRequest` | Use named fields. `RawRequest` now records whether JSON-RPC request validation failed so the server can return Invalid Request instead of treating the value as a notification. Existing named-field literals continue to compile. |
+| `jsonrpc` | `IDToString(id any) string` | Call `IDToString(id any) (string, error)` and handle the error. The function accepts decoded string and `json.Number` IDs and returns an error for every other Go type instead of silently returning an empty string. |
+| `jsonrpc` | Positional literals for `RawRequest` and `RawResponse` | Use named fields. `RawRequest` adds `Invalid` and `HasMethod`; `RawResponse` adds `Invalid`, `HasResult`, `HasError`, and `HasID`. Generated clients and servers use these fields to distinguish a missing JSON member from a member whose value is empty or null. Existing named-field literals continue to compile. |
 | `jsonrpc` | WebSocket `StreamConfig`, `StreamConfigOption`, `StreamErrorType`, `StreamErrorHandler`, `StreamErrorConnection`, `StreamErrorProtocol`, `StreamErrorParsing`, `StreamErrorOrphaned`, `StreamErrorTimeout`, `StreamErrorNotification`, `NewStreamConfig`, `WithRequestTimeout`, `WithConnectionTimeout`, `WithCloseTimeout`, `WithResultChannelBuffer`, `WithWebSocketBuffers`, `WithRetryConfig`, `WithCompression`, `WithPingInterval`, `WithErrorHandler`, and `(*StreamConfig).Validate` | No replacement. JSON-RPC WebSocket generation was removed. JSON-RPC supports unary HTTP calls and server streams through explicit server-sent events. |
 | `codegen/service` | Unkeyed `UnionTypeData` and `UnionFieldData` literals; public union name strings | Use named fields. `UnionTypeData` adds `TypeDeclaration` and `KindDeclaration`. Each `UnionFieldData` adds `KindDeclaration` and `ConstructorDeclaration` for its generated constant and constructor. `FieldName` is the public branch spelling used by accessors; `StorageName` is the private struct field that stores the selected value. The released `Name`, `KindName`, and `KindConst` strings remain final snapshots for existing plugin templates. `Constructor` is a new final-name snapshot alongside the new declaration fields. |
 | `http/codegen/openapi` | Process-global `Definitions`; `APISchema`, `GenerateServiceDefinition`, `ResultTypeRef`, `ResultTypeRefWithPrefix`, `TypeRef`, `TypeRefWithPrefix`, `GenerateResultTypeDefinition`, `GenerateTypeDefinition`, `GenerateTypeDefinitionWithName`, `TypeSchema`, `TypeSchemaWithPrefix`, `AttributeTypeSchema`, and `AttributeTypeSchemaWithPrefix` | The global definition cache and its mutating helpers have no replacement. For OpenAPI 2 attribute schemas, use `v2.BuildAttributeSchema(api, attribute, exampleGenerator)`; otherwise build a complete v2 or v3 document so definitions remain local to that build. |
@@ -668,8 +669,8 @@ that compiled with Goa v3 must be changed to named fields:
   `ViewedResultTypeData`. `UnionTypeData` adds `TypeDeclaration` and
   `KindDeclaration`; `UnionFieldData` adds
   `KindDeclaration`, `ConstructorDeclaration`, and `StorageName`.
-- `expr`: `APIExpr`, `ResultTypeExpr`, `SchemeExpr`, `ServiceExpr`, and
-  `UserTypeExpr`.
+- `expr`: `APIExpr`, `HTTPResponseExpr`, `ResultTypeExpr`, `SchemeExpr`,
+  `ServiceExpr`, and `UserTypeExpr`.
 - `grpc/codegen`: `EndpointData`, `InitArgData`, `InitData`,
   `LegacyDecodeData`, `MetadataData`, `RequestData`, `ResponseData`,
   `ServiceData`, `ServicesData`, `StreamData`, and `ValidationData`.
@@ -677,6 +678,7 @@ that compiled with Goa v3 must be changed to named fields:
   `FileServerData`, `HeaderData`, `InitArgData`, `InitData`,
   `MultipartData`, `ParamData`, `PayloadData`, `ResponseData`, `ServiceData`,
   `ServicesData`, `SSEData`, `TypeData`, and `WebSocketData`.
+- `jsonrpc`: `RawRequest` and `RawResponse`.
 
 `TransformAttrs`, `codegen/cli.FlagArgData`, `service.ValidateData`,
 `grpc/codegen.InitArgData`, `grpc/codegen.MetadataData`,

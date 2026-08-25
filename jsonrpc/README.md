@@ -254,10 +254,11 @@ explicitly empty header remains an explicitly empty string. A required field
 can be satisfied by the header because the server reads it before validating
 the payload. The field is not repeated in JSON-RPC `params`.
 
-JSON-RPC rejects a method that defines different `Result` and
-`StreamingResult` types because the generated client cannot receive both from
-one call. Define one method for the stream and another method for the final
-resource. The two methods may share the same service and JSON-RPC path.
+JSON-RPC rejects a method that defines both `Result` and `StreamingResult`,
+even when both declarations use the same Goa type, because the generated client
+cannot receive both from one call. Define one method for the stream and another
+method for the final resource. The two methods may share the same service and
+JSON-RPC path.
 
 ## Errors
 

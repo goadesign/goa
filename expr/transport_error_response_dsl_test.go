@@ -36,6 +36,25 @@ func TestHTTPErrorResponseCallbackUsesDeclaredError(t *testing.T) {
 	}
 }
 
+func TestHTTPMethodErrorResponseCallbackAcceptsTag(t *testing.T) {
+	root := expr.RunDSL(t, func() {
+		Service("Errors", func() {
+			Method("Run", func() {
+				Error("problem", transportErrorType())
+				HTTP(func() {
+					POST("/")
+					Response("problem", StatusUnprocessableEntity, func() {
+						Tag("detail", "problem")
+					})
+				})
+			})
+		})
+	})
+
+	response := root.API.HTTP.Services[0].HTTPEndpoints[0].HTTPErrors[0].Response
+	require.Equal(t, [2]string{"detail", "problem"}, response.Tag)
+}
+
 func TestGRPCErrorResponseCallbackUsesDeclaredError(t *testing.T) {
 	for _, test := range []struct {
 		name string
@@ -142,13 +161,18 @@ func TestSuccessResponseCallbackUsesMethodResult(t *testing.T) {
 				})
 				HTTP(func() {
 					POST("/")
-					Response(StatusOK, func() { Body("value") })
+					Response(StatusOK, func() {
+						Tag("value", "complete")
+						Body("value")
+					})
+					Response(StatusAccepted)
 				})
 			})
 		})
 	})
 
 	response := root.API.HTTP.Services[0].HTTPEndpoints[0].Responses[0]
+	require.Equal(t, [2]string{"value", "complete"}, response.Tag)
 	require.Equal(t, []string{"value"}, response.Body.Meta["origin:attribute"])
 }
 

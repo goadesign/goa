@@ -11,6 +11,7 @@ import (
 	"unicode/utf8"
 
 	"goa.design/goa/v3/eval"
+	"goa.design/goa/v3/internal/codegenname"
 	goa "goa.design/goa/v3/pkg"
 )
 
@@ -121,8 +122,13 @@ func (v *defaultValueValidator) validate(attribute *AttributeExpr, value reflect
 			v.addTypeError(path, value, attribute.Type)
 			return
 		}
-	case IsMap(attribute.Type), IsObject(attribute.Type), IsUnion(attribute.Type):
+	case IsMap(attribute.Type), IsUnion(attribute.Type):
 		if value.Kind() != reflect.Map {
+			v.addTypeError(path, value, attribute.Type)
+			return
+		}
+	case IsObject(attribute.Type):
+		if value.Kind() != reflect.Map && value.Kind() != reflect.Struct {
 			v.addTypeError(path, value, attribute.Type)
 			return
 		}
@@ -284,7 +290,7 @@ func (v *defaultValueValidator) validateObject(attribute *AttributeExpr, value r
 	for _, field := range *object {
 		fields[field.Name] = field.Attribute
 	}
-	values, invalidKeys := defaultStringMap(value)
+	values, invalidKeys := defaultObjectFields(value, object)
 	for _, keyType := range invalidKeys {
 		v.add("%s object key has type %s, expected string", path, keyType)
 	}
@@ -301,6 +307,23 @@ func (v *defaultValueValidator) validateObject(attribute *AttributeExpr, value r
 		}
 		v.validate(field, values[name], fmt.Sprintf("%s field %q", path, name))
 	}
+}
+
+// defaultObjectFields returns values using their design names. Struct fields
+// use the same Go names as generated object literals.
+func defaultObjectFields(value reflect.Value, object *Object) (map[string]reflect.Value, []string) {
+	if value.Kind() == reflect.Map {
+		return defaultStringMap(value)
+	}
+	values := make(map[string]reflect.Value, len(*object))
+	for _, field := range *object {
+		name := codegenname.AttributeName(field.Name, field.Attribute.Meta["struct:field:name"])
+		fieldValue := value.FieldByName(codegenname.Goify(name, true))
+		if fieldValue.IsValid() {
+			values[field.Name] = fieldValue
+		}
+	}
+	return values, nil
 }
 
 // validateUnion requires the canonical tagged envelope and validates only the

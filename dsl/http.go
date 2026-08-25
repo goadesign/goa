@@ -1100,8 +1100,8 @@ func CanonicalMethod(name string) {
 //	    })
 //	})
 func Tag(name, value string) {
-	res, ok := eval.Current().(*expr.HTTPResponseExpr)
-	if !ok {
+	res := httpResponse(eval.Current())
+	if res == nil {
 		eval.IncompatibleDSL()
 		return
 	}

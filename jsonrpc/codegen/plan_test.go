@@ -509,6 +509,13 @@ func TestPlanUsesAssignedViewedHelperNames(t *testing.T) {
 	require.NoError(t, err)
 	plans, err := NewPlans(generation, PlanInput{Root: root, Service: servicePlan, HTTP: httpPlans[0]})
 	require.NoError(t, err)
+	availableUnaryStreamName := codegen.NewPreferredName(
+		codegen.NameFunction,
+		"encodeFetchItemResult",
+		codegen.UnexportedName,
+		jsonRPCNameOrder{role: 255},
+	)
+	require.NoError(t, server.DeclareName(availableUnaryStreamName))
 	require.NoError(t, generation.Freeze())
 	require.NoError(t, servicePlan.Link())
 	require.NoError(t, httpPlans[0].Link())
@@ -518,6 +525,8 @@ func TestPlanUsesAssignedViewedHelperNames(t *testing.T) {
 	require.Equal(t, "decodeJSONRPCResult2", plans[0].services[0].bodyDecoder.Name())
 	require.Equal(t, "decodeFetchItemViewedResult2", helpers["fetch-item"].decode.Name())
 	require.Equal(t, "encodeFetchItemViewedResult2", helpers["fetch-item"].encode.Name())
+	require.Nil(t, helpers["fetch-item"].streamEncode)
+	require.Equal(t, "encodeFetchItemResult", availableUnaryStreamName.Name())
 	require.NotEqual(t, helpers["fetch-item"].decode.Name(), helpers["fetch_item"].decode.Name())
 	require.NotEqual(t, helpers["fetch-item"].encode.Name(), helpers["fetch_item"].encode.Name())
 }
