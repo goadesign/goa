@@ -4,6 +4,7 @@ package codegen
 
 import (
 	"fmt"
+	"strings"
 
 	"goa.design/goa/v3/expr"
 )
@@ -95,6 +96,43 @@ type (
 		index int
 	}
 
+	// TransformHelperDefinitionID selects one function body in a TransformPlan.
+	// Its fields are private so callers cannot rebuild it from type names.
+	TransformHelperDefinitionID struct {
+		plan  *TransformPlan
+		index int
+	}
+
+	// TransformHelperDefinitionLocation orders function bodies by the authored
+	// field or collection position where they are used. Its representation is
+	// private and is never used as a generated Go name.
+	TransformHelperDefinitionLocation struct {
+		encoded string
+	}
+
+	// TransformHelperDefinition describes one function body shared by equivalent
+	// helper calls in a TransformPlan. Requiredness belongs to each call and does
+	// not create a different definition.
+	TransformHelperDefinition struct {
+		// ID selects this function body in its TransformPlan.
+		ID TransformHelperDefinitionID
+		// Source describes the source attribute converted by the function.
+		// HelperDefinitions returns a detached copy, so changing it does not affect
+		// Render.
+		Source *expr.AttributeExpr
+		// Target describes the target attribute produced by the function.
+		// HelperDefinitions returns a detached copy, so changing it does not affect
+		// Render.
+		Target *expr.AttributeExpr
+		// Location provides a stable order for this function body.
+		Location TransformHelperDefinitionLocation
+		// Declaration is populated when BindHelperDefinition assigns the
+		// package-level function name. It remains nil when callers bind only the
+		// individual helper occurrences.
+		Declaration *NameDeclaration
+		helpers     []int
+	}
+
 	// TransformHelper describes one generated function that converts a nested or
 	// recursive value. The same chosen function name is used at every call and at
 	// its definition.
@@ -107,7 +145,8 @@ type (
 		// Target describes the target attribute selected for this function.
 		// Helpers returns a detached copy, so changing it does not affect Render.
 		Target *expr.AttributeExpr
-		// Required reports whether nil is rejected by the helper operation.
+		// Required reports whether the caller reaches this function through a
+		// required value. Optional callers check for nil before calling it.
 		Required bool
 		// Occurrence is the one-based position of this helper operation in the
 		// transform plan's stable traversal.
@@ -172,6 +211,7 @@ type (
 		sourceCtx      *AttributeContext
 		targetCtx      *AttributeContext
 		helpers        []TransformHelper
+		definitions    []TransformHelperDefinition
 		operations     []*transformOperation
 		renders        map[transformRenderRequest]transformRenderResult
 	}
@@ -216,6 +256,14 @@ type (
 	}
 )
 
+const (
+	transformObjectFieldLocation byte = iota + 1
+	transformArrayElementLocation
+	transformMapKeyLocation
+	transformMapValueLocation
+	transformUnionBranchLocation
+)
+
 // NewAttributeContext initializes an attribute context.
 func NewAttributeContext(pointer, reqIgnore, useDefault bool, pkg string, scope *NameScope) *AttributeContext {
 	return &AttributeContext{
@@ -229,6 +277,12 @@ func NewAttributeContext(pointer, reqIgnore, useDefault bool, pkg string, scope 
 // NewAttributeScope initializes an attribute scope.
 func NewAttributeScope(scope *NameScope) *AttributeScope {
 	return newAttributeScope(scope, "")
+}
+
+// Compare returns -1, 0, or 1 when this authored location sorts before, at,
+// or after other.
+func (l TransformHelperDefinitionLocation) Compare(other TransformHelperDefinitionLocation) int {
+	return strings.Compare(l.encoded, other.encoded)
 }
 
 // EnterCollection returns the loop variable for the current array and a copy

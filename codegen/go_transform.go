@@ -362,7 +362,7 @@ func NewTransformPlan(source, target *expr.AttributeExpr, prefix string, hooks *
 		return !plan.changed()
 	})
 	plan.hooks = retainedHooks
-	err := planTransformOperation(source, target, true, true, plan.operations[0], make(map[transformPair]TransformHelperID), plan)
+	err := planTransformOperation(source, target, true, true, TransformHelperDefinitionLocation{}, plan.operations[0], make(map[transformPair]TransformHelperID), plan)
 	if structuralChoices != nil && structuralChoices.mutationErr != nil {
 		return nil, structuralChoices.mutationErr
 	}
@@ -391,6 +391,23 @@ func (p *TransformPlan) Helpers() []TransformHelper {
 	return helpers
 }
 
+// HelperDefinitions returns the distinct recursive conversion function bodies
+// selected by the plan. Calls with the same retained source and target facts
+// share one definition even when one call is required and another is optional.
+// Changing the returned slice or its Source and Target attributes does not
+// change the plan.
+func (p *TransformPlan) HelperDefinitions() []TransformHelperDefinition {
+	definitions := slices.Clone(p.definitions)
+	for index := range definitions {
+		sourceCopier := expr.NewAttributeGraphCopier()
+		targetCopier := expr.NewAttributeGraphCopier()
+		definitions[index].Source = sourceCopier.Copy(definitions[index].Source)
+		definitions[index].Target = targetCopier.Copy(definitions[index].Target)
+		definitions[index].helpers = nil
+	}
+	return definitions
+}
+
 // BindHelperDeclaration assigns the package-level function declared for one
 // value returned by Helpers. Equivalent conversions may share a declaration;
 // Render verifies that their generated definitions match.
@@ -409,6 +426,34 @@ func (p *TransformPlan) BindHelperDeclaration(id TransformHelperID, declaration 
 		return fmt.Errorf("transform helper already has a different declaration")
 	}
 	helper.Declaration = declaration
+	return nil
+}
+
+// BindHelperDefinition assigns one package-level function declaration to every
+// equivalent helper call represented by a value returned by HelperDefinitions.
+func (p *TransformPlan) BindHelperDefinition(id TransformHelperDefinitionID, declaration *NameDeclaration) error {
+	if id.plan != p || id.index < 0 || id.index >= len(p.definitions) {
+		return fmt.Errorf("transform helper definition does not belong to this plan")
+	}
+	if declaration == nil {
+		return fmt.Errorf("transform helper definition declaration must not be nil")
+	}
+	if declaration.Kind() != NameFunction {
+		return fmt.Errorf("transform helper definition declaration must be a function, got %s", declaration.Kind())
+	}
+	definition := &p.definitions[id.index]
+	if definition.Declaration != nil && definition.Declaration != declaration {
+		return fmt.Errorf("transform helper definition already has a different declaration")
+	}
+	for _, index := range definition.helpers {
+		if bound := p.helpers[index].Declaration; bound != nil && bound != declaration {
+			return fmt.Errorf("transform helper occurrence %d already has a different declaration", index+1)
+		}
+	}
+	definition.Declaration = declaration
+	for _, index := range definition.helpers {
+		p.helpers[index].Declaration = declaration
+	}
 	return nil
 }
 
@@ -628,7 +673,8 @@ func transformDataTypesEqual(left, right expr.DataType, seen map[transformAttrib
 		return true
 	case expr.UserType:
 		right := right.(expr.UserType)
-		return left.Name() == right.Name() && transformAttributesEqual(left.Attribute(), right.Attribute(), seen)
+		return left.Origin() == right.Origin() && left.Name() == right.Name() &&
+			transformAttributesEqual(left.Attribute(), right.Attribute(), seen)
 	default:
 		panic(fmt.Sprintf("cannot compare transform type %T", left)) // bug
 	}
@@ -1278,15 +1324,15 @@ func transformUnion(source, target *expr.AttributeExpr, sourceVar, targetVar str
 // planTransformOperation records the recursive calls made by the main
 // conversion or one generated function. It reuses a function when that same
 // source and target pair is already being converted.
-func planTransformOperation(source, target *expr.AttributeExpr, required, topLevel bool, operation *transformOperation, active map[transformPair]TransformHelperID, plan *TransformPlan) error {
-	return planTransformOperationWithHelper(source, target, required, topLevel, false, operation, active, plan)
+func planTransformOperation(source, target *expr.AttributeExpr, required, topLevel bool, location TransformHelperDefinitionLocation, operation *transformOperation, active map[transformPair]TransformHelperID, plan *TransformPlan) error {
+	return planTransformOperationWithHelper(source, target, required, topLevel, false, location, operation, active, plan)
 }
 
 // planTransformOperationWithHelper records one conversion. forceHelper is true
 // when a custom union renderer declares that it calls TransformHelperName for
 // this pair, including named arrays and aliases that the default renderer
 // writes inline.
-func planTransformOperationWithHelper(source, target *expr.AttributeExpr, required, topLevel, forceHelper bool, operation *transformOperation, active map[transformPair]TransformHelperID, plan *TransformPlan) error {
+func planTransformOperationWithHelper(source, target *expr.AttributeExpr, required, topLevel, forceHelper bool, location TransformHelperDefinitionLocation, operation *transformOperation, active map[transformPair]TransformHelperID, plan *TransformPlan) error {
 	helperSource, helperTarget := source, target
 	if forceHelper {
 		_, sourceNamed := source.Type.(expr.UserType)
@@ -1326,6 +1372,7 @@ func planTransformOperationWithHelper(source, target *expr.AttributeExpr, requir
 			Required:   required,
 			Occurrence: id.index + 1,
 		})
+		plan.recordHelperDefinition(id, helperSource, helperTarget, location)
 		operation.calls = append(operation.calls, transformCall{
 			helper: id,
 		})
@@ -1340,29 +1387,132 @@ func planTransformOperationWithHelper(source, target *expr.AttributeExpr, requir
 			delete(active, pair)
 			return err
 		}
-		err := planTransformChildren(bodySource, bodyTarget, required, body, active, plan)
+		err := planTransformChildren(bodySource, bodyTarget, required, location, body, active, plan)
 		delete(active, pair)
 		return err
 	}
-	return planTransformChildren(source, target, required, operation, active, plan)
+	return planTransformChildren(source, target, required, location, operation, active, plan)
+}
+
+// recordHelperDefinition groups calls with the same retained source and target
+// facts. Hooks may inspect metadata, defaults, and validation when writing a
+// function body, so matching only the data type would merge different code.
+// Requiredness stays on the call because it only decides whether the caller
+// checks for nil.
+func (p *TransformPlan) recordHelperDefinition(id TransformHelperID, source, target *expr.AttributeExpr, location TransformHelperDefinitionLocation) {
+	for index := range p.definitions {
+		definition := &p.definitions[index]
+		same := transformAttributesEqual(definition.Source, source, make(map[transformAttributePair]struct{})) &&
+			transformAttributesEqual(definition.Target, target, make(map[transformAttributePair]struct{}))
+		if p.hooks != nil && p.hooks.SameHelperDefinition != nil {
+			same = sameTransformUserTypeOrigin(definition.Source, source) &&
+				sameTransformUserTypeOrigin(definition.Target, target) &&
+				p.hooks.SameHelperDefinition(definition.Source, definition.Target, source, target)
+		}
+		if same {
+			definition.helpers = append(definition.helpers, id.index)
+			if location.Compare(definition.Location) < 0 {
+				definition.Location = location
+			}
+			return
+		}
+	}
+	definitionID := TransformHelperDefinitionID{plan: p, index: len(p.definitions)}
+	p.definitions = append(p.definitions, TransformHelperDefinition{
+		ID:       definitionID,
+		Source:   source,
+		Target:   target,
+		Location: location,
+		helpers:  []int{id.index},
+	})
+}
+
+// sameTransformUserTypeOrigin prevents a hook from merging functions for two
+// separately authored named types. A named type's origin owns its generated Go
+// declaration even when another type has the same name and fields.
+func sameTransformUserTypeOrigin(first, next *expr.AttributeExpr) bool {
+	firstType, firstNamed := first.Type.(expr.UserType)
+	nextType, nextNamed := next.Type.(expr.UserType)
+	if firstNamed != nextNamed {
+		return false
+	}
+	return !firstNamed || firstType.Origin() == nextType.Origin()
+}
+
+// append adds one authored path component. NUL bytes inside names are escaped,
+// and two NUL bytes end each component, so empty and nested names remain
+// distinct while string comparison preserves their lexical order.
+func (l TransformHelperDefinitionLocation) append(kind byte, name string) TransformHelperDefinitionLocation {
+	var encoded strings.Builder
+	encoded.Grow(len(l.encoded) + len(name) + 3)
+	encoded.WriteString(l.encoded)
+	encoded.WriteByte(kind)
+	for index := range len(name) {
+		if name[index] == 0 {
+			encoded.WriteByte(0)
+			encoded.WriteByte(0xff)
+			continue
+		}
+		encoded.WriteByte(name[index])
+	}
+	encoded.WriteByte(0)
+	encoded.WriteByte(0)
+	return TransformHelperDefinitionLocation{encoded: encoded.String()}
+}
+
+// objectField returns the location below one authored object field.
+func (l TransformHelperDefinitionLocation) objectField(name string) TransformHelperDefinitionLocation {
+	return l.append(transformObjectFieldLocation, name)
+}
+
+// arrayElement returns the location below an array element.
+func (l TransformHelperDefinitionLocation) arrayElement() TransformHelperDefinitionLocation {
+	return l.append(transformArrayElementLocation, "")
+}
+
+// mapKey returns the location below a map key.
+func (l TransformHelperDefinitionLocation) mapKey() TransformHelperDefinitionLocation {
+	return l.append(transformMapKeyLocation, "")
+}
+
+// mapValue returns the location below a map value.
+func (l TransformHelperDefinitionLocation) mapValue() TransformHelperDefinitionLocation {
+	return l.append(transformMapValueLocation, "")
+}
+
+// unionBranch returns the location below an authored union branch.
+func (l TransformHelperDefinitionLocation) unionBranch(name string) TransformHelperDefinitionLocation {
+	return l.append(transformUnionBranchLocation, name)
+}
+
+// transformUnionHelperBranch returns the authored branch name selected by a
+// custom union hook. Both attributes must be the retained authored branch
+// pair so the location cannot silently identify a different function body.
+func transformUnionHelperBranch(source, target *expr.Union, sourceBranch, targetBranch *expr.AttributeExpr) (string, bool) {
+	for index, branch := range source.Values {
+		if branch.Attribute == sourceBranch && target.Values[index].Attribute == targetBranch {
+			return branch.Name, true
+		}
+	}
+	return "", false
 }
 
 // planTransformChildren walks child transformations in the same order as the
 // core templates consume helper names.
-func planTransformChildren(source, target *expr.AttributeExpr, required bool, operation *transformOperation, active map[transformPair]TransformHelperID, plan *TransformPlan) error {
-	collect := func(source, target *expr.AttributeExpr, childRequired bool, top bool) error {
-		return planTransformOperation(source, target, childRequired, top, operation, active, plan)
+func planTransformChildren(source, target *expr.AttributeExpr, required bool, location TransformHelperDefinitionLocation, operation *transformOperation, active map[transformPair]TransformHelperID, plan *TransformPlan) error {
+	collect := func(source, target *expr.AttributeExpr, childRequired bool, top bool, childLocation TransformHelperDefinitionLocation) error {
+		return planTransformOperation(source, target, childRequired, top, childLocation, operation, active, plan)
 	}
 	elementTop := plan.hooks != nil && plan.hooks.InlineCompositeElems
 	switch {
 	case expr.IsArray(source.Type):
-		return collect(expr.AsArray(source.Type).ElemType, expr.AsArray(target.Type).ElemType, required, elementTop)
+		return collect(expr.AsArray(source.Type).ElemType, expr.AsArray(target.Type).ElemType, required, elementTop, location.arrayElement())
 	case expr.IsMap(source.Type):
 		sourceMap, targetMap := expr.AsMap(source.Type), expr.AsMap(target.Type)
-		if err := collect(sourceMap.KeyType, targetMap.KeyType, required, elementTop); err != nil {
+		if err := collect(sourceMap.KeyType, targetMap.KeyType, required, elementTop, location.mapKey()); err != nil {
 			return err
 		}
-		return collect(sourceMap.ElemType, targetMap.ElemType, required, elementTop)
+		return collect(sourceMap.ElemType, targetMap.ElemType, required, elementTop, location.mapValue())
 	case expr.IsUnion(source.Type):
 		targetUnion := expr.AsUnion(target.Type)
 		if targetUnion == nil {
@@ -1378,7 +1528,12 @@ func planTransformChildren(source, target *expr.AttributeExpr, required bool, op
 				if planErr != nil {
 					return
 				}
-				planErr = planTransformOperationWithHelper(sourceBranch, targetBranch, required, false, true, operation, active, plan)
+				branch, ok := transformUnionHelperBranch(sourceUnion, targetUnion, sourceBranch, targetBranch)
+				if !ok {
+					planErr = fmt.Errorf("custom union transform helper must use retained authored branch attributes")
+					return
+				}
+				planErr = planTransformOperationWithHelper(sourceBranch, targetBranch, required, false, true, location.unionBranch(branch), operation, active, plan)
 			})
 			return planErr
 		}
@@ -1393,7 +1548,7 @@ func planTransformChildren(source, target *expr.AttributeExpr, required bool, op
 			}
 		}
 		for index, branch := range sourceUnion.Values {
-			if err := collect(branch.Attribute, targetUnion.Values[index].Attribute, required, false); err != nil {
+			if err := collect(branch.Attribute, targetUnion.Values[index].Attribute, required, false, location.unionBranch(branch.Name)); err != nil {
 				return err
 			}
 		}
@@ -1407,7 +1562,7 @@ func planTransformChildren(source, target *expr.AttributeExpr, required bool, op
 				if plan.hooks != nil && plan.hooks.FieldPairAttrs != nil {
 					sourceChild, targetChild = plan.hooks.FieldPairAttrs(sourceChild, targetChild)
 				}
-				walkErr = collect(sourceChild, targetChild, sourceMapped.IsRequired(name), false)
+				walkErr = collect(sourceChild, targetChild, sourceMapped.IsRequired(name), false, location.objectField(name))
 			}
 		})
 		return walkErr
@@ -1448,9 +1603,6 @@ func generateTransformHelper(helper TransformHelper, ta *TransformAttrs) (*Trans
 	code, err := TransformAttribute(helper.Source, helper.Target, "v", "res", true, ta)
 	if err != nil {
 		return nil, err
-	}
-	if !helper.Required && !expr.IsPrimitive(helper.Source.Type) {
-		code = "if v == nil {\n\treturn nil\n}\n" + code
 	}
 	tfd := &TransformFunctionData{
 		ID:            helper.ID,

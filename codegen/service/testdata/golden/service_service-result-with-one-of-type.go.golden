@@ -273,9 +273,6 @@ func newResultOneofView(res *ResultOneof) *resultwithoneoftypeviews.ResultOneofV
 // transformResultwithoneoftypeviewsTViewToT builds a value of type *T from a
 // value of type *resultwithoneoftypeviews.TView.
 func transformResultwithoneoftypeviewsTViewToT(v *resultwithoneoftypeviews.TView) *T {
-	if v == nil {
-		return nil
-	}
 	res := &T{
 		Message: v.Message,
 	}
@@ -286,9 +283,6 @@ func transformResultwithoneoftypeviewsTViewToT(v *resultwithoneoftypeviews.TView
 // transformResultwithoneoftypeviewsUViewToU builds a value of type *U from a
 // value of type *resultwithoneoftypeviews.UView.
 func transformResultwithoneoftypeviewsUViewToU(v *resultwithoneoftypeviews.UView) *U {
-	if v == nil {
-		return nil
-	}
 	res := &U{}
 	if v.Item != nil {
 		res.Item = transformResultwithoneoftypeviewsItemViewToItem(v.Item)
@@ -300,9 +294,6 @@ func transformResultwithoneoftypeviewsUViewToU(v *resultwithoneoftypeviews.UView
 // transformResultwithoneoftypeviewsItemViewToItem builds a value of type *Item
 // from a value of type *resultwithoneoftypeviews.ItemView.
 func transformResultwithoneoftypeviewsItemViewToItem(v *resultwithoneoftypeviews.ItemView) *Item {
-	if v == nil {
-		return nil
-	}
 	res := &Item{
 		A: v.A,
 	}
@@ -313,9 +304,6 @@ func transformResultwithoneoftypeviewsItemViewToItem(v *resultwithoneoftypeviews
 // transformTToResultwithoneoftypeviewsTView builds a value of type
 // *resultwithoneoftypeviews.TView from a value of type *T.
 func transformTToResultwithoneoftypeviewsTView(v *T) *resultwithoneoftypeviews.TView {
-	if v == nil {
-		return nil
-	}
 	res := &resultwithoneoftypeviews.TView{
 		Message: v.Message,
 	}
@@ -326,9 +314,6 @@ func transformTToResultwithoneoftypeviewsTView(v *T) *resultwithoneoftypeviews.T
 // transformUToResultwithoneoftypeviewsUView builds a value of type
 // *resultwithoneoftypeviews.UView from a value of type *U.
 func transformUToResultwithoneoftypeviewsUView(v *U) *resultwithoneoftypeviews.UView {
-	if v == nil {
-		return nil
-	}
 	res := &resultwithoneoftypeviews.UView{}
 	if v.Item != nil {
 		res.Item = transformItemToResultwithoneoftypeviewsItemView(v.Item)
@@ -340,9 +325,6 @@ func transformUToResultwithoneoftypeviewsUView(v *U) *resultwithoneoftypeviews.U
 // transformItemToResultwithoneoftypeviewsItemView builds a value of type
 // *resultwithoneoftypeviews.ItemView from a value of type *Item.
 func transformItemToResultwithoneoftypeviewsItemView(v *Item) *resultwithoneoftypeviews.ItemView {
-	if v == nil {
-		return nil
-	}
 	res := &resultwithoneoftypeviews.ItemView{
 		A: v.A,
 	}

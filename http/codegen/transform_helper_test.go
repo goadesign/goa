@@ -243,7 +243,7 @@ func TestViewedTransformHelpersNameViewsPackage(t *testing.T) {
 	for _, helper := range service.ClientTransformHelpers {
 		names = append(names, helper.Name)
 	}
-	require.Contains(t, names, "unmarshalUserTypeResponseBodyToServiceexplicitbodyuserresultobjectviewsUserTypeViewOptional")
+	require.Contains(t, names, "unmarshalUserTypeResponseBodyToServiceexplicitbodyuserresultobjectviewsUserTypeView")
 }
 
 func TestTransformHelpersUseConciseServiceAndWireTypeNames(t *testing.T) {
@@ -263,7 +263,7 @@ func TestSiblingTransformHelpersShareOneDefinition(t *testing.T) {
 	plan := linkedHTTPPlanForRoot(t, root)
 	service := plan.services.Get("ServiceResultUserTypeSibling")
 	require.Len(t, service.ServerTransformHelpers, 1)
-	name := "marshalServiceresultusertypesiblingviewsUserTypeViewToUserTypeResponseBodyOptional"
+	name := "marshalServiceresultusertypesiblingviewsUserTypeViewToUserTypeResponseBody"
 	require.Equal(t, name, service.ServerTransformHelpers[0].Name)
 	result := service.Endpoint("MethodResultUserTypeSibling").Result
 	require.NotEmpty(t, result.Responses)
@@ -292,11 +292,12 @@ func TestTransformHelpersShareExactPackageDeclaration(t *testing.T) {
 	root := expr.RunDSL(t, sharedTransformHelperDSL)
 	plan := linkedHTTPPlanForRoot(t, root)
 	service := plan.services.Get("SharedHelpers")
-	requiredName, optionalName := transformHelperNamesByRequired(t, service.serverWireTypes)
-	require.Contains(t, service.Endpoint("First").Payload.Request.PayloadInit.ServerCode, requiredName+"(body.Child)")
-	require.Contains(t, service.Endpoint("Second").Payload.Request.PayloadInit.ServerCode, requiredName+"(body.Child)")
-	require.Contains(t, service.Endpoint("Optional").Payload.Request.PayloadInit.ServerCode, optionalName+"(body.Child)")
-	require.NotContains(t, service.Endpoint("Optional").Payload.Request.PayloadInit.ServerCode, requiredName+"(body.Child)")
+	name := sharedTransformHelperName(t, service.serverWireTypes)
+	require.Contains(t, service.Endpoint("First").Payload.Request.PayloadInit.ServerCode, name+"(body.Child)")
+	require.Contains(t, service.Endpoint("Second").Payload.Request.PayloadInit.ServerCode, name+"(body.Child)")
+	optional := service.Endpoint("Optional").Payload.Request.PayloadInit.ServerCode
+	require.Contains(t, optional, "if body.Child != nil {")
+	require.Contains(t, optional, name+"(body.Child)")
 	var (
 		code  bytes.Buffer
 		count int
@@ -310,7 +311,7 @@ func TestTransformHelpersShareExactPackageDeclaration(t *testing.T) {
 			require.NoError(t, section.Write(&code))
 		}
 	}
-	require.Equal(t, 2, count)
+	require.Equal(t, 1, count)
 	testutil.AssertGo(
 		t,
 		"testdata/golden/transform_helper_shared-declarations.go.golden",
@@ -331,19 +332,19 @@ func TestJSONRPCTransformHelpersUseHTTPPackageDeclarations(t *testing.T) {
 	require.NoError(t, plans[0].Link())
 
 	serviceData := plans[0].services.Get("SharedHelpers")
-	requiredName, optionalName := transformHelperNamesByRequired(t, serviceData.serverWireTypes)
+	name := sharedTransformHelperName(t, serviceData.serverWireTypes)
 	snapshot, ok := plans[0].JSONRPCService("SharedHelpers")
 	require.True(t, ok)
-	require.Contains(t, snapshot.Endpoints[0].Payload.Request.PayloadInit.ServerCode, requiredName+"(body.Child)")
-	require.Contains(t, snapshot.Endpoints[1].Payload.Request.PayloadInit.ServerCode, requiredName+"(body.Child)")
-	require.Contains(t, snapshot.Endpoints[2].Payload.Request.PayloadInit.ServerCode, optionalName+"(body.Child)")
-	require.NotContains(t, snapshot.Endpoints[2].Payload.Request.PayloadInit.ServerCode, requiredName+"(body.Child)")
+	require.Contains(t, snapshot.Endpoints[0].Payload.Request.PayloadInit.ServerCode, name+"(body.Child)")
+	require.Contains(t, snapshot.Endpoints[1].Payload.Request.PayloadInit.ServerCode, name+"(body.Child)")
+	require.Contains(t, snapshot.Endpoints[2].Payload.Request.PayloadInit.ServerCode, "if body.Child != nil {")
+	require.Contains(t, snapshot.Endpoints[2].Payload.Request.PayloadInit.ServerCode, name+"(body.Child)")
 
 	first := jsonRPCTransformHelpers(snapshot.ServerCodecFile())
 	second := jsonRPCTransformHelpers(snapshot.ServerCodecFile())
-	require.Len(t, first, 2)
-	require.Len(t, second, 2)
-	require.ElementsMatch(t, []string{requiredName, optionalName}, []string{first[0].Name, first[1].Name})
+	require.Len(t, first, 1)
+	require.Len(t, second, 1)
+	require.Equal(t, name, first[0].Name)
 	first[0].Name = "changed"
 	fresh := jsonRPCTransformHelpers(snapshot.ServerCodecFile())
 	require.Equal(t, second[0].Name, fresh[0].Name)
@@ -363,25 +364,16 @@ func jsonRPCTransformHelpers(file *codegen.File) []*jsonRPCTransformFunctionData
 	return helpers
 }
 
-// transformHelperNamesByRequired returns the two function names from the test
-// catalog according to whether they accept a missing source value.
-func transformHelperNamesByRequired(t *testing.T, catalog *wireTypeCatalog) (string, string) {
+// sharedTransformHelperName returns the one function used by the required and
+// optional child fields in the test service.
+func sharedTransformHelperName(t *testing.T, catalog *wireTypeCatalog) string {
 	t.Helper()
-	var required, optional string
-	for _, helper := range catalog.transformHelpers {
-		if helper.identity.required {
-			required = helper.declaration.Name()
-		} else {
-			optional = helper.declaration.Name()
-		}
-	}
-	require.NotEmpty(t, required)
-	require.NotEmpty(t, optional)
-	return required, optional
+	require.Len(t, catalog.transformHelpers, 1)
+	return catalog.transformHelpers[0].declaration.Name()
 }
 
 // sharedTransformHelperDSL uses one named child in two required fields and one
-// optional field so functions share only when missing values behave the same.
+// optional field so all three calls can share one strict function.
 func sharedTransformHelperDSL() {
 	sharedTransformHelperDesign(false)
 }

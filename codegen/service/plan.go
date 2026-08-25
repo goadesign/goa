@@ -734,9 +734,9 @@ func collectViewNames(facts *serviceFacts, servicePackage, viewsPackage *codegen
 				if conversion.plan == nil {
 					continue
 				}
-				for _, helper := range conversion.plan.Helpers() {
-					sourceName, sourceID := transformDataTypeName(helper.Source.Type)
-					targetName, targetID := transformDataTypeName(helper.Target.Type)
+				for _, definition := range conversion.plan.HelperDefinitions() {
+					sourceName, sourceID := transformDataTypeName(definition.Source.Type)
+					targetName, targetID := transformDataTypeName(definition.Target.Type)
 					sourcePreferred := sourceName
 					targetPreferred := targetName
 					viewsPackageName := strings.ToLower(codegen.Goify(facts.service.Name, false)) + "views"
@@ -753,13 +753,12 @@ func collectViewNames(facts *serviceFacts, servicePackage, viewsPackage *codegen
 						source:     sourceID,
 						target:     targetID,
 						side:       side,
-						occurrence: helper.Occurrence,
-						required:   helper.Required,
+						definition: definition.Location,
 					}, "transform"+codegen.Goify(sourcePreferred, true)+"To"+codegen.Goify(targetPreferred, true), facts.apiName)
 					if err != nil {
 						return err
 					}
-					if err := conversion.plan.BindHelperDeclaration(helper.ID, declaration); err != nil {
+					if err := conversion.plan.BindHelperDefinition(definition.ID, declaration); err != nil {
 						return err
 					}
 				}

@@ -19,10 +19,10 @@ type UserTypeResponseBody struct {
 func NewMethodResultUserTypeSiblingResponseBody(res *serviceresultusertypesiblingviews.ResulttypesiblingView) *MethodResultUserTypeSiblingResponseBody {
 	body := &MethodResultUserTypeSiblingResponseBody{}
 	if res.A != nil {
-		body.A = marshalServiceresultusertypesiblingviewsUserTypeViewToUserTypeResponseBodyOptional(res.A)
+		body.A = marshalServiceresultusertypesiblingviewsUserTypeViewToUserTypeResponseBody(res.A)
 	}
 	if res.B != nil {
-		body.B = marshalServiceresultusertypesiblingviewsUserTypeViewToUserTypeResponseBodyOptional(res.B)
+		body.B = marshalServiceresultusertypesiblingviewsUserTypeViewToUserTypeResponseBody(res.B)
 	}
 	return body
 }

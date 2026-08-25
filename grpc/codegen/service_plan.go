@@ -201,13 +201,13 @@ func replaceGRPCTransforms(
 		if err != nil {
 			return err
 		}
-		oldHelpers := conversion.transform.Helpers()
-		newHelpers := transform.Helpers()
-		if len(oldHelpers) != len(newHelpers) {
-			return fmt.Errorf("saved conversion helper count changed from %d to %d", len(oldHelpers), len(newHelpers))
+		oldDefinitions := conversion.transform.HelperDefinitions()
+		newDefinitions := transform.HelperDefinitions()
+		if len(oldDefinitions) != len(newDefinitions) {
+			return fmt.Errorf("saved conversion helper definition count changed from %d to %d", len(oldDefinitions), len(newDefinitions))
 		}
-		for index, helper := range newHelpers {
-			if err := transform.BindHelperDeclaration(helper.ID, oldHelpers[index].Declaration); err != nil {
+		for index, definition := range newDefinitions {
+			if err := transform.BindHelperDefinition(definition.ID, oldDefinitions[index].Declaration); err != nil {
 				return err
 			}
 		}

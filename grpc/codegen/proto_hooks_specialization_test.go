@@ -99,6 +99,24 @@ func TestTransformPlanOneofLookupUsesOriginalBranch(t *testing.T) {
 	require.Same(t, targetBranch, branches[0])
 }
 
+// TestGRPCHelperDefinitionIgnoresOnlyFieldNumber checks that field positions
+// share a copy function while other metadata keeps separate definitions.
+func TestGRPCHelperDefinitionIgnoresOnlyFieldNumber(t *testing.T) {
+	typeExpr := &expr.UserTypeExpr{
+		TypeName: "Child",
+		AttributeExpr: &expr.AttributeExpr{Type: &expr.Object{
+			{Name: "value", Attribute: &expr.AttributeExpr{Type: expr.String}},
+		}},
+	}
+	first := &expr.AttributeExpr{Type: typeExpr, Meta: expr.MetaExpr{"rpc:tag": {"1"}}}
+	second := &expr.AttributeExpr{Type: typeExpr, Meta: expr.MetaExpr{"rpc:tag": {"2"}}}
+	hook := protoHooks(true).SameHelperDefinition
+	require.True(t, hook(first, first, second, second))
+
+	second.Meta["struct:field:type"] = []string{"CustomChild", "example.com/custom"}
+	require.False(t, hook(first, first, second, second))
+}
+
 // Enter preserves protobuf wrapper lookup while entering a copied union.
 func (a *protobufOneofSnapshotAttributor) Enter(attribute *expr.AttributeExpr) codegen.Attributor {
 	return &protobufOneofSnapshotAttributor{

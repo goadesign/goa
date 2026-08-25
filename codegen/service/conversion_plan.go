@@ -19,7 +19,7 @@ type (
 	externalConversionDirection uint8
 
 	// externalConversionNameOrder orders child conversion helpers by their
-	// service, method, and field position instead of discovery order.
+	// owning conversion and source and target types instead of discovery order.
 	externalConversionNameOrder struct {
 		receiverID  string
 		externalPkg string
@@ -27,8 +27,7 @@ type (
 		direction   externalConversionDirection
 		source      string
 		target      string
-		occurrence  int
-		required    bool
+		definition  codegen.TransformHelperDefinitionLocation
 	}
 
 	// externalConversionFacts stores one conversion between a Goa type and a
@@ -292,9 +291,9 @@ func planExternalConversion(
 		plan:              transform,
 		receiverType:      identity.receiver,
 	}
-	for _, helper := range transform.Helpers() {
-		sourceName, sourceID := transformDataTypeName(helper.Source.Type)
-		targetName, targetID := transformDataTypeName(helper.Target.Type)
+	for _, definition := range transform.HelperDefinitions() {
+		sourceName, sourceID := transformDataTypeName(definition.Source.Type)
+		targetName, targetID := transformDataTypeName(definition.Target.Type)
 		if identity.direction == externalConvertTo {
 			targetName = externalAlias + codegen.Goify(targetName, true)
 		} else {
@@ -307,8 +306,7 @@ func planExternalConversion(
 			direction:   identity.direction,
 			source:      sourceID,
 			target:      targetID,
-			occurrence:  helper.Occurrence,
-			required:    helper.Required,
+			definition:  definition.Location,
 		}
 		declaration := codegen.NewPreferredName(
 			codegen.NameFunction,
@@ -319,7 +317,7 @@ func planExternalConversion(
 		if err := owner.DeclareName(declaration); err != nil {
 			return nil, err
 		}
-		if err := transform.BindHelperDeclaration(helper.ID, declaration); err != nil {
+		if err := transform.BindHelperDefinition(definition.ID, declaration); err != nil {
 			return nil, err
 		}
 	}
@@ -549,14 +547,6 @@ func (r *externalConversionResolver) packageName(userType expr.UserType) string 
 // types, service, method, and direction instead of discovery order.
 func (o externalConversionNameOrder) ComparePackageName(other codegen.PackageNameOrder) int {
 	right := other.(externalConversionNameOrder)
-	required := 0
-	if o.required != right.required {
-		if o.required {
-			required = 1
-		} else {
-			required = -1
-		}
-	}
 	return cmp.Or(
 		strings.Compare(o.receiverID, right.receiverID),
 		strings.Compare(o.externalPkg, right.externalPkg),
@@ -564,7 +554,6 @@ func (o externalConversionNameOrder) ComparePackageName(other codegen.PackageNam
 		cmp.Compare(o.direction, right.direction),
 		strings.Compare(o.source, right.source),
 		strings.Compare(o.target, right.target),
-		cmp.Compare(o.occurrence, right.occurrence),
-		required,
+		o.definition.Compare(right.definition),
 	)
 }

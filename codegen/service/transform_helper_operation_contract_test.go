@@ -1,5 +1,5 @@
-// This file verifies recursive transform helpers retain the field-presence
-// operation selected by each result view from planning through rendered calls.
+// This file verifies recursive transform calls retain the field-presence
+// operation selected by each result view from planning through rendered code.
 package service
 
 import (
@@ -19,10 +19,9 @@ type retainedTransformOperation struct {
 	definition *codegen.TransformFunctionData
 }
 
-// TestRecursiveTransformHelpersRetainRequiredness catches required and
-// optional recursive field operations that are collapsed because their named
-// source and target types have the same origins.
-func TestRecursiveTransformHelpersRetainRequiredness(t *testing.T) {
+// TestRecursiveTransformCallsRetainRequiredness checks that optional values
+// are tested for nil before the same strict conversion used by required values.
+func TestRecursiveTransformCallsRetainRequiredness(t *testing.T) {
 	forwardPlan := recursiveTransformPlan(t, false)
 	operations := retainedRecursiveTransformOperations(t, forwardPlan)
 	required := operations[expr.DefaultView]
@@ -31,10 +30,10 @@ func TestRecursiveTransformHelpersRetainRequiredness(t *testing.T) {
 	require.NotNil(t, optional)
 
 	require.NotSame(t, required.definition.Declaration, optional.definition.Declaration)
-	require.NotEqual(t, required.definition.Code, optional.definition.Code)
 	require.NotContains(t, required.definition.Code, "if v == nil")
-	require.Contains(t, optional.definition.Code, "if v == nil")
+	require.NotContains(t, optional.definition.Code, "if v == nil")
 	require.Contains(t, required.init.Code, required.definition.Declaration.Name()+"(")
+	require.Contains(t, optional.init.Code, "if res.OptionalNode != nil {")
 	require.Contains(t, optional.init.Code, optional.definition.Declaration.Name()+"(")
 	require.Same(
 		t,
@@ -67,10 +66,10 @@ func TestRecursiveTransformHelpersRetainRequiredness(t *testing.T) {
 	compileGeneratedServiceFiles(t, reverseCompileFiles)
 }
 
-// TestRecursiveTransformHelpersRetainSiblingOccurrences catches package-name
-// planning that collapses two optional fields because their recursive types
-// share an authored origin and requiredness.
-func TestRecursiveTransformHelpersRetainSiblingOccurrences(t *testing.T) {
+// TestRecursiveTransformCallsShareSiblingHelper checks that required and
+// optional fields call one strict conversion while the optional call stays
+// inside its nil check.
+func TestRecursiveTransformCallsShareSiblingHelper(t *testing.T) {
 	root := codegen.RunDSL(t, func() {
 		node := dsl.Type("Node", func() {
 			dsl.Attribute("label", dsl.String)
@@ -81,6 +80,7 @@ func TestRecursiveTransformHelpersRetainSiblingOccurrences(t *testing.T) {
 			dsl.TypeName("SiblingTree")
 			dsl.Attribute("left", node)
 			dsl.Attribute("right", node)
+			dsl.Required("left")
 			dsl.View(expr.DefaultView, func() {
 				dsl.Attribute("left")
 				dsl.Attribute("right")
@@ -106,9 +106,9 @@ func TestRecursiveTransformHelpersRetainSiblingOccurrences(t *testing.T) {
 	require.NotNil(t, conversion)
 	helpers := conversion.plan.Helpers()
 	require.Len(t, helpers, 2)
-	require.False(t, helpers[0].Required)
+	require.True(t, helpers[0].Required)
 	require.False(t, helpers[1].Required)
-	require.NotSame(t, helpers[0].Declaration, helpers[1].Declaration)
+	require.Same(t, helpers[0].Declaration, helpers[1].Declaration)
 
 	serviceData := plan.Services().Get("Trees")
 	require.NotNil(t, serviceData)
@@ -122,24 +122,78 @@ func TestRecursiveTransformHelpersRetainSiblingOccurrences(t *testing.T) {
 		}
 	}
 	require.NotNil(t, init)
-	require.Len(t, init.Helpers, 2)
-	for _, helper := range helpers {
-		require.Contains(t, init.Code, helper.Declaration.Name()+"(")
-		var definition *codegen.TransformFunctionData
-		for _, candidate := range init.Helpers {
-			if candidate.ID == helper.ID {
-				definition = candidate
-				break
-			}
-		}
-		require.NotNil(t, definition)
-		require.Same(t, helper.Declaration, definition.Declaration)
-	}
+	require.Len(t, init.Helpers, 1)
+	require.Same(t, helpers[0].Declaration, init.Helpers[0].Declaration)
+	require.NotContains(t, init.Helpers[0].Code, "if v == nil")
+	require.Contains(t, init.Code, "vres.Left = "+helpers[0].Declaration.Name()+"(res.Left)")
+	require.Contains(t, init.Code, "if res.Right != nil {")
+	require.Contains(t, init.Code, "vres.Right = "+helpers[0].Declaration.Name()+"(res.Right)")
 
 	files, err := Files(plan)
 	require.NoError(t, err)
 	files = append(files, ExampleServiceFiles(plan)...)
 	compileGeneratedServiceFiles(t, files)
+}
+
+// TestTransformHelperNamesIgnoreSiblingFieldOrder verifies that the authored
+// field path, not discovery order, decides which colliding helper name keeps
+// its preferred spelling.
+func TestTransformHelperNamesIgnoreSiblingFieldOrder(t *testing.T) {
+	declarations := func(reverse bool) map[string]string {
+		root := codegen.RunDSL(t, func() {
+			node := dsl.Type("Node", func() {
+				dsl.Attribute("label", dsl.String)
+				dsl.Attribute("next", "Node")
+				dsl.Required("label")
+			})
+			tree := dsl.ResultType("application/vnd.stable-tree", func() {
+				dsl.TypeName("StableTree")
+				field := func(name string) {
+					dsl.Attribute(name, node, func() {
+						dsl.Meta("test:helper", name)
+					})
+				}
+				if reverse {
+					field("right")
+					field("left")
+				} else {
+					field("left")
+					field("right")
+				}
+				dsl.View(expr.DefaultView, func() {
+					dsl.Attribute("left")
+					dsl.Attribute("right")
+				})
+			})
+			dsl.Service("Trees", func() {
+				dsl.Method("Read", func() {
+					dsl.Result(tree)
+				})
+			})
+		})
+		plan := retainedServicePlanForPackage(t, root)
+		facts := plan.facts.serviceByID["Trees"]
+		projected := facts.projections[facts.methods[0]].types[0]
+		var conversion *viewConversionFacts
+		for _, candidate := range projected.conversions {
+			if !candidate.toResult && candidate.viewName == expr.DefaultView {
+				conversion = candidate
+				break
+			}
+		}
+		require.NotNil(t, conversion)
+		definitions := conversion.plan.HelperDefinitions()
+		require.Len(t, definitions, 2)
+		names := make(map[string]string, len(definitions))
+		for _, definition := range definitions {
+			marker := definition.Source.Meta["test:helper"]
+			require.Len(t, marker, 1)
+			names[marker[0]] = definition.Declaration.Name()
+		}
+		return names
+	}
+
+	require.Equal(t, declarations(false), declarations(true))
 }
 
 // recursiveTransformPlan builds equivalent result designs in either field and

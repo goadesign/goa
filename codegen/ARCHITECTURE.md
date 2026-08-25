@@ -368,10 +368,30 @@ function declarations and final package qualifiers. `GoTransformWithAttrs`
 keeps its released interface, but now performs these same steps internally and
 returns the released helper data after rendering once.
 
-`Helpers` returns detached type descriptions together with plan-owned helper
-IDs. A caller may inspect or change those descriptions while choosing a
-function declaration, but cannot change the type graph used for rendering.
-Rendering also rejects a hook that changes the retained graph. When one plan is
+Each recursive call is a helper occurrence. `Helpers` returns those occurrences
+with the requiredness that decides whether the generated caller checks for nil.
+Several occurrences can call the same function. `HelperDefinitions` returns one
+record for each distinct function body, comparing the complete retained source
+and target attributes because hooks may inspect their metadata, defaults, and
+validation. Caller requiredness is deliberately not part of a definition.
+Each definition also carries a private authored location made from object
+fields, array elements, map keys and values, and union branches. Equivalent
+calls keep the earliest location, so reordering sibling fields does not change
+which colliding declaration keeps its preferred Go name. The location is used
+only for ordering and never appears in generated source.
+Generators normally declare one name per definition and bind it with
+`BindHelperDefinition`; `BindHelperDeclaration` remains available for callers
+that manage individual occurrences. A transport may supply
+`SameHelperDefinition` only when its complete hook set proves that one retained
+difference cannot change the function body. gRPC uses this for protobuf field
+numbers: a field number changes the serialized position, not the Go code that
+copies the field value.
+
+Both methods return detached type descriptions with plan-owned IDs. A caller
+may inspect or change those descriptions while choosing a function declaration,
+but cannot change the type graph used for rendering. Rendering also rejects a
+hook that changes the retained graph and checks that calls sharing a declaration
+produce the same parameter type, result type, and body. When one plan is
 rendered again with the same source variable, target variable, and assignment
 choice, it returns a copy of the first result instead of calling hooks again.
 This lets one conversion plan serve repeated template requests without letting
@@ -610,6 +630,8 @@ performing that step; the run or the owning retained plan now performs it once.
 | `codegen` | `TransformHooks.HelperNameAttrs` | Removed. Bind each recursive helper through `TransformPlan.Helpers` and `BindHelperDeclaration`; do not derive a helper name from a second attribute walk. A custom `TransformUnion` that calls `TransformHelperName` must also implement `PlanUnionHelpers` so planning can declare those functions before rendering. |
 | `codegen` | `WrapDirective.InitTypeName` | Set `WrapDirective.Target` to the wrapper attribute. Rendering resolves its already planned Go type name. |
 | `codegen` | `TransformFunctionData` contained only `Name`, parameter and result references, and code | It now also identifies the planned helper with `ID` and `Declaration`. `Name` remains as a deprecated copy of `Declaration.Name()` for every rendered helper. Unkeyed struct literals must be updated. |
+| `codegen` | `TransformPlan.Helpers` and `BindHelperDeclaration` | These methods remain available for individual helper calls. New generators should use `HelperDefinitions` and `BindHelperDefinition` so required and optional calls to the same conversion share one strict function. |
+| `codegen` | `GoTransformWithAttrs` returned a separate nil-tolerant helper for some optional calls | The signature is unchanged, but returned helpers are strict: optional callers check for nil before calling them, and equivalent required and optional calls may return one shared helper instead of two. Plugins that call a returned helper directly must perform the same nil check at the call site. |
 | `codegen/cli` | `BuildCommandData(data)`, `EndpointParserFile(..., data, parseSection)`, `UsageCommands(data)`, `UsageExamples(data)`, and `FlagsCode(data)` | These released signatures and section data remain available. Goa's HTTP and gRPC planners call private planned variants that carry final import, declaration, and local-variable names. |
 | `codegen/cli` | `BuildFunctionData.Name`, `ActualParams`, and `FormalParams` | These fields remain and contain the final generated name and parameter lists. New planning code may also read `BuildFunctionData.Declaration`. |
 | `codegen/cli` | `NewFlagData` accepted a type name; `FieldLoadCode` accepted type and validation source strings; `FlagArgData.TypeName` and `Validate`; positional `FlagData` literals | The released functions and fields remain available and keep their string-based behavior. Goa's transport planners use one opaque `FlagPlan`, created by `NewFlagPlan`, so validation is written against the exact parsed value without rewriting generated text. Supplying both `Validate` and `Plan` is rejected. Use named fields when constructing `FlagData` because it now contains private planning state. |

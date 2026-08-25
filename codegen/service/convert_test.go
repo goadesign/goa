@@ -29,6 +29,12 @@ type (
 	hasNonPtrFields struct {
 		inner inner
 	}
+
+	externalSibling struct {
+		Label string
+		Left  *externalSibling
+		Right *externalSibling
+	}
 )
 
 func TestCommonPath(t *testing.T) {
@@ -409,6 +415,40 @@ func TestConversionPlanSharesHelperDeclarations(t *testing.T) {
 			require.Same(t, planned[index].Declaration, operation.helpers[index].Declaration)
 		}
 	}
+}
+
+// TestExternalConversionSharesSiblingHelper checks that one external type
+// conversion uses the same strict function for required and optional fields.
+func TestExternalConversionSharesSiblingHelper(t *testing.T) {
+	root := runDSL(t, func() {
+		sibling := dsl.Type("ExternalSibling", func() {
+			dsl.ConvertTo(externalSibling{})
+			dsl.Attribute("Label", dsl.String)
+			dsl.Attribute("Left", "ExternalSibling")
+			dsl.Attribute("Right", "ExternalSibling")
+			dsl.Required("Label", "Left")
+		})
+		dsl.Service("SiblingService", func() {
+			dsl.Method("Read", func() {
+				dsl.Payload(sibling)
+			})
+		})
+	})
+	plan := mustServicePlan(t, root)
+	files := plan.facts.externalConversions
+	require.Len(t, files, 1)
+	require.Len(t, files[0].operations, 1)
+	operation := files[0].operations[0]
+	planned := operation.plan.Helpers()
+	require.Len(t, planned, 2)
+	require.True(t, planned[0].Required)
+	require.False(t, planned[1].Required)
+	require.Same(t, planned[0].Declaration, planned[1].Declaration)
+	require.Len(t, operation.helpers, 1)
+	require.NotContains(t, operation.helpers[0].Code, "if v == nil")
+	require.Contains(t, operation.data.Code, "v.Left = "+planned[0].Declaration.Name()+"(t.Left)")
+	require.Contains(t, operation.data.Code, "if t.Right != nil {")
+	require.Contains(t, operation.data.Code, "v.Right = "+planned[0].Declaration.Name()+"(t.Right)")
 }
 
 // TestConversionMethodNamesUseReceiverNamespaces verifies different receiver

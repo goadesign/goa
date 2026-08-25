@@ -1,9 +1,6 @@
-// unmarshalFooRequestBodyToFooFooOptional builds a value of type *foo.Foo from
-// a value of type *FooRequestBody.
-func unmarshalFooRequestBodyToFooFooOptional(v *FooRequestBody) *foo.Foo {
-	if v == nil {
-		return nil
-	}
+// unmarshalFooRequestBodyToFooFoo builds a value of type *foo.Foo from a value
+// of type *FooRequestBody.
+func unmarshalFooRequestBodyToFooFoo(v *FooRequestBody) *foo.Foo {
 	res := &foo.Foo{
 		Bar: v.Bar,
 	}

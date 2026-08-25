@@ -13,9 +13,6 @@ func NewProtoMethodResultWithCollectionResponse(result *serviceresultwithcollect
 // *service_result_with_collectionpb.ResultT from a value of type
 // *serviceresultwithcollection.ResultT.
 func transformResultTToProtoResultT(v *serviceresultwithcollection.ResultT) *service_result_with_collectionpb.ResultT {
-	if v == nil {
-		return nil
-	}
 	res := &service_result_with_collectionpb.ResultT{}
 	if v.CollectionField != nil {
 		res.CollectionField = &service_result_with_collectionpb.RTCollection{}

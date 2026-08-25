@@ -34,7 +34,7 @@ func NewMethodAAPayload(body *MethodARequestBody) *servicemixedpayloadinbody.APa
 	}
 	v.Object = unmarshalBPayloadRequestBodyToServicemixedpayloadinbodyBPayload(body.Object)
 	if body.DupObj != nil {
-		v.DupObj = unmarshalBPayloadRequestBodyToServicemixedpayloadinbodyBPayloadOptional(body.DupObj)
+		v.DupObj = unmarshalBPayloadRequestBodyToServicemixedpayloadinbodyBPayload(body.DupObj)
 	}
 
 	return v

@@ -24,9 +24,6 @@ func NewProtoMethodPayloadWithNestedTypesResponse() *service_payload_with_nested
 // *servicepayloadwithnestedtypes.AParams from a value of type
 // *service_payload_with_nested_typespb.AParams.
 func transformProtoAParamsToAParams(v *service_payload_with_nested_typespb.AParams) *servicepayloadwithnestedtypes.AParams {
-	if v == nil {
-		return nil
-	}
 	res := &servicepayloadwithnestedtypes.AParams{}
 	if v.A != nil {
 		res.A = make(map[string][]string, len(v.A))
@@ -50,9 +47,6 @@ func transformProtoAParamsToAParams(v *service_payload_with_nested_typespb.APara
 // *servicepayloadwithnestedtypes.BParams from a value of type
 // *service_payload_with_nested_typespb.BParams.
 func transformProtoBParamsToBParams(v *service_payload_with_nested_typespb.BParams) *servicepayloadwithnestedtypes.BParams {
-	if v == nil {
-		return nil
-	}
 	res := &servicepayloadwithnestedtypes.BParams{}
 	if v.B != nil {
 		res.B = make(map[string]string, len(v.B))

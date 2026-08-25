@@ -24,7 +24,7 @@ type RtResponseBody struct {
 func NewMethodResultWithResultCollectionResultOK(body *MethodResultWithResultCollectionResponseBody) *serviceresultwithresultcollection.MethodResultWithResultCollectionResult {
 	v := &serviceresultwithresultcollection.MethodResultWithResultCollectionResult{}
 	if body.A != nil {
-		v.A = unmarshalResulttypeResponseBodyToServiceresultwithresultcollectionResulttypeOptional(body.A)
+		v.A = unmarshalResulttypeResponseBodyToServiceresultwithresultcollectionResulttype(body.A)
 	}
 
 	return v

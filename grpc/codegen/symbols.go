@@ -55,11 +55,11 @@ type (
 		bound                 bool
 	}
 
-	// grpcTransform contains one private function name requested by a retained
-	// conversion plan.
+	// grpcTransform stores one private conversion function and every call to it
+	// in one conversion plan.
 	grpcTransform struct {
 		plan          *codegen.TransformPlan
-		helper        codegen.TransformHelper
+		definition    codegen.TransformHelperDefinition
 		pkg           *codegen.GeneratedPackage
 		order         grpcSymbolOrder
 		preferredName string
@@ -91,8 +91,8 @@ type (
 		path       string
 		source     string
 		target     string
+		definition codegen.TransformHelperDefinitionLocation
 		operation  int
-		occurrence int
 	}
 
 	// grpcSymbolOrder decides which item keeps an unsuffixed Go name when several
@@ -316,22 +316,22 @@ func planGRPCTransforms(
 				if err != nil {
 					return nil, err
 				}
-				for _, helper := range transform.Helpers() {
-					helperID := id
-					helperID.role = grpcTransformHelperRole
-					helperID.source = grpcTransformTypeName(helper.Source)
-					helperID.target = grpcTransformTypeName(helper.Target)
-					helperID.occurrence = helper.Occurrence
+				for _, definition := range transform.HelperDefinitions() {
 					methodName := ""
 					if endpointSpecific {
 						methodName = endpoint.Name()
 					}
-					preferredName, fullName := grpcTransformHelperNames(helper, proto, serviceName, messageName, methodName)
+					preferredName, fullName := grpcTransformHelperNames(definition, proto, serviceName, messageName, methodName)
 					preferredName = grpcViewedConversionName(endpoint.MethodExpr, viewKey, preferredName)
 					fullName = grpcViewedConversionName(endpoint.MethodExpr, viewKey, fullName)
+					helperID := id
+					helperID.role = grpcTransformHelperRole
+					helperID.source = preferredName
+					helperID.target = fullName
+					helperID.definition = definition.Location
 					*helpers = append(*helpers, &grpcTransform{
 						plan:          transform,
-						helper:        helper,
+						definition:    definition,
 						pkg:           pkg,
 						order:         grpcSymbolOrder(helperID),
 						preferredName: preferredName,
@@ -738,7 +738,7 @@ func declareGRPCTransforms(conversions map[grpcConversionKey]*grpcConversion, he
 		if err := helper.pkg.DeclareName(declaration); err != nil {
 			return err
 		}
-		if err := helper.plan.BindHelperDeclaration(helper.helper.ID, declaration); err != nil {
+		if err := helper.plan.BindHelperDefinition(helper.definition.ID, declaration); err != nil {
 			return err
 		}
 	}
@@ -850,9 +850,9 @@ func grpcConversionNames(serviceAttribute *expr.AttributeExpr, message *protobuf
 
 // grpcTransformHelperNames returns the short nested-type name and the complete
 // name that also identifies the outer conversion.
-func grpcTransformHelperNames(helper codegen.TransformHelper, proto bool, serviceName, messageName, methodName string) (string, string) {
-	source := grpcTransformTypeName(helper.Source)
-	target := grpcTransformTypeName(helper.Target)
+func grpcTransformHelperNames(definition codegen.TransformHelperDefinition, proto bool, serviceName, messageName, methodName string) (string, string) {
+	source := grpcTransformTypeName(definition.Source)
+	target := grpcTransformTypeName(definition.Target)
 	if proto {
 		return codegen.Goify("transform"+source+"ToProto"+target, false),
 			codegen.Goify("transform"+methodName+serviceName+source+"ToProto"+messageName+target, false)
@@ -999,8 +999,8 @@ func (left grpcSymbolOrder) ComparePackageName(other codegen.PackageNameOrder) i
 		strings.Compare(left.path, right.path),
 		strings.Compare(left.source, right.source),
 		strings.Compare(left.target, right.target),
+		left.definition.Compare(right.definition),
 		cmp.Compare(left.operation, right.operation),
-		cmp.Compare(left.occurrence, right.occurrence),
 	)
 }
 

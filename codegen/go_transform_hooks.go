@@ -67,6 +67,12 @@ type (
 		// custom union renderer does not call TransformHelperName.
 		PlanUnionHelpers func(source, target *expr.AttributeExpr, record func(source, target *expr.AttributeExpr))
 
+		// SameHelperDefinition reports whether two helper calls can use one
+		// function body. It may return true only when every transform hook will
+		// produce the same code for both source and target pairs. A nil function
+		// compares the complete retained attributes.
+		SameHelperDefinition func(firstSource, firstTarget, nextSource, nextTarget *expr.AttributeExpr) bool
+
 		// GuardCondition returns the condition that guards the
 		// transformation code of an object field, e.g.
 		// "if p.Name != nil {\n". src is the (possibly normalized)

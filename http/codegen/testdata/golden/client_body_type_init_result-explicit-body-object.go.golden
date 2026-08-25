@@ -5,7 +5,7 @@
 func NewMethodExplicitBodyUserResultObjectResulttypeOK(body *MethodExplicitBodyUserResultObjectResponseBody, c *string, b *string) *serviceexplicitbodyuserresultobjectviews.ResulttypeView {
 	v := &serviceexplicitbodyuserresultobjectviews.ResulttypeView{}
 	if body.A != nil {
-		v.A = unmarshalUserTypeResponseBodyToServiceexplicitbodyuserresultobjectviewsUserTypeViewOptional(body.A)
+		v.A = unmarshalUserTypeResponseBodyToServiceexplicitbodyuserresultobjectviewsUserTypeView(body.A)
 	}
 	v.C = c
 	v.B = b

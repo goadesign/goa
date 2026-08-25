@@ -21,9 +21,6 @@ func NewMethodResultWithCollectionResult(message *service_result_with_collection
 // *serviceresultwithcollection.ResultT from a value of type
 // *service_result_with_collectionpb.ResultT.
 func transformProtoResultTToResultT(v *service_result_with_collectionpb.ResultT) *serviceresultwithcollection.ResultT {
-	if v == nil {
-		return nil
-	}
 	res := &serviceresultwithcollection.ResultT{}
 	if v.CollectionField != nil {
 		res.CollectionField = make([]*serviceresultwithcollection.RT, len(v.CollectionField.Field))

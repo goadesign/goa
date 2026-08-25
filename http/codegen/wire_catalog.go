@@ -78,11 +78,10 @@ type (
 	}
 
 	// wireTransformHelperIdentity contains the generated source and target Go
-	// types plus the nil behavior of one conversion function.
+	// types used by one conversion function.
 	wireTransformHelperIdentity struct {
-		source   wireTransformTypeIdentity
-		target   wireTransformTypeIdentity
-		required bool
+		source wireTransformTypeIdentity
+		target wireTransformTypeIdentity
 	}
 
 	// wireTransformTypeIdentity selects either one HTTP package declaration or
@@ -229,7 +228,6 @@ type (
 		pointer             bool
 		arrayElementPointer bool
 		defaults            bool
-		required            bool
 	}
 
 	// wireAttributeScope chooses the Go type name for each copied HTTP field.
@@ -447,7 +445,6 @@ func (c *wireTypeCatalog) Declare() error {
 				source:    identity.source.orderKey(),
 				target:    identity.target.orderKey(),
 				preferred: preferred,
-				required:  identity.required,
 			}
 			record := c.findTransformHelper(identity)
 			if record == nil {
@@ -527,9 +524,8 @@ func (c *wireTypeCatalog) transformHelperIdentity(transform *wireTransformRecord
 		return wireTransformHelperIdentity{}, err
 	}
 	return wireTransformHelperIdentity{
-		source:   source,
-		target:   target,
-		required: helper.Required,
+		source: source,
+		target: target,
 	}, nil
 }
 
@@ -588,7 +584,7 @@ func (c *wireTypeCatalog) transformHelperPreferredName(prefix string, identity w
 	if err != nil {
 		return "", err
 	}
-	return prefix + codegen.Goify(source, true) + "To" + codegen.Goify(target, true) + identity.behaviorSuffix(), nil
+	return prefix + codegen.Goify(source, true) + "To" + codegen.Goify(target, true), nil
 }
 
 // transformTypeRoleName returns the package and type role used in a helper
@@ -622,7 +618,7 @@ func (c *wireTypeCatalog) declareTransformHelper(helper *wireTransformHelperReco
 			codegen.NameFunction,
 			sourceWire.declaration,
 			helper.prefix,
-			"To"+codegen.Goify(target, true)+helper.identity.behaviorSuffix(),
+			"To"+codegen.Goify(target, true),
 			helper.order,
 		)
 	}
@@ -634,18 +630,9 @@ func (c *wireTypeCatalog) declareTransformHelper(helper *wireTransformHelperReco
 		codegen.NameFunction,
 		targetWire.declaration,
 		helper.prefix+codegen.Goify(source, true)+"To",
-		helper.identity.behaviorSuffix(),
+		"",
 		helper.order,
 	)
-}
-
-// behaviorSuffix distinguishes a conversion that preserves a missing source
-// value from one whose caller guarantees that the source is present.
-func (i wireTransformHelperIdentity) behaviorSuffix() string {
-	if !i.required {
-		return "Optional"
-	}
-	return ""
 }
 
 // findTransformHelper returns the declaration for an equivalent conversion.
@@ -659,10 +646,9 @@ func (c *wireTypeCatalog) findTransformHelper(identity wireTransformHelperIdenti
 }
 
 // wireTransformHelperIdentitiesEqual reports whether two functions have the
-// same generated parameter, result, field layout, and nil behavior.
+// same generated parameter, result, and field layout.
 func wireTransformHelperIdentitiesEqual(left, right wireTransformHelperIdentity) bool {
-	return left.required == right.required &&
-		wireTransformTypeIdentitiesEqual(left.source, right.source) &&
+	return wireTransformTypeIdentitiesEqual(left.source, right.source) &&
 		wireTransformTypeIdentitiesEqual(left.target, right.target)
 }
 
@@ -2060,7 +2046,6 @@ func (o wireNameOrder) ComparePackageName(other codegen.PackageNameOrder) int {
 		cmp.Compare(boolOrder(o.pointer), boolOrder(right.pointer)),
 		cmp.Compare(boolOrder(o.arrayElementPointer), boolOrder(right.arrayElementPointer)),
 		cmp.Compare(boolOrder(o.defaults), boolOrder(right.defaults)),
-		cmp.Compare(boolOrder(o.required), boolOrder(right.required)),
 	} {
 		if compared != 0 {
 			return compared

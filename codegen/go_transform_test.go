@@ -969,6 +969,30 @@ func TestTransformPlanRejectsPlanningUnionHelperMutation(t *testing.T) {
 	require.EqualError(t, err, "transform planning hook PlanUnionHelpers changed the retained plan")
 }
 
+func TestTransformPlanRejectsDerivedUnionHelperBranches(t *testing.T) {
+	sourceType := transformObjectAttribute("SourceBranch", true).Type
+	targetType := transformObjectAttribute("TargetBranch", true).Type
+	source := &expr.AttributeExpr{Type: &expr.Union{Values: []*expr.NamedAttributeExpr{
+		{Name: "value", Attribute: &expr.AttributeExpr{Type: sourceType}},
+	}}}
+	target := &expr.AttributeExpr{Type: &expr.Union{Values: []*expr.NamedAttributeExpr{
+		{Name: "value", Attribute: &expr.AttributeExpr{Type: targetType}},
+	}}}
+
+	_, err := NewTransformPlan(source, target, "", &TransformHooks{
+		TransformUnion: func(_ *expr.AttributeExpr, _ *expr.AttributeExpr, _, _ string, _ bool, _, _ *expr.AttributeExpr, _ *TransformAttrs) (string, error) {
+			return "", nil
+		},
+		PlanUnionHelpers: func(source, target *expr.AttributeExpr, record func(*expr.AttributeExpr, *expr.AttributeExpr)) {
+			record(
+				expr.DupAtt(expr.AsUnion(source.Type).Values[0].Attribute),
+				expr.DupAtt(expr.AsUnion(target.Type).Values[0].Attribute),
+			)
+		},
+	})
+	require.EqualError(t, err, "custom union transform helper must use retained authored branch attributes")
+}
+
 func TestGoTransformWithAttrsCallsStructuralHookOnce(t *testing.T) {
 	attribute := &expr.AttributeExpr{Type: expr.String}
 	var calls int
@@ -990,7 +1014,7 @@ func TestGoTransformWithAttrsCallsStructuralHookOnce(t *testing.T) {
 	require.Equal(t, 1, calls)
 }
 
-func TestGoTransformWithAttrsRejectsConflictingHelperBodies(t *testing.T) {
+func TestGoTransformWithAttrsSharesRequiredAndOptionalHelper(t *testing.T) {
 	root := RunDSL(t, testdata.TestTypesDSL)
 	recursive := root.UserType("Recursive")
 	fields := &expr.Object{}
@@ -1006,11 +1030,16 @@ func TestGoTransformWithAttrsRejectsConflictingHelperBodies(t *testing.T) {
 	attribute := &expr.AttributeExpr{Type: container}
 	context := NewAttributeContext(false, false, true, "", NewNameScope())
 
-	_, _, err := GoTransformWithAttrs(attribute, attribute, "source", "target", &TransformAttrs{
+	code, helpers, err := GoTransformWithAttrs(attribute, attribute, "source", "target", &TransformAttrs{
 		SourceCtx: context,
 		TargetCtx: context,
 	}, true)
-	require.EqualError(t, err, "transform helper declaration \"transformRecursiveToRecursive\" has different definitions")
+	require.NoError(t, err)
+	require.Len(t, helpers, 1)
+	require.NotContains(t, helpers[0].Code, "if v == nil")
+	require.Contains(t, code, "target.Left = transformRecursiveToRecursive(source.Left)")
+	require.Contains(t, code, "if source.Right != nil {")
+	require.Contains(t, code, "target.Right = transformRecursiveToRecursive(source.Right)")
 }
 
 func TestTransformPlanUsesCustomUnionHelperOrderForNamedArraysAndAliases(t *testing.T) {
@@ -1291,7 +1320,7 @@ func TestTransformPlanSharesOneDeclarationForEquivalentHelpers(t *testing.T) {
 	require.Contains(t, code, "target.Right = transformRecursive(source.Right)")
 }
 
-func TestTransformPlanRejectsSharedDeclarationForDifferentBehavior(t *testing.T) {
+func TestTransformPlanSharesDeclarationAcrossRequiredAndOptionalCalls(t *testing.T) {
 	plan := mixedSiblingTransformPlan(t)
 	helpers := plan.Helpers()
 	require.Len(t, helpers, 2)
@@ -1306,8 +1335,256 @@ func TestTransformPlanRejectsSharedDeclarationForDifferentBehavior(t *testing.T)
 		NewAttributeContext(false, false, true, "", NewNameScope()),
 		NewAttributeContext(false, false, true, "", NewNameScope()),
 	))
-	_, _, err := plan.Render("source", "target", true)
-	require.EqualError(t, err, "transform helper declaration \"transformRecursive\" has different definitions")
+	code, definitions, err := plan.Render("source", "target", true)
+	require.NoError(t, err)
+	require.Len(t, definitions, 1)
+	require.Contains(t, code, "target.Left = transformRecursive(source.Left)")
+	require.Contains(t, code, "if source.Right != nil {")
+	require.Contains(t, code, "target.Right = transformRecursive(source.Right)")
+}
+
+func TestTransformPlanGroupsEquivalentHelpersIntoOneDefinition(t *testing.T) {
+	plan := mixedSiblingTransformPlan(t)
+	definitions := plan.HelperDefinitions()
+	require.Len(t, definitions, 1)
+	require.NotSame(t, plan.Helpers()[0].Source, definitions[0].Source)
+	require.NotSame(t, plan.Helpers()[0].Target, definitions[0].Target)
+
+	declaration := NewExactName(NameFunction, "transformRecursive")
+	require.NoError(t, plan.BindHelperDefinition(definitions[0].ID, declaration))
+	for _, helper := range plan.Helpers() {
+		require.Same(t, declaration, helper.Declaration)
+	}
+}
+
+func TestTransformHelperDefinitionLocationComparesStructuralPaths(t *testing.T) {
+	root := TransformHelperDefinitionLocation{}
+	emptyField := root.objectField("")
+	nulField := root.objectField("\x00")
+	letterField := root.objectField("a")
+	require.Less(t, emptyField.Compare(nulField), 0)
+	require.Less(t, nulField.Compare(letterField), 0)
+	require.NotEqual(t, root.objectField("a\x00b"), root.objectField("a").objectField("b"))
+	require.NotEqual(t, root.arrayElement(), root.mapKey())
+	require.NotEqual(t, root.mapValue(), root.unionBranch(""))
+}
+
+func TestTransformPlanDefinitionLocationIgnoresSiblingFieldOrder(t *testing.T) {
+	plan := func(reverse bool) *TransformPlan {
+		root := RunDSL(t, testdata.TestTypesDSL)
+		recursive := root.UserType("Recursive")
+		source, target := &expr.Object{}, &expr.Object{}
+		add := func(name string) {
+			source.Set(name, &expr.AttributeExpr{Type: recursive})
+			target.Set(name, &expr.AttributeExpr{Type: recursive})
+		}
+		if reverse {
+			add("right")
+			add("left")
+		} else {
+			add("left")
+			add("right")
+		}
+		planned, err := NewTransformPlan(
+			&expr.AttributeExpr{Type: source},
+			&expr.AttributeExpr{Type: target},
+			"",
+			nil,
+		)
+		require.NoError(t, err)
+		return planned
+	}
+
+	forward := plan(false).HelperDefinitions()
+	reverse := plan(true).HelperDefinitions()
+	require.Len(t, forward, 1)
+	require.Len(t, reverse, 1)
+	require.Equal(t, forward[0].Location, reverse[0].Location)
+}
+
+func TestTransformPlanKeepsDifferentHelperBodiesInSeparateDefinitions(t *testing.T) {
+	sourceOrigin := transformObjectAttribute("SourceNode", true).Type.(expr.UserType)
+	targetOrigin := transformObjectAttribute("TargetNode", true).Type.(expr.UserType)
+	sourceLeft := sourceOrigin.Dup(nil)
+	sourceRight := sourceOrigin.Dup(nil)
+	targetLeft := targetOrigin.Dup(nil)
+	targetRight := targetOrigin.Dup(nil)
+	sourceLeft.SetAttribute(&expr.AttributeExpr{Type: &expr.Object{
+		{Name: "left", Attribute: &expr.AttributeExpr{Type: expr.String}},
+	}})
+	sourceRight.SetAttribute(&expr.AttributeExpr{Type: &expr.Object{
+		{Name: "right", Attribute: &expr.AttributeExpr{Type: expr.String}},
+	}})
+	targetLeft.SetAttribute(&expr.AttributeExpr{Type: &expr.Object{
+		{Name: "left", Attribute: &expr.AttributeExpr{Type: expr.String}},
+	}})
+	targetRight.SetAttribute(&expr.AttributeExpr{Type: &expr.Object{
+		{Name: "right", Attribute: &expr.AttributeExpr{Type: expr.String}},
+	}})
+
+	plan, err := NewTransformPlan(
+		&expr.AttributeExpr{Type: &expr.Object{
+			{Name: "left", Attribute: &expr.AttributeExpr{Type: sourceLeft}},
+			{Name: "right", Attribute: &expr.AttributeExpr{Type: sourceRight}},
+		}},
+		&expr.AttributeExpr{Type: &expr.Object{
+			{Name: "left", Attribute: &expr.AttributeExpr{Type: targetLeft}},
+			{Name: "right", Attribute: &expr.AttributeExpr{Type: targetRight}},
+		}},
+		"",
+		nil,
+	)
+	require.NoError(t, err)
+	require.Len(t, plan.HelperDefinitions(), 2)
+}
+
+func TestTransformPlanKeepsDifferentAuthoredTypesInSeparateDefinitions(t *testing.T) {
+	newType := func(uid string) expr.UserType {
+		return &expr.UserTypeExpr{
+			TypeName: "Node",
+			UID:      uid,
+			AttributeExpr: &expr.AttributeExpr{Type: &expr.Object{
+				{Name: "value", Attribute: &expr.AttributeExpr{Type: expr.String}},
+			}},
+		}
+	}
+	sourceLeft, sourceRight := newType("source-left"), newType("source-right")
+	targetLeft, targetRight := newType("target-left"), newType("target-right")
+	plan, err := NewTransformPlan(
+		&expr.AttributeExpr{Type: &expr.Object{
+			{Name: "left", Attribute: &expr.AttributeExpr{Type: sourceLeft}},
+			{Name: "right", Attribute: &expr.AttributeExpr{Type: sourceRight}},
+		}},
+		&expr.AttributeExpr{Type: &expr.Object{
+			{Name: "left", Attribute: &expr.AttributeExpr{Type: targetLeft}},
+			{Name: "right", Attribute: &expr.AttributeExpr{Type: targetRight}},
+		}},
+		"",
+		&TransformHooks{
+			SameHelperDefinition: func(_, _, _, _ *expr.AttributeExpr) bool {
+				return true
+			},
+		},
+	)
+	require.NoError(t, err)
+	require.Len(t, plan.HelperDefinitions(), 2)
+}
+
+func TestTransformPlanKeepsHookVisibleRootFactsInSeparateDefinitions(t *testing.T) {
+	root := RunDSL(t, testdata.TestTypesDSL)
+	recursive := root.UserType("Recursive")
+	sourceLeft := &expr.AttributeExpr{Type: recursive}
+	sourceRight := &expr.AttributeExpr{Type: recursive}
+	targetLeft := &expr.AttributeExpr{Type: recursive}
+	targetRight := &expr.AttributeExpr{Type: recursive}
+	targetRight.AddMeta("helper:deref", "value")
+
+	plan, err := NewTransformPlan(
+		&expr.AttributeExpr{Type: &expr.Object{
+			{Name: "left", Attribute: sourceLeft},
+			{Name: "right", Attribute: sourceRight},
+		}},
+		&expr.AttributeExpr{Type: &expr.Object{
+			{Name: "left", Attribute: targetLeft},
+			{Name: "right", Attribute: targetRight},
+		}},
+		"",
+		&TransformHooks{
+			ObjectDeref: func(target *expr.AttributeExpr) (string, bool) {
+				if len(target.Meta["helper:deref"]) > 0 {
+					return "", true
+				}
+				return "&", true
+			},
+		},
+	)
+	require.NoError(t, err)
+	require.Len(t, plan.Helpers(), 2)
+	require.Len(t, plan.HelperDefinitions(), 2)
+}
+
+func TestTransformPlanKeepsDifferentRootDefaultsInSeparateDefinitions(t *testing.T) {
+	root := RunDSL(t, testdata.TestTypesDSL)
+	recursive := root.UserType("Recursive")
+	targetLeft := &expr.AttributeExpr{Type: recursive}
+	targetRight := &expr.AttributeExpr{Type: recursive, DefaultValue: "right"}
+
+	plan, err := NewTransformPlan(
+		&expr.AttributeExpr{Type: &expr.Object{
+			{Name: "left", Attribute: &expr.AttributeExpr{Type: recursive}},
+			{Name: "right", Attribute: &expr.AttributeExpr{Type: recursive}},
+		}},
+		&expr.AttributeExpr{Type: &expr.Object{
+			{Name: "left", Attribute: targetLeft},
+			{Name: "right", Attribute: targetRight},
+		}},
+		"",
+		nil,
+	)
+	require.NoError(t, err)
+	require.Len(t, plan.HelperDefinitions(), 2)
+}
+
+func TestTransformPlanKeepsDifferentRootValidationInSeparateDefinitions(t *testing.T) {
+	root := RunDSL(t, testdata.TestTypesDSL)
+	recursive := root.UserType("Recursive")
+	targetLeft := &expr.AttributeExpr{Type: recursive}
+	targetRight := &expr.AttributeExpr{
+		Type:       recursive,
+		Validation: &expr.ValidationExpr{Required: []string{"name"}},
+	}
+
+	plan, err := NewTransformPlan(
+		&expr.AttributeExpr{Type: &expr.Object{
+			{Name: "left", Attribute: &expr.AttributeExpr{Type: recursive}},
+			{Name: "right", Attribute: &expr.AttributeExpr{Type: recursive}},
+		}},
+		&expr.AttributeExpr{Type: &expr.Object{
+			{Name: "left", Attribute: targetLeft},
+			{Name: "right", Attribute: targetRight},
+		}},
+		"",
+		nil,
+	)
+	require.NoError(t, err)
+	require.Len(t, plan.HelperDefinitions(), 2)
+}
+
+func TestTransformPlanLetsHooksApproveOneHelperDefinition(t *testing.T) {
+	root := RunDSL(t, testdata.TestTypesDSL)
+	recursive := root.UserType("Recursive")
+	targetLeft := &expr.AttributeExpr{Type: recursive}
+	targetRight := &expr.AttributeExpr{Type: recursive, DefaultValue: "right"}
+
+	plan, err := NewTransformPlan(
+		&expr.AttributeExpr{Type: &expr.Object{
+			{Name: "left", Attribute: &expr.AttributeExpr{Type: recursive}},
+			{Name: "right", Attribute: &expr.AttributeExpr{Type: recursive}},
+		}},
+		&expr.AttributeExpr{Type: &expr.Object{
+			{Name: "left", Attribute: targetLeft},
+			{Name: "right", Attribute: targetRight},
+		}},
+		"",
+		&TransformHooks{
+			SameHelperDefinition: func(_, _, _, _ *expr.AttributeExpr) bool {
+				return true
+			},
+		},
+	)
+	require.NoError(t, err)
+	require.Len(t, plan.Helpers(), 2)
+	require.Len(t, plan.HelperDefinitions(), 1)
+}
+
+func TestTransformPlanRejectsForeignHelperDefinition(t *testing.T) {
+	first := siblingTransformPlan(t)
+	second := siblingTransformPlan(t)
+	err := first.BindHelperDefinition(
+		second.HelperDefinitions()[0].ID,
+		NewExactName(NameFunction, "transformRecursive"),
+	)
+	require.EqualError(t, err, "transform helper definition does not belong to this plan")
 }
 
 func TestTransformPlanRequiresEveryHelperDeclaration(t *testing.T) {
@@ -1398,7 +1675,7 @@ func TestTransformPlanHelperEligibilityMatchesCompositeRenderers(t *testing.T) {
 	}
 }
 
-func TestTransformPlanRetainsRequiredAndOptionalSiblingCalls(t *testing.T) {
+func TestTransformPlanGuardsOptionalSiblingCallsBeforeStrictHelpers(t *testing.T) {
 	plan := mixedSiblingTransformPlan(t)
 	code, definitions := renderTransformPlan(t, plan)
 	require.Len(t, definitions, 2)
@@ -1414,8 +1691,9 @@ func TestTransformPlanRetainsRequiredAndOptionalSiblingCalls(t *testing.T) {
 	require.NotNil(t, required)
 	require.NotNil(t, optional)
 	require.NotContains(t, required.Code, "if v == nil")
-	require.Contains(t, optional.Code, "if v == nil")
+	require.NotContains(t, optional.Code, "if v == nil")
 	require.Contains(t, code, "target.Left = "+required.Declaration.Name()+"(source.Left)")
+	require.Contains(t, code, "if source.Right != nil {")
 	require.Contains(t, code, "target.Right = "+optional.Declaration.Name()+"(source.Right)")
 }
 

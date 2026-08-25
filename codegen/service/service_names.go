@@ -29,8 +29,7 @@ type (
 		source     string
 		target     string
 		side       string
-		occurrence int
-		required   bool
+		definition codegen.TransformHelperDefinitionLocation
 	}
 
 	// serviceSymbolID identifies one package declaration without using the Go
@@ -137,16 +136,7 @@ func (o serviceNameOrder) ComparePackageName(other codegen.PackageNameOrder) int
 	if compared := cmp.Compare(o.side, right.side); compared != 0 {
 		return compared
 	}
-	if compared := cmp.Compare(o.occurrence, right.occurrence); compared != 0 {
-		return compared
-	}
-	if o.required == right.required {
-		return 0
-	}
-	if !o.required {
-		return -1
-	}
-	return 1
+	return o.definition.Compare(right.definition)
 }
 
 // kind returns whether this role writes a Go type, function, constant, or

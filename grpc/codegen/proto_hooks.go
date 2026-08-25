@@ -5,6 +5,8 @@ package codegen
 import (
 	"bytes"
 	"fmt"
+	"maps"
+	"reflect"
 	"strings"
 	"text/template"
 
@@ -99,6 +101,7 @@ func protoHooks(proto bool) *codegen.TransformHooks {
 				}
 			}
 		},
+		SameHelperDefinition: sameGRPCHelperDefinition,
 		GuardCondition: func(src *expr.AttributeExpr, srcVar string, _, srcPtr bool) (string, bool) {
 			// Protobuf message fields can be nil, so check them before use.
 			if expr.IsPrimitive(src.Type) && !srcPtr {
@@ -127,6 +130,36 @@ func protoHooks(proto bool) *codegen.TransformHooks {
 		},
 		InlineCompositeElems: true,
 	}
+}
+
+// sameGRPCHelperDefinition compares every retained attribute fact except the
+// protobuf field number. A field number chooses its serialized position but
+// cannot change the Go code that copies its value.
+func sameGRPCHelperDefinition(firstSource, firstTarget, nextSource, nextTarget *expr.AttributeExpr) bool {
+	return sameGRPCHelperAttribute(firstSource, nextSource) &&
+		sameGRPCHelperAttribute(firstTarget, nextTarget)
+}
+
+// sameGRPCHelperAttribute compares the facts available to conversion hooks.
+// Planning copies preserve shared type identity, so a different type cannot
+// describe the same function.
+func sameGRPCHelperAttribute(first, next *expr.AttributeExpr) bool {
+	return first.Type == next.Type &&
+		reflect.DeepEqual(first.Bases, next.Bases) &&
+		reflect.DeepEqual(first.References, next.References) &&
+		first.Description == next.Description &&
+		reflect.DeepEqual(first.Docs, next.Docs) &&
+		reflect.DeepEqual(first.Validation, next.Validation) &&
+		reflect.DeepEqual(grpcHelperMeta(first.Meta), grpcHelperMeta(next.Meta)) &&
+		reflect.DeepEqual(first.DefaultValue, next.DefaultValue) &&
+		reflect.DeepEqual(first.UserExamples, next.UserExamples)
+}
+
+// grpcHelperMeta copies metadata without the protobuf field number.
+func grpcHelperMeta(meta expr.MetaExpr) expr.MetaExpr {
+	copy := maps.Clone(meta)
+	delete(copy, "rpc:tag")
+	return copy
 }
 
 // renderArrayTransform writes code that copies sourceVar into the target array.
