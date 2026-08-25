@@ -6,6 +6,8 @@ package codegen
 import (
 	"bytes"
 	"fmt"
+	"go/ast"
+	"go/parser"
 	"reflect"
 	"slices"
 	"strconv"
@@ -520,6 +522,10 @@ func (p *TransformPlan) Render(sourceVar, targetVar string, newVar bool) (code s
 		Prefix:    p.prefix,
 		Hooks:     hooks,
 	}
+	renderAttrs.locals, err = newTransformLocalScope(sourceVar, targetVar)
+	if err != nil {
+		return "", nil, err
+	}
 	renderAttrs.helpers = make(map[TransformHelperID]TransformHelper, len(p.helpers))
 	for _, planned := range p.helpers {
 		if planned.Declaration == nil {
@@ -539,6 +545,10 @@ func (p *TransformPlan) Render(sourceVar, targetVar string, newVar bool) (code s
 	definitions := make(map[*NameDeclaration]*TransformFunctionData, len(p.helpers))
 	for index, planned := range p.helpers {
 		entered := enterTransformAttrs(planned.Source, planned.Target, &renderAttrs)
+		entered.locals, err = newTransformLocalScope("v", "res")
+		if err != nil {
+			return "", nil, err
+		}
 		entered.calls = &transformCallCursor{calls: p.operations[index+1].calls}
 		helper, err := generateTransformHelper(planned, entered)
 		if err != nil {
@@ -575,6 +585,48 @@ func copyTransformFunctionData(helpers []*TransformFunctionData) []*TransformFun
 		copied[index] = &value
 	}
 	return copied
+}
+
+// newTransformLocalScope reserves every variable referenced by the source and
+// target expressions. Generated temporary variables can then use ordinary
+// names without hiding a parameter or another value used by the conversion.
+func newTransformLocalScope(expressions ...string) (*NameScope, error) {
+	names := make(map[string]struct{})
+	for _, expression := range expressions {
+		parsed, err := parser.ParseExpr(expression)
+		if err != nil {
+			return nil, fmt.Errorf("parse transform expression %q: %w", expression, err)
+		}
+		collectTransformExpressionNames(parsed, names)
+	}
+	ordered := make([]string, 0, len(names))
+	for name := range names {
+		ordered = append(ordered, name)
+	}
+	slices.Sort(ordered)
+	scope := NewNameScope()
+	for _, name := range ordered {
+		scope.Unique(name)
+	}
+	return scope, nil
+}
+
+// collectTransformExpressionNames records variables used by expression. A
+// selector field such as Field in value.Field is not a variable in the current
+// Go block and therefore does not reserve a local name.
+func collectTransformExpressionNames(expression ast.Expr, names map[string]struct{}) {
+	ast.Inspect(expression, func(node ast.Node) bool {
+		switch node := node.(type) {
+		case *ast.SelectorExpr:
+			collectTransformExpressionNames(node.X, names)
+			return false
+		case *ast.Ident:
+			if node.Name != "_" {
+				names[node.Name] = struct{}{}
+			}
+		}
+		return true
+	})
 }
 
 // changed reports whether code generation would read an expression different
@@ -685,6 +737,13 @@ func transformDataTypesEqual(left, right expr.DataType, seen map[transformAttrib
 // transformation. It is exported so that TransformHooks implementations can
 // recurse into the transform engine from the code they render.
 func TransformAttribute(source, target *expr.AttributeExpr, sourceVar, targetVar string, newVar bool, ta *TransformAttrs) (string, error) {
+	if ta.locals == nil {
+		var err error
+		ta.locals, err = newTransformLocalScope(sourceVar, targetVar)
+		if err != nil {
+			return "", err
+		}
+	}
 	var (
 		prelude                      string
 		sourcePointer, targetPointer bool
@@ -897,7 +956,7 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 					if srcPtr && !srcMatt.IsRequired(n) {
 						postInitCode += fmt.Sprintf("if %s != nil {\n", srcField)
 						if tgtPtr {
-							tmp := Goify(tgtMatt.ElemName(n), false)
+							tmp := ta.enterLocalBlock().uniqueLocal(Goify(tgtMatt.ElemName(n), false))
 							postInitCode += fmt.Sprintf("%s := %s\n%s.%s = &%s\n", tmp, exp, targetVar, tgtField, tmp)
 						} else {
 							postInitCode += fmt.Sprintf("%s.%s = %s\n", targetVar, tgtField, exp)
@@ -905,7 +964,7 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 						postInitCode += "}\n"
 						return
 					} else if tgtPtr {
-						tmp := Goify(tgtMatt.ElemName(n), false)
+						tmp := ta.uniqueLocal(Goify(tgtMatt.ElemName(n), false))
 						postInitCode += fmt.Sprintf("%s := %s\n%s.%s = &%s\n", tmp, exp, targetVar, tgtField, tmp)
 						return
 					}

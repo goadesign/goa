@@ -85,6 +85,7 @@ type (
 		Hooks           *TransformHooks
 		helpers         map[TransformHelperID]TransformHelper
 		calls           *transformCallCursor
+		locals          *NameScope
 		collectionDepth int
 		unionDepth      int
 	}
@@ -291,6 +292,20 @@ func (a *TransformAttrs) EnterCollection() (string, *TransformAttrs) {
 	child := *a
 	child.collectionDepth++
 	return string(rune('i' + a.collectionDepth)), &child
+}
+
+// enterLocalBlock returns a copy that can declare names visible only inside a
+// generated Go block. Names already visible outside the block remain reserved.
+func (a *TransformAttrs) enterLocalBlock() *TransformAttrs {
+	child := *a
+	child.locals = a.locals.Fork()
+	return &child
+}
+
+// uniqueLocal reserves the preferred local name in the current generated Go
+// block and returns the spelling that does not conflict with visible names.
+func (a *TransformAttrs) uniqueLocal(preferred string) string {
+	return a.locals.Unique(preferred)
 }
 
 // IsCompatible returns an error if a and b are not both objects, both arrays,

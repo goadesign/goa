@@ -750,6 +750,23 @@ var ResultWithAliasValidation = func() {
 	})
 }
 
+// ResultFieldNameCollisionDSL defines a required alias field whose Go name can
+// match the source parameter of the generated response conversion function.
+var ResultFieldNameCollisionDSL = func() {
+	var JSON = Type("JSON", String)
+	var ToolResult = Type("ToolResult", func() {
+		Field(1, "result", JSON)
+		Required("result")
+	})
+
+	Service("ResultFieldNameCollision", func() {
+		Method("show", func() {
+			Result(ToolResult)
+			GRPC(func() {})
+		})
+	})
+}
+
 var PayloadWithMixedAttributesDSL = func() {
 	var APayload = Type("APayload", func() {
 		Field(1, "optional", Int)

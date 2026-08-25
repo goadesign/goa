@@ -22,6 +22,7 @@ func TestServerTypeFiles(t *testing.T) {
 		{"server-payload-with-mixed-attributes", testdata.PayloadWithMixedAttributesDSL},
 		{"server-payload-with-custom-type-package", testdata.PayloadWithCustomTypePackageDSL},
 		{"server-result-collection", testdata.ResultWithCollectionDSL},
+		{"server-result-field-name-collision", testdata.ResultFieldNameCollisionDSL},
 		{"server-with-errors", testdata.UnaryRPCWithErrorsDSL},
 		{"server-elem-validation", testdata.ElemValidationDSL},
 		{"server-alias-validation", testdata.AliasValidationDSL},
