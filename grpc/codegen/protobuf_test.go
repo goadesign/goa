@@ -227,3 +227,31 @@ func TestProtoBufMessageDefJSONNameOptionOneOf(t *testing.T) {
 		t.Fatalf("expected json_name option in oneof, got %q", def)
 	}
 }
+
+func TestProtoBufMessageDefReservations(t *testing.T) {
+	attr := &expr.AttributeExpr{
+		Type: &expr.Object{
+			&expr.NamedAttributeExpr{
+				Name: "id",
+				Attribute: &expr.AttributeExpr{
+					Type: expr.String,
+					Meta: expr.MetaExpr{"rpc:tag": []string{"1"}},
+				},
+			},
+		},
+		Meta: expr.MetaExpr{
+			"rpc:reserved:number": []string{"20", "3", "15"},
+			"rpc:reserved:name":   []string{"linked_control_point_id", "deployment_id"},
+		},
+	}
+	sd := &ServiceData{Scope: codegen.NewNameScope()}
+
+	def := protoBufMessageDef(attr, sd)
+
+	if !strings.Contains(def, "reserved 3, 15, 20;") {
+		t.Fatalf("expected sorted reserved numbers, got %q", def)
+	}
+	if !strings.Contains(def, `reserved "deployment_id", "linked_control_point_id";`) {
+		t.Fatalf("expected sorted reserved names, got %q", def)
+	}
+}

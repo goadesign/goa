@@ -19,6 +19,13 @@ type (
 	}
 )
 
+const (
+	// protoBufReservedNumberMeta and protoBufReservedNameMeta let an owning Goa
+	// type preserve removed protobuf tags and field names across regeneration.
+	protoBufReservedNumberMeta = "rpc:reserved:number"
+	protoBufReservedNameMeta   = "rpc:reserved:name"
+)
+
 // Name returns the protocol buffer type name.
 func (p *protoBufScope) Name(att *expr.AttributeExpr, pkg string, _, _ bool) string {
 	return protoBufGoFullTypeName(att, pkg, p.scope)
@@ -310,6 +317,7 @@ func protoBufMessageDef(att *expr.AttributeExpr, sd *ServiceData) string {
 	case *expr.Object:
 		var ss []string
 		ss = append(ss, " {")
+		ss = append(ss, protoBufReservations(att)...)
 		for _, nat := range *actual {
 			if expr.IsUnion(nat.Attribute.Type) {
 				ss = append(ss, protoBufMessageDef(nat.Attribute, sd))
@@ -345,6 +353,39 @@ func protoBufMessageDef(att *expr.AttributeExpr, sd *ServiceData) string {
 	default:
 		panic(fmt.Sprintf("unknown data type %T", actual)) // bug
 	}
+}
+
+// protoBufReservations renders removed field numbers and names declared on a
+// Goa type. Sorting keeps generated schemas stable when metadata values are
+// assembled from multiple design files.
+func protoBufReservations(att *expr.AttributeExpr) []string {
+	var reservations []string
+	if values := att.Meta[protoBufReservedNumberMeta]; len(values) > 0 {
+		numbers := make([]uint64, len(values))
+		for i, value := range values {
+			number, err := strconv.ParseUint(value, 10, 64)
+			if err != nil {
+				panic(fmt.Sprintf("invalid protobuf reserved field number %q: %v", value, err))
+			}
+			numbers[i] = number
+		}
+		slices.Sort(numbers)
+		parts := make([]string, len(numbers))
+		for i, number := range numbers {
+			parts[i] = strconv.FormatUint(number, 10)
+		}
+		reservations = append(reservations, "\treserved "+strings.Join(parts, ", ")+";")
+	}
+	if values := att.Meta[protoBufReservedNameMeta]; len(values) > 0 {
+		names := slices.Clone(values)
+		slices.Sort(names)
+		parts := make([]string, len(names))
+		for i, name := range names {
+			parts[i] = strconv.Quote(name)
+		}
+		reservations = append(reservations, "\treserved "+strings.Join(parts, ", ")+";")
+	}
+	return reservations
 }
 
 func protoJSONOption(att *expr.AttributeExpr) string {
