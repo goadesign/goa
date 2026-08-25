@@ -467,6 +467,7 @@ func (d *ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 		if e.MethodExpr.StreamingPayload.Type != expr.Empty {
 			e.StreamingRequest = makeProtoBufMessage(e.StreamingRequest, protoBufify(e.Name()+"_streaming_request", true, true), sd)
 		}
+		inheritProtoBufReservations(e.Response.Message, e.MethodExpr.Result)
 		e.Response.Message = makeProtoBufMessage(e.Response.Message, protoBufify(e.Name()+"_response", true, true), sd)
 		for _, er := range e.GRPCErrors {
 			if er.Type == expr.ErrorResult || !expr.IsObject(er.Type) {

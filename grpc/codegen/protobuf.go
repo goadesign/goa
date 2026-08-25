@@ -388,6 +388,32 @@ func protoBufReservations(att *expr.AttributeExpr) []string {
 	return reservations
 }
 
+// inheritProtoBufReservations keeps reservations declared by an object result
+// on the method-specific protobuf response message generated for that result.
+// Collection and primitive results are wrappers, so their element metadata
+// must not become reservations on the wrapper message.
+func inheritProtoBufReservations(message, result *expr.AttributeExpr) {
+	if !expr.IsObject(result.Type) && !expr.IsUnion(result.Type) {
+		return
+	}
+	if message.Meta == nil {
+		message.Meta = make(expr.MetaExpr)
+	}
+	copyReservations := func(meta expr.MetaExpr) {
+		for _, key := range []string{protoBufReservedNumberMeta, protoBufReservedNameMeta} {
+			for _, value := range meta[key] {
+				if !slices.Contains(message.Meta[key], value) {
+					message.Meta[key] = append(message.Meta[key], value)
+				}
+			}
+		}
+	}
+	copyReservations(result.Meta)
+	if userType, ok := result.Type.(expr.UserType); ok {
+		copyReservations(userType.Attribute().Meta)
+	}
+}
+
 func protoJSONOption(att *expr.AttributeExpr) string {
 	if att == nil || att.Meta == nil {
 		return ""

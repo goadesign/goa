@@ -255,3 +255,33 @@ func TestProtoBufMessageDefReservations(t *testing.T) {
 		t.Fatalf("expected sorted reserved names, got %q", def)
 	}
 }
+
+func TestInheritProtoBufReservationsFromResultType(t *testing.T) {
+	result := &expr.AttributeExpr{
+		Type: &expr.UserTypeExpr{
+			TypeName: "Activation",
+			AttributeExpr: &expr.AttributeExpr{
+				Type: &expr.Object{},
+				Meta: expr.MetaExpr{
+					protoBufReservedNumberMeta: []string{"3", "15"},
+					protoBufReservedNameMeta:   []string{"deployment_id"},
+				},
+			},
+		},
+	}
+	message := &expr.AttributeExpr{
+		Type: &expr.Object{},
+		Meta: expr.MetaExpr{
+			protoBufReservedNumberMeta: []string{"3"},
+		},
+	}
+
+	inheritProtoBufReservations(message, result)
+
+	if got := strings.Join(message.Meta[protoBufReservedNumberMeta], ","); got != "3,15" {
+		t.Fatalf("expected inherited reserved numbers, got %q", got)
+	}
+	if got := strings.Join(message.Meta[protoBufReservedNameMeta], ","); got != "deployment_id" {
+		t.Fatalf("expected inherited reserved names, got %q", got)
+	}
+}
