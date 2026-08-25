@@ -26,6 +26,30 @@ func TestMakeHTTPTypeDistinguishesEqualUIDOrigins(t *testing.T) {
 	require.NotContains(t, wireSecond.Attribute().Meta, "struct:pkg:path")
 }
 
+func TestMakeHTTPTypeStopsRecursiveUnionBranches(t *testing.T) {
+	node := &expr.UserTypeExpr{TypeName: "Node", UID: "node"}
+	next := &expr.Union{
+		TypeName: "Next",
+		Values: []*expr.NamedAttributeExpr{
+			{Name: "end", Attribute: &expr.AttributeExpr{Type: &expr.Object{}}},
+			{Name: "node", Attribute: &expr.AttributeExpr{Type: node}},
+		},
+	}
+	node.AttributeExpr = &expr.AttributeExpr{
+		Type: &expr.Object{
+			{Name: "next", Attribute: &expr.AttributeExpr{Type: next}},
+		},
+		Meta: expr.MetaExpr{"struct:pkg:path": {"service/types"}},
+	}
+
+	wire := makeHTTPType(&expr.AttributeExpr{Type: node})
+	wireNode := wire.Type.(expr.UserType)
+	wireNext := expr.AsObject(wireNode).Attribute("next").Type.(*expr.Union)
+	wireRecursiveNode := wireNext.Values[1].Attribute.Type.(expr.UserType)
+	require.Equal(t, "Node", wireRecursiveNode.Name())
+	require.NotContains(t, wireNode.Attribute().Meta, "struct:pkg:path")
+}
+
 func TestCollectUserTypesDistinguishesEqualUIDOriginsAndStopsRecursion(t *testing.T) {
 	first := &expr.UserTypeExpr{TypeName: "First", UID: "shared"}
 	firstObject := &expr.Object{}

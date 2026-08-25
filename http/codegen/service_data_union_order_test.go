@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"goa.design/goa/v3/codegen/testutil"
 	"goa.design/goa/v3/dsl"
 	"goa.design/goa/v3/expr"
 )
@@ -232,6 +233,21 @@ func TestHTTPServiceDataReusesOneAuthoredUnionAcrossErrors(t *testing.T) {
 	}
 }
 
+func TestHTTPServiceDataReusesUnionWhenBranchTypeAppearsEarlier(t *testing.T) {
+	root := expr.RunDSL(t, unionBranchOrderDSL)
+
+	data := linkedHTTPPlanForRoot(t, root).services.Get("values")
+	for _, catalog := range []*wireTypeCatalog{data.serverWireTypes, data.clientWireTypes} {
+		require.Len(t, catalog.unionTypes(), 1)
+		require.Equal(t, "RelationshipResponseBody", catalog.unionTypes()[0].Name)
+	}
+}
+
+func TestHTTPUnionBranchTypesDoNotDependOnSurroundingFieldOrder(t *testing.T) {
+	code := renderClientTypesCode(t, unionBranchOrderDSL)
+	testutil.AssertGo(t, "testdata/golden/http_union_branch_order.go.golden", code)
+}
+
 func TestMakeHTTPTypeRemovesServicePackageOwnershipFromWireCopy(t *testing.T) {
 	nested := &expr.UserTypeExpr{
 		TypeName: "Nested",
@@ -297,6 +313,57 @@ func TestStreamingHTTPTypeRemovesServicePackageOwnershipFromWireCopy(t *testing.
 func sameShapedValueUnionDSL() {
 	dsl.Attribute("bool", dsl.Boolean)
 	dsl.Attribute("number", dsl.Float64)
+}
+
+// unionBranchOrderDSL returns the same authored union through response objects
+// that reach its nested branch type in different orders.
+func unionBranchOrderDSL() {
+	identifier := dsl.Type("Identifier", dsl.String)
+	label := dsl.Type("Label", func() {
+		dsl.Attribute("value", dsl.String)
+		dsl.Required("value")
+	})
+	snapshot := dsl.Type("Snapshot", func() {
+		dsl.Attribute("id", identifier)
+		dsl.Attribute("labels", dsl.ArrayOf(label))
+		dsl.Required("id", "labels")
+	})
+	noEdit := dsl.Type("NoEdit", func() {})
+	editable := dsl.Type("Editable", func() {
+		dsl.Attribute("snapshot", snapshot)
+		dsl.Required("snapshot")
+	})
+	edit := dsl.Type("Edit", func() {
+		dsl.OneOf("relationship", func() {
+			dsl.Attribute("none", noEdit)
+			dsl.Attribute("editable", editable)
+		})
+		dsl.Required("relationship")
+	})
+	withEarlierSnapshot := dsl.Type("WithEarlierSnapshot", func() {
+		dsl.Attribute("snapshot", snapshot)
+		dsl.Attribute("edit", edit)
+		dsl.Required("snapshot", "edit")
+	})
+	withEditOnly := dsl.Type("WithEditOnly", func() {
+		dsl.Attribute("edit", edit)
+		dsl.Required("edit")
+	})
+
+	dsl.Service("values", func() {
+		dsl.Method("with_earlier_snapshot", func() {
+			dsl.Result(withEarlierSnapshot)
+			dsl.HTTP(func() {
+				dsl.GET("/with-earlier-snapshot")
+			})
+		})
+		dsl.Method("with_edit_only", func() {
+			dsl.Result(withEditOnly)
+			dsl.HTTP(func() {
+				dsl.GET("/with-edit-only")
+			})
+		})
+	})
 }
 
 func collectHTTPUnionTypeNames(t *testing.T, att *expr.AttributeExpr) map[string]string {

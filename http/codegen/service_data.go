@@ -2021,8 +2021,11 @@ func makeHTTPTypeRecursive(att *expr.AttributeExpr, seen map[expr.UserType]struc
 		}
 		att.Type = &obj
 	case *expr.Union:
-		// The HTTP package catalog gives this union the exact name for its request,
-		// streaming request, response, or response-view use.
+		// Prepare every branch before the HTTP package catalog assigns the union's
+		// request, streaming request, response, or response-view name.
+		for _, branch := range dt.Values {
+			branch.Attribute = makeHTTPTypeRecursive(branch.Attribute, seen)
+		}
 	}
 	return att
 }
