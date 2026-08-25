@@ -1,6 +1,7 @@
 package goa
 
 import (
+	"bytes"
 	"encoding/gob"
 	"encoding/json"
 	"encoding/xml"
@@ -147,7 +148,7 @@ func (decoder *HTTPDecoder) Register(f DecoderFunc, contentTypes ...string) {
 // pool.
 func newDecodePool(f DecoderFunc) *decoderPool {
 	// get a new decoder and type assert to see if it can be reset
-	d := f(nil)
+	d := f(bytes.NewReader(nil))
 	rd, ok := d.(ResettableDecoder)
 
 	p := &decoderPool{fn: f}
@@ -155,7 +156,7 @@ func newDecodePool(f DecoderFunc) *decoderPool {
 	// if the decoder can be reset, create a pool and put the typed decoder in
 	if ok {
 		p.pool = &sync.Pool{
-			New: func() interface{} { return f(nil) },
+			New: func() interface{} { return f(bytes.NewReader(nil)) },
 		}
 		p.pool.Put(rd)
 	}
@@ -238,7 +239,7 @@ func (encoder *HTTPEncoder) Register(f EncoderFunc, contentTypes ...string) {
 // a pool.
 func newEncodePool(f EncoderFunc) *encoderPool {
 	// get a new encoder and type assert to see if it can be reset
-	e := f(nil)
+	e := f(io.Discard)
 	re, ok := e.(ResettableEncoder)
 
 	p := &encoderPool{fn: f}
@@ -246,7 +247,7 @@ func newEncodePool(f EncoderFunc) *encoderPool {
 	// if the encoder can be reset, create a pool and put the typed encoder in
 	if ok {
 		p.pool = &sync.Pool{
-			New: func() interface{} { return f(nil) },
+			New: func() interface{} { return f(io.Discard) },
 		}
 		p.pool.Put(re)
 	}
