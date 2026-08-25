@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/dsl"
 	"goa.design/goa/v3/expr"
 )
 
@@ -216,6 +217,25 @@ func TestProtoBufMessageDefJSONNameOptionOneOf(t *testing.T) {
 	if !strings.Contains(def, `json_name = "cat"`) {
 		t.Fatalf("expected json_name option in oneof, got %q", def)
 	}
+}
+
+func TestProtoBufMessageDefReservations(t *testing.T) {
+	root := codegen.RunDSL(t, func() {
+		dsl.Type("Activation", func() {
+			dsl.Meta("rpc:reserved:number", "20", "3", "15")
+			dsl.Meta("rpc:reserved:name", "linked_control_point_id", "deployment_id")
+			dsl.Field(1, "id", dsl.String)
+		})
+	})
+	activation := root.UserType("Activation")
+	sd := &ServiceData{Scope: codegen.NewNameScope()}
+	def := protoBufMessageDef(activation.Attribute(), sd)
+	require.Contains(t, def, "reserved 3, 15, 20;")
+	require.Contains(t, def, `reserved "deployment_id", "linked_control_point_id";`)
+
+	proto := "syntax = \"proto3\";\npackage test;\noption go_package = \"example.com/test;test\";\nmessage Activation" + def
+	fpath := codegen.CreateTempFile(t, proto)
+	require.NoError(t, protoc(defaultProtocCmd, fpath))
 }
 
 func TestMakeProtoBufMessageMarksWrappers(t *testing.T) {

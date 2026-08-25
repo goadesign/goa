@@ -32,6 +32,11 @@ const (
 	// used by isWrappedAttr and unwrapAttr to identify wrapper messages
 	// deterministically.
 	wrappedAttrMeta = "grpc:wrapped"
+
+	// protoBufReservedNumberMeta and protoBufReservedNameMeta let an owning Goa
+	// type preserve removed protobuf tags and field names across regeneration.
+	protoBufReservedNumberMeta = "rpc:reserved:number"
+	protoBufReservedNameMeta   = "rpc:reserved:name"
 )
 
 // Name returns the protocol buffer type name.
@@ -410,42 +415,7 @@ func protoBufMessageDef(att *expr.AttributeExpr, sd *ServiceData) string {
 	case *expr.Map:
 		return fmt.Sprintf("map<%s, %s>", protoType(actual.KeyType, sd), protoType(actual.ElemType, sd))
 	case *expr.Union:
-		oneofName := codegen.ProtobufFieldName(actual.Name())
-		if sd.protobuf != nil {
-			oneofName = sd.protobuf.plan.sourceOneofName(att)
-		}
-		var fieldNames []string
-		for _, nat := range actual.Values {
-			fn := protobufSourceFieldName(nat.Name)
-			if sd.protobuf != nil {
-				fn = sd.protobuf.plan.sourceFieldName(nat.Attribute)
-			}
-			fieldNames = append(fieldNames, fn)
-		}
-		if sd.protobuf == nil {
-			for slices.Contains(fieldNames, oneofName) {
-				oneofName += "_oneof"
-			}
-		}
-		def := "\toneof " + oneofName + " {"
-		for i, nat := range actual.Values {
-			fn := fieldNames[i]
-			fnum := rpcTag(nat.Attribute)
-			var typ string
-			if prim := getPrimitive(nat.Attribute); prim != nil {
-				typ = protoType(prim, sd)
-			} else {
-				typ = protoType(nat.Attribute, sd)
-			}
-			var desc string
-			if d := nat.Attribute.Description; d != "" {
-				desc = codegen.Comment(d) + "\n\t"
-			}
-			opt := protoJSONOption(nat.Attribute)
-			def += fmt.Sprintf("\n\t\t%s%s %s = %d%s;", desc, typ, fn, fnum, opt)
-		}
-		def += "\n\t}"
-		return def
+		return protoBufUnionDef(actual.Name(), att, actual, sd)
 	case expr.UserType:
 		if actual == expr.Empty {
 			return " {}"
@@ -457,9 +427,10 @@ func protoBufMessageDef(att *expr.AttributeExpr, sd *ServiceData) string {
 	case *expr.Object:
 		var ss []string
 		ss = append(ss, " {")
+		ss = append(ss, protoBufReservations(att)...)
 		for _, nat := range *actual {
 			if expr.IsUnion(nat.Attribute.Type) {
-				ss = append(ss, protoBufMessageDef(nat.Attribute, sd))
+				ss = append(ss, protoBufUnionDef(nat.Name, nat.Attribute, expr.AsUnion(nat.Attribute.Type), sd))
 				continue
 			}
 			var (
@@ -495,6 +466,78 @@ func protoBufMessageDef(att *expr.AttributeExpr, sd *ServiceData) string {
 	default:
 		panic(fmt.Sprintf("unknown data type %T", actual)) // bug
 	}
+}
+
+// protoBufReservations renders removed field numbers and names declared on a
+// Goa type. Sorting keeps generated schemas stable when metadata values are
+// assembled from multiple design files.
+func protoBufReservations(att *expr.AttributeExpr) []string {
+	var reservations []string
+	if values := att.Meta[protoBufReservedNumberMeta]; len(values) > 0 {
+		numbers := make([]uint64, len(values))
+		for i, value := range values {
+			number, err := strconv.ParseUint(value, 10, 64)
+			if err != nil {
+				panic(fmt.Sprintf("invalid protobuf reserved field number %q: %v", value, err))
+			}
+			numbers[i] = number
+		}
+		slices.Sort(numbers)
+		parts := make([]string, len(numbers))
+		for i, number := range numbers {
+			parts[i] = strconv.FormatUint(number, 10)
+		}
+		reservations = append(reservations, "\treserved "+strings.Join(parts, ", ")+";")
+	}
+	if values := att.Meta[protoBufReservedNameMeta]; len(values) > 0 {
+		names := slices.Clone(values)
+		slices.Sort(names)
+		parts := make([]string, len(names))
+		for i, name := range names {
+			parts[i] = strconv.Quote(name)
+		}
+		reservations = append(reservations, "\treserved "+strings.Join(parts, ", ")+";")
+	}
+	return reservations
+}
+
+// protoBufUnionDef renders a protobuf oneof using the source names stored in
+// the service plan. Tests that render an isolated message use the same fallback
+// spelling rules without reserving package names.
+func protoBufUnionDef(name string, attribute *expr.AttributeExpr, union *expr.Union, sd *ServiceData) string {
+	oneofName := codegen.ProtobufFieldName(name)
+	fieldNames := make([]string, len(union.Values))
+	for index, branch := range union.Values {
+		fieldNames[index] = protobufSourceFieldName(branch.Name)
+	}
+	if sd.protobuf == nil {
+		for slices.Contains(fieldNames, oneofName) {
+			oneofName += "_oneof"
+		}
+	} else {
+		oneofName = sd.protobuf.plan.sourceOneofName(attribute)
+		for index, branch := range union.Values {
+			fieldNames[index] = sd.protobuf.plan.sourceFieldName(branch.Attribute)
+		}
+	}
+	def := "\toneof " + oneofName + " {"
+	for i, nat := range union.Values {
+		fn := fieldNames[i]
+		fnum := rpcTag(nat.Attribute)
+		var typ string
+		if prim := getPrimitive(nat.Attribute); prim != nil {
+			typ = protoType(prim, sd)
+		} else {
+			typ = protoType(nat.Attribute, sd)
+		}
+		var desc string
+		if d := nat.Attribute.Description; d != "" {
+			desc = codegen.Comment(d) + "\n\t"
+		}
+		opt := protoJSONOption(nat.Attribute)
+		def += fmt.Sprintf("\n\t\t%s%s %s = %d%s;", desc, typ, fn, fnum, opt)
+	}
+	return def + "\n\t}"
 }
 
 func protoJSONOption(att *expr.AttributeExpr) string {
