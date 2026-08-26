@@ -222,13 +222,15 @@ func httpCLIRequestFlags(endpoint *expr.HTTPEndpointExpr) []httpCLIFlag {
 			continue
 		}
 		_ = codegen.WalkMappedAttr(mapped, func(name, _ string, required bool, attribute *expr.AttributeExpr) error {
+			hasDefault := requestElementDefault(endpoint.MethodExpr.Payload, name, attribute) != nil
 			if mapping.pathRequired {
 				required = true
+				hasDefault = false
 			}
 			flags = append(flags, httpCLIFlag{
 				attribute:  attribute,
 				required:   required,
-				hasDefault: requestElementDefault(endpoint.MethodExpr.Payload, name, attribute) != nil,
+				hasDefault: hasDefault,
 			})
 			return nil
 		})

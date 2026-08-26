@@ -1,0 +1,15 @@
+// BuildMethodPathStringDefaultPayload builds the payload for the
+// ServicePathStringDefault MethodPathStringDefault endpoint from CLI flags.
+func BuildMethodPathStringDefaultPayload(servicePathStringDefaultMethodPathStringDefaultP *string) (*servicepathstringdefault.MethodPathStringDefaultPayload, error) {
+	var p string
+	{
+		if servicePathStringDefaultMethodPathStringDefaultP == nil {
+			return nil, fmt.Errorf("missing required flag --p")
+		}
+		p = *servicePathStringDefaultMethodPathStringDefaultP
+	}
+	v := &servicepathstringdefault.MethodPathStringDefaultPayload{}
+	v.P = p
+
+	return v, nil
+}

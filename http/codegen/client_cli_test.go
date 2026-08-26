@@ -36,6 +36,7 @@ func TestClientCLIFiles(t *testing.T) {
 		{"string-build", testdata.PayloadQueryStringDSL, 1, 1},
 		{"string-required-build", testdata.PayloadQueryStringValidateDSL, 1, 1},
 		{"string-default-build", testdata.PayloadQueryStringDefaultDSL, 1, 1},
+		{"path-string-default-build", testdata.PayloadPathStringDefaultDSL, 1, 1},
 		{"body-query-path-object-build", testdata.PayloadBodyQueryPathObjectDSL, 1, 1},
 		{"body-nested-user-build", testdata.PayloadBodyNestedUserDSL, 1, 1},
 		{"param-validation-build", testdata.ParamValidateDSL, 1, 1},

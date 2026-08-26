@@ -529,6 +529,13 @@ func TestHTTPFilePlansIncludeGeneratedUses(t *testing.T) {
 		require.Contains(t, clientImports, "strings")
 	})
 
+	t.Run("path default ignored by client command", func(t *testing.T) {
+		root := expr.RunDSL(t, testdata.PayloadPathStringDefaultDSL)
+		plan := linkedHTTPPlanForRoot(t, root)
+		clientImports := plannedHTTPFileImports(t, plan.ClientCLIFiles(), "/client/cli.go")
+		require.Contains(t, clientImports, "fmt")
+	})
+
 	t.Run("nested string validation", func(t *testing.T) {
 		root := expr.RunDSL(t, testdata.ResultWithResultCollectionDSL)
 		plan := linkedHTTPPlanForRoot(t, root)
