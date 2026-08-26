@@ -114,6 +114,17 @@ type (
 		subject string
 		view    string
 	}
+
+	// grpcValidationNameKey contains the generated package and validation-body
+	// facts used in the ordinary private function name.
+	grpcValidationNameKey struct {
+		side        validateKind
+		api         string
+		service     string
+		message     string
+		targetName  string
+		contextName string
+	}
 )
 
 const (
@@ -930,6 +941,12 @@ func planGRPCValidations(generation *codegen.Generation, input PlanInput, servic
 			protobuf.catalog.collectValidation(messages.streamingRequest, validateServer, stream, "stream", "stream")
 		}
 	}
+	privateNameCounts := make(map[grpcValidationNameKey]int)
+	for _, validator := range protobuf.catalog.validators {
+		if validator.source.path != "" {
+			privateNameCounts[grpcValidationKey(validator)]++
+		}
+	}
 	for _, validator := range protobuf.catalog.validators {
 		pkg := clientPackage
 		side := grpcClientPackage
@@ -948,21 +965,136 @@ func planGRPCValidations(generation *codegen.Generation, input PlanInput, servic
 			path:      validator.source.path,
 			operation: int(validator.source.role),
 		}
-		preferred := "Validate" + validator.message.plannedName
-		if validator.source.view != "" && validator.source.view != expr.DefaultView {
-			preferred += codegen.Goify(validator.source.view, true)
-		}
-		validator.declaration = codegen.NewPreferredName(
-			codegen.NameFunction,
-			preferred,
-			codegen.ExportedName,
-			grpcSymbolOrder(id),
+		validator.declaration = grpcValidationDeclaration(
+			validator,
+			id,
+			privateNameCounts[grpcValidationKey(validator)] > 1,
 		)
 		if err := pkg.DeclareName(validator.declaration); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// grpcValidationDeclaration keeps private semantic names exact. A collision is
+// a planning error instead of silently turning the name into a numbered name.
+func grpcValidationDeclaration(validator *protobufValidationRecord, id grpcSymbolID, includeSource bool) *codegen.NameDeclaration {
+	name, visibility := grpcValidationName(validator, includeSource)
+	if visibility == codegen.UnexportedName {
+		return codegen.NewExactName(codegen.NameFunction, name)
+	}
+	return codegen.NewPreferredName(
+		codegen.NameFunction,
+		name,
+		visibility,
+		grpcSymbolOrder(id),
+	)
+}
+
+// grpcValidationName keeps the released name for a validator called directly
+// by generated transport code. A nested validator uses the API, service,
+// message, argument, and error context that determine its body. The complete
+// method and field source is added only when distinct bodies would otherwise
+// receive the same name.
+func grpcValidationName(validator *protobufValidationRecord, includeSource bool) (string, codegen.PackageNameVisibility) {
+	if validator.source.path == "" {
+		name := "Validate" + validator.message.plannedName
+		if validator.source.view != "" && validator.source.view != expr.DefaultView {
+			name += codegen.Goify(validator.source.view, true)
+		}
+		return name, codegen.ExportedName
+	}
+
+	name := "validate" + grpcValidationNamePart(validator.source.api) +
+		"_" + grpcValidationNamePart(validator.source.service) +
+		"_" + grpcValidationNamePart(validator.message.plannedName)
+	if validator.targetName == validator.contextName {
+		name += "_At_" + grpcValidationNamePart(validator.contextName)
+	} else {
+		name += "_Target_" + grpcValidationNamePart(validator.targetName) +
+			"_Context_" + grpcValidationNamePart(validator.contextName)
+	}
+	if !includeSource {
+		return name, codegen.UnexportedName
+	}
+	name += "_From_" + grpcValidationNamePart(validator.source.method)
+	switch validator.source.role {
+	case protobufRequestValidation:
+		name += "_Request"
+	case protobufResponseValidation:
+		name += "_Response"
+	case protobufErrorValidation:
+		name += "_Error_" + grpcValidationNamePart(validator.source.error)
+	case protobufStreamingRequestValidation:
+		name += "_StreamingRequest"
+	default:
+		panic("unknown protobuf validation role")
+	}
+	if validator.source.view != "" && validator.source.view != expr.DefaultView {
+		name += "_View_" + grpcValidationNamePart(validator.source.view)
+	}
+	for _, step := range validator.source.pathSteps {
+		name += "_" + grpcValidationPathStepName(step)
+	}
+	return name, codegen.UnexportedName
+}
+
+// grpcValidationKey returns the stable facts used to detect private names that
+// need their endpoint source added.
+func grpcValidationKey(validator *protobufValidationRecord) grpcValidationNameKey {
+	return grpcValidationNameKey{
+		side:        validator.side,
+		api:         validator.source.api,
+		service:     validator.source.service,
+		message:     validator.message.plannedName,
+		targetName:  validator.targetName,
+		contextName: validator.contextName,
+	}
+}
+
+// grpcValidationPathStepName writes one unambiguous part of a private
+// validation function name.
+func grpcValidationPathStepName(step protobufValidationPathStep) string {
+	switch step.kind {
+	case protobufValidationField:
+		return "Field_" + grpcValidationNamePart(step.name)
+	case protobufValidationArrayElement:
+		return "ArrayElement"
+	case protobufValidationMapKey:
+		return "MapKey"
+	case protobufValidationMapValue:
+		return "MapValue"
+	case protobufValidationUnionBranch:
+		return "Union_" + grpcValidationNamePart(step.name)
+	default:
+		panic("unknown protobuf validation path kind")
+	}
+}
+
+// grpcValidationNamePart writes one authored label into a Go identifier. ASCII
+// letters and digits stay readable. Every other byte uses its hexadecimal value
+// between underscores, so two different labels can never produce one spelling.
+func grpcValidationNamePart(value string) string {
+	if value == "" {
+		panic("empty protobuf validation name part")
+	}
+	const hexadecimal = "0123456789ABCDEF"
+	var name strings.Builder
+	for index := range len(value) {
+		character := value[index]
+		if character >= 'a' && character <= 'z' ||
+			character >= 'A' && character <= 'Z' ||
+			character >= '0' && character <= '9' {
+			name.WriteByte(character)
+			continue
+		}
+		name.WriteByte('_')
+		name.WriteByte(hexadecimal[character>>4])
+		name.WriteByte(hexadecimal[character&0x0f])
+		name.WriteByte('_')
+	}
+	return name.String()
 }
 
 // newGRPCTransformPlan copies the protobuf input or output type, then records

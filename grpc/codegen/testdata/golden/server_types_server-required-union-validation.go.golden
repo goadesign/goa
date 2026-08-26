@@ -23,7 +23,7 @@ func ValidateExchangeRequest(message *union_validationpb.ExchangeRequest) (err e
 			break
 		}
 		if v.Detail != nil {
-			if err2 := ValidateDetail(v.Detail); err2 != nil {
+			if err2 := validatetest_20_api_UnionValidation_Detail_At_detail(v.Detail); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
 		}

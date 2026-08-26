@@ -43,6 +43,28 @@ func TestTransformHelpersShareRequiredAndOptionalCalls(t *testing.T) {
 	require.Contains(t, serverCode, "if message.Right != nil {")
 	require.Contains(t, serverCode, "v.Right = "+serverHelper.Declaration.Name()+"(message.Right)")
 
+	for _, side := range []validateKind{validateClient, validateServer} {
+		validations := make(map[string]*protobufValidationRecord)
+		for _, validation := range service.protobuf.validators {
+			if validation.side == side {
+				validations[validation.source.path] = validation
+			}
+		}
+		rootValidation := validations[""]
+		leftValidation := validations["left"]
+		rightValidation := validations["right"]
+		require.NotNil(t, rootValidation)
+		require.NotNil(t, leftValidation)
+		require.NotNil(t, rightValidation)
+		require.Equal(t, "ValidateStoreRequest", rootValidation.declaration.Name())
+		require.Equal(t, "validatetest_20_api_SharedHelpers_SharedChild_At_left", leftValidation.declaration.Name())
+		require.Equal(t, "validatetest_20_api_SharedHelpers_SharedChild_At_right", rightValidation.declaration.Name())
+		require.Contains(t, leftValidation.data.Def, `MissingFieldError("value", "left")`)
+		require.Contains(t, rightValidation.data.Def, `MissingFieldError("value", "right")`)
+		require.Contains(t, rootValidation.data.Def, "validatetest_20_api_SharedHelpers_SharedChild_At_left(message.Left)")
+		require.Contains(t, rootValidation.data.Def, "validatetest_20_api_SharedHelpers_SharedChild_At_right(message.Right)")
+	}
+
 	client := codegen.SectionsCode(t, clientTypeFiles(services)[0].SectionTemplates[1:])
 	testutil.AssertGo(t, "testdata/golden/transform_helper_shared.go.golden", client)
 }

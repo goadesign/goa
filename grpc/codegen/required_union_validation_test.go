@@ -16,6 +16,26 @@ import (
 func TestRequiredUnionValidationUsesCompleteProtobufBranches(t *testing.T) {
 	root := RunGRPCDSL(t, requiredUnionValidationDSL)
 	services := CreateGRPCServices(root)
+	service := services.Get("UnionValidation")
+	for _, expected := range []struct {
+		side validateKind
+		name string
+	}{
+		{validateServer, "validatetest_20_api_UnionValidation_Detail_At_detail"},
+		{validateClient, "validatetest_20_api_UnionValidation_Detail_At_detail"},
+	} {
+		var nested *protobufValidationRecord
+		for _, validation := range service.protobuf.validators {
+			if validation.side == expected.side &&
+				validation.source.path == "choice.detail" {
+				nested = validation
+				break
+			}
+		}
+		require.NotNil(t, nested)
+		require.Equal(t, expected.name, nested.declaration.Name())
+		require.Contains(t, nested.data.Def, `MissingFieldError("label", "detail")`)
+	}
 
 	for _, test := range []struct {
 		name        string

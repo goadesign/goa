@@ -58,7 +58,7 @@ func TestRepeatedWrapperValidationUsesAuthoredRules(t *testing.T) {
 
 	withLength := CreateGRPCServices(RunGRPCDSL(t, testdata.ElemValidationDSL))
 	withLengthCode := codegen.SectionsCode(t, serverTypeFiles(withLength)[0].SectionTemplates[1:])
-	require.Contains(t, withLengthCode, "func ValidateArrayOfString(")
+	require.Contains(t, withLengthCode, "func validatetest_20_api_ServiceElemValidation_ArrayOfString_At_val(")
 	require.Contains(t, withLengthCode, `InvalidLengthError("val.field"`)
 	require.NotContains(t, withLengthCode, `MissingFieldError("field", "val")`)
 }

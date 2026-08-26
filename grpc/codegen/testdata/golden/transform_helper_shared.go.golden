@@ -17,28 +17,30 @@ func ValidateStoreRequest(message *shared_helperspb.StoreRequest) (err error) {
 		err = goa.MergeErrors(err, goa.MissingFieldError("left", "message"))
 	}
 	if message.Left != nil {
-		if err2 := ValidateSharedChild(message.Left); err2 != nil {
+		if err2 := validatetest_20_api_SharedHelpers_SharedChild_At_left(message.Left); err2 != nil {
 			err = goa.MergeErrors(err, err2)
 		}
 	}
 	if message.Right != nil {
-		if err2 := ValidateSharedChild2(message.Right); err2 != nil {
+		if err2 := validatetest_20_api_SharedHelpers_SharedChild_At_right(message.Right); err2 != nil {
 			err = goa.MergeErrors(err, err2)
 		}
 	}
 	return
 }
 
-// ValidateSharedChild runs the validations defined on SharedChild.
-func ValidateSharedChild(left *shared_helperspb.SharedChild) (err error) {
+// validatetest_20_api_SharedHelpers_SharedChild_At_left runs the validations
+// defined on SharedChild.
+func validatetest_20_api_SharedHelpers_SharedChild_At_left(left *shared_helperspb.SharedChild) (err error) {
 	if left.Value == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("value", "left"))
 	}
 	return
 }
 
-// ValidateSharedChild2 runs the validations defined on SharedChild.
-func ValidateSharedChild2(right *shared_helperspb.SharedChild) (err error) {
+// validatetest_20_api_SharedHelpers_SharedChild_At_right runs the validations
+// defined on SharedChild.
+func validatetest_20_api_SharedHelpers_SharedChild_At_right(right *shared_helperspb.SharedChild) (err error) {
 	if right.Value == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("value", "right"))
 	}

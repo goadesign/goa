@@ -9,6 +9,7 @@ import (
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/service"
+	"goa.design/goa/v3/dsl"
 	"goa.design/goa/v3/expr"
 )
 
@@ -171,6 +172,38 @@ func TestCollectMessagesStopsAtRecursiveCopy(t *testing.T) {
 	require.Contains(t, messages[0].Def, "Recursive next = 2")
 }
 
+// TestCollectValidationsStopsAtRecursivePath checks that a recursive field
+// calls the private validator chosen for the first nested occurrence instead
+// of creating one function name per recursion depth.
+func TestCollectValidationsStopsAtRecursivePath(t *testing.T) {
+	minimum := 2
+	message := grpcValidationTraversalType("Recursive", "recursive", &expr.AttributeExpr{
+		Type:       expr.String,
+		Validation: &expr.ValidationExpr{MinLength: &minimum},
+	})
+	object := expr.AsObject(message)
+	next := &expr.AttributeExpr{
+		Type: message,
+		Meta: expr.MetaExpr{"rpc:tag": {"2"}},
+	}
+	*object = append(*object, &expr.NamedAttributeExpr{Name: "next", Attribute: next})
+	root := &expr.AttributeExpr{Type: message}
+	sd := grpcTraversalServiceData()
+	freezeTraversalMessages(t, sd, root)
+	sd.protobuf.collectValidation(root, validateServer, grpcTraversalValidationSource(), "message", "message")
+	planTraversalValidations(t, sd)
+	sd.validations = sd.protobuf.freezeValidations(sd)
+
+	require.Len(t, sd.validations, 2)
+	rootValidation := addValidation(root, sd, true)
+	nestedValidation := addValidation(next, sd, true)
+	require.Equal(t, "ValidateRecursive", rootValidation.Declaration.Name())
+	require.Equal(t, "validateTestAPI_TestService_Recursive_At_next", nestedValidation.Declaration.Name())
+	require.Contains(t, rootValidation.Def, "validateTestAPI_TestService_Recursive_At_next(message.Next)")
+	require.Contains(t, nestedValidation.Def, "validateTestAPI_TestService_Recursive_At_next(next.Next)")
+	require.Contains(t, nestedValidation.Def, `InvalidLengthError("next.value"`)
+}
+
 func TestProtoBufMessageNameRequiresFrozenDeclaration(t *testing.T) {
 	message := grpcMessageTraversalType("Unbound", "unbound", expr.String, "1")
 	sd := grpcTraversalServiceData()
@@ -288,8 +321,8 @@ func TestAddValidationDistinguishesRulesForOneWireDeclaration(t *testing.T) {
 	}}
 	freezeTraversalMessages(t, sd, root)
 	source := grpcTraversalValidationSource()
-	sd.protobuf.collectValidation(firstAttribute, validateServer, source, "message", "message")
-	sd.protobuf.collectValidation(secondAttribute, validateServer, source.child("second"), "message", "message")
+	sd.protobuf.collectValidation(firstAttribute, validateServer, source.field("first"), "message", "message")
+	sd.protobuf.collectValidation(secondAttribute, validateServer, source.field("second"), "message", "message")
 	planTraversalValidations(t, sd)
 	sd.validations = sd.protobuf.freezeValidations(sd)
 
@@ -299,8 +332,150 @@ func TestAddValidationDistinguishesRulesForOneWireDeclaration(t *testing.T) {
 	require.NotNil(t, secondValidation)
 	require.Len(t, sd.validations, 2)
 	require.NotEqual(t, firstValidation.Declaration.Name(), secondValidation.Declaration.Name())
+	require.Equal(t, "validateTestAPI_TestService_Shared_At_message_From_Call_Request_Field_first", firstValidation.Declaration.Name())
+	require.Equal(t, "validateTestAPI_TestService_Shared_At_message_From_Call_Request_Field_second", secondValidation.Declaration.Name())
 	require.Contains(t, firstValidation.Def, `InvalidLengthError("message.value", *message.Value, utf8.RuneCountInString(*message.Value), 2, true)`)
 	require.Contains(t, secondValidation.Def, `InvalidLengthError("message.value", *message.Value, utf8.RuneCountInString(*message.Value), 5, true)`)
+}
+
+// TestGRPCValidationNamesDescribeTheirRootAndPath checks the complete private
+// name for each nested validator role.
+func TestGRPCValidationNamesDescribeTheirRootAndPath(t *testing.T) {
+	message := &protobufMessageRecord{plannedName: "Message2"}
+	source := func(role protobufValidationRole) protobufValidationSource {
+		return protobufValidationSource{
+			api:     "Example",
+			service: "Storage",
+			method:  "Store",
+			role:    role,
+		}
+	}
+	request := source(protobufRequestValidation).field("first").field("value")
+	response := source(protobufResponseValidation).field("result").field("item")
+	response.view = "compact"
+	failure := source(protobufErrorValidation).field("cause")
+	failure.error = "bad_request"
+	stream := source(protobufStreamingRequestValidation).field("items").arrayElement()
+	for _, test := range []struct {
+		name     string
+		source   protobufValidationSource
+		expected string
+	}{
+		{"request", request, "validateExample_Storage_Message2_At_value_From_Store_Request_Field_first_Field_value"},
+		{"viewed response", response, "validateExample_Storage_Message2_At_value_From_Store_Response_View_compact_Field_result_Field_item"},
+		{"error", failure, "validateExample_Storage_Message2_At_value_From_Store_Error_bad_5F_request_Field_cause"},
+		{"stream", stream, "validateExample_Storage_Message2_At_value_From_Store_StreamingRequest_Field_items_ArrayElement"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			actual, visibility := grpcValidationName(&protobufValidationRecord{
+				message:     message,
+				source:      test.source,
+				targetName:  "value",
+				contextName: "value",
+			}, true)
+			require.Equal(t, test.expected, actual)
+			require.Equal(t, codegen.UnexportedName, visibility)
+		})
+	}
+}
+
+// TestGRPCValidationNamesDistinguishFieldAndCollectionPaths checks that a
+// field name cannot collide with the generated label for an array element.
+func TestGRPCValidationNamesDistinguishFieldAndCollectionPaths(t *testing.T) {
+	source := grpcTraversalValidationSource()
+	direct := source.field("items_element")
+	nested := source.field("items").arrayElement()
+	message := &protobufMessageRecord{plannedName: "Message"}
+
+	directName, _ := grpcValidationName(&protobufValidationRecord{
+		message:     message,
+		source:      direct,
+		targetName:  "elem",
+		contextName: "elem",
+	}, true)
+	nestedName, _ := grpcValidationName(&protobufValidationRecord{
+		message:     message,
+		source:      nested,
+		targetName:  "elem",
+		contextName: "elem",
+	}, true)
+	require.NotEqual(t, directName, nestedName)
+
+	dashName, _ := grpcValidationName(&protobufValidationRecord{
+		message:     message,
+		source:      source.field("foo-bar"),
+		targetName:  "elem",
+		contextName: "elem",
+	}, true)
+	underscoreName, _ := grpcValidationName(&protobufValidationRecord{
+		message:     message,
+		source:      source.field("foo_bar"),
+		targetName:  "elem",
+		contextName: "elem",
+	}, true)
+	require.NotEqual(t, dashName, underscoreName)
+}
+
+// TestCollectValidationsKeepsRootExportedAfterNestedUse checks that endpoint
+// order cannot replace a public root validator with a private nested one.
+func TestCollectValidationsKeepsRootExportedAfterNestedUse(t *testing.T) {
+	names := func(nestedFirst bool) (string, string) {
+		minimum := 2
+		child := grpcValidationTraversalType("Child", "child", &expr.AttributeExpr{
+			Type:       expr.String,
+			Validation: &expr.ValidationExpr{MinLength: &minimum},
+		})
+		nested := &expr.AttributeExpr{Type: expr.Dup(child)}
+		root := &expr.AttributeExpr{Type: expr.Dup(child)}
+		container := &expr.AttributeExpr{Type: &expr.Object{
+			{Name: "nested", Attribute: nested},
+			{Name: "root", Attribute: root},
+		}}
+		sd := grpcTraversalServiceData()
+		freezeTraversalMessages(t, sd, container)
+		nestedSource := grpcTraversalValidationSource().field("message")
+		rootSource := grpcTraversalValidationSource()
+		rootSource.method = "Root"
+		if nestedFirst {
+			sd.protobuf.collectValidation(nested, validateServer, nestedSource, "message", "message")
+			sd.protobuf.collectValidation(root, validateServer, rootSource, "message", "message")
+		} else {
+			sd.protobuf.collectValidation(root, validateServer, rootSource, "message", "message")
+			sd.protobuf.collectValidation(nested, validateServer, nestedSource, "message", "message")
+		}
+		planTraversalValidations(t, sd)
+		sd.validations = sd.protobuf.freezeValidations(sd)
+
+		rootValidation := addValidation(root, sd, true)
+		nestedValidation := addValidation(nested, sd, true)
+		require.NotSame(t, rootValidation, nestedValidation)
+		return rootValidation.Declaration.Name(), nestedValidation.Declaration.Name()
+	}
+
+	rootFirst, nestedAfterRoot := names(false)
+	rootAfterNested, nestedFirst := names(true)
+	require.Equal(t, "ValidateChild", rootFirst)
+	require.Equal(t, rootFirst, rootAfterNested)
+	require.Equal(t, nestedAfterRoot, nestedFirst)
+}
+
+// TestNestedValidationNameIgnoresInsertedSibling checks that adding another
+// use of the same message cannot renumber an existing helper.
+func TestNestedValidationNameIgnoresInsertedSibling(t *testing.T) {
+	name := func(withSibling bool) string {
+		root := RunGRPCDSL(t, nestedValidationInsertionDSL(withSibling))
+		service := CreateGRPCServices(root).Get("StableValidationNames")
+		for _, validation := range service.protobuf.validators {
+			if validation.side == validateServer && validation.source.path == "target" {
+				return validation.declaration.Name()
+			}
+		}
+		t.Errorf("missing target validator")
+		return ""
+	}
+
+	require.Equal(t, "validatetest_20_api_StableValidationNames_Child2_At_target", name(false))
+	require.Equal(t, "validatetest_20_api_StableValidationNames_Child2_At_target", name(true))
 }
 
 func TestAddValidationDistinguishesRequirednessForOneWireDeclaration(t *testing.T) {
@@ -362,7 +537,7 @@ func TestAddValidationDistinguishesGeneratedSide(t *testing.T) {
 	require.Equal(t, validateClient, client.Kind)
 }
 
-func TestAddValidationReusesIdenticalRulesOnOneSide(t *testing.T) {
+func TestAddValidationKeepsNamesStableForIdenticalRulesAtDifferentPaths(t *testing.T) {
 	minimum := 2
 	message := grpcMessageTraversalType("Shared", "shared", expr.String, "1")
 	expr.AsObject(message).Attribute("value").Validation = &expr.ValidationExpr{MinLength: &minimum}
@@ -375,25 +550,85 @@ func TestAddValidationReusesIdenticalRulesOnOneSide(t *testing.T) {
 	}}
 	freezeTraversalMessages(t, sd, root)
 	source := grpcTraversalValidationSource()
-	sd.protobuf.collectValidation(first, validateServer, source, "message", "message")
-	sd.protobuf.collectValidation(second, validateServer, source.child("second"), "message", "message")
+	sd.protobuf.collectValidation(first, validateServer, source.field("first"), "message", "message")
+	sd.protobuf.collectValidation(second, validateServer, source.field("second"), "message", "message")
 	planTraversalValidations(t, sd)
 	sd.validations = sd.protobuf.freezeValidations(sd)
 
 	require.Len(t, sd.validations, 1)
-	require.Same(t, addValidation(first, sd, true), addValidation(second, sd, true))
+	firstValidation := addValidation(first, sd, true)
+	secondValidation := addValidation(second, sd, true)
+	require.Same(t, firstValidation, secondValidation)
+	require.Equal(t, "validateTestAPI_TestService_Shared_At_message", firstValidation.Declaration.Name())
+}
+
+// TestSharedValidationChoosesTheSameSourceAfterTraversalOrderChanges checks
+// that a shared body keeps one exact name when a different body requires the
+// longer source-based spelling.
+func TestSharedValidationChoosesTheSameSourceAfterTraversalOrderChanges(t *testing.T) {
+	name := func(reverse bool) string {
+		minimum := 2
+		original := grpcMessageTraversalType("Shared", "shared", expr.String, "1")
+		first := expr.Dup(original).(expr.UserType)
+		second := expr.Dup(original).(expr.UserType)
+		different := expr.Dup(original).(expr.UserType)
+		for _, message := range []expr.UserType{first, second} {
+			message.Attribute().Validation = &expr.ValidationExpr{Required: []string{"value"}}
+			expr.AsObject(message).Attribute("value").Validation = &expr.ValidationExpr{MinLength: &minimum}
+		}
+		expr.AsObject(different).Attribute("value").Validation = &expr.ValidationExpr{MinLength: &minimum}
+		firstAttribute := &expr.AttributeExpr{Type: first}
+		secondAttribute := &expr.AttributeExpr{Type: second}
+		differentAttribute := &expr.AttributeExpr{Type: different}
+		sd := grpcTraversalServiceData()
+		root := &expr.AttributeExpr{Type: &expr.Object{
+			{Name: "first", Attribute: firstAttribute},
+			{Name: "second", Attribute: secondAttribute},
+			{Name: "different", Attribute: differentAttribute},
+		}}
+		freezeTraversalMessages(t, sd, root)
+		source := grpcTraversalValidationSource()
+		ordered := []struct {
+			attribute *expr.AttributeExpr
+			path      string
+		}{
+			{attribute: firstAttribute, path: "zeta"},
+			{attribute: secondAttribute, path: "alpha"},
+		}
+		if reverse {
+			ordered[0], ordered[1] = ordered[1], ordered[0]
+		}
+		for _, item := range ordered {
+			sd.protobuf.collectValidation(item.attribute, validateServer, source.field(item.path), "message", "message")
+		}
+		sd.protobuf.collectValidation(differentAttribute, validateServer, source.field("different"), "message", "message")
+		planTraversalValidations(t, sd)
+		sd.validations = sd.protobuf.freezeValidations(sd)
+
+		validation := addValidation(firstAttribute, sd, true)
+		require.NotNil(t, validation)
+		return validation.Declaration.Name()
+	}
+
+	want := "validateTestAPI_TestService_Shared_At_message_From_Call_Request_Field_alpha"
+	require.Equal(t, want, name(false))
+	require.Equal(t, want, name(true))
 }
 
 // TestAddValidationKeepsDistinctErrorPaths checks that one shared protobuf
 // message gets separate validators when its callers need different field paths.
 func TestAddValidationKeepsDistinctErrorPaths(t *testing.T) {
 	minimum := 2
-	shared := grpcValidationTraversalType("Shared", "shared", &expr.AttributeExpr{
+	shared := grpcValidationTraversalType("Shared2", "shared", &expr.AttributeExpr{
 		Type:       expr.String,
 		Validation: &expr.ValidationExpr{MinLength: &minimum},
 	})
 	first := &expr.AttributeExpr{Type: shared, Meta: expr.MetaExpr{"rpc:tag": {"1"}}}
-	second := &expr.AttributeExpr{Type: shared, Meta: expr.MetaExpr{"rpc:tag": {"2"}}}
+	secondElement := &expr.AttributeExpr{Type: shared}
+	second := &expr.AttributeExpr{
+		Type: &expr.Array{ElemType: secondElement},
+		Meta: expr.MetaExpr{"rpc:tag": {"2"}},
+	}
 	rootType := &expr.UserTypeExpr{
 		TypeName: "Root",
 		UID:      "root",
@@ -410,15 +645,64 @@ func TestAddValidationKeepsDistinctErrorPaths(t *testing.T) {
 	sd.validations = sd.protobuf.freezeValidations(sd)
 
 	firstValidation := addValidation(first, sd, true)
-	secondValidation := addValidation(second, sd, true)
+	secondValidation := addValidation(secondElement, sd, true)
 	require.NotNil(t, firstValidation)
 	require.NotNil(t, secondValidation)
 	require.NotSame(t, firstValidation, secondValidation)
+	require.Equal(t, "validateTestAPI_TestService_Shared2_At_first", firstValidation.Declaration.Name())
+	require.Equal(t, "validateTestAPI_TestService_Shared2_At_elem", secondValidation.Declaration.Name())
 	require.Contains(t, firstValidation.Def, `InvalidLengthError("first.value"`)
-	require.Contains(t, secondValidation.Def, `InvalidLengthError("second.value"`)
+	require.Contains(t, secondValidation.Def, `InvalidLengthError("elem.value"`)
 	rootValidation := addValidation(root, sd, true)
+	require.Equal(t, "ValidateRoot", rootValidation.Declaration.Name())
 	require.Contains(t, rootValidation.Def, firstValidation.Declaration.Name()+"(message.First)")
-	require.Contains(t, rootValidation.Def, secondValidation.Declaration.Name()+"(message.Second)")
+	require.Contains(t, rootValidation.Def, secondValidation.Declaration.Name()+"(e)")
+}
+
+// TestCollectValidationsSharesRecursiveSiblings checks that identical array
+// element checks share a name that does not depend on the first sibling.
+func TestCollectValidationsSharesRecursiveSiblings(t *testing.T) {
+	minimum := 2
+	child := grpcValidationTraversalType("Child", "child", &expr.AttributeExpr{
+		Type:       expr.String,
+		Validation: &expr.ValidationExpr{MinLength: &minimum},
+	})
+	childObject := expr.AsObject(child)
+	*childObject = append(*childObject, &expr.NamedAttributeExpr{
+		Name: "next",
+		Attribute: &expr.AttributeExpr{
+			Type: child,
+			Meta: expr.MetaExpr{"rpc:tag": {"2"}},
+		},
+	})
+	firstElement := &expr.AttributeExpr{Type: child}
+	secondElement := &expr.AttributeExpr{Type: child}
+	root := &expr.AttributeExpr{Type: &expr.UserTypeExpr{
+		TypeName: "Root",
+		UID:      "root",
+		AttributeExpr: &expr.AttributeExpr{Type: &expr.Object{
+			{Name: "first", Attribute: &expr.AttributeExpr{
+				Type: &expr.Array{ElemType: firstElement},
+				Meta: expr.MetaExpr{"rpc:tag": {"1"}},
+			}},
+			{Name: "second", Attribute: &expr.AttributeExpr{
+				Type: &expr.Array{ElemType: secondElement},
+				Meta: expr.MetaExpr{"rpc:tag": {"2"}},
+			}},
+		}},
+	}}
+	sd := grpcTraversalServiceData()
+	freezeTraversalMessages(t, sd, root)
+	sd.protobuf.collectValidation(root, validateServer, grpcTraversalValidationSource(), "message", "message")
+	planTraversalValidations(t, sd)
+	sd.validations = sd.protobuf.freezeValidations(sd)
+
+	firstValidation := addValidation(firstElement, sd, true)
+	secondValidation := addValidation(secondElement, sd, true)
+	require.NotNil(t, firstValidation)
+	require.NotNil(t, secondValidation)
+	require.Same(t, firstValidation, secondValidation)
+	require.Equal(t, "validateTestAPI_TestService_Child_At_elem", firstValidation.Declaration.Name())
 }
 
 func TestCollectValidationsDistinguishesEqualUIDOrigins(t *testing.T) {
@@ -470,6 +754,12 @@ func planTraversalValidations(t *testing.T, sd *ServiceData) {
 	require.NoError(t, err)
 	server, err := generation.ClaimPackage("generated.local/gen/grpc/test/server")
 	require.NoError(t, err)
+	privateNameCounts := make(map[grpcValidationNameKey]int)
+	for _, record := range sd.protobuf.validators {
+		if record.source.path != "" {
+			privateNameCounts[grpcValidationKey(record)]++
+		}
+	}
 	for _, record := range sd.protobuf.validators {
 		pkg := client
 		side := grpcClientPackage
@@ -488,15 +778,10 @@ func planTraversalValidations(t *testing.T, sd *ServiceData) {
 			path:      record.source.path,
 			operation: int(record.source.role),
 		}
-		preferred := "Validate" + record.message.plannedName
-		if record.source.view != "" && record.source.view != expr.DefaultView {
-			preferred += codegen.Goify(record.source.view, true)
-		}
-		record.declaration = codegen.NewPreferredName(
-			codegen.NameFunction,
-			preferred,
-			codegen.ExportedName,
-			grpcSymbolOrder(id),
+		record.declaration = grpcValidationDeclaration(
+			record,
+			id,
+			privateNameCounts[grpcValidationKey(record)] > 1,
 		)
 		require.NoError(t, pkg.DeclareName(record.declaration))
 	}
@@ -516,6 +801,29 @@ func grpcValidationTraversalType(name, uid string, field *expr.AttributeExpr) *e
 		}},
 		TypeName: name,
 		UID:      uid,
+	}
+}
+
+// nestedValidationInsertionDSL builds the same target field with or without an
+// earlier sibling that uses the same nested type.
+func nestedValidationInsertionDSL(withSibling bool) func() {
+	return func() {
+		child := dsl.Type("Child2", func() {
+			dsl.Field(1, "value", dsl.String)
+			dsl.Required("value")
+		})
+		dsl.Service("StableValidationNames", func() {
+			dsl.Method("Store", func() {
+				dsl.Payload(func() {
+					if withSibling {
+						dsl.Field(1, "alpha", child)
+					}
+					dsl.Field(2, "target", child)
+					dsl.Required("target")
+				})
+				dsl.GRPC(func() {})
+			})
+		})
 	}
 }
 

@@ -30,15 +30,16 @@ func NewProtoMethodElemValidationResponse() *service_elem_validationpb.MethodEle
 // MethodElemValidationRequest.
 func ValidateMethodElemValidationRequest(message *service_elem_validationpb.MethodElemValidationRequest) (err error) {
 	for _, v := range message.Foo {
-		if err2 := ValidateArrayOfString(v); err2 != nil {
+		if err2 := validatetest_20_api_ServiceElemValidation_ArrayOfString_At_val(v); err2 != nil {
 			err = goa.MergeErrors(err, err2)
 		}
 	}
 	return
 }
 
-// ValidateArrayOfString runs the validations defined on ArrayOfString.
-func ValidateArrayOfString(val *service_elem_validationpb.ArrayOfString) (err error) {
+// validatetest_20_api_ServiceElemValidation_ArrayOfString_At_val runs the
+// validations defined on ArrayOfString.
+func validatetest_20_api_ServiceElemValidation_ArrayOfString_At_val(val *service_elem_validationpb.ArrayOfString) (err error) {
 	var valField []string
 	if val != nil {
 		valField = val.Field

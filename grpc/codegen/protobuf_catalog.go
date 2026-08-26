@@ -4,10 +4,11 @@
 package codegen
 
 import (
+	"cmp"
 	"fmt"
 	"reflect"
 	"regexp"
-	"strings"
+	"slices"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/service"
@@ -110,14 +111,25 @@ type (
 	// protobufValidationSource records the endpoint value and nested field that
 	// first needs one validation function.
 	protobufValidationSource struct {
-		api     string
-		service string
-		method  string
-		error   string
-		view    string
-		path    string
-		role    protobufValidationRole
+		api       string
+		service   string
+		method    string
+		error     string
+		view      string
+		path      string
+		pathSteps []protobufValidationPathStep
+		role      protobufValidationRole
 	}
+
+	// protobufValidationPathStep records one field, collection part, or union
+	// branch on the way from an endpoint value to a nested message.
+	protobufValidationPathStep struct {
+		kind protobufValidationPathKind
+		name string
+	}
+
+	// protobufValidationPathKind identifies how one nested value is reached.
+	protobufValidationPathKind uint8
 
 	// protobufValidationRole says which endpoint value is checked.
 	protobufValidationRole uint8
@@ -163,6 +175,14 @@ const (
 	protobufResponseValidation
 	protobufErrorValidation
 	protobufStreamingRequestValidation
+)
+
+const (
+	protobufValidationField protobufValidationPathKind = iota + 1
+	protobufValidationArrayElement
+	protobufValidationMapKey
+	protobufValidationMapValue
+	protobufValidationUnionBranch
 )
 
 // newProtobufPackageCatalog creates the protobuf messages for one service and
@@ -563,7 +583,7 @@ func (c *protobufPackageCatalog) collectValidationRecursive(attribute *expr.Attr
 		if message == nil {
 			panic(fmt.Sprintf("no protobuf declaration collected for validation type %q", actual.Name()))
 		}
-		record := c.findValidation(message, attribute, side, targetName, contextName)
+		record := c.findValidation(message, attribute, side, source, targetName, contextName)
 		if record == nil {
 			record = &protobufValidationRecord{
 				message:     message,
@@ -574,10 +594,6 @@ func (c *protobufPackageCatalog) collectValidationRecursive(attribute *expr.Attr
 				contextName: contextName,
 			}
 			c.validators = append(c.validators, record)
-		} else if source.compare(record.source) < 0 {
-			record.source = source
-			record.targetName = targetName
-			record.contextName = contextName
 		}
 		c.bindValidationUse(attribute, side, record)
 		if _, ok := seen[record]; ok {
@@ -585,18 +601,19 @@ func (c *protobufPackageCatalog) collectValidationRecursive(attribute *expr.Attr
 		}
 		seen[record] = struct{}{}
 		c.collectValidationRecursive(userTypeAttribute(actual), side, source, targetName, contextName, seen)
+		delete(seen, record)
 	case *expr.Object:
 		for _, named := range *actual {
-			c.collectValidationRecursive(named.Attribute, side, source.child(named.Name), codegen.Goify(named.Name, false), named.Name, seen)
+			c.collectValidationRecursive(named.Attribute, side, source.field(named.Name), codegen.Goify(named.Name, false), named.Name, seen)
 		}
 	case *expr.Array:
-		c.collectValidationRecursive(actual.ElemType, side, source.child("element"), "elem", "elem", seen)
+		c.collectValidationRecursive(actual.ElemType, side, source.arrayElement(), "elem", "elem", seen)
 	case *expr.Map:
-		c.collectValidationRecursive(actual.KeyType, side, source.child("key"), "key", "key", seen)
-		c.collectValidationRecursive(actual.ElemType, side, source.child("value"), "val", "val", seen)
+		c.collectValidationRecursive(actual.KeyType, side, source.mapKey(), "key", "key", seen)
+		c.collectValidationRecursive(actual.ElemType, side, source.mapValue(), "val", "val", seen)
 	case *expr.Union:
 		for _, named := range actual.Values {
-			c.collectValidationRecursive(named.Attribute, side, source.child(named.Name), codegen.Goify(named.Name, false), named.Name, seen)
+			c.collectValidationRecursive(named.Attribute, side, source.unionBranch(named.Name), codegen.Goify(named.Name, false), named.Name, seen)
 		}
 	}
 }
@@ -614,14 +631,68 @@ func (c *protobufPackageCatalog) findMessage(identity protobufMessageIdentity) *
 
 // findValidation returns the existing function that checks the same message
 // rules in the same client or server package.
-func (c *protobufPackageCatalog) findValidation(declaration *protobufMessageRecord, attribute *expr.AttributeExpr, side validateKind, targetName, contextName string) *protobufValidationRecord {
+func (c *protobufPackageCatalog) findValidation(declaration *protobufMessageRecord, attribute *expr.AttributeExpr, side validateKind, source protobufValidationSource, targetName, contextName string) *protobufValidationRecord {
 	for _, record := range c.validators {
-		if record.message == declaration && record.side == side && record.targetName == targetName && record.contextName == contextName &&
+		if record.message == declaration && record.side == side && sameProtobufValidationSource(record.source, source) && record.targetName == targetName && record.contextName == contextName &&
 			sameProtobufValidationAttribute(record.attribute, attribute, make(map[protobufAttributePair]struct{})) {
+			if compareProtobufValidationSources(source, record.source) < 0 {
+				record.source = source
+			}
 			return record
 		}
 	}
 	return nil
+}
+
+// sameProtobufValidationSource reports whether two uses may call one function.
+// Top-level functions with different selected views keep separate released
+// names. Nested values may share one function when their complete checks and
+// error paths are identical.
+func sameProtobufValidationSource(left, right protobufValidationSource) bool {
+	leftNested := left.path != ""
+	rightNested := right.path != ""
+	if leftNested != rightNested {
+		return false
+	}
+	if leftNested {
+		return true
+	}
+	return normalizedProtobufValidationView(left.view) == normalizedProtobufValidationView(right.view)
+}
+
+// compareProtobufValidationSources orders every authored part of a validator
+// source. A shared validation body therefore keeps the same source when service
+// or field traversal order changes.
+func compareProtobufValidationSources(left, right protobufValidationSource) int {
+	for _, values := range [][2]string{
+		{left.api, right.api},
+		{left.service, right.service},
+		{left.method, right.method},
+		{left.error, right.error},
+		{normalizedProtobufValidationView(left.view), normalizedProtobufValidationView(right.view)},
+	} {
+		if order := cmp.Compare(values[0], values[1]); order != 0 {
+			return order
+		}
+	}
+	if order := cmp.Compare(left.role, right.role); order != 0 {
+		return order
+	}
+	return slices.CompareFunc(left.pathSteps, right.pathSteps, func(left, right protobufValidationPathStep) int {
+		if order := cmp.Compare(left.kind, right.kind); order != 0 {
+			return order
+		}
+		return cmp.Compare(left.name, right.name)
+	})
+}
+
+// normalizedProtobufValidationView treats the default view the same as an
+// omitted view because both produce the released root validator name.
+func normalizedProtobufValidationView(view string) string {
+	if view == expr.DefaultView {
+		return ""
+	}
+	return view
 }
 
 // validationRecord returns the validation function called for one copied
@@ -718,42 +789,44 @@ func (c *protobufPackageCatalog) validationData() []*ValidationData {
 	return data
 }
 
-// child returns the same endpoint value at one nested field or collection
-// part.
-func (s protobufValidationSource) child(name string) protobufValidationSource {
+// child returns the same endpoint value at one nested field, collection part,
+// or union branch.
+func (s protobufValidationSource) child(kind protobufValidationPathKind, name string) protobufValidationSource {
 	if s.path == "" {
 		s.path = name
 	} else {
 		s.path += "." + name
 	}
+	s.pathSteps = append(append([]protobufValidationPathStep(nil), s.pathSteps...), protobufValidationPathStep{
+		kind: kind,
+		name: name,
+	})
 	return s
 }
 
-// compare orders endpoint values and their nested fields the same way even when
-// the design lists them in a different order.
-func (s protobufValidationSource) compare(other protobufValidationSource) int {
-	if result := strings.Compare(s.api, other.api); result != 0 {
-		return result
-	}
-	if result := strings.Compare(s.service, other.service); result != 0 {
-		return result
-	}
-	if result := strings.Compare(s.method, other.method); result != 0 {
-		return result
-	}
-	if result := strings.Compare(s.error, other.error); result != 0 {
-		return result
-	}
-	if result := strings.Compare(s.view, other.view); result != 0 {
-		return result
-	}
-	if s.role < other.role {
-		return -1
-	}
-	if s.role > other.role {
-		return 1
-	}
-	return strings.Compare(s.path, other.path)
+// field returns the source for one named object field.
+func (s protobufValidationSource) field(name string) protobufValidationSource {
+	return s.child(protobufValidationField, name)
+}
+
+// arrayElement returns the source for an array element.
+func (s protobufValidationSource) arrayElement() protobufValidationSource {
+	return s.child(protobufValidationArrayElement, "element")
+}
+
+// mapKey returns the source for a map key.
+func (s protobufValidationSource) mapKey() protobufValidationSource {
+	return s.child(protobufValidationMapKey, "key")
+}
+
+// mapValue returns the source for a map value.
+func (s protobufValidationSource) mapValue() protobufValidationSource {
+	return s.child(protobufValidationMapValue, "value")
+}
+
+// unionBranch returns the source for one named union branch.
+func (s protobufValidationSource) unionBranch(name string) protobufValidationSource {
+	return s.child(protobufValidationUnionBranch, name)
 }
 
 // protobufMessageIdentityFor records the source type, requested name, and
