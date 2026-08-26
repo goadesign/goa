@@ -97,3 +97,50 @@ func TestMethodLayoutsRetainNestedNamedValues(t *testing.T) {
 	require.NotNil(t, payloadFacts)
 	require.Empty(t, payloadFacts.layout.PlansForOccurrence(payloadGrandchild.Attribute().Find("value")))
 }
+
+// TestMethodTypeLayoutKeepsSourceAndProjectedDeclarations checks that creating
+// a result view does not move the original service type into the views package.
+func TestMethodTypeLayoutKeepsSourceAndProjectedDeclarations(t *testing.T) {
+	var viewed, plain *expr.MethodExpr
+	root := codegen.RunDSL(t, func() {
+		child := dsl.Type("SharedDeclarationChild", func() {
+			dsl.Attribute("value", dsl.String)
+			dsl.Required("value")
+		})
+		result := dsl.ResultType("application/vnd.view-bindings", func() {
+			dsl.TypeName("ViewedContainer")
+			dsl.Attribute("child", child)
+			dsl.Required("child")
+			dsl.View("default", func() {
+				dsl.Attribute("child")
+			})
+		})
+		dsl.Service("ViewBindings", func() {
+			viewed = dsl.Method("Viewed", func() {
+				dsl.Result(result)
+			})
+			plain = dsl.Method("Plain", func() {
+				dsl.Payload(func() {
+					dsl.Attribute("child", child)
+				})
+			})
+		})
+	})
+	plan := mustServicePlan(t, root)
+
+	plainLayout, err := plan.MethodTypeLayout(plain, plain.Payload)
+	require.NoError(t, err)
+	plainChild := plainLayout.PlansForOccurrence(plain.Payload.Find("child"))
+	require.Len(t, plainChild, 1)
+	require.Equal(t, "goa.design/goa/example/view_bindings", plainChild[0].Owner())
+	require.Equal(t, "SharedDeclarationChild", plainChild[0].TypeDeclaration().Name())
+
+	projected, err := plan.ProjectedResult(viewed)
+	require.NoError(t, err)
+	projectedLayout, err := plan.MethodTypeLayout(viewed, projected)
+	require.NoError(t, err)
+	projectedChild := projectedLayout.PlansForOccurrence(projected.Find("child"))
+	require.Len(t, projectedChild, 1)
+	require.Equal(t, "goa.design/goa/example/view_bindings/views", projectedChild[0].Owner())
+	require.Equal(t, "SharedDeclarationChildView", projectedChild[0].TypeDeclaration().Name())
+}

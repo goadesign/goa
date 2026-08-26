@@ -20,9 +20,22 @@ type (
 	protobufOneofAttributor interface {
 		OneofWrapper(*expr.AttributeExpr) string
 	}
+
+	// grpcHelperAttributePair stops comparison after two recursive type fields
+	// have already been compared.
+	grpcHelperAttributePair struct {
+		first *expr.AttributeExpr
+		next  *expr.AttributeExpr
+	}
 )
 
 var (
+	// transformToProtoProgram owns the immutable service-to-protobuf rules used
+	// by every generated gRPC package.
+	transformToProtoProgram *codegen.TransformProgram
+	// transformFromProtoProgram owns the immutable protobuf-to-service rules used
+	// by every generated gRPC package.
+	transformFromProtoProgram *codegen.TransformProgram
 	// renderGoArrayT writes a conversion between service and protobuf arrays.
 	renderGoArrayT *template.Template
 	// renderGoMapT writes a conversion between service and protobuf maps.
@@ -33,9 +46,29 @@ var (
 	renderGoUnionFromProtoT *template.Template
 )
 
+// grpcTransformProgram returns the one conversion program for a direction.
+// Plans made from the returned value may share helpers after their complete
+// generated type layouts and child calls have been compared.
+func grpcTransformProgram(proto bool) *codegen.TransformProgram {
+	if proto {
+		return transformToProtoProgram
+	}
+	return transformFromProtoProgram
+}
+
 // The templates are initialized here because Go cannot initialize this cycle
 // of template functions in the variable declarations.
 func init() {
+	var err error
+	transformToProtoProgram, err = codegen.NewTransformProgram(protoHooks(true))
+	if err != nil {
+		panic(fmt.Sprintf("create service-to-protobuf transform program: %s", err))
+	}
+	transformFromProtoProgram, err = codegen.NewTransformProgram(protoHooks(false))
+	if err != nil {
+		panic(fmt.Sprintf("create protobuf-to-service transform program: %s", err))
+	}
+
 	fm := template.FuncMap{"transformAttribute": codegen.TransformAttribute}
 	renderGoArrayT = template.Must(template.New("renderGoArray").Funcs(fm).Parse(grpcTemplates.Read(grpcTransformGoArrayT)))
 	renderGoMapT = template.Must(template.New("renderGoMap").Funcs(fm).Parse(grpcTemplates.Read(grpcTransformGoMapT)))
@@ -136,23 +169,91 @@ func protoHooks(proto bool) *codegen.TransformHooks {
 // protobuf field number. A field number chooses its serialized position but
 // cannot change the Go code that copies its value.
 func sameGRPCHelperDefinition(firstSource, firstTarget, nextSource, nextTarget *expr.AttributeExpr) bool {
-	return sameGRPCHelperAttribute(firstSource, nextSource) &&
-		sameGRPCHelperAttribute(firstTarget, nextTarget)
+	return sameGRPCHelperAttribute(firstSource, nextSource, make(map[grpcHelperAttributePair]struct{})) &&
+		sameGRPCHelperAttribute(firstTarget, nextTarget, make(map[grpcHelperAttributePair]struct{}))
 }
 
 // sameGRPCHelperAttribute compares the facts available to conversion hooks.
-// Planning copies preserve shared type identity, so a different type cannot
-// describe the same function.
-func sameGRPCHelperAttribute(first, next *expr.AttributeExpr) bool {
-	return first.Type == next.Type &&
-		reflect.DeepEqual(first.Bases, next.Bases) &&
-		reflect.DeepEqual(first.References, next.References) &&
-		first.Description == next.Description &&
-		reflect.DeepEqual(first.Docs, next.Docs) &&
-		reflect.DeepEqual(first.Validation, next.Validation) &&
-		reflect.DeepEqual(grpcHelperMeta(first.Meta), grpcHelperMeta(next.Meta)) &&
-		reflect.DeepEqual(first.DefaultValue, next.DefaultValue) &&
-		reflect.DeepEqual(first.UserExamples, next.UserExamples)
+// It follows copied type graphs by value so separate plans do not differ only
+// because their expression copies have different addresses.
+func sameGRPCHelperAttribute(first, next *expr.AttributeExpr, seen map[grpcHelperAttributePair]struct{}) bool {
+	if first == nil || next == nil {
+		return first == next
+	}
+	pair := grpcHelperAttributePair{first: first, next: next}
+	if _, ok := seen[pair]; ok {
+		return true
+	}
+	seen[pair] = struct{}{}
+	if first.Description != next.Description ||
+		!reflect.DeepEqual(first.Docs, next.Docs) ||
+		!reflect.DeepEqual(first.Validation, next.Validation) ||
+		!reflect.DeepEqual(grpcHelperMeta(first.Meta), grpcHelperMeta(next.Meta)) ||
+		!reflect.DeepEqual(first.DefaultValue, next.DefaultValue) ||
+		!reflect.DeepEqual(first.UserExamples, next.UserExamples) ||
+		len(first.Bases) != len(next.Bases) || len(first.References) != len(next.References) {
+		return false
+	}
+	for index := range first.Bases {
+		if !sameGRPCHelperDataType(first.Bases[index], next.Bases[index], seen) {
+			return false
+		}
+	}
+	for index := range first.References {
+		if !sameGRPCHelperDataType(first.References[index], next.References[index], seen) {
+			return false
+		}
+	}
+	return sameGRPCHelperDataType(first.Type, next.Type, seen)
+}
+
+// sameGRPCHelperDataType compares the nested fields and collection rules that
+// gRPC conversion hooks may inspect while writing one helper body.
+func sameGRPCHelperDataType(first, next expr.DataType, seen map[grpcHelperAttributePair]struct{}) bool {
+	if first == nil || next == nil || reflect.TypeOf(first) != reflect.TypeOf(next) {
+		return first == next
+	}
+	switch first := first.(type) {
+	case expr.Primitive:
+		return first == next.(expr.Primitive)
+	case *expr.Array:
+		next := next.(*expr.Array)
+		return first.NonNullableElems == next.NonNullableElems &&
+			sameGRPCHelperAttribute(first.ElemType, next.ElemType, seen)
+	case *expr.Map:
+		next := next.(*expr.Map)
+		return sameGRPCHelperAttribute(first.KeyType, next.KeyType, seen) &&
+			sameGRPCHelperAttribute(first.ElemType, next.ElemType, seen)
+	case *expr.Object:
+		next := next.(*expr.Object)
+		if len(*first) != len(*next) {
+			return false
+		}
+		for index, field := range *first {
+			other := (*next)[index]
+			if field.Name != other.Name || !sameGRPCHelperAttribute(field.Attribute, other.Attribute, seen) {
+				return false
+			}
+		}
+		return true
+	case *expr.Union:
+		next := next.(*expr.Union)
+		if first.TypeName != next.TypeName || first.TypeKey != next.TypeKey ||
+			first.ValueKey != next.ValueKey || len(first.Values) != len(next.Values) {
+			return false
+		}
+		for index, branch := range first.Values {
+			other := next.Values[index]
+			if branch.Name != other.Name || !sameGRPCHelperAttribute(branch.Attribute, other.Attribute, seen) {
+				return false
+			}
+		}
+		return true
+	case expr.UserType:
+		return sameGRPCHelperAttribute(first.Attribute(), next.(expr.UserType).Attribute(), seen)
+	default:
+		panic(fmt.Sprintf("cannot compare gRPC helper type %T", first))
+	}
 }
 
 // grpcHelperMeta copies metadata without the protobuf field number.

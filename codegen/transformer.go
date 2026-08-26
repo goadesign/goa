@@ -201,6 +201,14 @@ type (
 		Code string
 	}
 
+	// TransformProgram owns one immutable, non-nil set of conversion hooks.
+	// Plans made by the same program may share a generated helper when their
+	// complete Go types, conversion rules, and child calls match. Built-in
+	// conversion plans do not need a TransformProgram.
+	TransformProgram struct {
+		hooks *TransformHooks
+	}
+
 	// TransformPlan owns copied source and target expressions plus every
 	// recursive function needed to convert between them. Create a plan, inspect
 	// the detached helper descriptions from Helpers and declare their names, bind
@@ -216,6 +224,7 @@ type (
 		sourceCopier   *expr.AttributeGraphCopier
 		targetCopier   *expr.AttributeGraphCopier
 		prefix         string
+		program        *TransformProgram
 		hooks          *TransformHooks
 		sourceCtx      *AttributeContext
 		targetCtx      *AttributeContext

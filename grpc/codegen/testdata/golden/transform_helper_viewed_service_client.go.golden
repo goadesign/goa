@@ -1,0 +1,117 @@
+// NewProtoViewedRequest builds *view_bindingspb.ViewedRequest from metadata
+// values.
+func NewProtoViewedRequest() *view_bindingspb.ViewedRequest {
+	message := &view_bindingspb.ViewedRequest{}
+	return message
+}
+
+// NewViewedResult builds *viewbindingsviews.ViewedContainerView from
+// *view_bindingspb.ViewedResponse.
+func NewViewedResult(message *view_bindingspb.ViewedResponse) *viewbindingsviews.ViewedContainerView {
+	result := &viewbindingsviews.ViewedContainerView{}
+	if message.Child != nil {
+		result.Child = transformProtoSharedDeclarationChildToSharedDeclarationChildView(message.Child)
+	}
+	return result
+}
+
+// NewProtoPlainRequest builds *view_bindingspb.PlainRequest from
+// *viewbindings.PlainPayload.
+func NewProtoPlainRequest(payload *viewbindings.PlainPayload) *view_bindingspb.PlainRequest {
+	message := &view_bindingspb.PlainRequest{}
+	if payload.Child != nil {
+		message.Child = transformSharedDeclarationChildToProtoSharedDeclarationChild(payload.Child)
+	}
+	return message
+}
+
+// NewPlainResult builds *viewbindings.PlainResult from
+// *view_bindingspb.PlainResponse.
+func NewPlainResult(message *view_bindingspb.PlainResponse) *viewbindings.PlainResult {
+	result := &viewbindings.PlainResult{}
+	if message.Child != nil {
+		result.Child = transformProtoSharedDeclarationChildToSharedDeclarationChild(message.Child)
+	}
+	return result
+}
+
+// ValidateViewedResponse runs the validations defined on ViewedResponse.
+func ValidateViewedResponse(message *view_bindingspb.ViewedResponse) (err error) {
+	if message.Child == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("child", "message"))
+	}
+	if message.Child != nil {
+		if err2 := validatetest_20_api_ViewBindings_SharedDeclarationChild_At_child(message.Child); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	return
+}
+
+// validatetest_20_api_ViewBindings_SharedDeclarationChild_At_child runs the
+// validations defined on SharedDeclarationChild.
+func validatetest_20_api_ViewBindings_SharedDeclarationChild_At_child(child *view_bindingspb.SharedDeclarationChild) (err error) {
+	if child.Value == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("value", "child"))
+	}
+	return
+}
+
+// ValidatePlainRequest runs the validations defined on PlainRequest.
+func ValidatePlainRequest(message *view_bindingspb.PlainRequest) (err error) {
+	if message.Child == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("child", "message"))
+	}
+	if message.Child != nil {
+		if err2 := validatetest_20_api_ViewBindings_SharedDeclarationChild_At_child(message.Child); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	return
+}
+
+// ValidatePlainResponse runs the validations defined on PlainResponse.
+func ValidatePlainResponse(message *view_bindingspb.PlainResponse) (err error) {
+	if message.Child == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("child", "message"))
+	}
+	if message.Child != nil {
+		if err2 := validatetest_20_api_ViewBindings_SharedDeclarationChild_At_child(message.Child); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	return
+}
+
+// transformProtoSharedDeclarationChildToSharedDeclarationChildView builds a
+// value of type *viewbindingsviews.SharedDeclarationChildView from a value of
+// type *view_bindingspb.SharedDeclarationChild.
+func transformProtoSharedDeclarationChildToSharedDeclarationChildView(v *view_bindingspb.SharedDeclarationChild) *viewbindingsviews.SharedDeclarationChildView {
+	res := &viewbindingsviews.SharedDeclarationChildView{
+		Value: v.Value,
+	}
+
+	return res
+}
+
+// transformSharedDeclarationChildToProtoSharedDeclarationChild builds a value
+// of type *view_bindingspb.SharedDeclarationChild from a value of type
+// *viewbindings.SharedDeclarationChild.
+func transformSharedDeclarationChildToProtoSharedDeclarationChild(v *viewbindings.SharedDeclarationChild) *view_bindingspb.SharedDeclarationChild {
+	res := &view_bindingspb.SharedDeclarationChild{
+		Value: &v.Value,
+	}
+
+	return res
+}
+
+// transformProtoSharedDeclarationChildToSharedDeclarationChild builds a value
+// of type *viewbindings.SharedDeclarationChild from a value of type
+// *view_bindingspb.SharedDeclarationChild.
+func transformProtoSharedDeclarationChildToSharedDeclarationChild(v *view_bindingspb.SharedDeclarationChild) *viewbindings.SharedDeclarationChild {
+	res := &viewbindings.SharedDeclarationChild{
+		Value: *v.Value,
+	}
+
+	return res
+}

@@ -1,0 +1,147 @@
+// NewProtoStoreRequest builds *shared_method_helperspb.StoreRequest from
+// *sharedmethodhelpers.StorePayload.
+func NewProtoStoreRequest(payload *sharedmethodhelpers.StorePayload) *shared_method_helperspb.StoreRequest {
+	message := &shared_method_helperspb.StoreRequest{}
+	if payload.Child != nil {
+		message.Child = transformSharedMethodChildToProtoSharedMethodChild(payload.Child)
+	}
+	return message
+}
+
+// NewProtoReplaceRequest builds *shared_method_helperspb.ReplaceRequest from
+// *sharedmethodhelpers.ReplacePayload.
+func NewProtoReplaceRequest(payload *sharedmethodhelpers.ReplacePayload) *shared_method_helperspb.ReplaceRequest {
+	message := &shared_method_helperspb.ReplaceRequest{}
+	if payload.Child != nil {
+		message.Child = transformSharedMethodChildToProtoSharedMethodChild(payload.Child)
+	}
+	return message
+}
+
+// NewProtoInspectRequest builds *shared_method_helperspb.InspectRequest from
+// *sharedmethodhelpers.InspectPayload.
+func NewProtoInspectRequest(payload *sharedmethodhelpers.InspectPayload) *shared_method_helperspb.InspectRequest {
+	message := &shared_method_helperspb.InspectRequest{}
+	if payload.Child != nil {
+		message.Child = transformNearMethodChildToProtoNearMethodChild(payload.Child)
+	}
+	return message
+}
+
+// ValidateStoreRequest runs the validations defined on StoreRequest.
+func ValidateStoreRequest(message *shared_method_helperspb.StoreRequest) (err error) {
+	if message.Child == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("child", "message"))
+	}
+	if message.Child != nil {
+		if err2 := validatetest_20_api_SharedMethodHelpers_SharedMethodChild_At_child(message.Child); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	return
+}
+
+// validatetest_20_api_SharedMethodHelpers_SharedMethodChild_At_child runs the
+// validations defined on SharedMethodChild.
+func validatetest_20_api_SharedMethodHelpers_SharedMethodChild_At_child(child *shared_method_helperspb.SharedMethodChild) (err error) {
+	if child.Value == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("value", "child"))
+	}
+	if child.Next != nil {
+		if err2 := validatetest_20_api_SharedMethodHelpers_SharedMethodChild_At_next(child.Next); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	return
+}
+
+// validatetest_20_api_SharedMethodHelpers_SharedMethodChild_At_next runs the
+// validations defined on SharedMethodChild.
+func validatetest_20_api_SharedMethodHelpers_SharedMethodChild_At_next(next *shared_method_helperspb.SharedMethodChild) (err error) {
+	if next.Value == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("value", "next"))
+	}
+	if next.Next != nil {
+		if err2 := validatetest_20_api_SharedMethodHelpers_SharedMethodChild_At_next(next.Next); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	return
+}
+
+// ValidateReplaceRequest runs the validations defined on ReplaceRequest.
+func ValidateReplaceRequest(message *shared_method_helperspb.ReplaceRequest) (err error) {
+	if message.Child == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("child", "message"))
+	}
+	if message.Child != nil {
+		if err2 := validatetest_20_api_SharedMethodHelpers_SharedMethodChild_At_child(message.Child); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	return
+}
+
+// ValidateInspectRequest runs the validations defined on InspectRequest.
+func ValidateInspectRequest(message *shared_method_helperspb.InspectRequest) (err error) {
+	if message.Child == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("child", "message"))
+	}
+	return
+}
+
+// transformSharedMethodChildToProtoSharedMethodChild builds a value of type
+// *shared_method_helperspb.SharedMethodChild from a value of type
+// *sharedmethodhelpers.SharedMethodChild.
+func transformSharedMethodChildToProtoSharedMethodChild(v *sharedmethodhelpers.SharedMethodChild) *shared_method_helperspb.SharedMethodChild {
+	res := &shared_method_helperspb.SharedMethodChild{
+		Value: &v.Value,
+	}
+	if v.Next != nil {
+		res.Next = transformSharedMethodChildToProtoSharedMethodChild(v.Next)
+	}
+
+	return res
+}
+
+// transformProtoSharedMethodChildToSharedMethodChild builds a value of type
+// *sharedmethodhelpers.SharedMethodChild from a value of type
+// *shared_method_helperspb.SharedMethodChild.
+func transformProtoSharedMethodChildToSharedMethodChild(v *shared_method_helperspb.SharedMethodChild) *sharedmethodhelpers.SharedMethodChild {
+	res := &sharedmethodhelpers.SharedMethodChild{
+		Value: *v.Value,
+	}
+	if v.Next != nil {
+		res.Next = transformProtoSharedMethodChildToSharedMethodChild(v.Next)
+	}
+
+	return res
+}
+
+// transformNearMethodChildToProtoNearMethodChild builds a value of type
+// *shared_method_helperspb.NearMethodChild from a value of type
+// *sharedmethodhelpers.NearMethodChild.
+func transformNearMethodChildToProtoNearMethodChild(v *sharedmethodhelpers.NearMethodChild) *shared_method_helperspb.NearMethodChild {
+	res := &shared_method_helperspb.NearMethodChild{
+		Value: v.Value,
+	}
+	if v.Next != nil {
+		res.Next = transformNearMethodChildToProtoNearMethodChild(v.Next)
+	}
+
+	return res
+}
+
+// transformProtoNearMethodChildToNearMethodChild builds a value of type
+// *sharedmethodhelpers.NearMethodChild from a value of type
+// *shared_method_helperspb.NearMethodChild.
+func transformProtoNearMethodChildToNearMethodChild(v *shared_method_helperspb.NearMethodChild) *sharedmethodhelpers.NearMethodChild {
+	res := &sharedmethodhelpers.NearMethodChild{
+		Value: v.Value,
+	}
+	if v.Next != nil {
+		res.Next = transformProtoNearMethodChildToNearMethodChild(v.Next)
+	}
+
+	return res
+}

@@ -1434,6 +1434,37 @@ func TestTransformHelperRegistryGroupsEquivalentPlans(t *testing.T) {
 	}
 }
 
+func TestNewTransformProgramRejectsNilHooks(t *testing.T) {
+	program, err := NewTransformProgram(nil)
+	require.Nil(t, program)
+	require.EqualError(t, err, "transform program hooks must not be nil")
+}
+
+func TestTransformHelperRegistryGroupsPlansFromOneProgram(t *testing.T) {
+	program, err := NewTransformProgram(&TransformHooks{})
+	require.NoError(t, err)
+	first := siblingTransformProgramPlan(t, program)
+	second, err := program.Plan(
+		first.sourceCopier.Original(first.source),
+		first.targetCopier.Original(first.target),
+		"",
+	)
+	require.NoError(t, err)
+	registry := NewTransformHelperRegistry()
+	for index, plan := range []*TransformPlan{first, second} {
+		require.NoError(t, registry.Collect(
+			plan,
+			transformTestLayout(t, plan.sourceCopier.Original(plan.source), GoLayoutPolicy{UseDefault: true}),
+			transformTestLayout(t, plan.targetCopier.Original(plan.target), GoLayoutPolicy{UseDefault: true}),
+			transformTestOrderFactory(fmt.Sprintf("plan-%d", index)).order,
+		))
+	}
+
+	groups, err := registry.Finalize()
+	require.NoError(t, err)
+	require.Len(t, groups, 1)
+}
+
 func TestTransformHelperRegistryGroupsSeparateTypeWrappersForOneDeclaration(t *testing.T) {
 	first := siblingTransformPlan(t)
 	second := siblingTransformPlan(t)
@@ -2283,6 +2314,12 @@ func %s(v %s) %s {
 // recursive type. Each field must own a helper even though both types share an
 // authored origin.
 func siblingTransformPlan(t *testing.T) *TransformPlan {
+	return siblingTransformProgramPlan(t, nil)
+}
+
+// siblingTransformProgramPlan builds the sibling conversion with program. A
+// nil program selects Goa's built-in conversion rules.
+func siblingTransformProgramPlan(t *testing.T, program *TransformProgram) *TransformPlan {
 	t.Helper()
 	root := RunDSL(t, testdata.TestTypesDSL)
 	recursive := root.UserType("Recursive")
@@ -2293,12 +2330,15 @@ func siblingTransformPlan(t *testing.T) *TransformPlan {
 		AttributeExpr: &expr.AttributeExpr{Type: fields},
 		TypeName:      "Container",
 	}
-	plan, err := NewTransformPlan(
-		&expr.AttributeExpr{Type: container},
-		&expr.AttributeExpr{Type: container},
-		"",
-		nil,
-	)
+	source := &expr.AttributeExpr{Type: container}
+	target := &expr.AttributeExpr{Type: container}
+	var plan *TransformPlan
+	var err error
+	if program == nil {
+		plan, err = NewTransformPlan(source, target, "", nil)
+	} else {
+		plan, err = program.Plan(source, target, "")
+	}
 	require.NoError(t, err)
 	return plan
 }

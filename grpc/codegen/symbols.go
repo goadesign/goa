@@ -4,6 +4,7 @@ package codegen
 
 import (
 	"cmp"
+	"fmt"
 	"path"
 	"slices"
 	"strings"
@@ -55,15 +56,11 @@ type (
 		bound                 bool
 	}
 
-	// grpcTransform stores one private conversion function and every call to it
-	// in one conversion plan.
-	grpcTransform struct {
-		plan          *codegen.TransformPlan
-		definition    codegen.TransformHelperDefinition
-		pkg           *codegen.GeneratedPackage
-		order         grpcSymbolOrder
-		preferredName string
-		fullName      string
+	// grpcTransformRegistry collects every private conversion function written
+	// to one generated client or server package.
+	grpcTransformRegistry struct {
+		pkg     *codegen.GeneratedPackage
+		helpers *codegen.TransformHelperRegistry
 	}
 
 	// grpcConversionKey contains the package and types that decide one
@@ -261,7 +258,7 @@ func planGRPCTransforms(
 	protobuf *protobufServicePlan,
 	symbols *grpcSymbols,
 	conversions map[grpcConversionKey]*grpcConversion,
-	helpers *[]*grpcTransform,
+	registries map[*codegen.GeneratedPackage]*grpcTransformRegistry,
 	pathName string,
 ) error {
 	clientPackage := generation.Package(path.Join(generation.GenPkg(), "grpc", pathName, "client"))
@@ -327,27 +324,25 @@ func planGRPCTransforms(
 				if err != nil {
 					return nil, err
 				}
-				for _, definition := range transform.HelperDefinitions() {
-					methodName := ""
-					if endpointSpecific {
-						methodName = endpoint.Name()
-					}
-					preferredName, fullName := grpcTransformHelperNames(definition, proto, serviceName, messageName, methodName)
-					preferredName = grpcViewedConversionName(endpoint.MethodExpr, viewKey, preferredName)
-					fullName = grpcViewedConversionName(endpoint.MethodExpr, viewKey, fullName)
-					helperID := id
-					helperID.role = grpcTransformHelperRole
-					helperID.source = preferredName
-					helperID.target = fullName
-					helperID.definition = definition.Location
-					*helpers = append(*helpers, &grpcTransform{
-						plan:          transform,
-						definition:    definition,
-						pkg:           pkg,
-						order:         grpcSymbolOrder(helperID),
-						preferredName: preferredName,
-						fullName:      fullName,
-					})
+				sourceLayout, targetLayout, err := planGRPCTransformLayouts(
+					generation, input, endpoint.MethodExpr, source, target, proto, protobuf, pathName,
+				)
+				if err != nil {
+					return nil, err
+				}
+				registry := registries[pkg]
+				if registry == nil {
+					registry = &grpcTransformRegistry{pkg: pkg, helpers: codegen.NewTransformHelperRegistry()}
+					registries[pkg] = registry
+				}
+				helperID := id
+				helperID.role = grpcTransformHelperRole
+				if err := registry.helpers.Collect(transform, sourceLayout, targetLayout,
+					func(location codegen.TransformHelperDefinitionLocation) codegen.PackageNameOrder {
+						helperID.definition = location
+						return grpcSymbolOrder(helperID)
+					}); err != nil {
+					return nil, err
 				}
 				conversion = &grpcConversion{
 					transform:     transform,
@@ -704,7 +699,7 @@ func clearGRPCProtobufValidation(attribute *expr.AttributeExpr, seen map[*expr.A
 
 // declareGRPCTransforms keeps a released response name when one method owns
 // it. Conversions shared by several methods use names based on their types.
-func declareGRPCTransforms(conversions map[grpcConversionKey]*grpcConversion, helpers []*grpcTransform) error {
+func declareGRPCTransforms(conversions map[grpcConversionKey]*grpcConversion, registries map[*codegen.GeneratedPackage]*grpcTransformRegistry) error {
 	type nameKey struct {
 		pkg  *codegen.GeneratedPackage
 		name string
@@ -736,21 +731,21 @@ func declareGRPCTransforms(conversions map[grpcConversionKey]*grpcConversion, he
 		}
 		conversion.declaration = declaration
 	}
-	helpersByName := make(map[nameKey]int)
-	for _, helper := range helpers {
-		helpersByName[nameKey{pkg: helper.pkg, name: helper.preferredName}]++
-	}
-	for _, helper := range helpers {
-		name := helper.preferredName
-		if helpersByName[nameKey{pkg: helper.pkg, name: name}] > 1 {
-			name = helper.fullName
-		}
-		declaration := codegen.NewPreferredName(codegen.NameFunction, name, codegen.UnexportedName, helper.order)
-		if err := helper.pkg.DeclareName(declaration); err != nil {
+	for _, registry := range registries {
+		groups, err := registry.helpers.Finalize()
+		if err != nil {
 			return err
 		}
-		if err := helper.plan.BindHelperDefinition(helper.definition.ID, declaration); err != nil {
-			return err
+		for _, group := range groups {
+			order := group.Order().(grpcSymbolOrder)
+			name := grpcTransformHelperName(group.Definition(), order.operation == grpcConversionDirection(true))
+			declaration := codegen.NewPreferredName(codegen.NameFunction, name, codegen.UnexportedName, order)
+			if err := registry.pkg.DeclareName(declaration); err != nil {
+				return err
+			}
+			if err := group.Bind(declaration); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -859,17 +854,15 @@ func grpcConversionNames(serviceAttribute *expr.AttributeExpr, message *protobuf
 	return name, fullName, serviceName, messageName
 }
 
-// grpcTransformHelperNames returns the short nested-type name and the complete
-// name that also identifies the outer conversion.
-func grpcTransformHelperNames(definition codegen.TransformHelperDefinition, proto bool, serviceName, messageName, methodName string) (string, string) {
+// grpcTransformHelperName returns the private name derived from the two nested
+// types converted by one helper.
+func grpcTransformHelperName(definition codegen.TransformHelperDefinition, proto bool) string {
 	source := grpcTransformTypeName(definition.Source)
 	target := grpcTransformTypeName(definition.Target)
 	if proto {
-		return codegen.Goify("transform"+source+"ToProto"+target, false),
-			codegen.Goify("transform"+methodName+serviceName+source+"ToProto"+messageName+target, false)
+		return codegen.Goify("transform"+source+"ToProto"+target, false)
 	}
-	return codegen.Goify("transformProto"+source+"To"+target, false),
-		codegen.Goify("transform"+methodName+"Proto"+messageName+source+"To"+serviceName+target, false)
+	return codegen.Goify("transformProto"+source+"To"+target, false)
 }
 
 // grpcTransformTypeName returns the declared type name used in a private
@@ -1113,7 +1106,81 @@ func newGRPCTransformPlan(source, target *expr.AttributeExpr, proto bool, protob
 		protobuf.bindAttributeCopy(original, source)
 		removeMeta(source)
 	}
-	return codegen.NewTransformPlan(source, target, prefix, protoHooks(proto))
+	return grpcTransformProgram(proto).Plan(source, target, prefix)
+}
+
+// planGRPCTransformLayouts records the exact service and protobuf Go types
+// supplied to one conversion. The helper registry compares these retained
+// declarations and field pointer rules before sharing a private function.
+func planGRPCTransformLayouts(
+	generation *codegen.Generation,
+	input PlanInput,
+	method *expr.MethodExpr,
+	source, target *expr.AttributeExpr,
+	proto bool,
+	protobuf *protobufServicePlan,
+	pathName string,
+) (*codegen.GoTypePlan, *codegen.GoTypePlan, error) {
+	serviceAttribute, protobufAttribute := target, source
+	if proto {
+		serviceAttribute, protobufAttribute = source, target
+	}
+	serviceLayout, err := input.Service.MethodTypeLayout(method, serviceAttribute)
+	if err != nil {
+		return nil, nil, err
+	}
+	protobufLayout, err := planGRPCProtobufLayout(generation, protobuf, protobufAttribute, pathName)
+	if err != nil {
+		return nil, nil, err
+	}
+	if proto {
+		return serviceLayout, protobufLayout, nil
+	}
+	return protobufLayout, serviceLayout, nil
+}
+
+// planGRPCProtobufLayout records the message, oneof, field, and pointer form
+// produced by protoc for attribute before those declarations receive names.
+func planGRPCProtobufLayout(generation *codegen.Generation, protobuf *protobufServicePlan, attribute *expr.AttributeExpr, pathName string) (*codegen.GoTypePlan, error) {
+	owner := path.Join(generation.GenPkg(), "grpc", pathName, pbPkgName)
+	planned := expr.DupAtt(attribute)
+	protobuf.bindAttributeCopy(attribute, planned)
+	removeMeta(planned)
+	if err := codegen.Walk(planned, func(candidate *expr.AttributeExpr) error {
+		for {
+			userType, ok := candidate.Type.(expr.UserType)
+			if !ok || protobuf.catalog.messageRecord(candidate) != nil {
+				break
+			}
+			candidate.Type = userType.Attribute().Type
+		}
+		return nil
+	}); err != nil {
+		return nil, fmt.Errorf("plan protobuf aliases: %w", err)
+	}
+	return codegen.PlanGoType(planned, codegen.GoTypePlanOptions{
+		Owner:            owner,
+		RetainNamedValue: true,
+		Policy:           codegen.GoLayoutPolicy{Pointer: true},
+		Bind: func(request codegen.GoTypeBindingRequest) (codegen.GoTypeBinding, error) {
+			switch request.Kind {
+			case codegen.GoNamed:
+				record := protobuf.catalog.messageRecord(request.Attribute)
+				if record == nil || record.declaration == nil {
+					return codegen.GoTypeBinding{}, fmt.Errorf("protobuf type %q has no generated declaration", request.Attribute.Type.Name())
+				}
+				return codegen.GoTypeBinding{Owner: owner, Declaration: record.declaration}, nil
+			case codegen.GoUnion:
+				key, ok := protobuf.oneofs[request.Attribute]
+				if !ok || protobuf.names[key] == nil {
+					return codegen.GoTypeBinding{}, fmt.Errorf("protobuf oneof %q has no generated declaration", request.Attribute.Type.Name())
+				}
+				return codegen.GoTypeBinding{Owner: owner, Declaration: protobuf.names[key]}, nil
+			default:
+				return codegen.GoTypeBinding{}, fmt.Errorf("bind unsupported protobuf Go type kind %s", request.Kind)
+			}
+		},
+	})
 }
 
 // ComparePackageName orders generated declarations by package, purpose, API,

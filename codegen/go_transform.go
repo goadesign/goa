@@ -328,6 +328,28 @@ func GoTransformWithAttrs(source, target *expr.AttributeExpr, sourceVar, targetV
 	return code, helpers, nil
 }
 
+// NewTransformProgram copies non-nil hooks into a conversion program that can
+// make several plans. The program exposes no mutable state, so a package-level
+// helper registry may compare plans by their shared program identity. Callers
+// that need Goa's built-in conversion use NewTransformPlan with nil hooks. It
+// returns an error when hooks is nil.
+func NewTransformProgram(hooks *TransformHooks) (*TransformProgram, error) {
+	if hooks == nil {
+		return nil, fmt.Errorf("transform program hooks must not be nil")
+	}
+	copied := *hooks
+	return &TransformProgram{hooks: &copied}, nil
+}
+
+// Plan copies source and target and records the conversion selected by the
+// program. Plans made by one program use the same immutable hook choices.
+func (p *TransformProgram) Plan(source, target *expr.AttributeExpr, prefix string) (*TransformPlan, error) {
+	if p == nil {
+		return nil, fmt.Errorf("transform program must not be nil")
+	}
+	return newTransformPlan(source, target, prefix, p)
+}
+
 // NewTransformPlan copies the source and target expression graphs and records
 // every recursive conversion needed to turn one into the other. Distinct user
 // types remain distinct even when they were copied from one declaration, and a
@@ -343,6 +365,20 @@ func GoTransformWithAttrs(source, target *expr.AttributeExpr, sourceVar, targetV
 // those copies without changing them; this function returns an error if it
 // detects a mutation.
 func NewTransformPlan(source, target *expr.AttributeExpr, prefix string, hooks *TransformHooks) (*TransformPlan, error) {
+	if hooks == nil {
+		return newTransformPlan(source, target, prefix, nil)
+	}
+	program, err := NewTransformProgram(hooks)
+	if err != nil {
+		return nil, err
+	}
+	return program.Plan(source, target, prefix)
+}
+
+// newTransformPlan records one conversion using program's retained hooks. A
+// nil program selects Goa's built-in conversion and can share with every other
+// plan that also has no custom hooks.
+func newTransformPlan(source, target *expr.AttributeExpr, prefix string, program *TransformProgram) (*TransformPlan, error) {
 	sourceCopier := expr.NewAttributeGraphCopier()
 	targetCopier := expr.NewAttributeGraphCopier()
 	source = sourceCopier.Copy(source)
@@ -357,8 +393,13 @@ func NewTransformPlan(source, target *expr.AttributeExpr, prefix string, hooks *
 		sourceCopier:   sourceCopier,
 		targetCopier:   targetCopier,
 		prefix:         prefix,
+		program:        program,
 		operations:     []*transformOperation{{}},
 		renders:        make(map[transformRenderRequest]transformRenderResult),
+	}
+	var hooks *TransformHooks
+	if program != nil {
+		hooks = program.hooks
 	}
 	retainedHooks, structuralChoices := captureTransformStructuralHooks(hooks, sourceCopier, targetCopier, func() bool {
 		return !plan.changed()

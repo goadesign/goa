@@ -215,6 +215,53 @@ func (p *Plan) StreamingResultLayout(method *expr.MethodExpr) (*codegen.GoTypePl
 	return nil, fmt.Errorf("service method %q is not part of this plan", method.Name)
 }
 
+// MethodTypeLayout returns the Go fields and declarations used when a
+// transport converts attribute for method. The supplied attribute may contain
+// only the fields selected by one result view; the returned plan keeps that
+// selection while binding each named value to the declaration already chosen
+// by service generation.
+func (p *Plan) MethodTypeLayout(method *expr.MethodExpr, attribute *expr.AttributeExpr) (*codegen.GoTypePlan, error) {
+	for _, service := range p.facts.services {
+		facts := service.methodByExpr[method]
+		if facts == nil {
+			continue
+		}
+		owner := service.packagePath
+		projected := make(map[expr.UserType]*codegen.TypeDeclaration)
+		for _, projection := range service.projections {
+			for _, planned := range projection.types {
+				projected[planned.pair.projected.Origin()] = planned.declaration
+			}
+		}
+		if userType, ok := attribute.Type.(expr.UserType); ok && projected[userType.Origin()] != nil {
+			owner = service.viewsPath
+		}
+		serviceBinder := serviceGoTypeBinder(p.facts.rootTypes, p.generation)
+		binder := func(request codegen.GoTypeBindingRequest) (codegen.GoTypeBinding, error) {
+			if request.Kind == codegen.GoNamed {
+				userType := request.Attribute.Type.(expr.UserType)
+				if declaration := projected[userType.Origin()]; declaration != nil {
+					return codegen.GoTypeBinding{Owner: service.viewsPath, Type: declaration}, nil
+				}
+			}
+			return serviceBinder(request)
+		}
+		return codegen.PlanGoType(attribute, codegen.GoTypePlanOptions{
+			Owner:            owner,
+			RetainNamedValue: true,
+			Policy: codegen.GoLayoutPolicy{
+				UseDefault: true,
+				SumType:    true,
+			},
+			Bind: binder,
+		})
+	}
+	if method == nil {
+		return nil, fmt.Errorf("service method is not part of this plan")
+	}
+	return nil, fmt.Errorf("service method %q is not part of this plan", method.Name)
+}
+
 // ServicePackageImports returns the generated service and views package
 // preferences recorded before Generation.Freeze. Transport generators use it
 // for service-level files that may not contain a method, such as an HTTP file

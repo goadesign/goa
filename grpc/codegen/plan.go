@@ -154,7 +154,7 @@ func newPlans(generation *codegen.Generation, resolver protobufToolResolver, inp
 		return nil, err
 	}
 	conversions := make(map[grpcConversionKey]*grpcConversion)
-	var helpers []*grpcTransform
+	registries := make(map[*codegen.GeneratedPackage]*grpcTransformRegistry)
 	for _, plan := range plans {
 		input := PlanInput{Root: plan.root, Service: plan.service}
 		for _, grpcService := range plan.expressions {
@@ -166,13 +166,13 @@ func newPlans(generation *codegen.Generation, resolver protobufToolResolver, inp
 			if err := planGRPCValidations(generation, input, grpcService, plan.protobuf[grpcService], pathName); err != nil {
 				return nil, err
 			}
-			if err := planGRPCTransforms(generation, input, grpcService, plan.protobuf[grpcService], symbols, conversions, &helpers, pathName); err != nil {
+			if err := planGRPCTransforms(generation, input, grpcService, plan.protobuf[grpcService], symbols, conversions, registries, pathName); err != nil {
 				return nil, err
 			}
 			plan.symbols[grpcService] = symbols
 		}
 	}
-	if err := declareGRPCTransforms(conversions, helpers); err != nil {
+	if err := declareGRPCTransforms(conversions, registries); err != nil {
 		return nil, err
 	}
 	for _, plan := range plans {

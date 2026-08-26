@@ -13,6 +13,125 @@ import (
 	"goa.design/goa/v3/dsl"
 )
 
+// TestTransformHelpersShareAcrossMethods checks that conversions written to
+// one client or server package reuse the same recursive private function. A
+// nearly identical child with different required-field pointer rules keeps a
+// separate function and call sites.
+func TestTransformHelpersShareAcrossMethods(t *testing.T) {
+	root := RunGRPCDSL(t, sharedGRPCTransformHelperMethodsDSL)
+	services := CreateGRPCServices(root)
+	service := services.Get("SharedMethodHelpers")
+	require.Len(t, service.clientTransformHelpers, 4)
+	require.Len(t, service.serverTransformHelpers, 2)
+
+	var clientShared, clientNear *codegen.TransformFunctionData
+	for _, helper := range service.clientTransformHelpers {
+		if !strings.Contains(helper.Declaration.Name(), "ToProto") {
+			continue
+		}
+		switch helper.ParamTypeRef {
+		case "*sharedmethodhelpers.SharedMethodChild":
+			clientShared = helper
+		case "*sharedmethodhelpers.NearMethodChild":
+			clientNear = helper
+		}
+	}
+	require.NotNil(t, clientShared)
+	require.NotNil(t, clientNear)
+	require.NotSame(t, clientShared.Declaration, clientNear.Declaration)
+	require.Contains(t, clientShared.Code, clientShared.Declaration.Name()+"(v.Next)")
+	require.Contains(t, clientNear.Code, clientNear.Declaration.Name()+"(v.Next)")
+
+	var serverShared, serverNear *codegen.TransformFunctionData
+	for _, helper := range service.serverTransformHelpers {
+		switch helper.ParamTypeRef {
+		case "*shared_method_helperspb.SharedMethodChild":
+			serverShared = helper
+		case "*shared_method_helperspb.NearMethodChild":
+			serverNear = helper
+		}
+	}
+	require.NotNil(t, serverShared)
+	require.NotNil(t, serverNear)
+	require.NotSame(t, serverShared.Declaration, serverNear.Declaration)
+	require.Contains(t, serverShared.Code, serverShared.Declaration.Name()+"(v.Next)")
+	require.Contains(t, serverNear.Code, serverNear.Declaration.Name()+"(v.Next)")
+
+	for _, endpoint := range service.Endpoints[:2] {
+		require.Contains(t, endpoint.Request.ClientConvert.Init.Code,
+			"message.Child = "+clientShared.Declaration.Name()+"(payload.Child)")
+		require.Contains(t, endpoint.Request.ServerConvert.Init.Code,
+			"v.Child = "+serverShared.Declaration.Name()+"(message.Child)")
+	}
+	inspect := service.Endpoints[2]
+	require.Contains(t, inspect.Request.ClientConvert.Init.Code,
+		"message.Child = "+clientNear.Declaration.Name()+"(payload.Child)")
+	require.Contains(t, inspect.Request.ServerConvert.Init.Code,
+		"v.Child = "+serverNear.Declaration.Name()+"(message.Child)")
+
+	client := codegen.SectionsCode(t, clientTypeFiles(services)[0].SectionTemplates[1:])
+	server := codegen.SectionsCode(t, serverTypeFiles(services)[0].SectionTemplates[1:])
+	testutil.AssertGo(t, "testdata/golden/transform_helper_shared_methods_client.go.golden", client)
+	testutil.AssertGo(t, "testdata/golden/transform_helper_shared_methods_server.go.golden", server)
+}
+
+// TestTransformHelpersKeepViewedAndServiceDeclarations checks that a projected
+// child uses its views package declaration while the original child used by a
+// normal method keeps its service package declaration. Their private helpers
+// must remain separate in the final client and server packages.
+func TestTransformHelpersKeepViewedAndServiceDeclarations(t *testing.T) {
+	root := RunGRPCDSL(t, viewedAndServiceTransformHelperDSL)
+	services := CreateGRPCServices(root)
+	service := services.Get("ViewBindings")
+
+	var clientServiceFrom, clientViewFrom *codegen.TransformFunctionData
+	for _, helper := range service.clientTransformHelpers {
+		switch helper.ResultTypeRef {
+		case "*viewbindings.SharedDeclarationChild":
+			clientServiceFrom = helper
+		case "*viewbindingsviews.SharedDeclarationChildView":
+			clientViewFrom = helper
+		}
+	}
+	require.NotNil(t, clientServiceFrom)
+	require.NotNil(t, clientViewFrom)
+	require.NotSame(t, clientServiceFrom.Declaration, clientViewFrom.Declaration)
+
+	var serverServiceTo, serverViewTo *codegen.TransformFunctionData
+	for _, helper := range service.serverTransformHelpers {
+		switch helper.ParamTypeRef {
+		case "*viewbindings.SharedDeclarationChild":
+			serverServiceTo = helper
+		case "*viewbindingsviews.SharedDeclarationChildView":
+			serverViewTo = helper
+		}
+	}
+	require.NotNil(t, serverServiceTo)
+	require.NotNil(t, serverViewTo)
+	require.NotSame(t, serverServiceTo.Declaration, serverViewTo.Declaration)
+
+	var viewed, plain *EndpointData
+	for _, endpoint := range service.Endpoints {
+		switch endpoint.Method.Name {
+		case "Viewed":
+			viewed = endpoint
+		case "Plain":
+			plain = endpoint
+		}
+	}
+	require.NotNil(t, viewed)
+	require.NotNil(t, plain)
+	require.Contains(t, plain.Response.ClientConvert.Init.Code, clientServiceFrom.Declaration.Name()+"(message.Child)")
+	require.Contains(t, plain.Response.ServerConvert.Init.Code, serverServiceTo.Declaration.Name()+"(result.Child)")
+	require.Contains(t, viewed.Response.ClientConvert.Init.Code, clientViewFrom.Declaration.Name()+"(message.Child)")
+	require.Contains(t, viewed.Response.ServerConvert.Init.Code, serverViewTo.Declaration.Name()+"(result.Child)")
+
+	client := codegen.SectionsCode(t, clientTypeFiles(services)[0].SectionTemplates[1:])
+	server := codegen.SectionsCode(t, serverTypeFiles(services)[0].SectionTemplates[1:])
+	testutil.AssertGo(t, "testdata/golden/transform_helper_viewed_service_client.go.golden", client)
+	testutil.AssertGo(t, "testdata/golden/transform_helper_viewed_service_server.go.golden", server)
+}
+
 // TestTransformHelpersShareRequiredAndOptionalCalls checks that a required
 // field and an optional field in one conversion plan share one function. The
 // optional call remains inside its nil check.
@@ -82,6 +201,73 @@ func sharedGRPCTransformHelperDSL() {
 				dsl.Field(1, "left", child)
 				dsl.Field(2, "right", child)
 				dsl.Required("left")
+			})
+			dsl.GRPC(func() {})
+		})
+	})
+}
+
+// sharedGRPCTransformHelperMethodsDSL creates two request messages with the
+// same recursive child and one request with a separate recursive child whose
+// value field is optional instead of required.
+func sharedGRPCTransformHelperMethodsDSL() {
+	child := dsl.Type("SharedMethodChild", func() {
+		dsl.Field(1, "value", dsl.String)
+		dsl.Field(2, "next", "SharedMethodChild")
+		dsl.Required("value")
+	})
+	near := dsl.Type("NearMethodChild", func() {
+		dsl.Field(1, "value", dsl.String)
+		dsl.Field(2, "next", "NearMethodChild")
+	})
+	dsl.Service("SharedMethodHelpers", func() {
+		for _, method := range []string{"Store", "Replace"} {
+			dsl.Method(method, func() {
+				dsl.Payload(func() {
+					dsl.Field(1, "child", child)
+					dsl.Required("child")
+				})
+				dsl.GRPC(func() {})
+			})
+		}
+		dsl.Method("Inspect", func() {
+			dsl.Payload(func() {
+				dsl.Field(1, "child", near)
+				dsl.Required("child")
+			})
+			dsl.GRPC(func() {})
+		})
+	})
+}
+
+// viewedAndServiceTransformHelperDSL uses one named child through both a
+// projected result view and an ordinary method result.
+func viewedAndServiceTransformHelperDSL() {
+	child := dsl.Type("SharedDeclarationChild", func() {
+		dsl.Field(1, "value", dsl.String)
+		dsl.Required("value")
+	})
+	viewedResult := dsl.ResultType("application/vnd.view-bindings", func() {
+		dsl.TypeName("ViewedContainer")
+		dsl.Field(1, "child", child)
+		dsl.Required("child")
+		dsl.View("default", func() {
+			dsl.Attribute("child")
+		})
+	})
+	dsl.Service("ViewBindings", func() {
+		dsl.Method("Viewed", func() {
+			dsl.Result(viewedResult)
+			dsl.GRPC(func() {})
+		})
+		dsl.Method("Plain", func() {
+			dsl.Payload(func() {
+				dsl.Field(1, "child", child)
+				dsl.Required("child")
+			})
+			dsl.Result(func() {
+				dsl.Field(1, "child", child)
+				dsl.Required("child")
 			})
 			dsl.GRPC(func() {})
 		})

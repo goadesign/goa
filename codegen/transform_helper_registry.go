@@ -253,10 +253,11 @@ func transformHelperClasses(candidates []*transformHelperCandidate, previous []i
 // transformHelperCandidatesEqual compares the facts that determine one
 // function body, then compares its child calls using the previous pass.
 func transformHelperCandidatesEqual(left, right *transformHelperCandidate, previous []int) bool {
-	if left.plan.hooks != nil || right.plan.hooks != nil {
-		if left.plan != right.plan || left.definition.ID != right.definition.ID {
-			return false
-		}
+	if left.plan.program != right.plan.program {
+		return false
+	}
+	if left.plan.program != nil && !transformProgramHelpersEqual(left, right) {
+		return false
 	}
 	if !transformGoLayoutsEqual(left.sourceLayout, right.sourceLayout, true, make(map[transformGoLayoutPair]struct{})) {
 		return false
@@ -279,6 +280,18 @@ func transformHelperCandidatesEqual(left, right *transformHelperCandidate, previ
 		}
 	}
 	return true
+}
+
+// transformProgramHelpersEqual asks one shared hook program whether helpers
+// from separate plans have the same conversion inputs. The remaining registry
+// comparison still checks their generated Go layouts and ordered child calls.
+func transformProgramHelpersEqual(left, right *transformHelperCandidate) bool {
+	hooks := left.plan.program.hooks
+	if hooks.SameHelperDefinition == nil {
+		return transformAttributesEqual(left.definition.Source, right.definition.Source, make(map[transformAttributePair]struct{})) &&
+			transformAttributesEqual(left.definition.Target, right.definition.Target, make(map[transformAttributePair]struct{}))
+	}
+	return hooks.SameHelperDefinition(left.definition.Source, left.definition.Target, right.definition.Source, right.definition.Target)
 }
 
 // transformGoLayoutsEqual compares every generated type fact read by a
