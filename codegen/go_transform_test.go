@@ -1434,6 +1434,65 @@ func TestTransformHelperRegistryGroupsEquivalentPlans(t *testing.T) {
 	}
 }
 
+func TestTransformHelperRegistryFollowsRootWrapper(t *testing.T) {
+	for _, wrapTarget := range []bool{false, true} {
+		plan, source, target := rootWrappedTransformPlan(t, wrapTarget)
+		registry := NewTransformHelperRegistry()
+		err := registry.Collect(
+			plan,
+			transformTestLayout(t, source, GoLayoutPolicy{UseDefault: true}),
+			transformTestLayout(t, target, GoLayoutPolicy{UseDefault: true}),
+			transformTestOrderFactory("wrapped").order,
+		)
+		require.NoError(t, err)
+	}
+}
+
+func TestTransformHelperRegistryRejectsInvalidRootWrapper(t *testing.T) {
+	tests := []struct {
+		name   string
+		change func(*TransformPlan, *GoTypePlan)
+		err    string
+	}{
+		{
+			name: "missing generated field",
+			change: func(plan *TransformPlan, _ *GoTypePlan) {
+				plan.rootWrap.FieldName = "Missing"
+			},
+			err: `select target root wrapper: wrapper field "Missing" is missing`,
+		},
+		{
+			name: "ambiguous generated field",
+			change: func(_ *TransformPlan, layout *GoTypePlan) {
+				layout.fields[1].fieldNameUpper = "Field"
+			},
+			err: `select target root wrapper: wrapper field "Field" is ambiguous`,
+		},
+		{
+			name: "different design field",
+			change: func(plan *TransformPlan, _ *GoTypePlan) {
+				plan.rootWrap.FieldName = "Other"
+			},
+			err: `select target root wrapper: wrapper field "Other" does not hold the selected value`,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			plan, source, target := rootWrappedTransformPlan(t, true)
+			targetLayout := transformTestLayout(t, target, GoLayoutPolicy{UseDefault: true})
+			test.change(plan, targetLayout)
+			registry := NewTransformHelperRegistry()
+			err := registry.Collect(
+				plan,
+				transformTestLayout(t, source, GoLayoutPolicy{UseDefault: true}),
+				targetLayout,
+				transformTestOrderFactory("wrapped").order,
+			)
+			require.EqualError(t, err, test.err)
+		})
+	}
+}
+
 func TestNewTransformProgramRejectsNilHooks(t *testing.T) {
 	program, err := NewTransformProgram(nil)
 	require.Nil(t, program)
@@ -1742,6 +1801,49 @@ func collectionTransformHelperPlan(t *testing.T, required bool) *TransformPlan {
 	plan, err := NewTransformPlan(container, container, "", nil)
 	require.NoError(t, err)
 	return plan
+}
+
+// rootWrappedTransformPlan builds an array conversion where one side stores
+// the array in a generated wrapper field before nested item helpers run.
+func rootWrappedTransformPlan(t *testing.T, wrapTarget bool) (*TransformPlan, *expr.AttributeExpr, *expr.AttributeExpr) {
+	t.Helper()
+	sourceElement := transformObjectAttribute("SourceItem", true)
+	targetElement := transformObjectAttribute("TargetItem", true)
+	sourceValue := &expr.AttributeExpr{Type: &expr.Array{ElemType: sourceElement}}
+	targetValue := &expr.AttributeExpr{Type: &expr.Array{ElemType: targetElement}}
+	wrap := func(value *expr.AttributeExpr) *expr.AttributeExpr {
+		return &expr.AttributeExpr{Type: &expr.Object{
+			{Name: "field", Attribute: value},
+			{Name: "other", Attribute: &expr.AttributeExpr{Type: expr.String}},
+		}}
+	}
+	source, target := sourceValue, wrap(targetValue)
+	if !wrapTarget {
+		source, target = wrap(sourceValue), targetValue
+	}
+	program, err := NewTransformProgram(&TransformHooks{
+		UnwrapPair: func(source, target *expr.AttributeExpr) (*expr.AttributeExpr, *expr.AttributeExpr, *WrapDirective) {
+			wrapper := target
+			if !wrapTarget {
+				wrapper = source
+			}
+			object := expr.AsObject(wrapper.Type)
+			if object == nil || object.Attribute("field") == nil {
+				return source, target, nil
+			}
+			directive := &WrapDirective{WrapTarget: wrapTarget, FieldName: "Field"}
+			if wrapTarget {
+				directive.Target = target
+				return source, object.Attribute("field"), directive
+			}
+			return object.Attribute("field"), target, directive
+		},
+	})
+	require.NoError(t, err)
+	plan, err := program.Plan(source, target, "")
+	require.NoError(t, err)
+	require.Len(t, plan.Helpers(), 1)
+	return plan, source, target
 }
 
 func TestTransformHelperGroupBindIsAtomic(t *testing.T) {

@@ -132,6 +132,25 @@ func TestTransformHelpersKeepViewedAndServiceDeclarations(t *testing.T) {
 	testutil.AssertGo(t, "testdata/golden/transform_helper_viewed_service_server.go.golden", server)
 }
 
+// TestTransformHelpersFollowCollectionWrapper checks that nested conversions
+// use the slice stored in a protobuf response wrapper on both transport sides.
+func TestTransformHelpersFollowCollectionWrapper(t *testing.T) {
+	root := RunGRPCDSL(t, wrappedCollectionTransformHelperDSL)
+	services := CreateGRPCServices(root)
+	service := services.Get("WrappedCollection")
+	require.NotEmpty(t, service.clientTransformHelpers)
+	require.NotEmpty(t, service.serverTransformHelpers)
+
+	response := service.Endpoints[0].Response
+	require.Contains(t, response.ServerConvert.Init.Code, "message.Field = make(")
+	require.Contains(t, response.ClientConvert.Init.Code, "result := make(")
+
+	client := codegen.SectionsCode(t, clientTypeFiles(services)[0].SectionTemplates[1:])
+	server := codegen.SectionsCode(t, serverTypeFiles(services)[0].SectionTemplates[1:])
+	testutil.AssertGo(t, "testdata/golden/transform_helper_wrapped_collection_client.go.golden", client)
+	testutil.AssertGo(t, "testdata/golden/transform_helper_wrapped_collection_server.go.golden", server)
+}
+
 // TestTransformHelpersShareRequiredAndOptionalCalls checks that a required
 // field and an optional field in one conversion plan share one function. The
 // optional call remains inside its nil check.
@@ -268,6 +287,35 @@ func viewedAndServiceTransformHelperDSL() {
 			dsl.Result(func() {
 				dsl.Field(1, "child", child)
 				dsl.Required("child")
+			})
+			dsl.GRPC(func() {})
+		})
+	})
+}
+
+// wrappedCollectionTransformHelperDSL returns a viewed slice whose item uses a
+// second viewed type, so gRPC needs a nested conversion inside its Field slice.
+func wrappedCollectionTransformHelperDSL() {
+	child := dsl.ResultType("application/vnd.wrapped-collection-child", func() {
+		dsl.TypeName("WrappedCollectionChild")
+		dsl.Field(1, "value", dsl.String)
+		dsl.Required("value")
+		dsl.View("default", func() {
+			dsl.Attribute("value")
+		})
+	})
+	item := dsl.ResultType("application/vnd.wrapped-collection-item", func() {
+		dsl.TypeName("WrappedCollectionItem")
+		dsl.Field(1, "child", child)
+		dsl.Required("child")
+		dsl.View("default", func() {
+			dsl.Attribute("child")
+		})
+	})
+	dsl.Service("WrappedCollection", func() {
+		dsl.Method("List", func() {
+			dsl.Result(dsl.CollectionOf(item), func() {
+				dsl.View("default")
 			})
 			dsl.GRPC(func() {})
 		})

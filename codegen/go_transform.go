@@ -388,6 +388,8 @@ func newTransformPlan(source, target *expr.AttributeExpr, prefix string, program
 	plan := &TransformPlan{
 		source:         source,
 		target:         target,
+		rootSource:     source,
+		rootTarget:     target,
 		sourceBaseline: baselineSource.Copy(source),
 		targetBaseline: baselineTarget.Copy(target),
 		sourceCopier:   sourceCopier,
@@ -1447,8 +1449,14 @@ func planTransformOperationWithHelper(source, target *expr.AttributeExpr, requir
 			return fmt.Errorf("custom union transform helper requires a named source or target type")
 		}
 	}
+	var rootWrap *WrapDirective
 	if plan.hooks != nil && plan.hooks.UnwrapPair != nil {
-		source, target, _ = plan.hooks.UnwrapPair(source, target)
+		source, target, rootWrap = plan.hooks.UnwrapPair(source, target)
+	}
+	if location.encoded == "" {
+		plan.rootSource = source
+		plan.rootTarget = target
+		plan.rootWrap = rootWrap
 	}
 	if !forceHelper {
 		helperSource, helperTarget = source, target

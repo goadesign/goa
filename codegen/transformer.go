@@ -219,6 +219,9 @@ type (
 	TransformPlan struct {
 		source         *expr.AttributeExpr
 		target         *expr.AttributeExpr
+		rootSource     *expr.AttributeExpr
+		rootTarget     *expr.AttributeExpr
+		rootWrap       *WrapDirective
 		sourceBaseline *expr.AttributeExpr
 		targetBaseline *expr.AttributeExpr
 		sourceCopier   *expr.AttributeGraphCopier

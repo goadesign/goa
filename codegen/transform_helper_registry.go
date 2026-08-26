@@ -87,6 +87,10 @@ func (r *TransformHelperRegistry) Collect(plan *TransformPlan, sourceLayout, tar
 	if order == nil {
 		return fmt.Errorf("transform helper order must not be nil")
 	}
+	sourceLayout, targetLayout, err := transformRootLayouts(plan, sourceLayout, targetLayout)
+	if err != nil {
+		return err
+	}
 	definitions := make(map[int]TransformHelperDefinition, len(plan.helpers))
 	for _, definition := range plan.definitions {
 		for _, index := range definition.helpers {
@@ -98,11 +102,11 @@ func (r *TransformHelperRegistry) Collect(plan *TransformPlan, sourceLayout, tar
 		if !ok {
 			return fmt.Errorf("transform helper occurrence %d has no definition", helper.Occurrence)
 		}
-		source, err := transformLayoutAtLocation(sourceLayout, plan.source, helper.location)
+		source, err := transformLayoutAtLocation(sourceLayout, plan.rootSource, helper.location)
 		if err != nil {
 			return fmt.Errorf("find source layout for transform helper occurrence %d: %w", helper.Occurrence, err)
 		}
-		target, err := transformLayoutAtLocation(targetLayout, plan.target, helper.location)
+		target, err := transformLayoutAtLocation(targetLayout, plan.rootTarget, helper.location)
 		if err != nil {
 			return fmt.Errorf("find target layout for transform helper occurrence %d: %w", helper.Occurrence, err)
 		}
@@ -121,6 +125,57 @@ func (r *TransformHelperRegistry) Collect(plan *TransformPlan, sourceLayout, tar
 		})
 	}
 	return nil
+}
+
+// transformRootLayouts selects the generated wrapper field that the transform
+// reads or writes before it calls any nested conversion functions.
+func transformRootLayouts(plan *TransformPlan, sourceLayout, targetLayout *GoTypePlan) (*GoTypePlan, *GoTypePlan, error) {
+	if plan.rootWrap == nil {
+		return sourceLayout, targetLayout, nil
+	}
+	if plan.rootWrap.WrapTarget {
+		selected, err := transformRootWrapperField(targetLayout, plan.target, plan.rootTarget, plan.rootWrap.FieldName)
+		if err != nil {
+			return nil, nil, fmt.Errorf("select target root wrapper: %w", err)
+		}
+		return sourceLayout, selected, nil
+	}
+	selected, err := transformRootWrapperField(sourceLayout, plan.source, plan.rootSource, plan.rootWrap.FieldName)
+	if err != nil {
+		return nil, nil, fmt.Errorf("select source root wrapper: %w", err)
+	}
+	return selected, targetLayout, nil
+}
+
+// transformRootWrapperField returns the generated field chosen by the saved
+// wrapper instruction. The generated field and design field must describe the
+// same value that the transform planned to read or write.
+func transformRootWrapperField(layout *GoTypePlan, wrapper, selected *expr.AttributeExpr, fieldName string) (*GoTypePlan, error) {
+	layout, wrapper = transformLayoutValue(layout, wrapper)
+	object := expr.AsObject(wrapper.Type)
+	if object == nil || layout.kind != GoStruct {
+		return nil, fmt.Errorf("wrapper does not select a generated struct")
+	}
+	if len(layout.fields) != len(*object) {
+		return nil, fmt.Errorf("wrapper has %d design fields and %d generated fields", len(*object), len(layout.fields))
+	}
+	var match *GoTypePlan
+	for index, field := range layout.fields {
+		if field.fieldNameUpper != fieldName {
+			continue
+		}
+		if match != nil {
+			return nil, fmt.Errorf("wrapper field %q is ambiguous", fieldName)
+		}
+		if (*object)[index].Attribute != selected {
+			return nil, fmt.Errorf("wrapper field %q does not hold the selected value", fieldName)
+		}
+		match = field
+	}
+	if match == nil {
+		return nil, fmt.Errorf("wrapper field %q is missing", fieldName)
+	}
+	return match, nil
 }
 
 // Finalize groups all collected helpers. It may be called once, after every
