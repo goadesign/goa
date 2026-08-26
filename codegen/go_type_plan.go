@@ -515,10 +515,21 @@ func (l LinkedGoType) Field(firstUpper bool) string {
 // from the output package. It returns an empty string when both types are in the
 // same package.
 func (l LinkedGoType) Package() string {
-	if l.plan.owner == l.outputPath {
+	var importPath string
+	switch l.plan.kind {
+	case GoPrimitive:
+		if l.plan.hasDirectImport && l.plan.customQualifier != "" {
+			importPath = l.plan.directImport.Path
+		}
+	case GoNamed, GoUnion:
+		importPath = l.plan.owner
+	case GoServiceError:
+		importPath = l.plan.directImport.Path
+	}
+	if importPath == "" || importPath == l.outputPath {
 		return ""
 	}
-	return l.qualify(l.plan.owner)
+	return l.qualify(importPath)
 }
 
 // Enter returns a formatter for child that uses the same output package and

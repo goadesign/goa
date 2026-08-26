@@ -181,8 +181,22 @@ func TestGoTypePlanRebindsCustomTypeQualifier(t *testing.T) {
 				return "wire2"
 			})
 			require.Equal(t, test.want, linked.Name())
+			require.Equal(t, "wire2", linked.Package())
 		})
 	}
+}
+
+func TestLinkedGoTypePackageIgnoresInheritedOwnerForBuiltInType(t *testing.T) {
+	plan, err := PlanGoType(&expr.AttributeExpr{Type: expr.String}, GoTypePlanOptions{
+		Owner:  "generated.local/gen/http",
+		Policy: GoLayoutPolicy{UseDefault: true, SumType: true},
+	})
+	require.NoError(t, err)
+	linked := plan.Link("generated.local/gen/service", func(string) string {
+		panic("built-in type must not request a package name")
+	})
+
+	require.Empty(t, linked.Package())
 }
 
 // TestGoTypePlanRetainsServiceErrorImport verifies that the built-in service
@@ -213,6 +227,7 @@ func TestGoTypePlanRetainsServiceErrorImport(t *testing.T) {
 	linked := plan.Link(owner, pkg.ImportName)
 	require.Equal(t, "goa2.ServiceError", linked.Name())
 	require.Equal(t, "*goa2.ServiceError", linked.Ref())
+	require.Equal(t, "goa2", linked.Package())
 	require.Equal(t, []GoTypeImport{{Name: "goa2", Path: goaPath}}, linked.Imports())
 }
 
