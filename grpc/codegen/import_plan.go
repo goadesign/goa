@@ -197,6 +197,7 @@ func planGRPCImports(generation *codegen.Generation, plan *Plan) error {
 		if facts.usesBearerMetadata {
 			clientCodecRequired = append(clientCodecRequired, codegen.SimpleImport("strings"))
 		}
+		clientCodecRequired = append(clientCodecRequired, grpcMetadataValidationImportSpecs(servicePlan, true)...)
 		var clientCodecGenerated []*codegen.ImportSpec
 		if facts.hasEndpoints {
 			clientCodecGenerated = append(clientCodecGenerated, protobufImport)
@@ -332,6 +333,7 @@ func planGRPCImports(generation *codegen.Generation, plan *Plan) error {
 		if facts.responseMetadataUsesAny {
 			serverCodecRequired = append(serverCodecRequired, codegen.SimpleImport("fmt"))
 		}
+		serverCodecRequired = append(serverCodecRequired, grpcMetadataValidationImportSpecs(servicePlan, false)...)
 		var serverCodecGenerated []*codegen.ImportSpec
 		if facts.hasEndpoints {
 			serverCodecGenerated = append(serverCodecGenerated, protobufImport)
@@ -584,6 +586,38 @@ func grpcValidationRuntimeImportSpecs(protobuf *protobufServicePlan, side valida
 			codegen.GoLayoutPolicy{Pointer: true},
 		) {
 			imports = appendGRPCImportSpec(imports, codegen.NewImport(runtimeImport.Name, runtimeImport.Path))
+		}
+	}
+	return imports
+}
+
+// grpcMetadataValidationImportSpecs returns the Go packages used while one
+// codec decodes metadata. Clients decode response metadata; servers decode
+// request metadata.
+func grpcMetadataValidationImportSpecs(service *grpcServicePlan, client bool) []*codegen.ImportSpec {
+	var imports []*codegen.ImportSpec
+	for _, endpoint := range service.endpoints {
+		groups := []*expr.MappedAttributeExpr{endpoint.expression.Metadata}
+		if client {
+			groups = []*expr.MappedAttributeExpr{
+				endpoint.expression.Response.Headers,
+				endpoint.expression.Response.Trailers,
+			}
+		} else if endpoint.legacyMetadata != nil {
+			groups = append(groups, endpoint.legacyMetadata)
+		}
+		for _, group := range groups {
+			for _, metadata := range endpoint.metadata[group] {
+				if metadata.validation == "" {
+					continue
+				}
+				for _, runtimeImport := range codegen.ValidationRuntimeImports(
+					metadata.wire,
+					codegen.GoLayoutPolicy{Pointer: metadata.pointer},
+				) {
+					imports = appendGRPCImportSpec(imports, codegen.NewImport(runtimeImport.Name, runtimeImport.Path))
+				}
+			}
 		}
 	}
 	return imports

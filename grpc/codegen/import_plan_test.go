@@ -3,6 +3,7 @@
 package codegen
 
 import (
+	"os"
 	"path"
 	"strings"
 	"testing"
@@ -10,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/codegen/testutil"
 	"goa.design/goa/v3/dsl"
 	"goa.design/goa/v3/expr"
 )
@@ -164,6 +166,47 @@ func TestGRPCNumericMetadataAliasesPlanStrconv(t *testing.T) {
 	require.Contains(t, serverHeader, `"strconv"`)
 }
 
+// TestGRPCMetadataStringLengthValidationImports checks that each decoder
+// codec reserves the UTF-8 package only when its own metadata needs it.
+func TestGRPCMetadataStringLengthValidationImports(t *testing.T) {
+	tests := []struct {
+		name       string
+		request    bool
+		response   bool
+		wantClient bool
+		wantServer bool
+	}{
+		{name: "request metadata", request: true, wantServer: true},
+		{name: "response metadata", response: true, wantClient: true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			plans := linkedGRPCPlans(t, grpcMetadataStringLengthRoot(t, test.request, test.response))
+			clientHeader := sectionCode(t, plans[0].ClientFiles()[1].SectionTemplates[0])
+			serverHeader := sectionCode(t, plans[0].ServerFiles()[1].SectionTemplates[0])
+			require.Equal(t, test.wantClient, strings.Contains(clientHeader, `"unicode/utf8"`))
+			require.Equal(t, test.wantServer, strings.Contains(serverHeader, `"unicode/utf8"`))
+		})
+	}
+}
+
+// TestGRPCMetadataStringLengthValidationFilesCompile checks complete generated
+// client and server packages with request and response metadata validation.
+func TestGRPCMetadataStringLengthValidationFilesCompile(t *testing.T) {
+	root := grpcMetadataStringLengthRoot(t, true, true)
+	generation, servicePlans := grpcServicePlans(t, []*expr.RootExpr{root})
+	plans, err := NewPlans(generation, PlanInput{Root: root, Service: servicePlans[0]})
+	require.NoError(t, err)
+	require.NoError(t, generation.Freeze())
+	require.NoError(t, servicePlans[0].Link())
+	require.NoError(t, plans[0].Link())
+	clientCodec := grpcCodecFile(t, plans[0].ClientFiles())
+	serverCodec := grpcCodecFile(t, plans[0].ServerFiles())
+	testutil.AssertGo(t, "testdata/golden/metadata_validation_client_codec.go.golden", renderedGRPCFile(t, clientCodec))
+	testutil.AssertGo(t, "testdata/golden/metadata_validation_server_codec.go.golden", renderedGRPCFile(t, serverCodec))
+	compileProtobufMethodServer(t, plans[0], servicePlans)
+}
+
 // TestGRPCCLIImportsFollowFlagCode checks that the command parser and payload
 // builder reserve only the fixed packages their generated code names.
 func TestGRPCCLIImportsFollowFlagCode(t *testing.T) {
@@ -269,6 +312,66 @@ func grpcServerExternalImportName(t *testing.T, root *expr.RootExpr, importPath 
 	servicePlan := plans[0].servicesPlan[0]
 	serverPath := path.Join(generation.GenPkg(), "grpc", servicePlan.packages.pathName, "server")
 	return generation.Package(serverPath).ImportName(importPath)
+}
+
+// grpcCodecFile returns the encoder and decoder file from one generated side.
+func grpcCodecFile(t *testing.T, files []*codegen.File) *codegen.File {
+	t.Helper()
+	for _, file := range files {
+		if strings.HasSuffix(file.Path, "encode_decode.go") {
+			return file
+		}
+	}
+	require.Fail(t, "generated gRPC codec file was not planned")
+	return nil
+}
+
+// renderedGRPCFile writes one planned file and returns its complete source.
+func renderedGRPCFile(t *testing.T, file *codegen.File) string {
+	t.Helper()
+	filePath, err := file.Render(t.TempDir())
+	require.NoError(t, err)
+	source, err := os.ReadFile(filePath)
+	require.NoError(t, err)
+	return string(source)
+}
+
+// grpcMetadataStringLengthRoot returns a service whose selected metadata
+// fields validate their Unicode character count while decoding.
+func grpcMetadataStringLengthRoot(t *testing.T, request, response bool) *expr.RootExpr {
+	t.Helper()
+	return expr.RunDSL(t, func() {
+		dsl.Service("Metadata Validation", func() {
+			dsl.Method("Check", func() {
+				dsl.Payload(func() {
+					dsl.Field(1, "request", dsl.String, func() {
+						dsl.MinLength(2)
+					})
+					dsl.Required("request")
+				})
+				dsl.Result(func() {
+					dsl.Field(1, "response", dsl.String, func() {
+						dsl.MinLength(3)
+					})
+					dsl.Required("response")
+				})
+				dsl.GRPC(func() {
+					if request {
+						dsl.Metadata(func() {
+							dsl.Attribute("request:x-request")
+						})
+					}
+					if response {
+						dsl.Response(func() {
+							dsl.Headers(func() {
+								dsl.Attribute("response:x-response")
+							})
+						})
+					}
+				})
+			})
+		})
+	})
 }
 
 // linkedGRPCPlans creates and links the gRPC plans for root.

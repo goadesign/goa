@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -18,6 +19,7 @@ import (
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/example"
 	"goa.design/goa/v3/codegen/service"
+	"goa.design/goa/v3/codegen/testutil"
 	"goa.design/goa/v3/dsl"
 	"goa.design/goa/v3/eval"
 	"goa.design/goa/v3/expr"
@@ -574,6 +576,93 @@ func TestHTTPFilePlansIncludeGeneratedUses(t *testing.T) {
 	})
 }
 
+// TestHTTPCodecFilesPlanStringLengthValidationImports checks the complete
+// decoder files that validate request and response headers directly.
+func TestHTTPCodecFilesPlanStringLengthValidationImports(t *testing.T) {
+	root := httpCodecStringLengthRoot(t, true, true)
+	plan := linkedHTTPPlanForRoot(t, root)
+	clientCodec := plannedHTTPFile(t, plan.ClientFiles(), "/client/encode_decode.go")
+	serverCodec := plannedHTTPFile(t, plan.ServerFiles(), "/server/encode_decode.go")
+	require.Contains(t, plannedHTTPFileImports(t, plan.ClientFiles(), "/client/encode_decode.go"), "unicode/utf8")
+	require.Contains(t, plannedHTTPFileImports(t, plan.ServerFiles(), "/server/encode_decode.go"), "unicode/utf8")
+	testutil.AssertGo(t, "testdata/golden/validation_imports_client_codec.go.golden", renderedHTTPFile(t, clientCodec))
+	testutil.AssertGo(t, "testdata/golden/validation_imports_server_codec.go.golden", renderedHTTPFile(t, serverCodec))
+
+	serviceFiles, err := service.Files(plan.servicePlan)
+	require.NoError(t, err)
+	files := slices.Clone(serviceFiles)
+	files = append(files, plan.ClientFiles()...)
+	files = append(files, plan.ServerFiles()...)
+	files = append(files, plan.ClientTypeFiles()...)
+	files = append(files, plan.ServerTypeFiles()...)
+	files = append(files, plan.PathFiles()...)
+	runGeneratedMixedSSECompile(t, files, "./gen/...")
+}
+
+// TestHTTPCodecStringLengthImportsStayOnDecodingSide checks that a request
+// rule does not reserve UTF-8 in the client and a response rule does not
+// reserve it in the server.
+func TestHTTPCodecStringLengthImportsStayOnDecodingSide(t *testing.T) {
+	tests := []struct {
+		name       string
+		request    bool
+		response   bool
+		wantClient bool
+		wantServer bool
+	}{
+		{name: "request header", request: true, wantServer: true},
+		{name: "response header", response: true, wantClient: true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			plan := linkedHTTPPlanForRoot(t, httpCodecStringLengthRoot(t, test.request, test.response))
+			clientImports := plannedHTTPFileImports(t, plan.ClientFiles(), "/client/encode_decode.go")
+			serverImports := plannedHTTPFileImports(t, plan.ServerFiles(), "/server/encode_decode.go")
+			require.Equal(t, test.wantClient, slices.Contains(clientImports, "unicode/utf8"))
+			require.Equal(t, test.wantServer, slices.Contains(serverImports, "unicode/utf8"))
+		})
+	}
+}
+
+// httpCodecStringLengthRoot returns an HTTP service with selected request and
+// response headers that validate their Unicode character count.
+func httpCodecStringLengthRoot(t *testing.T, request, response bool) *expr.RootExpr {
+	t.Helper()
+	return expr.RunDSL(t, func() {
+		dsl.Service("Validation Imports", func() {
+			dsl.Method("Check", func() {
+				if request {
+					dsl.Payload(func() {
+						dsl.Field(1, "request", dsl.String, func() {
+							dsl.MinLength(2)
+						})
+						dsl.Required("request")
+					})
+				}
+				if response {
+					dsl.Result(func() {
+						dsl.Field(1, "response", dsl.String, func() {
+							dsl.MinLength(3)
+						})
+						dsl.Required("response")
+					})
+				}
+				dsl.HTTP(func() {
+					dsl.GET("/")
+					if request {
+						dsl.Header("request:X-Request")
+					}
+					if response {
+						dsl.Response(func() {
+							dsl.Header("response:X-Response")
+						})
+					}
+				})
+			})
+		})
+	})
+}
+
 // importPaths returns the package paths from one generated file header.
 func importPaths(imports []*codegen.ImportSpec) []string {
 	paths := make([]string, len(imports))
@@ -587,13 +676,31 @@ func importPaths(imports []*codegen.ImportSpec) []string {
 // whose path ends in suffix.
 func plannedHTTPFileImports(t *testing.T, files []*codegen.File, suffix string) []string {
 	t.Helper()
+	file := plannedHTTPFile(t, files, suffix)
+	return importPaths(file.SectionTemplates[0].Data.(map[string]any)["Imports"].([]*codegen.ImportSpec))
+}
+
+// plannedHTTPFile returns the generated file whose slash-separated path ends
+// in suffix.
+func plannedHTTPFile(t *testing.T, files []*codegen.File, suffix string) *codegen.File {
+	t.Helper()
 	for _, file := range files {
 		if strings.HasSuffix(filepath.ToSlash(file.Path), suffix) {
-			return importPaths(file.SectionTemplates[0].Data.(map[string]any)["Imports"].([]*codegen.ImportSpec))
+			return file
 		}
 	}
 	require.Fail(t, "generated HTTP file was not planned", suffix)
 	return nil
+}
+
+// renderedHTTPFile writes one planned file and returns its complete source.
+func renderedHTTPFile(t *testing.T, file *codegen.File) string {
+	t.Helper()
+	filePath, err := file.Render(t.TempDir())
+	require.NoError(t, err)
+	source, err := os.ReadFile(filePath)
+	require.NoError(t, err)
+	return string(source)
 }
 
 // TestJSONRPCSnapshotsExposeReleasedNames checks that copied JSON-RPC data

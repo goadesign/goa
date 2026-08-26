@@ -173,6 +173,65 @@ func httpFixedFileImports(service *expr.HTTPServiceExpr, client bool, kind httpF
 	return imports
 }
 
+// httpCodecValidationImports returns the Go packages used by validation checks
+// written directly into one client or server codec file.
+func httpCodecValidationImports(service *expr.HTTPServiceExpr, client bool) []*codegen.ImportSpec {
+	seen := make(map[string]struct{})
+	var imports []*codegen.ImportSpec
+	add := func(attribute *expr.AttributeExpr, policy codegen.GoLayoutPolicy) {
+		for _, runtimeImport := range codegen.ValidationRuntimeImports(attribute, policy) {
+			if _, ok := seen[runtimeImport.Path]; ok {
+				continue
+			}
+			seen[runtimeImport.Path] = struct{}{}
+			imports = append(imports, codegen.NewImport(runtimeImport.Name, runtimeImport.Path))
+		}
+	}
+	addMapped := func(mapped *expr.MappedAttributeExpr) {
+		if mapped == nil || mapped.IsEmpty() {
+			return
+		}
+		if err := codegen.WalkMappedAttr(mapped, func(_ string, _ string, _ bool, attribute *expr.AttributeExpr) error {
+			add(attribute, codegen.GoLayoutPolicy{})
+			return nil
+		}); err != nil {
+			panic(err) // The callback above cannot return an error.
+		}
+	}
+	for _, endpoint := range service.HTTPEndpoints {
+		if client {
+			for _, response := range endpoint.Responses {
+				if response.Body != nil && response.Body.Type != expr.Empty {
+					if _, named := response.Body.Type.(expr.UserType); !named {
+						add(response.Body, codegen.GoLayoutPolicy{})
+					}
+				}
+				addMapped(response.Headers)
+				addMapped(response.Cookies)
+			}
+			continue
+		}
+		if endpoint.Body != nil && endpoint.Body.Type != expr.Empty {
+			if _, named := endpoint.Body.Type.(expr.UserType); !named {
+				add(endpoint.Body, codegen.GoLayoutPolicy{
+					Pointer:             !expr.IsPrimitive(endpoint.Body.Type),
+					UnionPointer:        true,
+					ArrayElementPointer: true,
+					SumType:             true,
+				})
+			}
+		}
+		addMapped(endpoint.PathParams())
+		addMapped(endpoint.QueryParams())
+		addMapped(endpoint.Headers)
+		addMapped(endpoint.Cookies)
+		if policy := jsonRPCRequestIDPolicyFor(endpoint); policy != nil && policy.attribute != nil {
+			add(policy.attribute.Attribute, codegen.GoLayoutPolicy{Pointer: policy.pointer})
+		}
+	}
+	return imports
+}
+
 // httpCLIPayloadBuilderFixedImports returns the conversion and validation
 // packages used by request flags written in one client payload-builder file.
 func httpCLIPayloadBuilderFixedImports(service *expr.HTTPServiceExpr) []*codegen.ImportSpec {

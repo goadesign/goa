@@ -1363,6 +1363,7 @@ func planImports(generation *codegen.Generation, transport transportKind, plans 
 						fixedImports = append(fixedImports, wireCatalogValidationImports(catalog)...)
 						references = append(references, serviceReferenceAttributes(transportService.HTTPEndpoints...)...)
 					case httpCodecFile:
+						fixedImports = append(fixedImports, httpCodecValidationImports(transportService, index == 0)...)
 						references = serviceReferenceAttributes(transportService.HTTPEndpoints...)
 					case httpPayloadBuilderFile:
 						references = httpCLIPayloadBuilderReferenceAttributes(transportService)
