@@ -17,7 +17,7 @@ import (
 func exampleCLIFiles(root *example.Root, services *ServicesData) []*codegen.File {
 	var files []*codegen.File
 	for _, server := range root.Servers {
-		if f := exampleCLI(root, server, services); f != nil {
+		if f := exampleCLI(server, services); f != nil {
 			files = append(files, f)
 		}
 	}
@@ -26,7 +26,7 @@ func exampleCLIFiles(root *example.Root, services *ServicesData) []*codegen.File
 
 // exampleCLI returns an example command-line client for the HTTP services on
 // the given server.
-func exampleCLI(root *example.Root, server *example.Data, services *ServicesData) *codegen.File {
+func exampleCLI(server *example.Data, services *ServicesData) *codegen.File {
 	genpkg := services.GenPkg()
 	outputPath := filepath.Join("cmd", server.Dir+"-cli", services.dir()+".go")
 	outputPackage := path.Join(path.Dir(genpkg), "cmd", server.Dir+"-cli")
@@ -40,47 +40,32 @@ func exampleCLI(root *example.Root, server *example.Data, services *ServicesData
 	if parser == nil {
 		panic("HTTP command parser names are missing for server " + server.Name)
 	}
-	specs := []*codegen.ImportSpec{
-		{Path: "context"},
-		{Path: "errors"},
-		{Path: "flag"},
-		{Path: "fmt"},
-		{Path: "io"},
-		{Path: "net/http"},
-		{Path: "net/url"},
-		{Path: "os"},
-		{Path: "strings"},
-		{Path: "time"},
-		{Path: "github.com/gorilla/websocket"},
-		codegen.GoaImport(""),
-		codegen.GoaNamedImport("http", "goahttp"),
-		cliImport,
-	}
+	var svcData []*ServiceData
 	hasClientInterceptors := false
-	for _, name := range root.Services {
-		data := services.ServicesData.Get(name)
-		serviceImport := services.ServiceImport(outputPackage, name)
-		specs = append(specs, serviceImport)
-		hasClientInterceptors = hasClientInterceptors || len(data.ClientInterceptors) > 0
+	hasMultipart := false
+	for _, name := range server.Services {
+		data := services.Get(name)
+		if data == nil {
+			continue
+		}
+		copy := exampleServiceDataForOutput(data, services, outputPackage)
+		svcData = append(svcData, copy)
+		hasClientInterceptors = hasClientInterceptors || len(data.Service.ClientInterceptors) > 0
+		for _, endpoint := range data.Endpoints {
+			hasMultipart = hasMultipart || endpoint.MultipartRequestDecoder != nil
+		}
 	}
 	var interceptorsPkg string
 	if hasClientInterceptors {
 		interceptorImport := services.PackageImport(outputPackage, rootPath+"/interceptors")
 		interceptorsPkg = interceptorImport.Name
-		specs = append(specs, interceptorImport)
 	}
-	apiImport := services.PackageImport(outputPackage, rootPath)
-	apiPkg := apiImport.Name
-	specs = append(specs, apiImport)
-
-	var svcData []*ServiceData
-	for _, svc := range server.Services {
-		if data := services.Get(svc); data != nil {
-			svcData = append(svcData, exampleServiceDataForOutput(data, services, outputPackage))
-		}
+	var apiPkg string
+	if hasMultipart {
+		apiPkg = services.PackageImport(outputPackage, rootPath).Name
 	}
 	sections := []*codegen.SectionTemplate{
-		codegen.Header("", "main", specs),
+		plannedFileHeader("", "main", outputPath, services),
 		{
 			Name:   "cli-http-start",
 			Source: httpTemplates.Read(cliStartT),

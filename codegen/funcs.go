@@ -1,3 +1,6 @@
+// This file contains helpers shared by Goa's code generators. The helpers
+// receive names and types chosen while a generated file is planned and return
+// the Go source inserted into that file.
 package codegen
 
 import (
@@ -29,6 +32,9 @@ type (
 		FieldPointer bool
 		// FieldType is the type of the field in the struct.
 		FieldType expr.DataType
+		// FieldTypeRef is the field's final Go type name in the generated file.
+		// Callers set it when converting an argument to a named primitive type.
+		FieldTypeRef string
 	}
 )
 
@@ -40,7 +46,7 @@ func TemplateFuncs() map[string]any {
 	}
 }
 
-// CommandLine return the command used to run this process.
+// CommandLine returns the command used to run this process.
 func CommandLine() string {
 	cmdl := "goa"
 	for _, arg := range os.Args {
@@ -229,11 +235,10 @@ func InitStructFields(args []*InitArgData, targetVar, sourcePkg, targetPkg strin
 			code += fmt.Sprintf("%s.%s = %s%s\n", targetVar, arg.FieldName, deref, arg.Name)
 		case expr.IsPrimitive(arg.FieldType):
 			// aliased primitive type
-			pkg := targetPkg
-			if loc := UserTypeLocation(arg.FieldType); loc != nil {
-				pkg = loc.PackageName()
+			if arg.FieldTypeRef == "" {
+				return "", helpers, fmt.Errorf("initialize field %q: missing final field type reference", arg.FieldName)
 			}
-			t := scope.GoFullTypeRef(&expr.AttributeExpr{Type: arg.FieldType}, pkg)
+			t := arg.FieldTypeRef
 			cast := fmt.Sprintf("%s(%s)", t, arg.Name)
 			if arg.Pointer {
 				code += "if " + arg.Name + " != nil {\n"

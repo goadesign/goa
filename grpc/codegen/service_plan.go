@@ -21,11 +21,9 @@ type (
 		packages        *grpcServicePackage
 		endpoints       []*grpcEndpointPlan
 		endpointByExpr  map[*expr.GRPCEndpointExpr]*grpcEndpointPlan
-		imports         []string
 		protoImports    []string
 		protoGoImports  []*codegen.ImportSpec
 		scope           *codegen.NameScope
-		usesAny         bool
 		usesAnyInErrors bool
 	}
 
@@ -58,7 +56,7 @@ type (
 
 // collectGRPCServicePlans copies the services selected for one gRPC plan and
 // records the imports and metadata conversions used by their generated files.
-func collectGRPCServicePlans(generation *codegen.Generation, plan *Plan) ([]*grpcServicePlan, error) {
+func collectGRPCServicePlans(plan *Plan) ([]*grpcServicePlan, error) {
 	services := make([]*grpcServicePlan, len(plan.expressions))
 	for index, source := range plan.expressions {
 		service, err := copyGRPCService(source)
@@ -66,9 +64,7 @@ func collectGRPCServicePlans(generation *codegen.Generation, plan *Plan) ([]*grp
 			return nil, err
 		}
 		service.scope = codegen.NewNameScope()
-		service.usesAny = usesAnyType(service.expression.GRPCEndpoints, false)
 		service.usesAnyInErrors = usesAnyType(service.expression.GRPCEndpoints, true)
-		service.imports = grpcServiceImportPaths(generation, service.expression)
 		service.packages = plan.packages[source]
 
 		plannedProtobuf := plan.protobuf[source]
@@ -540,55 +536,4 @@ func legacyRequestMetadata(endpoint *expr.GRPCEndpointExpr) *expr.MappedAttribut
 		legacy.Validation.AddRequired("goa_payload")
 	}
 	return legacy
-}
-
-// grpcServiceImportPaths records every package used by service values in gRPC
-// client, server, type, and command-line files.
-func grpcServiceImportPaths(generation *codegen.Generation, service *expr.GRPCServiceExpr) []string {
-	paths := make(map[string]struct{})
-	seen := make(map[expr.UserType]struct{})
-	for _, attribute := range grpcEndpointAttributes(service.GRPCEndpoints...) {
-		collectGRPCAttributeImportPaths(generation, attribute, paths, seen)
-	}
-	result := make([]string, 0, len(paths))
-	for importPath := range paths {
-		result = append(result, importPath)
-	}
-	sort.Strings(result)
-	return result
-}
-
-// collectGRPCAttributeImportPaths walks one service value and records named
-// generated packages and explicit field packages.
-func collectGRPCAttributeImportPaths(generation *codegen.Generation, attribute *expr.AttributeExpr, paths map[string]struct{}, seen map[expr.UserType]struct{}) {
-	if attribute == nil || attribute.Type == expr.Empty {
-		return
-	}
-	if _, spec := codegen.GetMetaType(attribute); spec != nil {
-		paths[spec.Path] = struct{}{}
-	}
-	switch actual := attribute.Type.(type) {
-	case expr.UserType:
-		if location := codegen.UserTypeLocation(actual); location != nil {
-			paths[path.Join(generation.GenPkg(), location.RelImportPath)] = struct{}{}
-		}
-		if _, ok := seen[actual]; ok {
-			return
-		}
-		seen[actual] = struct{}{}
-		collectGRPCAttributeImportPaths(generation, actual.Attribute(), paths, seen)
-	case *expr.Object:
-		for _, named := range *actual {
-			collectGRPCAttributeImportPaths(generation, named.Attribute, paths, seen)
-		}
-	case *expr.Array:
-		collectGRPCAttributeImportPaths(generation, actual.ElemType, paths, seen)
-	case *expr.Map:
-		collectGRPCAttributeImportPaths(generation, actual.KeyType, paths, seen)
-		collectGRPCAttributeImportPaths(generation, actual.ElemType, paths, seen)
-	case *expr.Union:
-		for _, named := range actual.Values {
-			collectGRPCAttributeImportPaths(generation, named.Attribute, paths, seen)
-		}
-	}
 }

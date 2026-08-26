@@ -422,6 +422,38 @@ func TestCompositeFlagPlanUsesJSON(t *testing.T) {
 	require.True(t, declaresError)
 }
 
+// TestFlagImportPreferencesMatchGeneratedCode verifies that import planning
+// follows the conversion and validation selected for each flag.
+func TestFlagImportPreferencesMatchGeneratedCode(t *testing.T) {
+	minimum := 2
+	validated := &expr.AttributeExpr{
+		Type:       expr.String,
+		Validation: &expr.ValidationExpr{MinLength: &minimum},
+	}
+	cases := []struct {
+		name       string
+		attribute  *expr.AttributeExpr
+		validation bool
+		want       []string
+	}{
+		{name: "string", attribute: &expr.AttributeExpr{Type: expr.String}},
+		{name: "number", attribute: &expr.AttributeExpr{Type: expr.Int32}, want: []string{"strconv"}},
+		{name: "JSON", attribute: &expr.AttributeExpr{Type: &expr.Array{ElemType: &expr.AttributeExpr{Type: expr.String}}}, want: []string{"encoding/json"}},
+		{name: "validated UTF-8 string", attribute: validated, validation: true, want: []string{"unicode/utf8", codegen.GoaImport("").Path}},
+	}
+
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			preferences := FlagImportPreferences(test.attribute, test.validation)
+			paths := make([]string, len(preferences))
+			for index, preference := range preferences {
+				paths[index] = preference.Path
+			}
+			require.ElementsMatch(t, test.want, paths)
+		})
+	}
+}
+
 func TestStringAndBytesAliasesUseStringFlags(t *testing.T) {
 	cases := []struct {
 		name          string

@@ -1081,7 +1081,8 @@ func TestTransportStaticAliasesCompileWithHttpAndPathServices(t *testing.T) {
 		httpSource.Write(source)
 	}
 	require.Contains(t, httpSource.String(), `http_ "generated.local/gen/http_"`)
-	require.Contains(t, httpSource.String(), `path2 "generated.local/gen/path"`)
+	require.Contains(t, httpSource.String(), `path "generated.local/gen/path"`)
+	require.NotContains(t, httpSource.String(), `"path"`)
 	runGeneratedTests(t, genDir)
 }
 

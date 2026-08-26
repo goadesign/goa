@@ -30,34 +30,6 @@ func exampleServer(services *ServicesData, server *example.Data) *codegen.File {
 	mainPath = filepath.Join("cmd", server.Dir, "grpc.go")
 	outputPackage := path.Join(path.Dir(genpkg), "cmd", server.Dir)
 
-	specs := []*codegen.ImportSpec{
-		{Path: "context"},
-		{Path: "fmt"},
-		{Path: "net"},
-		{Path: "net/url"},
-		{Path: "sync"},
-		codegen.GoaNamedImport("grpc", "goagrpc"),
-		{Path: "goa.design/clue/debug"},
-		{Path: "goa.design/clue/log"},
-		{Path: "google.golang.org/grpc"},
-		{Path: "google.golang.org/grpc/reflection"},
-	}
-	for _, serviceName := range server.Services {
-		sd := services.Get(serviceName)
-		if sd == nil {
-			continue
-		}
-		svcName := sd.Service.PathName
-		serverImport := services.PackageImport(outputPackage, path.Join(genpkg, "grpc", svcName, "server"))
-		serviceImport := services.ServiceImport(outputPackage, serviceName)
-		protobufImport := services.PackageImport(outputPackage, path.Join(genpkg, "grpc", svcName, pbPkgName))
-		specs = append(specs, serverImport, serviceImport, protobufImport)
-	}
-
-	rootPath := path.Dir(genpkg)
-	apiImport := services.PackageImport(outputPackage, rootPath)
-	specs = append(specs, apiImport)
-
 	var (
 		sections []*codegen.SectionTemplate
 	)
@@ -68,7 +40,7 @@ func exampleServer(services *ServicesData, server *example.Data) *codegen.File {
 		}
 	}
 	sections = []*codegen.SectionTemplate{
-		codegen.Header("", "main", specs),
+		codegen.Header("", "main", nil),
 		{
 			Name:   "server-grpc-start",
 			Source: grpcTemplates.Read(grpcServerGRPCStartT),
@@ -99,7 +71,7 @@ func exampleServer(services *ServicesData, server *example.Data) *codegen.File {
 			},
 		},
 	}
-	return &codegen.File{Path: mainPath, SectionTemplates: sections, SkipExist: true}
+	return addEndpointImports(&codegen.File{Path: mainPath, SectionTemplates: sections, SkipExist: true}, services)
 }
 
 // needStream returns true if at least one method in the defined services

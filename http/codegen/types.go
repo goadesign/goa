@@ -13,7 +13,7 @@ import (
 func serverTypeFiles(data *ServicesData) []*codegen.File {
 	fw := make([]*codegen.File, len(data.Expressions.Services))
 	for i, svc := range data.Expressions.Services {
-		fw[i] = addPlannedFileImports(typesFile(svc, true, data), data)
+		fw[i] = typesFile(svc, true, data)
 	}
 	return fw
 }
@@ -22,7 +22,7 @@ func serverTypeFiles(data *ServicesData) []*codegen.File {
 func clientTypeFiles(data *ServicesData) []*codegen.File {
 	fw := make([]*codegen.File, len(data.Expressions.Services))
 	for i, svc := range data.Expressions.Services {
-		fw[i] = addPlannedFileImports(typesFile(svc, false, data), data)
+		fw[i] = typesFile(svc, false, data)
 	}
 	return fw
 }
@@ -80,24 +80,11 @@ func typesFile(svc *expr.HTTPServiceExpr, svr bool, services *ServicesData) *cod
 		validateSection = "client-validate"
 		bodyInitT = clientBodyInitT
 	}
-	unionTypes := data.wireTypes(svr).unionTypes()
 	path := filepath.Join(codegen.Gendir, services.dir(), svcName, side, "types.go")
 	outputPackage := generatedFileOutputPackage(services, path)
 	data = serviceDataForOutput(data, services, outputPackage)
-	imports := []*codegen.ImportSpec{
-		{Path: "encoding/json"},
-		{Path: "fmt"},
-		{Path: "unicode/utf8"},
-		services.ServiceImport(outputPackage, svc.Name()),
-	}
-	if serviceHasViewedResult(data, nil) {
-		imports = append(imports, services.ViewImport(outputPackage, svc.Name()))
-	}
-	if len(unionTypes) > 0 {
-		imports = append(imports, &codegen.ImportSpec{Path: "bytes"})
-	}
-	imports = append(imports, codegen.GoaImport(""))
-	header := codegen.Header(svc.Name()+" "+services.label()+" "+side+" types", side, imports)
+	unionTypes := data.wireTypes(svr).unionTypes()
+	header := plannedFileHeader(svc.Name()+" "+services.label()+" "+side+" types", side, path, services)
 
 	var (
 		initData       []*InitData
@@ -385,6 +372,7 @@ func fieldCode(init *InitData, typ string) string {
 			FieldName:    arg.FieldName,
 			FieldPointer: arg.FieldPointer,
 			FieldType:    arg.FieldType,
+			FieldTypeRef: arg.ServiceTypeRef,
 		}
 	}
 	// We can ignore the transform helpers as there won't be any generated

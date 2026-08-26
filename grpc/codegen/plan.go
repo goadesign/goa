@@ -32,6 +32,7 @@ type (
 		packages     map[*expr.GRPCServiceExpr]*grpcServicePackage
 		tools        map[*expr.GRPCServiceExpr]*protobufToolPlan
 		symbols      map[*expr.GRPCServiceExpr]*grpcSymbols
+		fileImports  map[string]*codegen.GeneratedImportPlan
 		expressions  []*expr.GRPCServiceExpr
 		servicesPlan []*grpcServicePlan
 		services     *ServicesData
@@ -145,6 +146,7 @@ func newPlans(generation *codegen.Generation, resolver protobufToolResolver, inp
 			packages:    packages,
 			tools:       tools,
 			symbols:     make(map[*expr.GRPCServiceExpr]*grpcSymbols),
+			fileImports: make(map[string]*codegen.GeneratedImportPlan),
 			expressions: append([]*expr.GRPCServiceExpr(nil), input.Root.API.GRPC.Services...),
 		}
 	}
@@ -174,7 +176,7 @@ func newPlans(generation *codegen.Generation, resolver protobufToolResolver, inp
 		return nil, err
 	}
 	for _, plan := range plans {
-		servicesPlan, err := collectGRPCServicePlans(generation, plan)
+		servicesPlan, err := collectGRPCServicePlans(plan)
 		if err != nil {
 			return nil, err
 		}
@@ -217,6 +219,11 @@ func (p *Plan) Link() error {
 	}
 	if p.services != nil {
 		return fmt.Errorf("gRPC plan is already linked")
+	}
+	for filePath, imports := range p.fileImports {
+		if err := imports.Link(); err != nil {
+			return fmt.Errorf("link gRPC imports for %q: %w", filePath, err)
+		}
 	}
 	services := newServicesData(p.service.Services(), p)
 	p.services = services

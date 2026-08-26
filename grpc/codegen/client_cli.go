@@ -76,50 +76,6 @@ func endpointParser(services *ServicesData, serverPlan *grpcCLIServerPlan, data 
 	outputPackage := path.Join(genpkg, "grpc", "cli", pkg)
 	fpath := filepath.Join(codegen.Gendir, "grpc", "cli", pkg, "cli.go")
 	title := serverPlan.name + " gRPC client CLI support package"
-	specs := []*codegen.ImportSpec{
-		{Path: "context"},
-		{Path: "flag"},
-		{Path: "fmt"},
-		{Path: "os"},
-		{Path: "strconv"},
-		{Path: "unicode/utf8"},
-		codegen.GoaImport(""),
-		codegen.GoaNamedImport("grpc", "goagrpc"),
-		{Path: "google.golang.org/grpc", Name: "grpc"},
-	}
-	// Add structpb import if Any type is used
-	needsAnyPb := false
-	for _, serviceName := range serverPlan.expression.Services {
-		servicePlan := grpcServicePlanByName(services.servicePlans, serviceName)
-		if servicePlan != nil && servicePlan.usesAny {
-			needsAnyPb = true
-			break
-		}
-	}
-	if needsAnyPb {
-		specs = append(specs,
-			&codegen.ImportSpec{Path: "google.golang.org/protobuf/types/known/structpb", Name: "structpb"},
-		)
-	}
-	for _, serviceName := range serverPlan.expression.Services {
-		servicePlan := grpcServicePlanByName(services.servicePlans, serviceName)
-		if servicePlan == nil {
-			continue
-		}
-		svc := servicePlan.expression
-		sd := services.Get(svc.Name())
-		if sd == nil {
-			continue
-		}
-		svcName := sd.Service.PathName
-		specs = append(specs,
-			services.PackageImport(outputPackage, path.Join(genpkg, "grpc", svcName, "client")),
-			services.PackageImport(outputPackage, path.Join(services.GenPkg(), "grpc", svcName, pbPkgName)))
-		// Add interceptors import if service has client interceptors
-		if len(sd.Service.ClientInterceptors) > 0 {
-			specs = append(specs, services.ServiceImport(outputPackage, svc.Name()))
-		}
-	}
 
 	parser := serverPlan.parser
 	if parser == nil {
@@ -174,7 +130,7 @@ func endpointParser(services *ServicesData, serverPlan *grpcCLIServerPlan, data 
 			parser.Variables,
 		},
 	}
-	return parser.EndpointParserFile(fpath, title, specs, plannedCommands, parseSection)
+	return addEndpointImports(parser.EndpointParserFile(fpath, title, nil, plannedCommands, parseSection), services)
 }
 
 // payloadBuilders returns the file that contains the payload constructors that
@@ -183,26 +139,9 @@ func payloadBuilders(servicePlan *grpcServicePlan, data *cli.CommandData, servic
 	svc := servicePlan.expression
 	sd := services.Get(svc.Name())
 	svcName := sd.Service.PathName
-	outputPackage := path.Join(services.GenPkg(), "grpc", svcName, "client")
 	fpath := filepath.Join(codegen.Gendir, "grpc", svcName, "client", "cli.go")
 	title := svc.Name() + " gRPC client CLI support package"
-	specs := []*codegen.ImportSpec{
-		{Path: "encoding/json"},
-		{Path: "fmt"},
-		{Path: "strconv"},
-		{Path: "unicode/utf8"},
-		codegen.GoaImport(""),
-		services.ServiceImport(outputPackage, svc.Name()),
-		services.PackageImport(outputPackage, path.Join(services.GenPkg(), "grpc", svcName, pbPkgName)),
-		{Path: "google.golang.org/protobuf/encoding/protojson"},
-	}
-	// Add structpb import if Any type is used
-	if servicePlan.usesAny {
-		specs = append(specs,
-			&codegen.ImportSpec{Path: "google.golang.org/protobuf/types/known/structpb", Name: "structpb"},
-		)
-	}
-	return addEndpointImports(cli.PayloadBuildersFile(fpath, title, specs, data), services, servicePlan)
+	return addEndpointImports(cli.PayloadBuildersFile(fpath, title, nil, data), services)
 }
 
 func buildFlags(e *EndpointData, declaration *codegen.NameDeclaration) ([]*cli.FlagData, *cli.BuildFunctionData) {
@@ -227,6 +166,7 @@ func makeFlags(e *EndpointData, args []*InitArgData) ([]*cli.FlagData, *cli.Buil
 			Name:         arg.Name,
 			FieldName:    arg.FieldName,
 			FieldType:    arg.FieldType,
+			FieldTypeRef: arg.FieldTypeRef,
 			Type:         arg.Type,
 			Pointer:      arg.Pointer,
 			FieldPointer: arg.Pointer,

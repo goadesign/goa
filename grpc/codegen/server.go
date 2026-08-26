@@ -4,7 +4,6 @@ package codegen
 
 import (
 	"fmt"
-	"path"
 	"path/filepath"
 
 	"goa.design/goa/v3/codegen"
@@ -16,10 +15,10 @@ func serverFiles(services *ServicesData) []*codegen.File {
 	svcLen := len(services.servicePlans)
 	fw := make([]*codegen.File, 2*svcLen)
 	for i, servicePlan := range services.servicePlans {
-		fw[i] = addEndpointImports(serverFile(servicePlan.expression, services), services, servicePlan)
+		fw[i] = addEndpointImports(serverFile(servicePlan.expression, services), services)
 	}
 	for i, servicePlan := range services.servicePlans {
-		fw[i+svcLen] = addEndpointImports(serverEncodeDecode(servicePlan.expression, services), services, servicePlan)
+		fw[i+svcLen] = addEndpointImports(serverEncodeDecode(servicePlan.expression, services), services)
 	}
 	return fw
 }
@@ -34,28 +33,9 @@ func serverFile(svc *expr.GRPCServiceExpr, services *ServicesData) *codegen.File
 	)
 	{
 		svcName := data.Service.PathName
-		outputPackage := path.Join(services.GenPkg(), "grpc", svcName, "server")
 		fpath = filepath.Join(codegen.Gendir, "grpc", svcName, "server", "server.go")
-		imports := []*codegen.ImportSpec{
-			{Path: "context"},
-			{Path: "errors"},
-			codegen.GoaImport(""),
-			codegen.GoaNamedImport("grpc", "goagrpc"),
-			{Path: "google.golang.org/grpc/codes"},
-			services.ServiceImport(outputPackage, svc.Name()),
-			services.PackageImport(outputPackage, path.Join(services.GenPkg(), "grpc", svcName, pbPkgName)),
-		}
-		for _, e := range data.Endpoints {
-			if e.Request.StreamEnvelope != nil {
-				imports = append(imports, &codegen.ImportSpec{Path: "io"})
-				break
-			}
-		}
-		if serviceHasCallerSelectedViewedServerStream(data) {
-			imports = append(imports, &codegen.ImportSpec{Path: "google.golang.org/grpc/metadata"})
-		}
 		sections = []*codegen.SectionTemplate{
-			codegen.Header(svc.Name()+" gRPC server", "server", imports),
+			codegen.Header(svc.Name()+" gRPC server", "server", nil),
 			{
 				Name:   "server-struct",
 				Source: grpcTemplates.Read(grpcServerStructTypeT),
@@ -134,28 +114,9 @@ func serverEncodeDecode(svc *expr.GRPCServiceExpr, services *ServicesData) *code
 	)
 	{
 		svcName := data.Service.PathName
-		outputPackage := path.Join(services.GenPkg(), "grpc", svcName, "server")
 		fpath = filepath.Join(codegen.Gendir, "grpc", svcName, "server", "encode_decode.go")
 		title := fmt.Sprintf("%s gRPC server encoders and decoders", svc.Name())
-		imports := []*codegen.ImportSpec{
-			{Path: "context"},
-			{Path: "strings"},
-			{Path: "strconv"},
-			{Path: "unicode/utf8"},
-			{Path: "google.golang.org/grpc"},
-			{Path: "google.golang.org/grpc/metadata"},
-			codegen.GoaImport(""),
-			codegen.GoaNamedImport("grpc", "goagrpc"),
-			services.ServiceImport(outputPackage, svc.Name()),
-			services.PackageImport(outputPackage, path.Join(services.GenPkg(), "grpc", svcName, pbPkgName)),
-		}
-		if serviceHasViewedResult(data) {
-			imports = append(imports, services.ViewImport(outputPackage, svc.Name()))
-		}
-		if responseMetadataNeedsFormat(data) {
-			imports = append(imports, &codegen.ImportSpec{Path: "fmt"})
-		}
-		sections = []*codegen.SectionTemplate{codegen.Header(title, "server", imports)}
+		sections = []*codegen.SectionTemplate{codegen.Header(title, "server", nil)}
 
 		for _, e := range data.Endpoints {
 			if e.Response.ServerConvert != nil {
@@ -182,45 +143,6 @@ func serverEncodeDecode(svc *expr.GRPCServiceExpr, services *ServicesData) *code
 		}
 	}
 	return &codegen.File{Path: fpath, SectionTemplates: sections}
-}
-
-// requestMetadataNeedsFormat reports whether request metadata can contain a Go
-// value whose concrete type is unknown until the client runs.
-func requestMetadataNeedsFormat(service *ServiceData) bool {
-	for _, endpoint := range service.Endpoints {
-		if metadataNeedsFormat(endpoint.Request.Metadata) {
-			return true
-		}
-	}
-	return false
-}
-
-// responseMetadataNeedsFormat reports whether response metadata can contain a
-// Go value whose concrete type is unknown until the server runs.
-func responseMetadataNeedsFormat(service *ServiceData) bool {
-	for _, endpoint := range service.Endpoints {
-		for _, group := range [][]*MetadataData{endpoint.Response.Headers, endpoint.Response.Trailers} {
-			if metadataNeedsFormat(group) {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-// metadataNeedsFormat reports whether one metadata field uses Goa's Any type.
-// All other supported metadata types have an exact string conversion.
-func metadataNeedsFormat(fields []*MetadataData) bool {
-	for _, field := range fields {
-		typeKind := field.Type.Kind()
-		if array := expr.AsArray(field.Type); array != nil {
-			typeKind = array.ElemType.Type.Kind()
-		}
-		if typeKind == expr.AnyKind {
-			return true
-		}
-	}
-	return false
 }
 
 // transTmplFuncs returns the type formatter used by metadata templates for one

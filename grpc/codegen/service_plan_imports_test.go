@@ -38,30 +38,6 @@ func TestCollectGRPCProtobufImportsVisitsEachCopiedType(t *testing.T) {
 	}
 }
 
-// TestGRPCServiceImportPathsVisitsEachCopiedType checks that one copied type
-// cannot hide a Go field package used by another copy.
-func TestGRPCServiceImportPathsVisitsEachCopiedType(t *testing.T) {
-	first, second := grpcImportCopies()
-	goField := expr.AsObject(second).Attribute("value")
-	goField.Meta["struct:field:type"] = []string{"time.Time", "time"}
-	generation, err := codegen.NewGeneration("generated.local/gen", nil)
-	require.NoError(t, err)
-
-	for _, roots := range [][2]expr.UserType{{first, second}, {second, first}} {
-		service := &expr.GRPCServiceExpr{
-			ServiceExpr: &expr.ServiceExpr{Name: "Imports"},
-			GRPCEndpoints: []*expr.GRPCEndpointExpr{{MethodExpr: &expr.MethodExpr{
-				Payload:          &expr.AttributeExpr{Type: roots[0]},
-				Result:           &expr.AttributeExpr{Type: roots[1]},
-				StreamingPayload: &expr.AttributeExpr{Type: expr.Empty},
-				StreamingResult:  &expr.AttributeExpr{Type: expr.Empty},
-			}}},
-		}
-
-		require.Contains(t, grpcServiceImportPaths(generation, service), "time")
-	}
-}
-
 // grpcImportCopies returns two independent copies of one Goa type.
 func grpcImportCopies() (expr.UserType, expr.UserType) {
 	original := grpcMessageTraversalType("Shared", "shared", expr.String, "1")

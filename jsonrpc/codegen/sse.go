@@ -22,20 +22,8 @@ func sseServerFile(planned *servicePlan) *codegen.File {
 
 	path := filepath.Join(codegen.Gendir, "jsonrpc", data.Service.PathName, "server", "sse.go")
 	title := fmt.Sprintf("%s SSE server streaming", planned.name)
-	imports := make([]*codegen.ImportSpec, 0, 5)
-	imports = append(imports, &codegen.ImportSpec{Path: "context"})
-	if serviceHasSSERetry(planned) {
-		imports = append(imports, &codegen.ImportSpec{Path: "fmt"})
-	}
-	imports = append(imports, codegen.GoaImport("jsonrpc"), data.ServerServiceImport())
-	for _, endpoint := range planned.endpoints {
-		if endpoint.SSE != nil && endpoint.Method.ViewedResult != nil && endpoint.Method.ViewedResult.ViewName == "" {
-			imports = append(imports, codegen.GoaImport(""))
-			break
-		}
-	}
 	sections := []*codegen.SectionTemplate{
-		codegen.Header(title, "server", imports),
+		codegen.Header(title, "server", nil),
 	}
 	funcs := viewedResultFuncs(planned)
 	funcs["sseStreamName"] = planned.sseStreamName
@@ -65,31 +53,11 @@ func sseClientFile(planned *servicePlan) *codegen.File {
 	path := filepath.Join(codegen.Gendir, "jsonrpc", data.Service.PathName, "client", "stream.go")
 	tmplSections := sseClientStreamSections(planned)
 	sections := make([]*codegen.SectionTemplate, 0, 1+len(tmplSections))
-	imports := []*codegen.ImportSpec{
-		{Path: "bufio"},
-		{Path: "bytes"},
-		{Path: "context"},
-		{Path: "encoding/json"},
-		{Path: "errors"},
-		{Path: "fmt"},
-		{Path: "io"},
-		{Path: "net/http"},
-		{Path: "strings"},
-		{Path: "sync"},
-	}
-	if serviceHasSSERetry(planned) {
-		imports = append(imports, &codegen.ImportSpec{Path: "strconv"})
-	}
-	imports = append(imports,
-		codegen.GoaImport("jsonrpc"),
-		codegen.GoaNamedImport("http", "goahttp"),
-		data.ClientServiceImport(),
-	)
 	sections = append(sections,
 		codegen.Header(
 			"stream",
 			"client",
-			imports,
+			nil,
 		),
 	)
 	sections = append(sections, tmplSections...)
@@ -118,17 +86,6 @@ func sseClientStreamSections(service *servicePlan) []*codegen.SectionTemplate {
 		})
 	}
 	return sections
-}
-
-// serviceHasSSERetry reports whether one generated client reads an SSE retry
-// line.
-func serviceHasSSERetry(service *servicePlan) bool {
-	for _, endpoint := range service.endpoints {
-		if endpoint.SSE != nil && endpoint.SSE.Retry != nil {
-			return true
-		}
-	}
-	return false
 }
 
 // sseRetrySigned reports whether a retry field uses a signed integer.

@@ -54,19 +54,36 @@ type (
 	}
 
 	// servicePlan stores one service's generated package path, function names,
-	// and HTTP request and response data.
+	// HTTP request and response data, and the imports written by each JSON-RPC
+	// file.
 	servicePlan struct {
-		data        httpcodegen.JSONRPCServiceSnapshot
-		api         string
-		name        string
-		pathName    string
-		endpoints   []*endpointPlan
-		helpers     map[string]*viewedHelperDeclarations
-		clientNames jsonRPCClientNames
-		serverNames jsonRPCServerNames
-		bodyDecoder *codegen.NameDeclaration
-		hasHTTP     bool
-		hasSSE      bool
+		jsonRPCServiceFacts
+		data              httpcodegen.JSONRPCServiceSnapshot
+		api               string
+		name              string
+		pathName          string
+		endpoints         []*endpointPlan
+		helpers           map[string]*viewedHelperDeclarations
+		clientNames       jsonRPCClientNames
+		serverNames       jsonRPCServerNames
+		bodyDecoder       *codegen.NameDeclaration
+		fileImports       map[string]*codegen.GeneratedImportPlan
+		clientPackage     *codegen.GeneratedPackage
+		serverPackage     *codegen.GeneratedPackage
+		serviceImportPath string
+	}
+
+	// jsonRPCServiceFacts records the service shapes that decide which source
+	// files and imports JSON-RPC generation writes.
+	jsonRPCServiceFacts struct {
+		hasHTTP                     bool
+		hasSSE                      bool
+		hasNotification             bool
+		hasViewedResult             bool
+		hasSSERetry                 bool
+		hasVariableViewedStream     bool
+		streamUsesServicePackage    bool
+		streamUsesResultViewPackage bool
 	}
 
 	// endpointPlan contains the HTTP request, HTTP response, and JSON-RPC result
@@ -180,9 +197,6 @@ func NewPlans(generation *codegen.Generation, inputs ...PlanInput) ([]*Plan, err
 		})
 		plans[index] = plan
 	}
-	if err := planImports(generation, inputs); err != nil {
-		return nil, err
-	}
 	return plans, nil
 }
 
@@ -192,7 +206,7 @@ func NewExamplePlan(transport *Plan, examples *example.Plan) (*ExamplePlan, erro
 	if _, ok := examples.Root(transport.service); !ok {
 		return nil, fmt.Errorf("JSON-RPC examples require server data created from the same service design")
 	}
-	httpPlan, err := httpcodegen.NewExamplePlan(transport.http, examples)
+	httpPlan, err := httpcodegen.NewCombinedExamplePlan(transport.http, transport.applicationHTTP, examples)
 	if err != nil {
 		return nil, err
 	}
@@ -226,6 +240,11 @@ func (p *Plan) Link() error {
 		return fmt.Errorf("JSON-RPC plan is already linked")
 	}
 	for _, planned := range p.services {
+		for _, imports := range planned.fileImports {
+			if err := imports.Link(); err != nil {
+				return err
+			}
+		}
 		data, ok := p.http.JSONRPCService(planned.name)
 		if !ok {
 			return fmt.Errorf("HTTP plan has no data for JSON-RPC service %q", planned.name)
@@ -240,11 +259,6 @@ func (p *Plan) Link() error {
 				viewed:                  planViewedRepresentation(&endpoint, viewed, hasViewedResult, helper),
 			}
 			planned.endpoints = append(planned.endpoints, plannedEndpoint)
-			if endpoint.SSE != nil {
-				planned.hasSSE = true
-			} else {
-				planned.hasHTTP = true
-			}
 		}
 	}
 	p.server = serverFiles(p.services)
@@ -342,19 +356,22 @@ func planViewedRepresentation(endpoint *httpcodegen.JSONRPCEndpointSnapshot, vie
 func servicePlanForOutput(planned *servicePlan, client bool) *servicePlan {
 	copy := *planned
 	copy.data = planned.data
-	serviceImport := planned.data.ServerServiceImport()
-	if client {
-		serviceImport = planned.data.ClientServiceImport()
+	serviceName := planned.nativeServiceName(client)
+	if serviceName != "" {
+		copy.data.Service.PkgName = serviceName
 	}
-	copy.data.Service.PkgName = serviceImport.Name
 	copy.data.Endpoints = make([]httpcodegen.JSONRPCEndpointSnapshot, len(planned.data.Endpoints))
 	copy.endpoints = make([]*endpointPlan, len(planned.endpoints))
 	for index, endpoint := range planned.endpoints {
 		endpointCopy := *endpoint
-		endpointCopy.ServicePkgName = serviceImport.Name
+		if serviceName != "" {
+			endpointCopy.ServicePkgName = serviceName
+		}
 		if endpoint.viewed != nil {
 			viewedCopy := *endpoint.viewed
-			viewedCopy.servicePkg = serviceImport.Name
+			if serviceName != "" {
+				viewedCopy.servicePkg = serviceName
+			}
 			endpointCopy.viewed = &viewedCopy
 		}
 		copy.endpoints[index] = &endpointCopy
@@ -368,48 +385,6 @@ func (p *Plan) requireLinked() {
 	if !p.linked {
 		panic("JSON-RPC files requested before Plan.Link")
 	}
-}
-
-// planImports records every import name written directly into JSON-RPC files.
-func planImports(generation *codegen.Generation, inputs []PlanInput) error {
-	clientImports := []*codegen.ImportSpec{
-		codegen.SimpleImport("bufio"),
-		codegen.SimpleImport("sync"),
-		codegen.GoaImport("jsonrpc"),
-	}
-	serverImports := []*codegen.ImportSpec{
-		codegen.SimpleImport("bytes"),
-		codegen.SimpleImport("mime"),
-		codegen.GoaImport(""),
-		codegen.GoaImport("jsonrpc"),
-	}
-	for _, input := range inputs {
-		for _, transport := range input.Root.API.JSONRPC.Services {
-			serviceImport, _, err := input.Service.ServicePackageImports(transport.ServiceExpr)
-			if err != nil {
-				return err
-			}
-			pathName := path.Base(serviceImport.Path)
-			for index, outputPackage := range []*codegen.GeneratedPackage{
-				generation.Package(path.Join(generation.GenPkg(), "jsonrpc", pathName, "client")),
-				generation.Package(path.Join(generation.GenPkg(), "jsonrpc", pathName, "server")),
-			} {
-				imports := clientImports
-				if index == 1 {
-					imports = serverImports
-				}
-				for _, spec := range imports {
-					if err := outputPackage.RequireImport(spec); err != nil {
-						return err
-					}
-				}
-				if err := outputPackage.ReserveGeneratedImport(serviceImport); err != nil {
-					return err
-				}
-			}
-		}
-	}
-	return nil
 }
 
 // validatePlanInputs checks every root and plan before NewPlans submits an
@@ -490,12 +465,46 @@ func jsonRPCEndpoint(data any) *httpcodegen.JSONRPCEndpointSnapshot {
 	}
 }
 
+// collectJSONRPCServiceFacts reads the service once and saves the choices used
+// by name planning, file planning, and rendering.
+func collectJSONRPCServiceFacts(service *expr.HTTPServiceExpr) jsonRPCServiceFacts {
+	var facts jsonRPCServiceFacts
+	for _, endpoint := range service.HTTPEndpoints {
+		facts.hasNotification = facts.hasNotification || endpoint.IsJSONRPCNotification()
+		viewed := jsonRPCMethodHasViewedResult(endpoint.MethodExpr)
+		facts.hasViewedResult = facts.hasViewedResult || viewed
+		if !endpoint.UsesSSE() {
+			facts.hasHTTP = true
+			continue
+		}
+		facts.hasSSE = true
+		if endpoint.SSE != nil && endpoint.SSE.RetryField != "" {
+			facts.hasSSERetry = true
+		}
+		if viewed {
+			facts.streamUsesServicePackage = true
+			facts.streamUsesResultViewPackage = true
+			if _, fixed := endpoint.MethodExpr.Result.Meta.Last(expr.ViewMetaKey); !fixed {
+				facts.hasVariableViewedStream = true
+			}
+		}
+		attribute := endpoint.MethodExpr.StreamingResult
+		if attribute == nil {
+			attribute = endpoint.MethodExpr.Result
+		}
+		if _, userType := attribute.Type.(expr.UserType); userType || len(endpoint.MethodExpr.Errors) > 0 {
+			facts.streamUsesServicePackage = true
+		}
+	}
+	return facts
+}
+
 // collectServicePlan stores the designed service name and generated package
 // path, then requests client decoder and server encoder names for every method
 // that returns a result view. Link later adds the HTTP endpoint data used to
 // build that service's files.
 func collectServicePlan(generation *codegen.Generation, input PlanInput, transport *expr.HTTPServiceExpr) (*servicePlan, error) {
-	serviceImport, _, err := input.Service.ServicePackageImports(transport.ServiceExpr)
+	serviceImport, viewsImport, err := input.Service.ServicePackageImports(transport.ServiceExpr)
 	if err != nil {
 		return nil, err
 	}
@@ -511,10 +520,11 @@ func collectServicePlan(generation *codegen.Generation, input PlanInput, transpo
 		return nil, err
 	}
 	planned := &servicePlan{
-		api:      input.Root.API.Name,
-		name:     transport.Name(),
-		pathName: pathName,
-		helpers:  make(map[string]*viewedHelperDeclarations),
+		jsonRPCServiceFacts: collectJSONRPCServiceFacts(transport),
+		api:                 input.Root.API.Name,
+		name:                transport.Name(),
+		pathName:            pathName,
+		helpers:             make(map[string]*viewedHelperDeclarations),
 	}
 	declare := func(pkg *codegen.GeneratedPackage, kind codegen.PackageNameKind, preferred string, role uint8) (*codegen.NameDeclaration, error) {
 		declaration := codegen.NewPreferredName(kind, preferred, codegen.UnexportedName, jsonRPCNameOrder{
@@ -526,14 +536,6 @@ func collectServicePlan(generation *codegen.Generation, input PlanInput, transpo
 			return nil, err
 		}
 		return declaration, nil
-	}
-	hasHTTP, hasSSE := false, false
-	for _, endpoint := range transport.HTTPEndpoints {
-		if endpoint.UsesSSE() {
-			hasSSE = true
-		} else {
-			hasHTTP = true
-		}
 	}
 	planned.clientNames.bufferPool, err = declare(client, codegen.NameVariable, "bufferPool", jsonRPCBufferPoolRole)
 	if err != nil {
@@ -547,13 +549,13 @@ func collectServicePlan(generation *codegen.Generation, input PlanInput, transpo
 	if err != nil {
 		return nil, err
 	}
-	if hasHTTP {
+	if planned.hasHTTP {
 		planned.serverNames.batchWriter, err = declare(server, codegen.NameType, "batchWriter", jsonRPCBatchWriterRole)
 		if err != nil {
 			return nil, err
 		}
 	}
-	if hasSSE {
+	if planned.hasSSE {
 		planned.serverNames.sseStream, err = declare(server, codegen.NameType, "sseServerStream", jsonRPCSSEStreamRole)
 		if err != nil {
 			return nil, err
@@ -614,6 +616,9 @@ func collectServicePlan(generation *codegen.Generation, input PlanInput, transpo
 			}
 		}
 		planned.helpers[method.Name] = helpers
+	}
+	if err := planJSONRPCFileImports(planned, transport, client, server, serviceImport, viewsImport); err != nil {
+		return nil, err
 	}
 	return planned, nil
 }

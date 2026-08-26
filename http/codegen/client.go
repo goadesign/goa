@@ -15,17 +15,17 @@ import (
 func clientFiles(data *ServicesData) []*codegen.File {
 	files := make([]*codegen.File, 0, len(data.Expressions.Services)*3) // preallocate for client files
 	for _, svc := range data.Expressions.Services {
-		files = append(files, addPlannedFileImports(clientFile(svc, data), data))
+		files = append(files, clientFile(svc, data))
 		if f := websocketClientFile(svc, data); f != nil {
-			files = append(files, addPlannedFileImports(f, data))
+			files = append(files, f)
 		}
 		if f := sseClientFile(svc, data); f != nil {
-			files = append(files, addPlannedFileImports(f, data))
+			files = append(files, f)
 		}
 	}
 	for _, svc := range data.Expressions.Services {
 		if f := clientEncodeDecodeFile(svc, data); f != nil {
-			files = append(files, addPlannedFileImports(f, data))
+			files = append(files, f)
 		}
 	}
 	return files
@@ -40,49 +40,7 @@ func clientEncodeDecodeFile(svc *expr.HTTPServiceExpr, services *ServicesData) *
 	outputPackage := generatedFileOutputPackage(services, path)
 	data = serviceDataForOutput(data, services, outputPackage)
 	title := fmt.Sprintf("%s %s client encoders and decoders", svc.Name(), services.label())
-	imports := []*codegen.ImportSpec{
-		{Path: "bytes"},
-		{Path: "context"},
-		{Path: "encoding/json"},
-		{Path: "fmt"},
-		{Path: "io"},
-		{Path: "mime/multipart"},
-		{Path: "net/http"},
-		{Path: "net/url"},
-		{Path: "os"},
-		{Path: "strconv"},
-		{Path: "strings"},
-		{Path: "unicode/utf8"},
-		codegen.GoaImport(""),
-		codegen.GoaNamedImport("http", "goahttp"),
-		services.ServiceImport(outputPackage, svc.Name()),
-	}
-	for _, endpoint := range data.Endpoints {
-		if !endpoint.Method.SkipResponseBodyEncodeDecode {
-			imports = append(imports, &codegen.ImportSpec{Path: "errors"})
-			break
-		}
-	}
-	if serviceHasViewedResult(data, nil) {
-		imports = append(imports, services.ViewImport(outputPackage, svc.Name()))
-	}
-	needsJSONRPC, needsUUID := false, false
-	for _, endpoint := range data.Endpoints {
-		if !endpoint.IsJSONRPC {
-			continue
-		}
-		needsJSONRPC = true
-		if endpoint.JSONRPCRequestID != nil && endpoint.JSONRPCRequestID.Generate {
-			needsUUID = true
-		}
-	}
-	if needsJSONRPC {
-		imports = append(imports, codegen.GoaImport("jsonrpc"))
-	}
-	if needsUUID {
-		imports = append(imports, &codegen.ImportSpec{Path: "github.com/google/uuid"})
-	}
-	sections := []*codegen.SectionTemplate{codegen.Header(title, "client", imports)}
+	sections := []*codegen.SectionTemplate{plannedFileHeader(title, "client", path, services)}
 
 	for _, e := range data.Endpoints {
 		sections = append(sections, &codegen.SectionTemplate{
@@ -161,30 +119,8 @@ func clientFile(svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File
 	outputPackage := generatedFileOutputPackage(services, path)
 	data = serviceDataForOutput(data, services, outputPackage)
 	title := fmt.Sprintf("%s client HTTP transport", svc.Name())
-	imports := []*codegen.ImportSpec{
-		{Path: "context"},
-		{Path: "fmt"},
-		{Path: "io"},
-		{Path: "mime/multipart"},
-		{Path: "net/http"},
-		{Path: "strconv"},
-		{Path: "time"},
-		{Path: "github.com/gorilla/websocket"},
-		codegen.GoaImport(""),
-		codegen.GoaNamedImport("http", "goahttp"),
-		services.ServiceImport(outputPackage, svc.Name()),
-	}
-	if HasSSE(data) {
-		imports = append(imports, &codegen.ImportSpec{Path: "mime"})
-	}
-	for _, endpoint := range data.Endpoints {
-		if endpoint.SSE != nil || endpoint.Method.SkipResponseBodyEncodeDecode {
-			imports = append(imports, &codegen.ImportSpec{Path: "errors"})
-			break
-		}
-	}
 	sections := []*codegen.SectionTemplate{
-		codegen.Header(title, "client", imports),
+		plannedFileHeader(title, "client", path, services),
 	}
 	sections = append(sections, &codegen.SectionTemplate{
 		Name:   "client-struct",

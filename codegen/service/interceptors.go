@@ -36,15 +36,15 @@ func interceptorsFiles(plan *Plan, facts *serviceFacts) []*codegen.File {
 
 	// Generate service-specific interceptor files
 	if len(svc.ServerInterceptors) > 0 {
-		files = append(files, interceptorFile(svc, facts.imports.serverInterceptors.specs, true))
+		files = append(files, interceptorFile(svc, facts.imports.serverInterceptors.Imports(), true))
 	}
 	if len(svc.ClientInterceptors) > 0 {
-		files = append(files, interceptorFile(svc, facts.imports.clientInterceptors.specs, false))
+		files = append(files, interceptorFile(svc, facts.imports.clientInterceptors.Imports(), false))
 	}
 
 	// Generate wrapper file if this service has any interceptors
 	if len(svc.ServerInterceptors) > 0 || len(svc.ClientInterceptors) > 0 {
-		files = append(files, wrapperFile(svc, facts.imports.interceptorWrappers.specs))
+		files = append(files, wrapperFile(svc, facts.imports.interceptorWrappers.Imports()))
 	}
 
 	return files

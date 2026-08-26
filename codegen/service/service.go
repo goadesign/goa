@@ -242,7 +242,7 @@ func serviceFiles(plan *Plan, facts *serviceFacts) []*codegen.File {
 		})
 	}
 
-	header := codegen.Header(facts.name+" service", svc.PkgName, facts.imports.service.specs)
+	header := codegen.Header(facts.name+" service", svc.PkgName, facts.imports.service.Imports())
 	def := &codegen.SectionTemplate{
 		Name:   "service",
 		Source: serviceTemplates.Read(serviceT),

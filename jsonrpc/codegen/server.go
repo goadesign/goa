@@ -35,10 +35,10 @@ func serverFiles(services []*servicePlan) []*codegen.File {
 	files := make([]*codegen.File, 0, len(services)*3)
 	for _, planned := range services {
 		renderPlan := servicePlanForOutput(planned, false)
-		files = append(files, addFileImports(serverFile(renderPlan), planned.data))
+		files = append(files, setFileImports(serverFile(renderPlan), renderPlan))
 		if renderPlan.hasSSE {
 			if f := sseServerFile(renderPlan); f != nil {
-				files = append(files, addFileImports(f, planned.data))
+				files = append(files, setFileImports(f, renderPlan))
 			}
 		}
 	}
@@ -48,15 +48,9 @@ func serverFiles(services []*servicePlan) []*codegen.File {
 			continue
 		}
 		for _, s := range f.SectionTemplates {
-			// These imports are used by the JSON-RPC error and body converters below.
-			if s.Name == "source-header" {
-				codegen.AddImport(s, &codegen.ImportSpec{Path: "bytes"})
-				codegen.AddImport(s, &codegen.ImportSpec{Path: "io"})
-				codegen.AddImport(s, codegen.GoaImport("jsonrpc"))
-			}
 			s.Name = "jsonrpc-" + s.Name
 		}
-		files = append(files, addFileImports(f, planned.data))
+		files = append(files, setFileImports(f, planned))
 	}
 	return files
 }
@@ -86,37 +80,8 @@ func serverFile(planned *servicePlan) *codegen.File {
 	for name, function := range viewedResultFuncs(planned) {
 		funcs[name] = function
 	}
-	imports := make([]*codegen.ImportSpec, 0, 15)
-	imports = append(imports,
-		&codegen.ImportSpec{Path: "bufio"},
-		&codegen.ImportSpec{Path: "bytes"},
-		&codegen.ImportSpec{Path: "context"},
-		&codegen.ImportSpec{Path: "errors"},
-		&codegen.ImportSpec{Path: "fmt"},
-		&codegen.ImportSpec{Path: "io"},
-		&codegen.ImportSpec{Path: "mime"},
-		&codegen.ImportSpec{Path: "mime/multipart"},
-		&codegen.ImportSpec{Path: "net/http"},
-		&codegen.ImportSpec{Path: "path"},
-		&codegen.ImportSpec{Path: "strings"},
-	)
-	if planned.hasHTTP && planned.hasSSE {
-		imports = append(imports, &codegen.ImportSpec{Path: "strconv"})
-	}
-	if planned.hasSSE {
-		imports = append(imports, &codegen.ImportSpec{Path: "sync"})
-	}
-	imports = append(imports,
-		codegen.GoaImport(""),
-		codegen.GoaImport("jsonrpc"),
-		codegen.GoaNamedImport("http", "goahttp"),
-		data.ServerServiceImport(),
-	)
-	if serviceHasViewedResult(data) {
-		imports = append(imports, data.ServerViewImport())
-	}
 	sections := []*codegen.SectionTemplate{
-		codegen.Header(title, "server", imports),
+		codegen.Header(title, "server", nil),
 	}
 
 	sections = append(sections,
@@ -189,17 +154,6 @@ func (s *servicePlan) noOutputWriterName() string {
 // requests and server-sent-event requests on the same HTTP path.
 func (s *servicePlan) hasMixedTransports() bool {
 	return s.hasHTTP && s.hasSSE
-}
-
-// serviceHasViewedResult reports whether server.go emits endpoint conversion
-// code that references the service views package.
-func serviceHasViewedResult(service httpcodegen.JSONRPCServiceSnapshot) bool {
-	for _, endpoint := range service.Endpoints {
-		if endpoint.Method.ViewedResult != nil {
-			return true
-		}
-	}
-	return false
 }
 
 // lowerInitial returns the string with the first letter in lowercase.

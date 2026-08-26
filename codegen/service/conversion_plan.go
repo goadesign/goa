@@ -43,7 +43,7 @@ type (
 		externalPath      string
 		externalAlias     string
 		externalAttribute *expr.AttributeExpr
-		externalPackages  map[expr.UserType]string
+		externalPackages  map[expr.UserType]*codegen.ImportSpec
 		externalScope     *codegen.NameScope
 		plan              *codegen.TransformPlan
 		methodName        string
@@ -56,7 +56,7 @@ type (
 	externalConversionFileFacts struct {
 		owner      *codegen.GeneratedPackage
 		operations []*externalConversionFacts
-		imports    retainedFileImports
+		imports    *codegen.GeneratedImportPlan
 	}
 
 	// externalConversionIdentity selects one generated method by its receiver,
@@ -250,16 +250,13 @@ func planExternalConversion(
 	if err != nil {
 		return nil, err
 	}
-	externalPackages := make(map[expr.UserType]string, len(reflectedTypes))
+	externalPackages := make(map[expr.UserType]*codegen.ImportSpec, len(reflectedTypes))
 	for userType, reflected := range reflectedTypes {
 		importPath, alias, err := getExternalReflectTypeInfo(reflected)
 		if err != nil {
 			return nil, err
 		}
-		if err := owner.DeclareImport(codegen.NewImport(alias, importPath)); err != nil {
-			return nil, err
-		}
-		externalPackages[userType.Origin()] = importPath
+		externalPackages[userType.Origin()] = codegen.NewImport(alias, importPath)
 	}
 	externalPath := identity.externalPath
 	externalAttribute := &expr.AttributeExpr{Type: externalDataType}
@@ -364,8 +361,10 @@ func finishExternalConversionFile(file *externalConversionFileFacts, generation 
 		return err
 	}
 	for _, operation := range file.operations {
-		for _, importPath := range operation.externalPackages {
-			addRetainedImportPath(&imports, importPath)
+		for _, spec := range operation.externalPackages {
+			if err := imports.AddDesign(spec); err != nil {
+				return err
+			}
 		}
 	}
 	file.imports = imports
@@ -395,7 +394,9 @@ func linkExternalConversions(
 	aliases *importAliases,
 ) error {
 	for _, file := range facts.externalConversions {
-		linkFileImports(&file.imports, generation)
+		if err := file.imports.Link(); err != nil {
+			return err
+		}
 		for _, operation := range file.operations {
 			serviceResolver := newServiceResolver(
 				generation,
@@ -469,13 +470,13 @@ func linkExternalConversion(
 // import name selected for its package.
 func newExternalConversionResolver(
 	scope *codegen.NameScope,
-	packages map[expr.UserType]string,
+	packages map[expr.UserType]*codegen.ImportSpec,
 	aliases *importAliases,
 	outputPackage string,
 ) *externalConversionResolver {
 	resolved := make(map[expr.UserType]string, len(packages))
-	for userType, importPath := range packages {
-		resolved[userType.Origin()] = aliases.name(outputPackage, importPath)
+	for userType, spec := range packages {
+		resolved[userType.Origin()] = aliases.name(outputPackage, spec.Path)
 	}
 	return &externalConversionResolver{
 		scope:    codegen.NewAttributeScope(scope),

@@ -396,6 +396,45 @@ func transform(source *WithRaw) *WithRaw {
 `)
 }
 
+// TestGoTransformDefaultUsesFinalCustomTypeImportAlias verifies that the
+// zero-value check uses the same package name as the generated import.
+func TestGoTransformDefaultUsesFinalCustomTypeImportAlias(t *testing.T) {
+	const customPath = "example.com/custom/strconv"
+	generation := mustTestGeneration(t, "generated.local/gen", nil)
+	pkg := mustClaimTestPackage(t, generation, "generated.local/gen/service")
+	field := &expr.AttributeExpr{
+		Type:         expr.String,
+		DefaultValue: "ready",
+		Meta: expr.MetaExpr{
+			"struct:field:type": {"strconv.Token", customPath, "strconv"},
+		},
+	}
+	withDefault := goTypeTestUserType("WithDefault", &expr.Object{
+		{Name: "token", Attribute: field},
+	})
+	_, err := pkg.DeclareUserType(withDefault)
+	require.NoError(t, err)
+	require.NoError(t, pkg.DeclareImport(NewImport("strconv", customPath)))
+	require.NoError(t, pkg.RequireImport(SimpleImport("strconv")))
+	require.NoError(t, generation.Freeze())
+	require.Equal(t, "strconv2", pkg.ImportName(customPath))
+	context := NewAttributeContext(false, false, true, "", pkg.Scope())
+
+	code, _, err := GoTransform(
+		&expr.AttributeExpr{Type: withDefault},
+		&expr.AttributeExpr{Type: withDefault},
+		"source",
+		"target",
+		context,
+		context,
+		"",
+		true,
+	)
+	require.NoError(t, err)
+	require.Contains(t, code, "var zero strconv2.Token")
+	require.NotContains(t, code, "var zero strconv.Token")
+}
+
 // TestGoTransformReturnsFirstDefaultError verifies that a later field cannot
 // hide an invalid earlier default while the generator walks an object.
 func TestGoTransformReturnsFirstDefaultError(t *testing.T) {

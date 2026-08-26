@@ -1682,10 +1682,7 @@ func (s *wireAttributeScope) Name(attribute *expr.AttributeExpr, pkg string, poi
 	}
 	switch actual := attribute.Type.(type) {
 	case expr.Primitive:
-		if name, _ := codegen.GetMetaType(attribute); name != "" {
-			return name
-		}
-		return codegen.GoNativeTypeName(actual)
+		return s.base.Name(attribute, pkg, pointer, useDefault)
 	case *expr.Array, *expr.Map, *expr.Object:
 		context := &codegen.AttributeContext{
 			Pointer:             pointer,
@@ -1757,7 +1754,7 @@ func (*wireAttributeScope) Field(attribute *expr.AttributeExpr, name string, fir
 // Package returns the Go package name written before the type for attribute.
 func (s *wireAttributeScope) Package(attribute *expr.AttributeExpr) string {
 	if location := codegen.UserTypeLocation(attribute.Type); location != nil {
-		return location.PackageName()
+		return s.base.Package(attribute)
 	}
 	return s.pkg
 }
@@ -1766,7 +1763,7 @@ func (s *wireAttributeScope) Package(attribute *expr.AttributeExpr) string {
 func (s *wireAttributeScope) Enter(attribute *expr.AttributeExpr) codegen.Attributor {
 	pkg := s.pkg
 	if location := codegen.UserTypeLocation(attribute.Type); location != nil {
-		pkg = location.PackageName()
+		pkg = s.base.Package(attribute)
 	}
 	policy := s.policy
 	viewRoot := s.viewRoot

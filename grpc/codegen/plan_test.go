@@ -160,10 +160,10 @@ func TestGRPCCLIImportAliasesBelongToOutputPackage(t *testing.T) {
 	require.Equal(t, "echoc", cliPackage.ImportName(clientPath))
 }
 
-// TestGRPCReferencesUseTheirOutputPackageAlias checks that client and server
-// source use their own service import names when only the server package also
-// imports the standard strings package.
-func TestGRPCReferencesUseTheirOutputPackageAlias(t *testing.T) {
+// TestGRPCReferencesKeepNamesWhenStandardPackageIsUnused checks that a service
+// package named strings keeps that name when generated files do not call the
+// standard strings package.
+func TestGRPCReferencesKeepNamesWhenStandardPackageIsUnused(t *testing.T) {
 	roots := grpcPlanRoots(t, "Strings")
 	generation, services := grpcServicePlans(t, roots)
 	plans, err := NewPlans(generation, PlanInput{Root: roots[0], Service: services[0]})
@@ -176,8 +176,8 @@ func TestGRPCReferencesUseTheirOutputPackageAlias(t *testing.T) {
 	serverCode := sectionCode(t, plans[0].ServerFiles()[0].SectionTemplates...)
 	require.Contains(t, clientCode, `strings "generated.local/gen/strings"`)
 	require.Contains(t, clientCode, `*strings.ReadPayload`)
-	require.Contains(t, serverCode, `strings2 "generated.local/gen/strings"`)
-	require.Contains(t, serverCode, `*strings2.Endpoints`)
+	require.Contains(t, serverCode, `strings "generated.local/gen/strings"`)
+	require.Contains(t, serverCode, `*strings.Endpoints`)
 }
 
 // TestGRPCServerUsesItsOwnProtobufAlias checks that the runtime protobuf

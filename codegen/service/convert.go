@@ -42,7 +42,7 @@ func convertFiles(conversions []*externalConversionFileFacts) []*codegen.File {
 			codegen.Header(
 				"External type conversion functions",
 				codegen.Goify(path.Base(retained.owner.ImportPath()), false),
-				retained.imports.specs,
+				retained.imports.Imports(),
 			),
 		}
 		for _, operation := range retained.operations {

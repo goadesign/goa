@@ -34,10 +34,7 @@ func goTypeDef(scope *codegen.NameScope, att *expr.AttributeExpr, ptr, useDefaul
 func goTypeDefForContext(att *expr.AttributeExpr, ctx *codegen.AttributeContext) string {
 	switch actual := att.Type.(type) {
 	case expr.Primitive:
-		if t, _ := codegen.GetMetaType(att); t != "" {
-			return t
-		}
-		return codegen.GoNativeTypeName(actual)
+		return ctx.Scope.Name(att, ctx.Pkg(att), ctx.Pointer, ctx.UseDefault)
 	case *expr.Array:
 		d := goTypeDefForContext(actual.ElemType, ctx)
 		if expr.IsObject(actual.ElemType.Type) || ctx.IsArrayElementPointer(actual) {

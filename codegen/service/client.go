@@ -18,7 +18,7 @@ func clientFile(plan *Plan, facts *serviceFacts) *codegen.File {
 		sections []*codegen.SectionTemplate
 	)
 	{
-		header := codegen.Header(facts.name+" client", svc.PkgName, facts.imports.client.specs)
+		header := codegen.Header(facts.name+" client", svc.PkgName, facts.imports.client.Imports())
 		def := &codegen.SectionTemplate{
 			Name:   "client-struct",
 			Source: serviceTemplates.Read(serviceClientT),

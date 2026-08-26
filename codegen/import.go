@@ -3,7 +3,13 @@
 package codegen
 
 import (
+	"bytes"
 	"fmt"
+	"go/ast"
+	goformat "go/format"
+	"go/parser"
+	"go/token"
+	"path"
 	"path/filepath"
 	"strconv"
 
@@ -76,6 +82,15 @@ func (s *ImportSpec) Code() string {
 	return fmt.Sprintf(`"%s"`, s.Path)
 }
 
+// preferredName returns the package name requested by this import. When the
+// import has no explicit name, Go uses the last part of its path.
+func (s *ImportSpec) preferredName() string {
+	if s.Name != "" {
+		return s.Name
+	}
+	return path.Base(s.Path)
+}
+
 // UserTypeLocation returns the location of the user type if set via the
 // struct:pkg:path metadata, nil otherwise..
 func UserTypeLocation(dt expr.DataType) *Location {
@@ -128,6 +143,40 @@ func GetMetaType(att *expr.AttributeExpr) (typeName string, importS *ImportSpec)
 		}
 	}
 	return
+}
+
+// rebindMetaTypeQualifier changes every reference to one imported package in
+// a custom Go field type. The type is parsed while source is generated, so
+// pointers, slices, maps, and repeated package references remain valid Go.
+func rebindMetaTypeQualifier(typeName, current, selected string) string {
+	if current == "" || current == selected {
+		return typeName
+	}
+	typeExpression, err := parser.ParseExpr(typeName)
+	if err != nil {
+		panic(fmt.Sprintf("invalid struct:field:type %q: %v", typeName, err))
+	}
+	changed := false
+	ast.Inspect(typeExpression, func(node ast.Node) bool {
+		selector, ok := node.(*ast.SelectorExpr)
+		if !ok {
+			return true
+		}
+		packageName, ok := selector.X.(*ast.Ident)
+		if ok && packageName.Name == current {
+			packageName.Name = selected
+			changed = true
+		}
+		return true
+	})
+	if !changed {
+		return typeName
+	}
+	var source bytes.Buffer
+	if err := goformat.Node(&source, token.NewFileSet(), typeExpression); err != nil {
+		panic(fmt.Sprintf("format struct:field:type %q: %v", typeName, err))
+	}
+	return source.String()
 }
 
 // GetMetaTypeImports parses the attribute for all user defined imports

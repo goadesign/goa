@@ -3,7 +3,6 @@
 package codegen
 
 import (
-	"path"
 	"path/filepath"
 
 	"goa.design/goa/v3/codegen"
@@ -16,10 +15,10 @@ func clientFiles(services *ServicesData) []*codegen.File {
 	svcLen := len(services.servicePlans)
 	fw := make([]*codegen.File, 2*svcLen)
 	for i, servicePlan := range services.servicePlans {
-		fw[i] = addEndpointImports(clientFile(servicePlan.expression, services), services, servicePlan)
+		fw[i] = addEndpointImports(clientFile(servicePlan.expression, services), services)
 	}
 	for i, servicePlan := range services.servicePlans {
-		fw[i+svcLen] = addEndpointImports(clientEncodeDecode(servicePlan.expression, services), services, servicePlan)
+		fw[i+svcLen] = addEndpointImports(clientEncodeDecode(servicePlan.expression, services), services)
 	}
 	return fw
 }
@@ -34,22 +33,9 @@ func clientFile(svc *expr.GRPCServiceExpr, services *ServicesData) *codegen.File
 	)
 	{
 		svcName := data.Service.PathName
-		outputPackage := path.Join(services.GenPkg(), "grpc", svcName, "client")
 		fpath = filepath.Join(codegen.Gendir, "grpc", svcName, "client", "client.go")
-		imports := []*codegen.ImportSpec{
-			{Path: "context"},
-			{Path: "google.golang.org/grpc"},
-			codegen.GoaImport(""),
-			codegen.GoaNamedImport("grpc", "goagrpc"),
-			codegen.GoaNamedImport("grpc/pb", "goapb"),
-			services.ServiceImport(outputPackage, svc.Name()),
-			services.PackageImport(outputPackage, path.Join(services.GenPkg(), "grpc", svcName, pbPkgName)),
-		}
-		if serviceHasViewedClientStream(data) {
-			imports = append(imports, services.ViewImport(outputPackage, svc.Name()))
-		}
 		sections = []*codegen.SectionTemplate{
-			codegen.Header(svc.Name()+" gRPC client", "client", imports),
+			codegen.Header(svc.Name()+" gRPC client", "client", nil),
 		}
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "client-struct",
@@ -124,26 +110,8 @@ func clientEncodeDecode(svc *expr.GRPCServiceExpr, services *ServicesData) *code
 	)
 	{
 		svcName := data.Service.PathName
-		outputPackage := path.Join(services.GenPkg(), "grpc", svcName, "client")
 		fpath = filepath.Join(codegen.Gendir, "grpc", svcName, "client", "encode_decode.go")
-		imports := []*codegen.ImportSpec{
-			{Path: "context"},
-			{Path: "strconv"},
-			{Path: "unicode/utf8"},
-			{Path: "google.golang.org/grpc"},
-			{Path: "google.golang.org/grpc/metadata"},
-			codegen.GoaImport(""),
-			codegen.GoaNamedImport("grpc", "goagrpc"),
-			services.ServiceImport(outputPackage, svc.Name()),
-			services.PackageImport(outputPackage, path.Join(services.GenPkg(), "grpc", svcName, pbPkgName)),
-		}
-		if requestMetadataNeedsFormat(data) {
-			imports = append(imports, &codegen.ImportSpec{Path: "fmt"})
-		}
-		if serviceHasUnaryViewedResult(data) {
-			imports = append(imports, services.ViewImport(outputPackage, svc.Name()))
-		}
-		sections = []*codegen.SectionTemplate{codegen.Header(svc.Name()+" gRPC client encoders and decoders", "client", imports)}
+		sections = []*codegen.SectionTemplate{codegen.Header(svc.Name()+" gRPC client encoders and decoders", "client", nil)}
 		fm := transTmplFuncs(data)
 		fm["hasInitArg"] = hasInitArg
 		fm["metadataEncodeDecodeData"] = metadataEncodeDecodeData

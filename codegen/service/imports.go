@@ -4,9 +4,6 @@ package service
 
 import (
 	"path"
-	"slices"
-	"sort"
-	"strings"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
@@ -19,52 +16,21 @@ type (
 		generation *codegen.Generation
 	}
 
-	// importCollector accumulates the imports referenced by one generated Go
-	// file while traversing recursive service type definitions.
-	importCollector struct {
-		aliases       *importAliases
-		genpkg        string
-		outputPackage string
-		paths         map[string]struct{}
-		planning      bool
-		err           error
-	}
-
-	// This record stores the complete package paths used by one emitted file and
-	// the import declarations built after all package names are chosen.
-	retainedFileImports struct {
-		outputPackage string
-		paths         []string
-		specs         []*codegen.ImportSpec
-	}
-
 	// serviceFileImports keeps imports separate for files that emit different
 	// subsets of one service's types and runtime helpers.
 	serviceFileImports struct {
-		service                   retainedFileImports
-		endpoint                  retainedFileImports
-		client                    retainedFileImports
-		views                     retainedFileImports
-		serverInterceptors        retainedFileImports
-		clientInterceptors        retainedFileImports
-		interceptorWrappers       retainedFileImports
-		exampleService            retainedFileImports
-		exampleServerInterceptors retainedFileImports
-		exampleClientInterceptors retainedFileImports
+		service                   *codegen.GeneratedImportPlan
+		endpoint                  *codegen.GeneratedImportPlan
+		client                    *codegen.GeneratedImportPlan
+		views                     *codegen.GeneratedImportPlan
+		serverInterceptors        *codegen.GeneratedImportPlan
+		clientInterceptors        *codegen.GeneratedImportPlan
+		interceptorWrappers       *codegen.GeneratedImportPlan
+		exampleService            *codegen.GeneratedImportPlan
+		exampleServerInterceptors *codegen.GeneratedImportPlan
+		exampleClientInterceptors *codegen.GeneratedImportPlan
 	}
 )
-
-// AttributeImports returns the exact generated-type and metadata imports
-// referenced by attributes, using the same chosen package names as service
-// type references.
-func (d *ServicesData) AttributeImports(outputPackage string, attributes ...*expr.AttributeExpr) []*codegen.ImportSpec {
-	collector := newImportCollector(d.aliases, d.generation.GenPkg(), outputPackage)
-	seen := make(map[expr.UserType]struct{})
-	for _, attribute := range attributes {
-		collector.collectReferences(attribute, seen)
-	}
-	return collector.imports()
-}
 
 // newImportAliases returns package-name lookups for the supplied generation.
 // Service analysis and rendering use these lookups after all import names are
@@ -87,114 +53,6 @@ func (a *importAliases) spec(outputPackage, importPath string) *codegen.ImportSp
 	return a.generation.Package(outputPackage).Import(importPath)
 }
 
-// newImportCollector creates a file-scoped collector that omits imports of the
-// package containing the generated file.
-func newImportCollector(aliases *importAliases, genpkg, outputPackage string) *importCollector {
-	return &importCollector{
-		aliases:       aliases,
-		genpkg:        genpkg,
-		outputPackage: outputPackage,
-		paths:         make(map[string]struct{}),
-	}
-}
-
-// newPlanningImportCollector creates the same path walker used by rendering
-// and additionally declares each discovered metadata or generated-package
-// preference in the generation alias catalog.
-func newPlanningImportCollector(generation *codegen.Generation, outputPackage string) *importCollector {
-	return &importCollector{
-		aliases:       &importAliases{generation: generation},
-		genpkg:        generation.GenPkg(),
-		outputPackage: outputPackage,
-		paths:         make(map[string]struct{}),
-		planning:      true,
-	}
-}
-
-// addPath records an explicitly referenced package unless it is the package
-// currently being emitted.
-func (c *importCollector) addPath(importPath string) {
-	if importPath != "" && importPath != c.outputPackage {
-		c.paths[importPath] = struct{}{}
-	}
-}
-
-// collectDefinition records imports used to render an attribute definition.
-// Named references stop traversal because their fields are emitted elsewhere.
-func (c *importCollector) collectDefinition(attribute *expr.AttributeExpr) {
-	c.collectAttribute(attribute, false, nil)
-}
-
-// collectReferences records imports used by recursive conversion and
-// validation code, including types and metadata nested in named declarations.
-func (c *importCollector) collectReferences(attribute *expr.AttributeExpr, seen map[expr.UserType]struct{}) {
-	c.collectAttribute(attribute, true, seen)
-}
-
-// collectAttribute implements definition and recursive-reference traversal.
-func (c *importCollector) collectAttribute(attribute *expr.AttributeExpr, expandNamed bool, seen map[expr.UserType]struct{}) {
-	if attribute == nil || attribute.Type == expr.Empty {
-		return
-	}
-	c.addMetaImport(attribute)
-	switch actual := attribute.Type.(type) {
-	case expr.UserType:
-		c.addLocation(codegen.UserTypeLocation(actual))
-		if !expandNamed {
-			return
-		}
-		origin := actual.Origin()
-		if _, ok := seen[origin]; ok {
-			return
-		}
-		seen[origin] = struct{}{}
-		c.collectAttribute(actual.Attribute(), true, seen)
-	case *expr.Object:
-		for _, named := range *actual {
-			c.collectAttribute(named.Attribute, expandNamed, seen)
-		}
-	case *expr.Array:
-		c.collectAttribute(actual.ElemType, expandNamed, seen)
-	case *expr.Map:
-		c.collectAttribute(actual.KeyType, expandNamed, seen)
-		c.collectAttribute(actual.ElemType, expandNamed, seen)
-	case *expr.Union:
-		for _, named := range actual.Values {
-			c.collectAttribute(named.Attribute, expandNamed, seen)
-		}
-	}
-}
-
-// addLocation records the generated package selected by location unless it is
-// the package currently being emitted.
-func (c *importCollector) addLocation(location *codegen.Location) {
-	if location == nil {
-		return
-	}
-	importPath := c.aliases.generation.Package(path.Join(c.genpkg, location.RelImportPath)).ImportPath()
-	if importPath != c.outputPackage {
-		c.paths[importPath] = struct{}{}
-		if c.planning && c.err == nil {
-			c.err = c.aliases.generation.Package(c.outputPackage).ReserveGeneratedImport(codegen.NewImport(
-				strings.ToLower(codegen.Goify(path.Base(importPath), false)),
-				importPath,
-			))
-		}
-	}
-}
-
-// addMetaImport records the package named by struct:field:type metadata unless
-// the metadata refers to the package currently being emitted.
-func (c *importCollector) addMetaImport(attribute *expr.AttributeExpr) {
-	_, spec := codegen.GetMetaType(attribute)
-	if spec != nil && spec.Path != c.outputPackage {
-		c.paths[spec.Path] = struct{}{}
-		if c.planning && c.err == nil {
-			c.err = c.aliases.generation.Package(c.outputPackage).DeclareImport(spec)
-		}
-	}
-}
-
 // retainFileImports collects the fixed, generated, type-definition, and
 // recursive-reference package paths used by one emitted file before
 // Generation.Freeze chooses their Go package names.
@@ -203,61 +61,21 @@ func retainFileImports(
 	outputPackage string,
 	fixed, generated []*codegen.ImportSpec,
 	definitions, references []*expr.AttributeExpr,
-) (retainedFileImports, error) {
-	collector := newPlanningImportCollector(generation, outputPackage)
-	owner := generation.Package(outputPackage)
-	for _, spec := range fixed {
-		collector.addPath(spec.Path)
-		if err := owner.RequireImport(spec); err != nil {
-			return retainedFileImports{}, err
-		}
+) (*codegen.GeneratedImportPlan, error) {
+	imports := codegen.NewGeneratedImportPlan(generation.Package(outputPackage))
+	if err := imports.Require(fixed...); err != nil {
+		return nil, err
 	}
-	for _, spec := range generated {
-		collector.addPath(spec.Path)
-		if err := owner.ReserveGeneratedImport(spec); err != nil {
-			return retainedFileImports{}, err
-		}
+	if err := imports.AddGenerated(generated...); err != nil {
+		return nil, err
 	}
-	for _, attribute := range definitions {
-		collector.collectDefinition(attribute)
+	if err := imports.AddTypeExpressions(definitions...); err != nil {
+		return nil, err
 	}
-	seen := make(map[expr.UserType]struct{})
-	for _, attribute := range references {
-		collector.collectReferences(attribute, seen)
+	if err := imports.AddRecursiveTypeReferences(references...); err != nil {
+		return nil, err
 	}
-	if collector.err != nil {
-		return retainedFileImports{}, collector.err
-	}
-	paths := make([]string, 0, len(collector.paths))
-	for importPath := range collector.paths {
-		paths = append(paths, importPath)
-	}
-	sort.Strings(paths)
-	return retainedFileImports{outputPackage: outputPackage, paths: paths}, nil
-}
-
-// linkFileImports converts one saved path list into import declarations after
-// Generation.Freeze chooses the package names. It does not reread service
-// attributes.
-func linkFileImports(imports *retainedFileImports, generation *codegen.Generation) {
-	imports.specs = make([]*codegen.ImportSpec, len(imports.paths))
-	if len(imports.paths) == 0 {
-		return
-	}
-	owner := generation.Package(imports.outputPackage)
-	for index, importPath := range imports.paths {
-		imports.specs[index] = owner.Import(importPath)
-	}
-}
-
-// addRetainedImportPath adds one explicitly declared package to a file's saved
-// path list in sorted order.
-func addRetainedImportPath(imports *retainedFileImports, importPath string) {
-	index, found := slices.BinarySearch(imports.paths, importPath)
-	if found {
-		return
-	}
-	imports.paths = slices.Insert(imports.paths, index, importPath)
+	return imports, nil
 }
 
 // planServiceFileImports selects the package paths used by each concrete file
@@ -267,7 +85,7 @@ func planServiceFileImports(facts *serviceFacts, rootTypes *rootTypeSet, generat
 	servicePath := facts.packagePath
 	serviceImport := facts.packageImport
 	viewsImport := facts.viewsImport
-	facts.generatedTypeImports = make(map[*codegen.TypeDeclaration]*retainedFileImports)
+	facts.generatedTypeImports = make(map[*codegen.TypeDeclaration]*codegen.GeneratedImportPlan)
 
 	definitions := serviceDefinitionAttributes(facts)
 	serviceDefinitions := append([]*expr.AttributeExpr(nil), facts.referenceAttributes...)
@@ -356,33 +174,35 @@ func planServiceFileImports(facts *serviceFacts, rootTypes *rootTypeSet, generat
 	interceptorFixed := []*codegen.ImportSpec{contextImport, goaImport}
 	if len(facts.serverInterceptors) > 0 {
 		serverInterceptorNames := interceptorNames(facts.serverInterceptorFacts)
-		serverInterceptorReferences := interceptorReferences(facts.serverInterceptorFacts)
-		serverInterceptorReferences = append(
-			serverInterceptorReferences,
-			interceptorReferencesOnly(facts.clientInterceptorFacts, serverInterceptorNames)...,
+		serverInterceptorTypes := interceptorTypes(facts.serverInterceptorFacts)
+		serverInterceptorTypes = append(
+			serverInterceptorTypes,
+			interceptorTypesOnly(facts.clientInterceptorFacts, serverInterceptorNames)...,
 		)
 		facts.imports.serverInterceptors, err = retainFileImports(
-			generation, servicePath, interceptorFixed, nil, nil, serverInterceptorReferences,
+			generation, servicePath, interceptorFixed, nil, serverInterceptorTypes, nil,
 		)
 		if err != nil {
 			return err
 		}
 	}
 	if len(facts.clientInterceptors) > 0 {
-		clientInterceptorReferences := interceptorReferencesWithout(
+		clientInterceptorTypes := interceptorTypesWithout(
 			facts.clientInterceptorFacts,
 			interceptorNames(facts.serverInterceptorFacts),
 		)
 		facts.imports.clientInterceptors, err = retainFileImports(
-			generation, servicePath, interceptorFixed, nil, nil, clientInterceptorReferences,
+			generation, servicePath, interceptorFixed, nil, clientInterceptorTypes, nil,
 		)
 		if err != nil {
 			return err
 		}
 	}
 	if len(facts.serverInterceptors) > 0 || len(facts.clientInterceptors) > 0 {
+		streamTypes := interceptorStreamTypes(facts.serverInterceptorFacts)
+		streamTypes = append(streamTypes, interceptorStreamTypes(facts.clientInterceptorFacts)...)
 		facts.imports.interceptorWrappers, err = retainFileImports(
-			generation, servicePath, interceptorFixed, nil, nil, nil,
+			generation, servicePath, interceptorFixed, nil, streamTypes, nil,
 		)
 		if err != nil {
 			return err
@@ -441,7 +261,7 @@ func planServiceFileImports(facts *serviceFacts, rootTypes *rootTypeSet, generat
 		if err != nil {
 			return err
 		}
-		facts.generatedTypeImports[userType.declaration] = &userType.imports
+		facts.generatedTypeImports[userType.declaration] = userType.imports
 	}
 	for _, method := range facts.methods {
 		attributes := []*expr.AttributeExpr{method.Payload, method.StreamingPayload, method.Result}
@@ -480,7 +300,7 @@ func planServiceFileImports(facts *serviceFacts, rootTypes *rootTypeSet, generat
 			if err != nil {
 				return err
 			}
-			facts.generatedTypeImports[declaration] = &retained
+			facts.generatedTypeImports[declaration] = retained
 		}
 	}
 	unionFixed := []*codegen.ImportSpec{
@@ -490,12 +310,9 @@ func planServiceFileImports(facts *serviceFacts, rootTypes *rootTypeSet, generat
 		goaImport,
 	}
 	for _, union := range facts.unions {
-		definitions := make([]*expr.AttributeExpr, 0, len(union.union.Values)*2)
+		definitions := make([]*expr.AttributeExpr, 0, len(union.union.Values))
 		for _, branch := range union.union.Values {
 			definitions = append(definitions, branch.Attribute)
-			if userType, ok := branch.Attribute.Type.(expr.UserType); ok {
-				definitions = append(definitions, userType.Attribute())
-			}
 		}
 		union.imports, err = retainFileImports(
 			generation,
@@ -512,41 +329,41 @@ func planServiceFileImports(facts *serviceFacts, rootTypes *rootTypeSet, generat
 	return nil
 }
 
-// interceptorReferences returns the selected fields whose Go types are written
+// interceptorTypes returns the selected fields whose Go types are written
 // in an interceptor interface or accessor method.
-func interceptorReferences(interceptors []*interceptorFacts) []*expr.AttributeExpr {
-	return interceptorReferencesWithout(interceptors, nil)
+func interceptorTypes(interceptors []*interceptorFacts) []*expr.AttributeExpr {
+	return interceptorTypesWithout(interceptors, nil)
 }
 
-// interceptorReferencesWithout returns selected interceptor fields except for
+// interceptorTypesWithout returns selected interceptor fields except for
 // interceptors whose names are emitted by another file.
-func interceptorReferencesWithout(interceptors []*interceptorFacts, excluded map[string]struct{}) []*expr.AttributeExpr {
-	var references []*expr.AttributeExpr
+func interceptorTypesWithout(interceptors []*interceptorFacts, excluded map[string]struct{}) []*expr.AttributeExpr {
+	var attributes []*expr.AttributeExpr
 	for _, interceptor := range interceptors {
 		if _, skip := excluded[interceptor.name]; skip {
 			continue
 		}
-		references = append(references, interceptorValueReferences(interceptor)...)
+		attributes = append(attributes, interceptorValueTypes(interceptor)...)
 	}
-	return references
+	return attributes
 }
 
-// interceptorReferencesOnly returns references for interceptor definitions
+// interceptorTypesOnly returns types for interceptor definitions
 // written in another file with the same name.
-func interceptorReferencesOnly(interceptors []*interceptorFacts, included map[string]struct{}) []*expr.AttributeExpr {
-	var references []*expr.AttributeExpr
+func interceptorTypesOnly(interceptors []*interceptorFacts, included map[string]struct{}) []*expr.AttributeExpr {
+	var attributes []*expr.AttributeExpr
 	for _, interceptor := range interceptors {
 		if _, keep := included[interceptor.name]; !keep {
 			continue
 		}
-		references = append(references, interceptorValueReferences(interceptor)...)
+		attributes = append(attributes, interceptorValueTypes(interceptor)...)
 	}
-	return references
+	return attributes
 }
 
-// interceptorValueReferences returns the selected fields and the complete
+// interceptorValueTypes returns the selected fields and the complete
 // method values stored behind their generated accessors.
-func interceptorValueReferences(interceptor *interceptorFacts) []*expr.AttributeExpr {
+func interceptorValueTypes(interceptor *interceptorFacts) []*expr.AttributeExpr {
 	accesses := [][]*interceptorAccessFacts{
 		interceptor.readPayloadFields,
 		interceptor.writePayloadFields,
@@ -557,10 +374,10 @@ func interceptorValueReferences(interceptor *interceptorFacts) []*expr.Attribute
 		interceptor.readStreamingResultFields,
 		interceptor.writeStreamingResultFields,
 	}
-	var references []*expr.AttributeExpr
+	var attributes []*expr.AttributeExpr
 	for _, fields := range accesses {
 		for _, field := range fields {
-			references = append(references, field.attribute)
+			attributes = append(attributes, field.attribute)
 		}
 	}
 	hasPayload := len(interceptor.readPayloadFields) > 0 || len(interceptor.writePayloadFields) > 0
@@ -569,19 +386,38 @@ func interceptorValueReferences(interceptor *interceptorFacts) []*expr.Attribute
 	hasStreamingResult := len(interceptor.readStreamingResultFields) > 0 || len(interceptor.writeStreamingResultFields) > 0
 	for _, method := range interceptor.methods {
 		if hasPayload {
-			references = append(references, method.payload.attribute)
+			attributes = append(attributes, method.payload.attribute)
 		}
 		if hasResult {
-			references = append(references, method.result.attribute)
+			attributes = append(attributes, method.result.attribute)
 		}
 		if hasStreamingPayload {
-			references = append(references, method.streamingPayload.attribute)
+			attributes = append(attributes, method.streamingPayload.attribute)
 		}
 		if hasStreamingResult {
-			references = append(references, method.result.attribute)
+			attributes = append(attributes, method.streamingResult.attribute)
 		}
 	}
-	return references
+	return attributes
+}
+
+// interceptorStreamTypes returns the streaming values written by wrapper
+// methods for interceptors that inspect those values.
+func interceptorStreamTypes(interceptors []*interceptorFacts) []*expr.AttributeExpr {
+	var attributes []*expr.AttributeExpr
+	for _, interceptor := range interceptors {
+		payload := len(interceptor.readStreamingPayloadFields) > 0 || len(interceptor.writeStreamingPayloadFields) > 0
+		result := len(interceptor.readStreamingResultFields) > 0 || len(interceptor.writeStreamingResultFields) > 0
+		for _, method := range interceptor.methods {
+			if payload {
+				attributes = append(attributes, method.streamingPayload.attribute)
+			}
+			if result {
+				attributes = append(attributes, method.streamingResult.attribute)
+			}
+		}
+	}
+	return attributes
 }
 
 // interceptorNames returns the names of interceptors emitted in a file.
@@ -621,33 +457,41 @@ func viewValidationImports(facts *serviceFacts) (fixed, generated []*codegen.Imp
 	return
 }
 
-// linkServiceFileImports resolves every concrete file contribution after the
-// Generation.Freeze chooses all imported package names.
-func linkServiceFileImports(facts *serviceFacts, generation *codegen.Generation) {
-	imports := []*retainedFileImports{
-		&facts.imports.service,
-		&facts.imports.endpoint,
-		&facts.imports.client,
-		&facts.imports.views,
-		&facts.imports.serverInterceptors,
-		&facts.imports.clientInterceptors,
-		&facts.imports.interceptorWrappers,
-		&facts.imports.exampleService,
-		&facts.imports.exampleServerInterceptors,
-		&facts.imports.exampleClientInterceptors,
+// linkServiceFileImports resolves every file's imports after
+// Generation.Freeze chooses all package names.
+func linkServiceFileImports(facts *serviceFacts) error {
+	imports := []*codegen.GeneratedImportPlan{
+		facts.imports.service,
+		facts.imports.endpoint,
+		facts.imports.client,
+		facts.imports.views,
+		facts.imports.serverInterceptors,
+		facts.imports.clientInterceptors,
+		facts.imports.interceptorWrappers,
+		facts.imports.exampleService,
+		facts.imports.exampleServerInterceptors,
+		facts.imports.exampleClientInterceptors,
 	}
 	for _, retained := range imports {
-		linkFileImports(retained, generation)
-	}
-	for _, userType := range append(append([]*userTypeFacts(nil), facts.userTypes...), facts.errorTypes...) {
-		linkFileImports(&userType.imports, generation)
+		if retained != nil {
+			if err := retained.Link(); err != nil {
+				return err
+			}
+		}
 	}
 	for _, union := range facts.unions {
-		linkFileImports(&union.imports, generation)
+		if union.imports != nil {
+			if err := union.imports.Link(); err != nil {
+				return err
+			}
+		}
 	}
 	for _, imports := range facts.generatedTypeImports {
-		linkFileImports(imports, generation)
+		if err := imports.Link(); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 // serviceDefinitionAttributes returns the exact named definitions written to
@@ -736,19 +580,4 @@ func serviceUsesGoaErrors(facts *serviceFacts) bool {
 		}
 	}
 	return false
-}
-
-// imports returns a deterministic snapshot of the packages collected for one
-// generated file.
-func (c *importCollector) imports() []*codegen.ImportSpec {
-	paths := make([]string, 0, len(c.paths))
-	for importPath := range c.paths {
-		paths = append(paths, importPath)
-	}
-	sort.Strings(paths)
-	imports := make([]*codegen.ImportSpec, len(paths))
-	for i, importPath := range paths {
-		imports[i] = c.aliases.spec(c.outputPackage, importPath)
-	}
-	return imports
 }

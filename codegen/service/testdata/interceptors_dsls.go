@@ -398,9 +398,11 @@ var StreamingInterceptorsWithReadStreamingResultDSL = func() {
 
 var MixedResultStreamingInterceptorsDSL = func() {
 	Summary := Type("Summary", func() {
+		Meta("struct:pkg:path", "summary")
 		Field(1, "count", Int)
 	})
 	Event := Type("Event", func() {
+		Meta("struct:pkg:path", "events")
 		Field(1, "message", String)
 	})
 	Interceptor("logging", func() {

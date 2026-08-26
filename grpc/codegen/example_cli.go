@@ -36,44 +36,22 @@ func exampleCLI(services *ServicesData, server *example.Data) *codegen.File {
 		panic("gRPC command parser names are missing for server " + server.Name)
 	}
 
-	specs := []*codegen.ImportSpec{
-		{Path: "context"},
-		{Path: "errors"},
-		{Path: "flag"},
-		{Path: "fmt"},
-		{Path: "io"},
-		{Path: "google.golang.org/grpc"},
-		{Path: "google.golang.org/grpc/credentials/insecure"},
-		{Path: "os"},
-		{Path: "time"},
-		codegen.GoaImport(""),
-		codegen.GoaNamedImport("grpc", "goagrpc"),
-		cliImport,
-	}
-
 	var svcData []*ServiceData
 	hasClientInterceptors := false
 	for _, svc := range server.Services {
 		if data := services.Get(svc); data != nil {
 			svcData = append(svcData, services.exampleServiceData(data, outputPackage, false))
 			hasClientInterceptors = hasClientInterceptors || len(data.Service.ClientInterceptors) > 0
-			for _, endpoint := range data.Endpoints {
-				if cliStreamsOutput(endpoint.Method) {
-					specs = append(specs, services.ServiceImport(outputPackage, svc))
-					break
-				}
-			}
 		}
 	}
 	var interceptorsPkg string
 	if hasClientInterceptors {
 		interceptorImport := services.PackageImport(outputPackage, rootPath+"/interceptors")
 		interceptorsPkg = interceptorImport.Name
-		specs = append(specs, interceptorImport)
 	}
 
 	sections := []*codegen.SectionTemplate{
-		codegen.Header("", "main", specs),
+		codegen.Header("", "main", nil),
 		{
 			Name:   "do-grpc-cli",
 			Source: grpcTemplates.Read(grpcDoGRPCCLIT),
@@ -96,7 +74,7 @@ func exampleCLI(services *ServicesData, server *example.Data) *codegen.File {
 		},
 	}
 
-	return &codegen.File{Path: mainPath, SectionTemplates: sections, SkipExist: true}
+	return addEndpointImports(&codegen.File{Path: mainPath, SectionTemplates: sections, SkipExist: true}, services)
 }
 
 // cliStreamsInput reports whether an example command would need to send more

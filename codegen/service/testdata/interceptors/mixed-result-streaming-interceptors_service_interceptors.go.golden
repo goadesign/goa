@@ -37,7 +37,7 @@ type (
 		loggingMethodInfo
 	}
 	loggingMethodStreamingResult struct {
-		result *Event
+		result *events.Event
 	}
 )
 
@@ -79,12 +79,12 @@ func (info *loggingMethodStreamingRecvInfo) CallType() goa.InterceptorCallType {
 
 // ClientStreamingResult returns this method's incoming streaming result fields.
 func (info *loggingMethodInfo) ClientStreamingResult(result any) LoggingStreamingResult {
-	return &loggingMethodStreamingResult{result: result.(*Event)}
+	return &loggingMethodStreamingResult{result: result.(*events.Event)}
 }
 
 // ServerStreamingResult returns this method's outgoing streaming result fields.
 func (info *loggingMethodInfo) ServerStreamingResult() LoggingStreamingResult {
-	return &loggingMethodStreamingResult{result: info.rawPayload.(*Event)}
+	return &loggingMethodStreamingResult{result: info.rawPayload.(*events.Event)}
 }
 
 // Methods that read and write the selected payload and result fields

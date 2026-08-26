@@ -558,7 +558,7 @@ func (a *AttributeScope) Package(att *expr.AttributeExpr) string {
 		return a.pkg
 	}
 	if loc := UserTypeLocation(att.Type); loc != nil {
-		return loc.PackageName()
+		return a.scope.generatedImportName(loc.RelImportPath, loc.PackageName())
 	}
 	return a.pkg
 }
@@ -573,8 +573,11 @@ func (a *AttributeScope) ValidatorCall(att *expr.AttributeExpr, view, target, _ 
 // Enter returns a scope whose default qualifier follows att's explicit type
 // location. The underlying name scope remains unchanged.
 func (a *AttributeScope) Enter(att *expr.AttributeExpr) Attributor {
-	if loc := UserTypeLocation(att.Type); loc != nil && loc.PackageName() != a.pkg {
-		return newAttributeScope(a.scope, loc.PackageName())
+	if loc := UserTypeLocation(att.Type); loc != nil {
+		pkg := a.scope.generatedImportName(loc.RelImportPath, loc.PackageName())
+		if pkg != a.pkg {
+			return newAttributeScope(a.scope, pkg)
+		}
 	}
 	return a
 }

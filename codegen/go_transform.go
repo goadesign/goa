@@ -1159,14 +1159,7 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 					}
 				}
 				if zeroName == "" {
-					if typeName, _ := GetMetaType(tgtc); typeName != "" {
-						zeroName = typeName
-					} else if _, ok := tgtc.Type.(expr.UserType); ok {
-						// aliased primitive
-						zeroName = ta.TargetCtx.Scope.Ref(tgtc, ta.TargetCtx.Pkg(tgtc))
-					} else {
-						zeroName = GoNativeTypeName(tgtc.Type)
-					}
+					zeroName = ta.TargetCtx.Scope.Ref(tgtc, ta.TargetCtx.Pkg(tgtc))
 				}
 				if !nilable {
 					code += fmt.Sprintf("var zero %s\n\t", zeroName)

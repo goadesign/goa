@@ -6,8 +6,6 @@ package codegen
 import (
 	"fmt"
 	"strings"
-	"unicode"
-	"unicode/utf8"
 
 	"goa.design/goa/v3/expr"
 )
@@ -392,10 +390,10 @@ func (l LinkedGoType) Name() string {
 		if !l.plan.hasDirectImport || l.plan.customQualifier == "" {
 			return l.plan.primitive
 		}
-		return strings.ReplaceAll(
+		return rebindMetaTypeQualifier(
 			l.plan.primitive,
-			l.plan.customQualifier+".",
-			l.qualify(l.plan.directImport.Path)+".",
+			l.plan.customQualifier,
+			l.qualify(l.plan.directImport.Path),
 		)
 	case GoArray:
 		return "[]" + l.Enter(l.plan.element).Ref()
@@ -594,7 +592,7 @@ func (p goTypePlanner) plan(attribute *expr.AttributeExpr, owner, fieldName stri
 			if importSpec != nil {
 				plan.directImport = GoTypeImport{Name: importSpec.Name, Path: importSpec.Path}
 				plan.hasDirectImport = true
-				plan.customQualifier = customTypeQualifier(custom, importSpec.Name)
+				plan.customQualifier = importSpec.preferredName()
 			}
 		}
 	case *expr.Array:
@@ -796,32 +794,6 @@ func (p *GoTypePlan) walkImports(visit func(*GoTypePlan)) {
 	for _, field := range p.fields {
 		field.walkImports(visit)
 	}
-}
-
-// customTypeQualifier returns the package name written in a custom Go type. It
-// uses alias when provided; otherwise it reads the name before the first dot.
-func customTypeQualifier(typeName, alias string) string {
-	if alias != "" {
-		return alias
-	}
-	dot := strings.IndexByte(typeName, '.')
-	if dot < 0 {
-		return ""
-	}
-	start := dot
-	for start > 0 {
-		char, size := utf8.DecodeLastRuneInString(typeName[:start])
-		if !goIdentifierRune(char) {
-			break
-		}
-		start -= size
-	}
-	return typeName[start:dot]
-}
-
-// goIdentifierRune reports whether char may occur in a Go identifier.
-func goIdentifierRune(char rune) bool {
-	return char == '_' || unicode.IsLetter(char) || unicode.IsDigit(char)
 }
 
 // qualify returns the package name written before types from importPath. It

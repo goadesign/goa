@@ -144,6 +144,7 @@ func (g *Generation) claimOutputPackage(claim, canonicalPath, outputDir string) 
 	}
 	generatedPackage := newGeneratedPackage(claim, canonicalPath, outputDir)
 	generatedPackage.generation = g.owner
+	generatedPackage.genpkg = g.genpkg
 	g.packages[claim] = generatedPackage
 	g.importOwners[canonicalPath] = generatedPackage
 	g.outputOwners[outputDir] = generatedPackage
@@ -313,38 +314,8 @@ func cleanImportPath(label, importPath string) (string, error) {
 // generatedOutputDirectory returns the directory under gen for importPath. It
 // returns an error when importPath is outside genpkg.
 func generatedOutputDirectory(genpkg, importPath string) (string, error) {
-	var relative string
-	switch genpkg {
-	case "/":
-		if !strings.HasPrefix(importPath, "/") {
-			return "", fmt.Errorf(
-				"generated package %q is outside generated import root %q",
-				importPath,
-				genpkg,
-			)
-		}
-		relative = strings.TrimPrefix(importPath, "/")
-	case ".":
-		if path.IsAbs(importPath) || importPath == ".." || strings.HasPrefix(importPath, "../") {
-			return "", fmt.Errorf(
-				"generated package %q is outside generated import root %q",
-				importPath,
-				genpkg,
-			)
-		}
-		relative = importPath
-	default:
-		if importPath != genpkg && !strings.HasPrefix(importPath, genpkg+"/") {
-			return "", fmt.Errorf(
-				"generated package %q is outside generated import root %q",
-				importPath,
-				genpkg,
-			)
-		}
-		relative = strings.TrimPrefix(importPath, genpkg)
-		relative = strings.TrimPrefix(relative, "/")
-	}
-	if relative == ".." || strings.HasPrefix(relative, "../") {
+	relative, ok := relativeGeneratedPackagePath(genpkg, importPath)
+	if !ok {
 		return "", fmt.Errorf(
 			"generated package %q is outside generated import root %q",
 			importPath,
@@ -352,4 +323,30 @@ func generatedOutputDirectory(genpkg, importPath string) (string, error) {
 		)
 	}
 	return canonicalOutputDirectory(path.Join(Gendir, relative))
+}
+
+// relativeGeneratedPackagePath removes the generated import root from a
+// package path. The second result is false when the package is outside that
+// root.
+func relativeGeneratedPackagePath(genpkg, importPath string) (string, bool) {
+	switch genpkg {
+	case "/":
+		if !path.IsAbs(importPath) {
+			return "", false
+		}
+		return strings.TrimPrefix(importPath, "/"), true
+	case ".":
+		if path.IsAbs(importPath) || importPath == ".." || strings.HasPrefix(importPath, "../") {
+			return "", false
+		}
+		return importPath, true
+	default:
+		if importPath == genpkg {
+			return "", true
+		}
+		if !strings.HasPrefix(importPath, genpkg+"/") {
+			return "", false
+		}
+		return strings.TrimPrefix(importPath, genpkg+"/"), true
+	}
 }

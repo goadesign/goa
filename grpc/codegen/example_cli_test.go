@@ -37,6 +37,10 @@ func TestExampleCLIFiles(t *testing.T) {
 			fs := examples.CLIFiles()
 			require.Greater(t, len(fs), 0)
 			require.Greater(t, len(fs[0].SectionTemplates), 0)
+			header := sectionCode(t, fs[0].SectionTemplates[0])
+			for _, absent := range []string{`"os"`, `"time"`, `goa "goa.design/goa/v3/pkg"`, `goagrpc "goa.design/goa/v3/grpc"`} {
+				require.NotContains(t, header, absent)
+			}
 			var buf bytes.Buffer
 			for _, s := range fs[0].SectionTemplates {
 				require.NoError(t, s.Write(&buf))

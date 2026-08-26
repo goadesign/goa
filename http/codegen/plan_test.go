@@ -4,8 +4,12 @@ package codegen
 
 import (
 	"fmt"
+	"go/parser"
+	"go/token"
+	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -19,7 +23,7 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
-func TestPlanReservesStaticAliasesBeforeFreeze(t *testing.T) {
+func TestPlanDoesNotReserveUnusedStaticAliasesBeforeFreeze(t *testing.T) {
 	root := expr.RunDSL(t, func() {
 		dsl.Service("Path", func() {
 			dsl.Method("Read", func() { dsl.HTTP(func() { dsl.GET("/") }) })
@@ -29,16 +33,16 @@ func TestPlanReservesStaticAliasesBeforeFreeze(t *testing.T) {
 	require.NoError(t, err)
 	servicePlan, err := service.NewPlan(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
 	require.NoError(t, err)
-	_, err = NewPlans(generation, PlanInput{Root: root, Service: servicePlan})
+	plans, err := NewPlans(generation, PlanInput{Root: root, Service: servicePlan})
 	require.NoError(t, err)
 	require.NoError(t, generation.Freeze())
 	require.NoError(t, servicePlan.Link())
-	services := servicePlan.Services()
-
-	clientOutput := "generated.local/gen/http/path/client"
-	require.Equal(t, "path", services.ServiceImport(clientOutput, "Path").Name)
-	serverOutput := "generated.local/gen/http/path/server"
-	require.Equal(t, "path2", services.ServiceImport(serverOutput, "Path").Name)
+	require.Len(t, plans, 1)
+	for filePath, file := range plans[0].fileImports {
+		if strings.HasPrefix(filePath, "gen/http/path/client/") {
+			require.NotContains(t, file.Paths(), "generated.local/gen/path")
+		}
+	}
 }
 
 func TestPlanRejectsFrozenGeneration(t *testing.T) {
@@ -168,7 +172,11 @@ func TestPlanReservesGeneratedHTTPPackages(t *testing.T) {
 	require.NoError(t, err)
 	servicePlan, err := service.NewPlan(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
 	require.NoError(t, err)
-	_, err = NewPlans(generation, PlanInput{Root: root, Service: servicePlan})
+	plans, err := NewPlans(generation, PlanInput{Root: root, Service: servicePlan})
+	require.NoError(t, err)
+	examples, err := example.NewPlan(generation, servicePlan)
+	require.NoError(t, err)
+	_, err = NewExamplePlan(plans[0], examples)
 	require.NoError(t, err)
 	require.NoError(t, generation.Freeze())
 	require.NoError(t, servicePlan.Link())
@@ -182,7 +190,7 @@ func TestPlanReservesGeneratedHTTPPackages(t *testing.T) {
 	serverOutput := path.Join("generated.local", "cmd", codegen.SnakeCase(codegen.Goify(root.API.Servers[0].Name, true)))
 	server := services.PackageImport(serverOutput, "generated.local/gen/http/foo/server")
 	require.Equal(t, "fooc", client.Name)
-	require.Equal(t, "foosvr", server.Name)
+	require.Equal(t, "foosvr2", server.Name)
 }
 
 // TestPlanLinkEagerlyRetainsHTTPFiles proves Link analyzes every HTTP service
@@ -205,12 +213,12 @@ func TestPlanLinkEagerlyRetainsHTTPFiles(t *testing.T) {
 	require.NoError(t, err)
 	examplePlan, err := example.NewPlan(generation, servicePlan)
 	require.NoError(t, err)
+	examples, err := NewExamplePlan(plans[0], examplePlan)
+	require.NoError(t, err)
 	require.NoError(t, generation.Freeze())
 	require.NoError(t, servicePlan.Link())
 	plan := plans[0]
 	require.NoError(t, plan.Link())
-	examples, err := NewExamplePlan(plan, examplePlan)
-	require.NoError(t, err)
 	_, ok := plan.JSONRPCService("Calc")
 	require.True(t, ok)
 	require.NotEmpty(t, examples.ServerFiles())
@@ -299,7 +307,7 @@ func TestPlanRetainsAttributeImportsBeforeFreeze(t *testing.T) {
 			},
 			file: func(plan *Plan) []*codegen.ImportSpec {
 				for _, file := range plan.ClientFiles() {
-					if strings.HasSuffix(filepath.ToSlash(file.Path), "/client/client.go") {
+					if strings.HasSuffix(filepath.ToSlash(file.Path), "/client/encode_decode.go") {
 						return file.SectionTemplates[0].Data.(map[string]any)["Imports"].([]*codegen.ImportSpec)
 					}
 				}
@@ -314,7 +322,7 @@ func TestPlanRetainsAttributeImportsBeforeFreeze(t *testing.T) {
 			file: func(plan *Plan) []*codegen.ImportSpec {
 				service, ok := plan.JSONRPCService("Calc")
 				require.True(t, ok)
-				return service.FileImports("gen/jsonrpc/calc/client/client.go")
+				return service.FileImports("gen/jsonrpc/calc/client/encode_decode.go")
 			},
 		},
 	} {
@@ -352,6 +360,135 @@ func TestPlanRetainsAttributeImportsBeforeFreeze(t *testing.T) {
 			imports := transport.file(plans[0])
 			require.Contains(t, importPaths(imports), "example.com/values")
 		})
+	}
+}
+
+// TestHTTPPlanReservesOnlyFixedImportsWrittenByThePackage verifies that a
+// package name stays available to user types when no generated HTTP file uses
+// the standard library package with that name.
+func TestHTTPPlanReservesOnlyFixedImportsWrittenByThePackage(t *testing.T) {
+	const customRoot = "example.com/custom/"
+	root := expr.RunDSL(t, func() {
+		dsl.Service("Calc", func() {
+			dsl.Method("Read", func() {
+				dsl.Result(func() {
+					for _, name := range []string{"errors", "strings", "strconv"} {
+						dsl.Attribute(name, dsl.String, func() {
+							dsl.Meta("struct:field:type", name+".Value", customRoot+name, name)
+						})
+					}
+				})
+				dsl.HTTP(func() { dsl.GET("/") })
+			})
+		})
+	})
+	generation, err := codegen.NewGeneration("generated.local/gen", []eval.Root{root})
+	require.NoError(t, err)
+	servicePlan, err := service.NewPlan(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
+	require.NoError(t, err)
+	plans, err := NewPlans(generation, PlanInput{Root: root, Service: servicePlan})
+	require.NoError(t, err)
+	require.NoError(t, generation.Freeze())
+	require.NoError(t, servicePlan.Link())
+	require.NoError(t, plans[0].Link())
+
+	server := generation.Package("generated.local/gen/http/calc/server")
+	for _, name := range []string{"errors", "strings", "strconv"} {
+		require.Equal(t, name, server.ImportName(customRoot+name))
+	}
+}
+
+// TestHTTPPlanReservesFixedImportsWrittenByThePackage verifies that standard
+// packages keep the names written by HTTP templates when generated sections
+// use them.
+func TestHTTPPlanReservesFixedImportsWrittenByThePackage(t *testing.T) {
+	const customRoot = "example.com/custom/"
+	root := expr.RunDSL(t, func() {
+		failure := dsl.Type("Failure", func() {
+			dsl.Attribute("message", dsl.String)
+		})
+		dsl.Service("Calc", func() {
+			dsl.Error("failed", failure)
+			dsl.Method("Read", func() {
+				dsl.Result(func() {
+					for _, name := range []string{"errors", "strings", "strconv"} {
+						dsl.Attribute(name, dsl.String, func() {
+							dsl.Meta("struct:field:type", name+".Value", customRoot+name, name)
+						})
+					}
+					dsl.Attribute("numbers", dsl.ArrayOf(dsl.Int))
+				})
+				dsl.Error("failed")
+				dsl.HTTP(func() {
+					dsl.GET("/")
+					dsl.Response(func() {
+						dsl.Header("numbers:X-Numbers")
+					})
+					dsl.Response("failed", dsl.StatusBadRequest)
+				})
+			})
+		})
+	})
+	generation, err := codegen.NewGeneration("generated.local/gen", []eval.Root{root})
+	require.NoError(t, err)
+	servicePlan, err := service.NewPlan(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
+	require.NoError(t, err)
+	plans, err := NewPlans(generation, PlanInput{Root: root, Service: servicePlan})
+	require.NoError(t, err)
+	require.NoError(t, generation.Freeze())
+	require.NoError(t, servicePlan.Link())
+	require.NoError(t, plans[0].Link())
+
+	server := generation.Package("generated.local/gen/http/calc/server")
+	for _, name := range []string{"errors", "strings", "strconv"} {
+		require.Equal(t, name+"2", server.ImportName(customRoot+name))
+	}
+}
+
+// TestHTTPFilePlansMatchRenderedImports verifies that planning and rendering
+// agree on every import used by a simple HTTP service.
+func TestHTTPFilePlansMatchRenderedImports(t *testing.T) {
+	root := expr.RunDSL(t, func() {
+		dsl.Service("Calc", func() {
+			dsl.Method("Read", func() {
+				dsl.Result(dsl.String)
+				dsl.HTTP(func() { dsl.GET("/") })
+			})
+		})
+	})
+	generation, err := codegen.NewGeneration("generated.local/gen", []eval.Root{root})
+	require.NoError(t, err)
+	servicePlan, err := service.NewPlan(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
+	require.NoError(t, err)
+	plans, err := NewPlans(generation, PlanInput{Root: root, Service: servicePlan})
+	require.NoError(t, err)
+	require.NoError(t, generation.Freeze())
+	require.NoError(t, servicePlan.Link())
+	require.NoError(t, plans[0].Link())
+
+	files := append(plans[0].ClientFiles(), plans[0].ServerFiles()...)
+	files = append(files, plans[0].ClientTypeFiles()...)
+	files = append(files, plans[0].ServerTypeFiles()...)
+	files = append(files, plans[0].PathFiles()...)
+	files = append(files, plans[0].ClientCLIFiles()...)
+	directory := t.TempDir()
+	for _, file := range files {
+		if file == nil || filepath.Ext(file.Path) != ".go" {
+			continue
+		}
+		planned := importPaths(file.SectionTemplates[0].Data.(map[string]any)["Imports"].([]*codegen.ImportSpec))
+		renderedPath, err := file.Render(directory)
+		require.NoError(t, err)
+		source, err := os.ReadFile(renderedPath)
+		require.NoError(t, err)
+		parsed, err := parser.ParseFile(token.NewFileSet(), renderedPath, source, parser.ImportsOnly)
+		require.NoError(t, err)
+		actual := make([]string, len(parsed.Imports))
+		for index, spec := range parsed.Imports {
+			actual[index], err = strconv.Unquote(spec.Path.Value)
+			require.NoError(t, err)
+		}
+		require.ElementsMatch(t, actual, planned, file.Path)
 	}
 }
 

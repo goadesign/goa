@@ -77,7 +77,7 @@ type (
 		names                    serviceNames
 		validators               map[validatorKey]*codegen.NameDeclaration
 		errorConstructors        map[string]*codegen.NameDeclaration
-		generatedTypeImports     map[*codegen.TypeDeclaration]*retainedFileImports
+		generatedTypeImports     map[*codegen.TypeDeclaration]*codegen.GeneratedImportPlan
 		exampleStruct            *codegen.NameDeclaration
 		exampleConstructor       *codegen.NameDeclaration
 		exampleServerStruct      *codegen.NameDeclaration
@@ -304,7 +304,7 @@ type (
 		location     *codegen.Location
 		declaration  *codegen.TypeDeclaration
 		layout       *codegen.GoTypePlan
-		imports      retainedFileImports
+		imports      *codegen.GeneratedImportPlan
 	}
 
 	// unionFacts records one Goa OneOf type and its generated Go declaration.
@@ -317,7 +317,7 @@ type (
 		branches    []*unionBranchFacts
 		location    *codegen.Location
 		declaration *codegen.UnionDeclaration
-		imports     retainedFileImports
+		imports     *codegen.GeneratedImportPlan
 		data        *UnionTypeData
 	}
 

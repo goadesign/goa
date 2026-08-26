@@ -60,17 +60,7 @@ func newViewResolver(generation *codegen.Generation, aliases *importAliases, ser
 func (r *declarationResolver) Name(att *expr.AttributeExpr, _ string, ptr, useDefault bool) string {
 	switch actual := att.Type.(type) {
 	case expr.Primitive:
-		if custom, spec := codegen.GetMetaType(att); custom != "" {
-			if spec == nil {
-				return custom
-			}
-			_, typeName, qualified := strings.Cut(custom, ".")
-			if !qualified {
-				return custom
-			}
-			return r.aliases.name(r.outputPath, spec.Path) + "." + typeName
-		}
-		return codegen.GoNativeTypeName(actual)
+		return r.generation.Package(r.outputPath).Scope().GoTypeName(att)
 	case *expr.Array:
 		return "[]" + r.Ref(actual.ElemType, "")
 	case *expr.Map:

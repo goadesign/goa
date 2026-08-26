@@ -29,6 +29,7 @@ type (
 		serviceByExpr map[*expr.GRPCServiceExpr]*ServiceData
 		endpointPlans map[*expr.GRPCEndpointExpr]*grpcEndpointPlan
 		metadataPlans map[*expr.MappedAttributeExpr][]*grpcMetadataPlan
+		fileImports   map[string]*codegen.GeneratedImportPlan
 		generation    *codegen.Generation
 	}
 
@@ -269,6 +270,8 @@ type (
 		FieldName string
 		// FieldType is the type of the struct field.
 		FieldType expr.DataType
+		// FieldTypeRef is the field's final Go type name in the generated file.
+		FieldTypeRef string
 		// ServiceAttribute is the service field populated from this metadata.
 		ServiceAttribute *expr.AttributeExpr
 		// WireAttribute is an independent copy of the native gRPC metadata value.
@@ -552,6 +555,8 @@ type (
 		// FieldType is the type of the data structure field that should be
 		// initialized with the argument if any.
 		FieldType expr.DataType
+		// FieldTypeRef is the field's final Go type name in the generated file.
+		FieldTypeRef string
 		// InitCode converts and assigns this argument to the constructor result.
 		InitCode string
 		// TypeName is the argument type name.
@@ -669,6 +674,7 @@ func newServicesData(services *service.ServicesData, plan *Plan) *ServicesData {
 		serviceByExpr: make(map[*expr.GRPCServiceExpr]*ServiceData, len(plan.servicesPlan)),
 		endpointPlans: make(map[*expr.GRPCEndpointExpr]*grpcEndpointPlan),
 		metadataPlans: make(map[*expr.MappedAttributeExpr][]*grpcMetadataPlan),
+		fileImports:   plan.fileImports,
 		generation:    plan.generation,
 	}
 	data.expressions = make([]*expr.GRPCServiceExpr, len(data.servicePlans))
@@ -707,7 +713,9 @@ func (d *ServicesData) exampleServiceData(source *ServiceData, outputPackage str
 		data.Endpoints[index] = &copy
 	}
 	if server {
-		service.PkgName = d.ServiceImport(outputPackage, service.Name).Name
+		if len(source.Endpoints) > 0 {
+			service.PkgName = d.ServiceImport(outputPackage, service.Name).Name
+		}
 		protobufPath := path.Join(d.GenPkg(), "grpc", service.PathName, pbPkgName)
 		data.PkgName = d.PackageImport(outputPackage, protobufPath).Name
 		data.ServerPkgName = d.PackageImport(outputPackage, path.Join(d.GenPkg(), "grpc", service.PathName, "server")).Name
@@ -768,55 +776,6 @@ func (sd *ServiceData) HasStreamingEndpoint() bool {
 	return false
 }
 
-// serviceHasViewedResult reports whether any generated transport section
-// references the service views package through a viewed method result.
-func serviceHasViewedResult(service *ServiceData) bool {
-	for _, endpoint := range service.Endpoints {
-		if endpoint.Method.ViewedResult != nil {
-			return true
-		}
-	}
-	return false
-}
-
-// serviceHasUnaryViewedResult reports whether client/encode_decode.go emits a
-// response decoder that constructs and validates a viewed unary result.
-func serviceHasUnaryViewedResult(service *ServiceData) bool {
-	for _, endpoint := range service.Endpoints {
-		if endpoint.ClientStream == nil && endpoint.Method.ViewedResult != nil {
-			return true
-		}
-	}
-	return false
-}
-
-// serviceHasViewedClientStream reports whether client.go emits a receive
-// method that constructs and validates a viewed streaming result.
-func serviceHasViewedClientStream(service *ServiceData) bool {
-	for _, endpoint := range service.Endpoints {
-		if endpoint.ClientStream != nil &&
-			endpoint.ClientStream.RecvConvert != nil &&
-			endpoint.Method.ViewedResult != nil {
-			return true
-		}
-	}
-	return false
-}
-
-// serviceHasCallerSelectedViewedServerStream reports whether server.go sends
-// the selected result view in the stream response metadata.
-func serviceHasCallerSelectedViewedServerStream(service *ServiceData) bool {
-	for _, endpoint := range service.Endpoints {
-		if endpoint.ServerStream != nil &&
-			endpoint.ServerStream.SendConvert != nil &&
-			endpoint.Method.ViewedResult != nil &&
-			endpoint.Method.ViewedResult.ViewName == "" {
-			return true
-		}
-	}
-	return false
-}
-
 // analyze creates the data necessary to render the code of the given service.
 func (d *ServicesData) analyze(servicePlan *grpcServicePlan) *ServiceData {
 	gs := servicePlan.expression
@@ -826,7 +785,10 @@ func (d *ServicesData) analyze(servicePlan *grpcServicePlan) *ServiceData {
 	transportService.ProtoImports = append(transportService.ProtoImports, servicePlan.protoGoImports...)
 	clientPackage := path.Join(d.GenPkg(), "grpc", svc.PathName, "client")
 	serverPackage := path.Join(d.GenPkg(), "grpc", svc.PathName, "server")
-	clientServicePackage := d.ServiceImport(clientPackage, svc.Name).Name
+	clientServicePackage := ""
+	if grpcAttributesHaveValues(grpcEndpointAttributes(gs.GRPCEndpoints...)) || grpcServiceHasStreaming(gs) {
+		clientServicePackage = d.ServiceImport(clientPackage, svc.Name).Name
+	}
 	serverServicePackage := d.ServiceImport(serverPackage, svc.Name).Name
 	transportService.PkgName = clientServicePackage
 	svc = &transportService
@@ -1440,13 +1402,16 @@ func (d *ServicesData) buildRequestConvertData(request, payload *expr.AttributeE
 
 	// client side
 	data := d.buildInitData(payload, request, "payload", "message", svcCtx, true, sd, expr.MethodPayloadExampleIdentity(e.MethodExpr), d.initDeclaration(e, false, grpcInitKey{role: grpcRequestInit}))
-	return &ConvertData{
-		SrcName: svcCtx.Scope.Name(payload, svcCtx.Pkg(payload), svcCtx.Pointer, svcCtx.UseDefault),
-		SrcRef:  svcCtx.Scope.Ref(payload, svcCtx.Pkg(payload)),
+	conversion := &ConvertData{
 		TgtName: protoBufGoFullTypeName(request, sd.ClientProtobufPkgName, sd),
 		TgtRef:  protoBufGoFullTypeRef(request, sd.ClientProtobufPkgName, sd),
 		Init:    data,
 	}
+	if !isEmpty(payload.Type) {
+		conversion.SrcName = svcCtx.Scope.Name(payload, svcCtx.Pkg(payload), svcCtx.Pointer, svcCtx.UseDefault)
+		conversion.SrcRef = svcCtx.Scope.Ref(payload, svcCtx.Pkg(payload))
+	}
+	return conversion
 }
 
 // buildLegacyDecodeData computes the data needed to decode requests sent by
@@ -2003,12 +1968,14 @@ func (d *ServicesData) extractMetadata(a *expr.MappedAttributeExpr, service *exp
 		wireVar := varn + "Wire"
 		encodeCode := d.metadataTransform(plan, fieldRef, wireVar, sd, encodeSide, true)
 		decodeCode := d.metadataTransform(plan, varn, targetRef, sd, side, false)
+		serviceContext := d.serviceTypeContext(sd, side).Enter(plan.serviceField)
 		metadata = append(metadata, &MetadataData{
 			Name:             plan.element,
 			AttributeName:    plan.name,
 			Description:      wire.Description,
 			FieldName:        fieldName,
 			FieldType:        plan.fieldType,
+			FieldTypeRef:     serviceContext.Scope.Ref(plan.serviceField, serviceContext.Pkg(plan.serviceField)),
 			ServiceAttribute: plan.serviceField,
 			WireAttribute:    wire,
 			VarName:          varn,
@@ -2098,6 +2065,7 @@ func argsFromMetadata(md []*MetadataData) []*InitArgData {
 			Ref:          m.VarName,
 			FieldName:    m.FieldName,
 			FieldType:    m.FieldType,
+			FieldTypeRef: m.FieldTypeRef,
 			TypeName:     m.TypeName,
 			TypeRef:      m.TypeRef,
 			Type:         m.Type,

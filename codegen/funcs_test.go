@@ -2,7 +2,52 @@ package codegen
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"goa.design/goa/v3/expr"
 )
+
+// TestInitStructFieldsUsesFinalFieldTypeRef verifies that primitive alias
+// casts use the exact type name selected during package planning.
+func TestInitStructFieldsUsesFinalFieldTypeRef(t *testing.T) {
+	alias := &expr.UserTypeExpr{
+		TypeName: "Token",
+		AttributeExpr: &expr.AttributeExpr{
+			Type: expr.String,
+			Meta: expr.MetaExpr{"struct:pkg:path": {"types"}},
+		},
+	}
+	code, _, err := InitStructFields([]*InitArgData{{
+		Name:         "token",
+		Type:         expr.String,
+		FieldName:    "Token",
+		FieldType:    alias,
+		FieldTypeRef: "types2.Token",
+		FieldPointer: false,
+		Pointer:      false,
+	}}, "payload", "", "service")
+	require.NoError(t, err)
+	require.Equal(t, "payload.Token = types2.Token(token)\n", code)
+}
+
+// TestInitStructFieldsRequiresFinalFieldTypeRef verifies that plugin data
+// cannot make the shared initializer guess a package name for a named field.
+func TestInitStructFieldsRequiresFinalFieldTypeRef(t *testing.T) {
+	alias := &expr.UserTypeExpr{
+		TypeName: "Token",
+		AttributeExpr: &expr.AttributeExpr{
+			Type: expr.String,
+		},
+	}
+	_, _, err := InitStructFields([]*InitArgData{{
+		Name:      "token",
+		Type:      expr.String,
+		FieldName: "Token",
+		FieldType: alias,
+	}}, "payload", "", "service")
+	require.EqualError(t, err, `initialize field "Token": missing final field type reference`)
+}
 
 func TestSnakeCase(t *testing.T) {
 	cases := map[string]struct {

@@ -17,6 +17,7 @@ type (
 	// for one generated Go package.
 	GeneratedPackage struct {
 		generation   *generationOwner
+		genpkg       string
 		claim        string
 		path         string
 		outputDir    string

@@ -7,6 +7,7 @@ package codegen
 
 import (
 	"fmt"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -17,11 +18,13 @@ import (
 type (
 	// NameScope defines a naming scope.
 	NameScope struct {
-		names         map[string]string             // type hash to unique name
-		userTypeNames map[expr.UserType]string      // original user type to exact name
-		unionNames    map[UnionDeclarationID]string // authored OneOf to exact name
-		counts        map[string]int                // raw type name to occurrence count
-		frozen        bool                          // true after this set rejects new names
+		names            map[string]string             // type hash to unique name
+		userTypeNames    map[expr.UserType]string      // original user type to exact name
+		unionNames       map[UnionDeclarationID]string // authored OneOf to exact name
+		importNames      map[string]string             // import path to final package name
+		generatedImports map[string]string             // generated relative path to final package name
+		counts           map[string]int                // raw type name to occurrence count
+		frozen           bool                          // true after this set rejects new names
 	}
 
 	// Hasher is the interface implemented by the objects that must be
@@ -41,10 +44,12 @@ type (
 // NewNameScope creates an empty name scope.
 func NewNameScope() *NameScope {
 	return &NameScope{
-		names:         make(map[string]string),
-		userTypeNames: make(map[expr.UserType]string),
-		unionNames:    make(map[UnionDeclarationID]string),
-		counts:        make(map[string]int),
+		names:            make(map[string]string),
+		userTypeNames:    make(map[expr.UserType]string),
+		unionNames:       make(map[UnionDeclarationID]string),
+		importNames:      make(map[string]string),
+		generatedImports: make(map[string]string),
+		counts:           make(map[string]int),
 	}
 }
 
@@ -62,10 +67,40 @@ func (s *NameScope) Fork() *NameScope {
 	for identity, name := range s.unionNames {
 		fork.unionNames[identity] = name
 	}
+	for importPath, name := range s.importNames {
+		fork.importNames[importPath] = name
+	}
+	for importPath, name := range s.generatedImports {
+		fork.generatedImports[importPath] = name
+	}
 	for name, count := range s.counts {
 		fork.counts[name] = count
 	}
 	return fork
+}
+
+// bindImport makes type rendering use the package name selected for an import
+// path. Generated packages call it before the scope is frozen.
+func (s *NameScope) bindImport(importPath, name string) {
+	if s.frozen {
+		panic("cannot bind an import name in a frozen name scope")
+	}
+	if existing, ok := s.importNames[importPath]; ok && existing != name {
+		panic(fmt.Sprintf("import path %q is already bound to package name %q", importPath, existing))
+	}
+	s.importNames[importPath] = name
+}
+
+// bindGeneratedImport records the final name for a path relative to the
+// generated module root.
+func (s *NameScope) bindGeneratedImport(importPath, name string) {
+	if s.frozen {
+		panic("cannot bind a generated import name in a frozen name scope")
+	}
+	if existing, ok := s.generatedImports[importPath]; ok && existing != name {
+		panic(fmt.Sprintf("generated import path %q is already bound to package name %q", importPath, existing))
+	}
+	s.generatedImports[importPath] = name
 }
 
 // HashedUnique builds the unique name for key using name and - if not unique -
@@ -199,9 +234,9 @@ func (s *NameScope) Name(name string) string {
 func (s *NameScope) GoTypeDef(att *expr.AttributeExpr, ptr, useDefault bool) string {
 	pkg := ""
 	if loc := UserTypeLocation(att.Type); loc != nil {
-		pkg = loc.PackageName()
+		pkg = s.generatedImportName(loc.RelImportPath, loc.PackageName())
 	} else if p, ok := att.Meta.Last("struct:pkg:path"); ok && p != "" {
-		pkg = Goify(filepath.Base(p), false)
+		pkg = s.generatedImportName(p, Goify(filepath.Base(p), false))
 	}
 	return s.goTypeDefWithPkgOverride(att, ptr, useDefault, pkg, "")
 }
@@ -214,8 +249,8 @@ func (s *NameScope) GoTypeDef(att *expr.AttributeExpr, ptr, useDefault bool) str
 func (s *NameScope) goTypeDefWithPkgOverride(att *expr.AttributeExpr, ptr, useDefault bool, pkg, targetPkg string) string {
 	switch actual := att.Type.(type) {
 	case expr.Primitive:
-		if t, _ := GetMetaType(att); t != "" {
-			return t
+		if typeName := s.metaTypeName(att); typeName != "" {
+			return typeName
 		}
 		return GoNativeTypeName(actual)
 	case *expr.Array:
@@ -276,7 +311,7 @@ func (s *NameScope) goTypeDefWithPkgOverride(att *expr.AttributeExpr, ptr, useDe
 		var referencedPkg string
 		if loc := UserTypeLocation(actual); loc != nil {
 			if targetPkg != "" || loc.PackageName() != pkg {
-				referencedPkg = loc.PackageName()
+				referencedPkg = s.generatedImportName(loc.RelImportPath, loc.PackageName())
 			}
 		} else if targetPkg != "" {
 			referencedPkg = targetPkg
@@ -343,16 +378,16 @@ func (s *NameScope) GoTypeNameWithDefaults(att *expr.AttributeExpr) string {
 func (s *NameScope) GoFullTypeName(att *expr.AttributeExpr, pkg string) string {
 	switch actual := att.Type.(type) {
 	case expr.Primitive:
-		if t, _ := GetMetaType(att); t != "" {
-			return t
+		if typeName := s.metaTypeName(att); typeName != "" {
+			return typeName
 		}
 		return GoNativeTypeName(actual)
 	case *expr.Array:
-		return "[]" + s.GoFullTypeRef(actual.ElemType, pkgWithDefault(actual.ElemType.Type, pkg))
+		return "[]" + s.GoFullTypeRef(actual.ElemType, s.pkgWithDefault(actual.ElemType.Type, pkg))
 	case *expr.Map:
 		return fmt.Sprintf("map[%s]%s",
-			s.GoFullTypeRef(actual.KeyType, pkgWithDefault(actual.KeyType.Type, pkg)),
-			s.GoFullTypeRef(actual.ElemType, pkgWithDefault(actual.ElemType.Type, pkg)))
+			s.GoFullTypeRef(actual.KeyType, s.pkgWithDefault(actual.KeyType.Type, pkg)),
+			s.GoFullTypeRef(actual.ElemType, s.pkgWithDefault(actual.ElemType.Type, pkg)))
 	case *expr.Object:
 		return s.GoTypeDef(att, false, false)
 	case expr.UserType:
@@ -363,7 +398,7 @@ func (s *NameScope) GoFullTypeName(att *expr.AttributeExpr, pkg string) string {
 	case *expr.Union:
 		return s.scopedUnionTypeName(NewUnionDeclarationID(att), Goify(actual.Name(), true), pkg)
 	case expr.CompositeExpr:
-		return s.GoFullTypeName(actual.Attribute(), pkgWithDefault(actual.Attribute().Type, pkg))
+		return s.GoFullTypeName(actual.Attribute(), s.pkgWithDefault(actual.Attribute().Type, pkg))
 	default:
 		panic(fmt.Sprintf("unknown data type %T", actual)) // bug
 	}
@@ -407,11 +442,41 @@ func (s *NameScope) scopedTypeName(userType expr.UserType, base, pkg string) str
 // pkgWithDefault returns the package defining the given type. If the types is a
 // user type with "struct:pkg:path" metadata then it returns the corresponding
 // value, otherwise it returns pkg.
-func pkgWithDefault(dt expr.DataType, pkg string) string {
+func (s *NameScope) pkgWithDefault(dt expr.DataType, pkg string) string {
 	if loc := UserTypeLocation(dt); loc != nil {
-		return loc.PackageName()
+		return s.generatedImportName(loc.RelImportPath, loc.PackageName())
 	}
 	return pkg
+}
+
+// importName returns the final package name for importPath when the generated
+// package planned that import.
+func (s *NameScope) importName(importPath, fallback string) string {
+	if name := s.importNames[importPath]; name != "" {
+		return name
+	}
+	return fallback
+}
+
+// generatedImportName returns the final package name for a path relative to
+// the generated module root.
+func (s *NameScope) generatedImportName(importPath, fallback string) string {
+	if name := s.generatedImports[path.Clean(importPath)]; name != "" {
+		return name
+	}
+	return s.importName(importPath, fallback)
+}
+
+// metaTypeName applies the final package name to a type named by
+// struct:field:type metadata.
+func (s *NameScope) metaTypeName(attribute *expr.AttributeExpr) string {
+	typeName, spec := GetMetaType(attribute)
+	if typeName == "" || spec == nil {
+		return typeName
+	}
+	preferred := spec.preferredName()
+	selected := s.importName(spec.Path, preferred)
+	return rebindMetaTypeQualifier(typeName, preferred, selected)
 }
 
 func goTypeRef(name string, dt expr.DataType) string {

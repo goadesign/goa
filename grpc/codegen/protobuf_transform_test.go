@@ -255,6 +255,42 @@ func TestProtoBufTransformAnyType(t *testing.T) {
 	}
 }
 
+// TestConvertPrimitiveFromProtoUsesFinalCustomTypeImportAlias verifies that a
+// protobuf conversion casts to the package name written by the import header.
+func TestConvertPrimitiveFromProtoUsesFinalCustomTypeImportAlias(t *testing.T) {
+	const (
+		packagePath = "generated.local/gen/grpc/values"
+		customPath  = "example.com/custom/wire"
+	)
+	generation, err := codegen.NewGeneration("generated.local/gen", nil)
+	require.NoError(t, err)
+	pkg, err := generation.ClaimPackage(packagePath)
+	require.NoError(t, err)
+	require.NoError(t, pkg.DeclareImport(codegen.NewImport("wire", customPath)))
+	require.NoError(t, pkg.RequireImport(codegen.NewImport("wire", "example.com/fixed/wire")))
+	require.NoError(t, generation.Freeze())
+	require.Equal(t, "wire2", pkg.ImportName(customPath))
+
+	target := &expr.AttributeExpr{
+		Type: expr.Int,
+		Meta: expr.MetaExpr{
+			"struct:field:type": {"wire.Value", customPath, "wire"},
+		},
+	}
+	targetContext := codegen.NewAttributeContext(false, false, true, "", pkg.Scope())
+	attrs := &codegen.TransformAttrs{TargetCtx: targetContext}
+
+	converted := convertPrimitiveFromProto(
+		&expr.AttributeExpr{Type: expr.Int},
+		target,
+		false,
+		false,
+		"source",
+		attrs,
+	)
+	require.Equal(t, "wire2.Value(source)", converted)
+}
+
 // TestProtoBufTransformNilableDefaults checks that absent protobuf bytes and
 // Any fields use their service defaults without treating present empty or null
 // values as absent.

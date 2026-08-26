@@ -341,8 +341,8 @@ func validateGeneratedTypeEmission(left, right *generatedTypeEmissionFacts) erro
 		!sameGeneratedTypeEmissionContent(left, right) ||
 		!generatedTypeEmissionLayout(left).Equivalent(generatedTypeEmissionLayout(right)) ||
 		!slices.Equal(
-			left.service.generatedTypeImports[left.declaration].paths,
-			right.service.generatedTypeImports[right.declaration].paths,
+			left.service.generatedTypeImports[left.declaration].Paths(),
+			right.service.generatedTypeImports[right.declaration].Paths(),
 		) {
 		return fmt.Errorf(
 			"conflicting generated type emission in package %q: roles %d and %d, sources %q and %q",
@@ -416,7 +416,7 @@ func validateGeneratedUnionEmission(left, right *generatedUnionEmissionFacts) er
 		left.union.valueKey != right.union.valueKey ||
 		generatedLocationPath(left.union.location) != generatedLocationPath(right.union.location) ||
 		!sameGeneratedUnionBranches(left.union.branches, right.union.branches) ||
-		!slices.Equal(left.union.imports.paths, right.union.imports.paths) {
+		!slices.Equal(left.union.imports.Paths(), right.union.imports.Paths()) {
 		return fmt.Errorf(
 			"conflicting generated union emission in package %q: declarations equal=%t, keys %q/%q and %q/%q",
 			left.union.declaration.PackagePath(),

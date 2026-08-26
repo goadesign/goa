@@ -35,7 +35,7 @@ func (d *ServicesData) registerPackageData() {
 		generatedPackage.types[emission.declaration] = &generatedTypeData{
 			declaration: emission.declaration,
 			location:    emission.location,
-			imports:     emission.service.generatedTypeImports[emission.declaration].specs,
+			imports:     emission.service.generatedTypeImports[emission.declaration].Imports(),
 			section:     section,
 			error:       errorSection,
 		}
@@ -45,7 +45,7 @@ func (d *ServicesData) registerPackageData() {
 		generatedPackage.unions[emission.union.declaration] = emission.union.data
 		generatedPackage.unionImports = appendImportSpecs(
 			generatedPackage.unionImports,
-			emission.union.imports.specs,
+			emission.union.imports.Imports(),
 		)
 	}
 }

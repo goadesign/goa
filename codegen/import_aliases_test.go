@@ -6,7 +6,57 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"goa.design/goa/v3/expr"
 )
+
+// TestPackageScopeUsesFinalImportAliases verifies that type rendering and
+// import declarations read the same package name after a collision.
+func TestPackageScopeUsesFinalImportAliases(t *testing.T) {
+	generation := mustTestGeneration(t, "generated.local/gen", nil)
+	pkg := mustClaimTestPackage(t, generation, "generated.local/gen/service")
+	token := &expr.UserTypeExpr{
+		TypeName: "Token",
+		AttributeExpr: &expr.AttributeExpr{
+			Type: expr.String,
+			Meta: expr.MetaExpr{"struct:pkg:path": {"domain/../strconv"}},
+		},
+	}
+	values := &expr.AttributeExpr{Type: &expr.Array{
+		ElemType: &expr.AttributeExpr{Type: token},
+	}}
+	_, err := pkg.DeclareUserType(token)
+	require.NoError(t, err)
+	require.NoError(t, pkg.DeclareImport(NewImport("strconv", "generated.local/gen/strconv")))
+	require.NoError(t, pkg.RequireImport(SimpleImport("strconv")))
+	require.NoError(t, generation.Freeze())
+
+	require.Equal(t, "strconv2", pkg.ImportName("generated.local/gen/strconv"))
+	require.Equal(t, "strconv2", pkg.Scope().generatedImportName("domain/../strconv", "strconv"))
+	require.Equal(t, "[]strconv2.Token", pkg.Scope().GoTypeDef(values, false, true))
+}
+
+// TestPackageScopeUsesFinalImportAliasesFromSlashRoot verifies that a local
+// generated package uses its selected name when generation starts at "/".
+func TestPackageScopeUsesFinalImportAliasesFromSlashRoot(t *testing.T) {
+	generation := mustTestGeneration(t, "/", nil)
+	pkg := mustClaimTestPackage(t, generation, "/service")
+	token := &expr.UserTypeExpr{
+		TypeName: "Token",
+		AttributeExpr: &expr.AttributeExpr{
+			Type: expr.String,
+			Meta: expr.MetaExpr{"struct:pkg:path": {"strconv"}},
+		},
+	}
+	_, err := pkg.DeclareUserType(token)
+	require.NoError(t, err)
+	require.NoError(t, pkg.DeclareImport(NewImport("strconv", "/strconv")))
+	require.NoError(t, pkg.RequireImport(SimpleImport("strconv")))
+	require.NoError(t, generation.Freeze())
+
+	require.Equal(t, "strconv2", pkg.ImportName("/strconv"))
+	require.Equal(t, "strconv2.Token", pkg.Scope().GoTypeDef(&expr.AttributeExpr{Type: token}, false, true))
+}
 
 // TestImportAliasPrioritiesIgnoreRegistrationOrder verifies that static
 // template imports keep required qualifiers ahead of generated packages and

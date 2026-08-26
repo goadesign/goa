@@ -140,6 +140,36 @@ func TestDeclarationResolverQualifiesRelocatedConsumersWithoutRenamingLocalType(
 	require.Equal(t, "Fault", resolver.Ref(&expr.AttributeExpr{Type: local}, ""))
 }
 
+// TestDeclarationResolverUsesFinalCustomTypeImportAlias verifies that service
+// fields keep their complete custom Go type when an import name changes.
+func TestDeclarationResolverUsesFinalCustomTypeImportAlias(t *testing.T) {
+	const (
+		servicePath = "generated.local/gen/values"
+		customPath  = "example.com/custom/wire"
+	)
+	attribute := &expr.AttributeExpr{
+		Type: expr.String,
+		Meta: expr.MetaExpr{
+			"struct:field:type": {"map[wire.Key]wire.Value", customPath, "wire"},
+		},
+	}
+	generation := mustTestGeneration(t, "generated.local/gen", nil)
+	pkg := mustClaimTestPackage(t, generation, servicePath)
+	require.NoError(t, pkg.DeclareImport(codegen.NewImport("wire", customPath)))
+	require.NoError(t, pkg.RequireImport(codegen.NewImport("wire", "example.com/fixed/wire")))
+	require.NoError(t, generation.Freeze())
+	require.Equal(t, "wire2", pkg.ImportName(customPath))
+
+	resolver := newServiceResolver(
+		generation,
+		&importAliases{generation: generation},
+		"Values",
+		servicePath,
+		servicePath,
+	)
+	require.Equal(t, "map[wire2.Key]wire2.Value", resolver.Name(attribute, "", false, true))
+}
+
 // TestDeclarationResolverPanicsWhenPlanOmittedType verifies render analysis
 // fails immediately instead of allocating a missing declaration.
 func TestDeclarationResolverPanicsWhenPlanOmittedType(t *testing.T) {

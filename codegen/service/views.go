@@ -26,7 +26,7 @@ func viewsFile(plan *Plan, facts *serviceFacts) *codegen.File {
 	}
 
 	path := filepath.Join(codegen.Gendir, svc.PathName, "views", "view.go")
-	header := codegen.Header(facts.name+" views", "views", facts.imports.views.specs)
+	header := codegen.Header(facts.name+" views", "views", facts.imports.views.Imports())
 	sections := []*codegen.SectionTemplate{header}
 
 	// type definitions

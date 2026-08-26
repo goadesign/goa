@@ -201,6 +201,36 @@ func TestEmittedUnionReservesFixedJSON(t *testing.T) {
 	require.Equal(t, "json2", aliases.name(outputPackage, "example.com/custom/json"))
 }
 
+// TestUnionImportsStopAtNamedBranches verifies that a union imports the named
+// branch package but not packages used only inside that branch's own file.
+func TestUnionImportsStopAtNamedBranches(t *testing.T) {
+	root := codegen.RunDSL(t, func() {
+		model := dsl.Type("Model", func() {
+			dsl.Meta("struct:pkg:path", "models")
+			dsl.Attribute("token", dsl.String, func() {
+				dsl.Meta("struct:field:type", "wire.Token", "example.com/wire", "wire")
+			})
+		})
+		payload := dsl.Type("Payload", func() {
+			dsl.OneOf("value", func() {
+				dsl.Attribute("model", model)
+			})
+		})
+		dsl.Service("Values", func() {
+			dsl.Method("Read", func() {
+				dsl.Payload(payload)
+			})
+		})
+	})
+	generation := mustTestGeneration(t, "generated.local/gen", []eval.Root{root})
+	plan, err := NewPlan(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
+	require.NoError(t, err)
+	require.Len(t, plan.facts.services[0].unions, 1)
+	paths := plan.facts.services[0].unions[0].imports.Paths()
+	require.Contains(t, paths, "generated.local/gen/models")
+	require.NotContains(t, paths, "example.com/wire")
+}
+
 // TestFixedTemplateAliasesBeatGeneratedPackages verifies that generated
 // service paths cannot take qualifiers required by static Goa and log calls.
 func TestFixedTemplateAliasesBeatGeneratedPackages(t *testing.T) {
@@ -422,13 +452,10 @@ func TestUnionFieldReferencesUseFixedImportAliases(t *testing.T) {
 	data := buildRetainedUnionTypeData(facts, aliases)
 	require.Equal(t, "json2.Value", data.Fields[0].FieldType)
 
-	collector := newImportCollector(aliases, generation.GenPkg(), "generated.local/gen/values")
-	collector.collectDefinition(branch)
-	header := codegen.Header(
-		"Union types",
-		"values",
-		append([]*codegen.ImportSpec{codegen.SimpleImport("encoding/json")}, collector.imports()...),
-	)
+	header := codegen.Header("Union types", "values", []*codegen.ImportSpec{
+		codegen.SimpleImport("encoding/json"),
+		generatedPackage.Import("example.com/custom/json"),
+	})
 	var rendered strings.Builder
 	require.NoError(t, header.Write(&rendered))
 	require.Contains(t, rendered.String(), `"encoding/json"`)

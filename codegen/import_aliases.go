@@ -175,6 +175,10 @@ func (p *GeneratedPackage) freezeImports() error {
 			name:     name,
 			explicit: explicit || name != path.Base(importPath),
 		}
+		p.scope.bindImport(importPath, name)
+		if relative, ok := relativeGeneratedPackagePath(p.genpkg, importPath); ok {
+			p.scope.bindGeneratedImport(relative, name)
+		}
 	}
 	p.imports = bindings
 	return nil

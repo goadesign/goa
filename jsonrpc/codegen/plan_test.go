@@ -22,6 +22,9 @@ func TestPlanIncludesSharedHTTPImportAliases(t *testing.T) {
 	root := expr.RunDSL(t, func() {
 		dsl.Service("UUID", func() {
 			dsl.Method("Read", func() {
+				dsl.Result(func() {
+					dsl.Attribute("value", dsl.String)
+				})
 				dsl.JSONRPC(func() {})
 			})
 		})
@@ -42,6 +45,23 @@ func TestPlanIncludesSharedHTTPImportAliases(t *testing.T) {
 	require.Equal(t, "uuid2", services.ServiceImport(clientOutput, "UUID").Name)
 }
 
+// TestPlanRecordsTransportKindsBeforeFreeze verifies file planning saves the
+// service shapes that decide which JSON-RPC files and helpers are generated.
+func TestPlanRecordsTransportKindsBeforeFreeze(t *testing.T) {
+	root := expr.RunDSL(t, jsonRPCFileImportsDSL)
+	generation, err := codegen.NewGeneration("generated.local/gen", []eval.Root{root})
+	require.NoError(t, err)
+	servicePlan, err := service.NewPlan(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
+	require.NoError(t, err)
+	httpPlans, err := httpcodegen.NewJSONRPCPlans(generation, httpcodegen.PlanInput{Root: root, Service: servicePlan})
+	require.NoError(t, err)
+	plans, err := NewPlans(generation, PlanInput{Root: root, Service: servicePlan, HTTP: httpPlans[0]})
+	require.NoError(t, err)
+
+	require.True(t, plans[0].services[0].hasHTTP)
+	require.True(t, plans[0].services[0].hasSSE)
+}
+
 // TestPlanRetainsServicePackageImport verifies JSON-RPC output packages use
 // the service package selected before later expression changes. The retained
 // preferred name must still resolve around the client's sync import.
@@ -49,6 +69,9 @@ func TestPlanRetainsServicePackageImport(t *testing.T) {
 	root := expr.RunDSL(t, func() {
 		dsl.Service("Sync", func() {
 			dsl.Method("Read", func() {
+				dsl.Result(func() {
+					dsl.Attribute("value", dsl.String)
+				})
 				dsl.JSONRPC(func() {})
 			})
 		})
@@ -159,7 +182,11 @@ func TestPlanReservesGeneratedJSONRPCPackages(t *testing.T) {
 	require.NoError(t, err)
 	httpPlans, err := httpcodegen.NewJSONRPCPlans(generation, httpcodegen.PlanInput{Root: root, Service: servicePlan})
 	require.NoError(t, err)
-	_, err = NewPlans(generation, PlanInput{Root: root, Service: servicePlan, HTTP: httpPlans[0]})
+	plans, err := NewPlans(generation, PlanInput{Root: root, Service: servicePlan, HTTP: httpPlans[0]})
+	require.NoError(t, err)
+	examples, err := example.NewPlan(generation, servicePlan)
+	require.NoError(t, err)
+	_, err = NewExamplePlan(plans[0], examples)
 	require.NoError(t, err)
 	require.NoError(t, generation.Freeze())
 	require.NoError(t, servicePlan.Link())
@@ -173,7 +200,7 @@ func TestPlanReservesGeneratedJSONRPCPackages(t *testing.T) {
 	serverOutput := path.Join("generated.local", "cmd", codegen.SnakeCase(codegen.Goify(root.API.Servers[0].Name, true)))
 	server := services.PackageImport(serverOutput, "generated.local/gen/jsonrpc/foo/server")
 	require.Equal(t, "fooc", client.Name)
-	require.Equal(t, "foojssvr", server.Name)
+	require.Equal(t, "foojssvr2", server.Name)
 }
 
 // TestNewPlansRequiresEveryJSONRPCRoot verifies that planning cannot reserve
@@ -366,13 +393,15 @@ func TestPlanBuildsCombinedExampleWithoutChangingHTTP(t *testing.T) {
 	require.NoError(t, err)
 	examplePlan, err := example.NewPlan(generation, servicePlan)
 	require.NoError(t, err)
+	httpExamples, err := httpcodegen.NewExamplePlan(applicationPlans[0], examplePlan)
+	require.NoError(t, err)
+	examples, err := NewExamplePlan(plans[0], examplePlan)
+	require.NoError(t, err)
 	require.NoError(t, generation.Freeze())
 	require.NoError(t, servicePlan.Link())
 	require.NoError(t, applicationPlans[0].Link())
 	require.NoError(t, httpPlans[0].Link())
 
-	httpExamples, err := httpcodegen.NewExamplePlan(applicationPlans[0], examplePlan)
-	require.NoError(t, err)
 	httpFile := httpExamples.ServerFiles()[0]
 	httpImports := append([]*codegen.ImportSpec(nil), httpFile.SectionTemplates[0].Data.(map[string]any)["Imports"].([]*codegen.ImportSpec)...)
 	require.NoError(t, plans[0].Link())
@@ -384,8 +413,6 @@ func TestPlanBuildsCombinedExampleWithoutChangingHTTP(t *testing.T) {
 			require.Empty(t, section.Data.(map[string]any)["JSONRPCServices"])
 		}
 	}
-	examples, err := NewExamplePlan(plans[0], examplePlan)
-	require.NoError(t, err)
 	combined := examples.ServerFiles()[0]
 	require.NotSame(t, httpFile, combined)
 	for _, section := range combined.SectionTemplates {

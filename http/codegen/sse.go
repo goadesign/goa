@@ -501,24 +501,12 @@ func sseServerFile(svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.F
 	data = serviceDataForOutput(data, services, outputPackage)
 	tmplSections := sseTemplateSections(data)
 	sections := make([]*codegen.SectionTemplate, 0, 1+len(tmplSections))
-	imports := []*codegen.ImportSpec{
-		{Path: "context"},
-		{Path: "io"},
-		{Path: "net/http"},
-		{Path: "sync"},
-		{Path: "time"},
-		{Path: "encoding/json"},
-		{Path: "fmt"},
-		services.ServiceImport(outputPackage, svc.Name()),
-	}
-	if serviceHasVariableViewedResult(data, IsSSEEndpoint) {
-		imports = append(imports, codegen.GoaImport(""))
-	}
 	sections = append(sections,
-		codegen.Header(
+		plannedFileHeader(
 			"sse",
 			"server",
-			imports,
+			path,
+			services,
 		),
 	)
 	sections = append(sections, tmplSections...)
@@ -571,18 +559,4 @@ func IsSSEEndpoint(ed *EndpointData) bool {
 // HasSSE returns true if at least one endpoint in the service uses SSE.
 func HasSSE(data *ServiceData) bool {
 	return slices.ContainsFunc(data.Endpoints, IsSSEEndpoint)
-}
-
-// serviceHasVariableViewedResult reports whether a selected endpoint carries
-// one of multiple legal views at runtime.
-func serviceHasVariableViewedResult(service *ServiceData, selected func(*EndpointData) bool) bool {
-	for _, endpoint := range service.Endpoints {
-		if selected != nil && !selected(endpoint) {
-			continue
-		}
-		if endpoint.Method.ViewedResult != nil && endpoint.Method.ViewedResult.ViewName == "" {
-			return true
-		}
-	}
-	return false
 }

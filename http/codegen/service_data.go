@@ -61,6 +61,10 @@ type (
 		// fileImports contains the exact design-derived imports collected for each
 		// generated file before package names were frozen.
 		fileImports map[string][]*codegen.ImportSpec
+		// clientServicePackages contains the package name used by client files for
+		// each generated service. Services with no client reference keep the
+		// preferred name because no import alias was selected.
+		clientServicePackages map[string]string
 	}
 
 	// ServiceData contains the data used to render the code related to a
@@ -954,8 +958,7 @@ func (sds *ServicesData) label() string {
 func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 	svc := sds.ServicesData.Get(httpSvc.ServiceExpr.Name)
 	transportService := *svc
-	clientOutputPackage := path.Join(sds.GenPkg(), sds.dir(), svc.PathName, "client")
-	transportService.PkgName = sds.ServiceImport(clientOutputPackage, svc.Name).Name
+	transportService.PkgName = sds.clientServicePackages[svc.Name]
 	svc = &transportService
 	scope := codegen.NewNameScope()
 	scope.Unique("c") // 'c' is reserved as the client's receiver name.
@@ -976,6 +979,7 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 	}
 	clientPkgName := strings.ToLower(codegen.Goify(svc.Name, false)) + "c"
 	serverPkgName := strings.ToLower(codegen.Goify(svc.Name, false)) + "svr"
+	clientOutputPackage := path.Join(sds.GenPkg(), sds.dir(), svc.PathName, "client")
 	if sds.jsonrpc {
 		serverPkgName = strings.ToLower(codegen.Goify(svc.Name, false)) + "jssvr"
 	}
@@ -985,9 +989,7 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 		}
 		serverName := codegen.SnakeCase(codegen.Goify(server.Name, true))
 		cliOutputPackage := path.Join(sds.GenPkg(), sds.dir(), "cli", serverName)
-		exampleOutputPackage := path.Join(path.Dir(sds.GenPkg()), "cmd", serverName)
 		clientPkgName = sds.PackageImport(cliOutputPackage, clientOutputPackage).Name
-		serverPkgName = sds.PackageImport(exampleOutputPackage, path.Join(sds.GenPkg(), sds.dir(), svc.PathName, "server")).Name
 		break
 	}
 	sd := &ServiceData{
@@ -1208,14 +1210,14 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 					// Populate service-aware type resolution fields
 					_, ca.IsAliased = ca.FieldType.(expr.UserType)
 					if ca.IsAliased {
-						attribute := &expr.AttributeExpr{Type: ca.Type}
+						attribute := &expr.AttributeExpr{Type: ca.FieldType}
 						ca.ServiceTypeRef = svcctx.Scope.Ref(attribute, svcctx.Pkg(attribute))
 					}
 					args = append(args, ca)
 				}
 			}
 			pkg = svc.PkgName
-			if len(routes[0].PathInit.ClientArgs) > 0 && httpEndpoint.MethodExpr.Payload.Type != expr.Empty {
+			if len(routes[0].PathInit.ClientArgs) > 0 && expr.IsObject(httpEndpoint.MethodExpr.Payload.Type) {
 				payloadRef = svcctx.Scope.Ref(httpEndpoint.MethodExpr.Payload, svcctx.Pkg(httpEndpoint.MethodExpr.Payload))
 			}
 		}
@@ -2820,19 +2822,20 @@ func (sds *ServicesData) jsonRPCRequestIDInitArg(policy *jsonRPCRequestIDPolicy,
 		typeRef = layout.RefWithPointer(true)
 	}
 	data := &AttributeData{
-		Name:         field.Name,
-		VarName:      variable,
-		Pointer:      pointer,
-		Required:     required,
-		Type:         attribute.Type,
-		TypeName:     context.Scope.Name(attribute, context.Pkg(attribute), false, true),
-		TypeRef:      typeRef,
-		Description:  attribute.Description,
-		FieldName:    codegen.Goify(field.Name, true),
-		FieldType:    attribute.Type,
-		FieldPointer: pointer,
-		DefaultValue: policy.defaultValue,
-		Example:      sds.FieldExample(attribute, payload, field.Name, owner),
+		Name:           field.Name,
+		VarName:        variable,
+		Pointer:        pointer,
+		Required:       required,
+		Type:           attribute.Type,
+		TypeName:       context.Scope.Name(attribute, context.Pkg(attribute), false, true),
+		TypeRef:        typeRef,
+		Description:    attribute.Description,
+		FieldName:      codegen.Goify(field.Name, true),
+		FieldType:      attribute.Type,
+		ServiceTypeRef: valueTypeRef,
+		FieldPointer:   pointer,
+		DefaultValue:   policy.defaultValue,
+		Example:        sds.FieldExample(attribute, payload, field.Name, owner),
 	}
 	if client {
 		validate := codegen.AttributeValidationCode(attribute, nil, context, required, expr.IsAlias(attribute.Type), variable, field.Name)
@@ -3974,6 +3977,7 @@ func (sds *ServicesData) extractElements(kind httpElementKind, a *expr.MappedAtt
 			typeRef     = layout.Ref()
 			elemTypeRef string
 			ft          = svcAtt.Type
+			fieldAtt    = svcAtt
 
 			slice   bool
 			pointer bool
@@ -3997,13 +4001,19 @@ func (sds *ServicesData) extractElements(kind httpElementKind, a *expr.MappedAtt
 		if !expr.IsObject(svcAtt.Type) {
 			fieldName = ""
 		} else {
-			ft = svcAtt.Find(name).Type
+			fieldAtt = svcAtt.Find(name)
+			ft = fieldAtt.Type
 			if kind == pathElement || kind == queryElement {
 				fptr = svcAtt.IsPrimitivePointer(name, true)
 			} else {
 				fptr = svcCtx.IsPrimitivePointer(name, svcAtt)
 			}
 		}
+		fieldPackage := ""
+		if _, userType := fieldAtt.Type.(expr.UserType); userType {
+			fieldPackage = svcCtx.Pkg(fieldAtt)
+		}
+		fieldTypeRef := svcCtx.Scope.Ref(fieldAtt, fieldPackage)
 		validationAttribute := att
 		defaultValue := requestElementDefault(svcAtt, name, att)
 		validate := codegen.AttributeValidationCode(att, nil, svcCtx, required, expr.IsAlias(att.Type), varn, name)
@@ -4025,20 +4035,21 @@ func (sds *ServicesData) extractElements(kind httpElementKind, a *expr.MappedAtt
 			Slice:       slice,
 			StringSlice: stringSlice,
 			AttributeData: &AttributeData{
-				Name:         name,
-				Description:  att.Description,
-				FieldName:    fieldName,
-				FieldPointer: fptr,
-				FieldType:    ft,
-				VarName:      varn,
-				Required:     required,
-				Type:         att.Type,
-				TypeName:     scope.GoTypeName(att),
-				TypeRef:      typeRef,
-				ValueTypeRef: valueTypeRef,
-				ElemTypeRef:  elemTypeRef,
-				Pointer:      pointer,
-				Validate:     validate,
+				Name:           name,
+				Description:    att.Description,
+				FieldName:      fieldName,
+				FieldPointer:   fptr,
+				FieldType:      ft,
+				ServiceTypeRef: fieldTypeRef,
+				VarName:        varn,
+				Required:       required,
+				Type:           att.Type,
+				TypeName:       scope.GoTypeName(att),
+				TypeRef:        typeRef,
+				ValueTypeRef:   valueTypeRef,
+				ElemTypeRef:    elemTypeRef,
+				Pointer:        pointer,
+				Validate:       validate,
 				CLIPlan: cli.NewFlagPlan(
 					validationAttribute,
 					scope.GoTypeName(validationAttribute),
@@ -4547,21 +4558,6 @@ func upgradeParams(e *EndpointData, fn string) map[string]any {
 		"ViewedResult": e.Method.ViewedResult,
 		"Function":     fn,
 	}
-}
-
-// serviceHasViewedResult reports whether the selected endpoint sections
-// reference a result containing only a selected view's fields from the service
-// views package.
-func serviceHasViewedResult(service *ServiceData, selected func(*EndpointData) bool) bool {
-	for _, endpoint := range service.Endpoints {
-		if selected != nil && !selected(endpoint) {
-			continue
-		}
-		if endpoint.Method.ViewedResult != nil {
-			return true
-		}
-	}
-	return false
 }
 
 // NeedDialer returns true if at least one method in the defined services

@@ -98,7 +98,7 @@ func endpointFile(plan *Plan, facts *serviceFacts) *codegen.File {
 		sections []*codegen.SectionTemplate
 	)
 	{
-		header := codegen.Header(facts.name+" endpoints", svc.PkgName, facts.imports.endpoint.specs)
+		header := codegen.Header(facts.name+" endpoints", svc.PkgName, facts.imports.endpoint.Imports())
 		def := &codegen.SectionTemplate{
 			Name:   "endpoints-struct",
 			Source: serviceTemplates.Read(serviceEndpointsT),

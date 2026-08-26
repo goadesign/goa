@@ -248,6 +248,16 @@ have priority over generated-package preferences, which have priority over
 design metadata preferences. References and `ImportSpec` values consume the
 same frozen binding, while each file imports only the paths it uses.
 
+Each generated source contribution owns a `GeneratedImportPlan`. Before
+freeze, its generator records the runtime packages written directly by
+templates, the generated packages visible in type expressions, and any
+packages used while generated code reads nested fields. The generated package
+chooses one qualifier for each complete path across all of its files. After
+freeze, each contribution resolves only its saved paths to those chosen
+qualifiers. Contributions that share an output file merge their completed
+imports. A renderer must not walk the design again, scan generated source, or
+add a broad list and remove unused imports later.
+
 The output planner canonicalizes both generated import paths and filesystem
 paths before collection. If two different package identities normalize to the
 same import path or output directory, planning rejects them. It does not let

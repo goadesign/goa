@@ -108,19 +108,42 @@ func TestValidationPlanImportsOnlyUsedRuntimePackages(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			attribute := &expr.AttributeExpr{Type: expr.String, Validation: test.validation}
+			policy := GoLayoutPolicy{UseDefault: true, SumType: true}
 			layout, err := PlanGoType(attribute, GoTypePlanOptions{
 				Owner:  "generated.local/gen/service",
-				Policy: GoLayoutPolicy{UseDefault: true, SumType: true},
+				Policy: policy,
 			})
 			require.NoError(t, err)
 			plan, err := NewValidationPlan(attribute, layout, ValidationPlanOptions{Required: true})
 			require.NoError(t, err)
 			require.Equal(t, test.wantPreferences, plan.ImportPreferences())
+			require.Equal(t, test.wantPreferences, ValidationRuntimeImports(attribute, policy))
 			linked, err := plan.Link(layout.Link(layout.Owner(), validationPlanTestQualifier))
 			require.NoError(t, err)
 			require.Equal(t, test.wantImports, linked.Imports())
 		})
 	}
+}
+
+// TestValidationRuntimeImportsStopAtNestedValidators verifies that a parent
+// file does not reserve packages used only inside a named child validator.
+func TestValidationRuntimeImportsStopAtNestedValidators(t *testing.T) {
+	minimum := 1
+	child := &expr.UserTypeExpr{
+		TypeName: "Child",
+		AttributeExpr: &expr.AttributeExpr{Type: &expr.Object{
+			{Name: "name", Attribute: &expr.AttributeExpr{
+				Type:       expr.String,
+				Validation: &expr.ValidationExpr{MinLength: &minimum},
+			}},
+		}},
+	}
+	parent := &expr.AttributeExpr{Type: &expr.Object{
+		{Name: "child", Attribute: &expr.AttributeExpr{Type: child}},
+	}}
+	policy := GoLayoutPolicy{UseDefault: true, SumType: true}
+
+	require.Equal(t, []GoTypeImport{{Name: "goa", Path: GoaImport("").Path}}, ValidationRuntimeImports(parent, policy))
 }
 
 // TestValidationPlanImportPreferencesIncludeExternalValidators checks that

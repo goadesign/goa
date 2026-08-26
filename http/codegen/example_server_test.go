@@ -3,6 +3,7 @@ package codegen
 
 import (
 	"bytes"
+	"path"
 	"path/filepath"
 	"testing"
 
@@ -134,6 +135,21 @@ func TestExampleServerUsesServicePathsForLocalNames(t *testing.T) {
 	require.Contains(t, output.String(), secondBase+"Endpoints")
 	require.Contains(t, output.String(), firstBase+"Server")
 	require.Contains(t, output.String(), secondBase+"Server")
+}
+
+// TestExampleServerImportsOnlyConfiguredServices verifies that an example
+// server does not reserve packages for services it does not expose or for a
+// WebSocket configurer it does not write.
+func TestExampleServerImportsOnlyConfiguredServices(t *testing.T) {
+	root := codegen.RunDSL(t, ctestdata.ServerHostingServiceSubsetDSL)
+	examples := linkedHTTPExamplePlanForRoot(t, root)
+	files := examples.ServerFiles()
+	require.Len(t, files, 1)
+
+	imports := importPaths(files[0].SectionTemplates[0].Data.(map[string]any)["Imports"].([]*codegen.ImportSpec))
+	ignored := examples.transport.services.Get("IgnoredService").Service
+	require.NotContains(t, imports, path.Join(examples.transport.services.GenPkg(), ignored.PathName))
+	require.NotContains(t, imports, "github.com/gorilla/websocket")
 }
 
 // collidingServiceNamesDSL defines two services whose names become the same Go

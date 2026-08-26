@@ -95,6 +95,41 @@ func TestOptionalWireTypeRefUsesLinkedLayout(t *testing.T) {
 	}
 }
 
+// TestWireAttributeScopeUsesFinalImportAliases verifies that HTTP type names
+// use the package names selected before the generated files are written.
+func TestWireAttributeScopeUsesFinalImportAliases(t *testing.T) {
+	catalog, generation := testWireTypeCatalog(t)
+	const (
+		customPath    = "example.com/custom/wire"
+		generatedPath = "generated.local/gen/types"
+	)
+	require.NoError(t, catalog.pkg.DeclareImport(codegen.NewImport("wire", customPath)))
+	require.NoError(t, catalog.pkg.RequireImport(codegen.NewImport("wire", "example.com/fixed/wire")))
+	require.NoError(t, catalog.pkg.ReserveGeneratedImport(codegen.NewImport("types", generatedPath)))
+	require.NoError(t, catalog.pkg.RequireImport(codegen.NewImport("types", "example.com/fixed/types")))
+	linkTestWireTypeCatalog(t, generation, catalog)
+	resolver := catalog.resolver(catalog.scope, wireTypePolicy{}).(*wireAttributeScope)
+
+	custom := &expr.AttributeExpr{
+		Type: expr.String,
+		Meta: expr.MetaExpr{
+			"struct:field:type": {"map[wire.Key]wire.Value", customPath, "wire"},
+		},
+	}
+	relocated := &expr.UserTypeExpr{
+		TypeName: "Record",
+		AttributeExpr: &expr.AttributeExpr{
+			Type: expr.String,
+			Meta: expr.MetaExpr{"struct:pkg:path": {"types"}},
+		},
+	}
+	relocatedAttribute := &expr.AttributeExpr{Type: relocated}
+
+	require.Equal(t, "map[wire2.Key]wire2.Value", resolver.Name(custom, "", false, true))
+	require.Equal(t, "types2", resolver.Package(relocatedAttribute))
+	require.Equal(t, "types2", resolver.Enter(relocatedAttribute).(*wireAttributeScope).pkg)
+}
+
 func TestWireTypeCatalogPreservesReleasedNestedNames(t *testing.T) {
 	cases := []struct {
 		name string

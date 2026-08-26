@@ -61,6 +61,16 @@ func TestInterceptors(t *testing.T) {
 			require.Len(t, fs, c.expectedFileCount)
 			for _, f := range fs {
 				base := filepath.Base(f.Path)
+				if c.Name == "mixed-result-streaming-interceptors" {
+					header := new(bytes.Buffer)
+					require.NoError(t, f.SectionTemplates[0].Write(header))
+					if base == "client_interceptors.go" {
+						require.NotContains(t, header.String(), `"goa.design/goa/example/events"`)
+					} else {
+						require.Contains(t, header.String(), `events "goa.design/goa/example/events"`)
+					}
+					require.NotContains(t, header.String(), `"goa.design/goa/example/summary"`)
+				}
 				if c.Name == "interceptor-with-external-read-payload" && base == "service_interceptors.go" {
 					header := new(bytes.Buffer)
 					require.NoError(t, f.SectionTemplates[0].Write(header))

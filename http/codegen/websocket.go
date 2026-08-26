@@ -256,21 +256,10 @@ func websocketServerFile(svc *expr.HTTPServiceExpr, services *ServicesData) *cod
 	outputPackage := generatedFileOutputPackage(services, outputPath)
 	data = serviceDataForOutput(data, services, outputPackage)
 	title := fmt.Sprintf("%s WebSocket server streaming", svc.Name())
-	imports := []*codegen.ImportSpec{
-		{Path: "context"},
-		{Path: "io"},
-		{Path: "net/http"},
-		{Path: "sync"},
-		{Path: "time"},
-		{Path: "github.com/gorilla/websocket"},
-		codegen.GoaImport(""),
-		codegen.GoaNamedImport("http", "goahttp"),
-		services.ServiceImport(outputPackage, svc.Name()),
-	}
 	structSections := serverStructWSSections(data)
 	wsSections := serverWSSections(data)
 	sections := make([]*codegen.SectionTemplate, 0, 1+len(structSections)+len(wsSections))
-	sections = append(sections, codegen.Header(title, "server", imports))
+	sections = append(sections, plannedFileHeader(title, "server", outputPath, services))
 	sections = append(sections, structSections...)
 	sections = append(sections, wsSections...)
 
@@ -292,24 +281,10 @@ func websocketClientFile(svc *expr.HTTPServiceExpr, services *ServicesData) *cod
 	outputPackage := generatedFileOutputPackage(services, outputPath)
 	data = serviceDataForOutput(data, services, outputPackage)
 	title := fmt.Sprintf("%s WebSocket client streaming", svc.Name())
-	imports := []*codegen.ImportSpec{
-		{Path: "context"},
-		{Path: "io"},
-		{Path: "net/http"},
-		{Path: "sync"},
-		{Path: "time"},
-		{Path: "github.com/gorilla/websocket"},
-		codegen.GoaImport(""),
-		codegen.GoaNamedImport("http", "goahttp"),
-		services.ServiceImport(outputPackage, svc.Name()),
-	}
-	if serviceHasViewedResult(data, IsWebSocketEndpoint) {
-		imports = append(imports, services.ViewImport(outputPackage, svc.Name()))
-	}
 	structSections := clientStructWSSections(data)
 	wsSections := clientWSSections(data)
 	sections := make([]*codegen.SectionTemplate, 0, 1+len(structSections)+len(wsSections))
-	sections = append(sections, codegen.Header(title, "client", imports))
+	sections = append(sections, plannedFileHeader(title, "client", outputPath, services))
 	sections = append(sections, structSections...)
 	sections = append(sections, wsSections...)
 

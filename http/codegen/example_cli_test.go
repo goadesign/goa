@@ -3,6 +3,7 @@ package codegen
 
 import (
 	"bytes"
+	"path"
 	"path/filepath"
 	"testing"
 
@@ -62,4 +63,20 @@ func TestExampleCLIUsesServicePathsForCommands(t *testing.T) {
 	require.NotEqual(t, firstCommand, secondCommand)
 	require.Contains(t, output.String(), `case "`+firstCommand+`":`)
 	require.Contains(t, output.String(), `case "`+secondCommand+`":`)
+}
+
+// TestExampleCLIImportsOnlyConfiguredServices verifies that an example client
+// does not reserve packages for services its server does not expose or for
+// streaming code it does not write.
+func TestExampleCLIImportsOnlyConfiguredServices(t *testing.T) {
+	root := codegen.RunDSL(t, ctestdata.ServerHostingServiceSubsetDSL)
+	examples := linkedHTTPExamplePlanForRoot(t, root)
+	files := examples.CLIFiles()
+	require.Len(t, files, 1)
+
+	imports := importPaths(files[0].SectionTemplates[0].Data.(map[string]any)["Imports"].([]*codegen.ImportSpec))
+	ignored := examples.transport.services.Get("IgnoredService").Service
+	require.NotContains(t, imports, path.Join(examples.transport.services.GenPkg(), ignored.PathName))
+	require.NotContains(t, imports, "strings")
+	require.NotContains(t, imports, "github.com/gorilla/websocket")
 }

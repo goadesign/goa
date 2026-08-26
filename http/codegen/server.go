@@ -27,17 +27,17 @@ type (
 func serverFiles(data *ServicesData) []*codegen.File {
 	files := make([]*codegen.File, 0, len(data.Expressions.Services)*3)
 	for _, svc := range data.Expressions.Services {
-		files = append(files, addPlannedFileImports(serverFile(svc, data), data))
+		files = append(files, serverFile(svc, data))
 		if f := websocketServerFile(svc, data); f != nil {
-			files = append(files, addPlannedFileImports(f, data))
+			files = append(files, f)
 		}
 		if f := sseServerFile(svc, data); f != nil {
-			files = append(files, addPlannedFileImports(f, data))
+			files = append(files, f)
 		}
 	}
 	for _, svc := range data.Expressions.Services {
 		if f := serverEncodeDecodeFile(svc, data); f != nil {
-			files = append(files, addPlannedFileImports(f, data))
+			files = append(files, f)
 		}
 	}
 	return files
@@ -62,22 +62,8 @@ func serverFile(svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File
 		"dir":                 path.Dir,
 		"isObject":            expr.IsObject,
 	}
-	imports := []*codegen.ImportSpec{
-		{Path: "bufio"},
-		{Path: "context"},
-		{Path: "fmt"},
-		{Path: "io"},
-		{Path: "mime/multipart"},
-		{Path: "net/http"},
-		{Path: "path"},
-		{Path: "strings"},
-		{Path: "github.com/gorilla/websocket"},
-		codegen.GoaImport(""),
-		codegen.GoaNamedImport("http", "goahttp"),
-		services.ServiceImport(outputPackage, svc.Name()),
-	}
 	sections := []*codegen.SectionTemplate{
-		codegen.Header(title, "server", imports),
+		plannedFileHeader(title, "server", fpath, services),
 	}
 
 	sections = append(sections,
@@ -143,25 +129,7 @@ func serverEncodeDecodeFile(svc *expr.HTTPServiceExpr, services *ServicesData) *
 	outputPackage := generatedFileOutputPackage(services, path)
 	data = serviceDataForOutput(data, services, outputPackage)
 	title := fmt.Sprintf("%s %s server encoders and decoders", svc.Name(), services.label())
-	imports := []*codegen.ImportSpec{
-		{Path: "context"},
-		{Path: "errors"},
-		{Path: "fmt"},
-		{Path: "io"},
-		{Path: "net/http"},
-		{Path: "strconv"},
-		{Path: "strings"},
-		{Path: "encoding/json"},
-		{Path: "mime/multipart"},
-		{Path: "unicode/utf8"},
-		codegen.GoaImport(""),
-		codegen.GoaNamedImport("http", "goahttp"),
-		services.ServiceImport(outputPackage, svc.Name()),
-	}
-	if serviceHasViewedResult(data, nil) {
-		imports = append(imports, services.ViewImport(outputPackage, svc.Name()))
-	}
-	sections := []*codegen.SectionTemplate{codegen.Header(title, "server", imports)}
+	sections := []*codegen.SectionTemplate{plannedFileHeader(title, "server", path, services)}
 
 	for _, e := range data.Endpoints {
 		if e.Redirect == nil && !IsWebSocketEndpoint(e) && !e.IsJSONRPC {

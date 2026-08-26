@@ -44,7 +44,7 @@ type (
 		symbols        map[*expr.HTTPServiceExpr]*httpSymbols
 		servicePaths   map[*expr.HTTPServiceExpr]string
 		cliParsers     map[string]*cli.ParserPlan
-		fileImports    map[string]*plannedFileImports
+		fileImports    map[string]*codegen.GeneratedImportPlan
 		services       *ServicesData
 		viewed         map[viewedMethodKey]*viewedResultPlan
 		jsonServices   map[string]*jsonRPCServicePlan
@@ -86,14 +86,10 @@ type (
 
 	// jsonRPCServicePlan stores the HTTP data copied for the JSON-RPC file writer.
 	jsonRPCServicePlan struct {
-		data                *ServiceData
-		fileImports         map[string][]*codegen.ImportSpec
-		clientCodec         *codegen.File
-		serverCodec         *codegen.File
-		clientServiceImport *codegen.ImportSpec
-		serverServiceImport *codegen.ImportSpec
-		clientViewImport    *codegen.ImportSpec
-		serverViewImport    *codegen.ImportSpec
+		data        *ServiceData
+		fileImports map[string][]*codegen.ImportSpec
+		clientCodec *codegen.File
+		serverCodec *codegen.File
 	}
 
 	// viewedResultPlan stores the HTTP response data copied for the JSON-RPC file
@@ -161,14 +157,10 @@ type (
 		// MountServerDeclaration supplies the route mounting function name written in HTTP files.
 		MountServerDeclaration *codegen.NameDeclaration
 		// ServerService is the generated function that returns the service implementation.
-		ServerService       string
-		clientServiceImport *codegen.ImportSpec
-		serverServiceImport *codegen.ImportSpec
-		clientViewImport    *codegen.ImportSpec
-		serverViewImport    *codegen.ImportSpec
-		fileImports         map[string][]*codegen.ImportSpec
-		clientCodec         *codegen.File
-		serverCodec         *codegen.File
+		ServerService string
+		fileImports   map[string][]*codegen.ImportSpec
+		clientCodec   *codegen.File
+		serverCodec   *codegen.File
 	}
 
 	// JSONRPCServiceData contains the service names written in JSON-RPC files.
@@ -719,13 +711,6 @@ type (
 		clientBodyConstructorNames map[clientBodyConstructorKey]string
 	}
 
-	// plannedFileImports stores the package that writes one generated file and
-	// every design-derived package path referenced by that file.
-	plannedFileImports struct {
-		output *codegen.GeneratedPackage
-		paths  []string
-	}
-
 	// plannedWireTransforms retains the exact conversion selected while HTTP
 	// request and response shapes are collected.
 	plannedWireTransforms struct {
@@ -786,7 +771,217 @@ func NewExamplePlan(transport *Plan, examples *example.Plan) (*ExamplePlan, erro
 	if !ok {
 		return nil, fmt.Errorf("HTTP examples require server data created from the same service design")
 	}
+	if err := planExampleFileImports(transport, nil, root); err != nil {
+		return nil, err
+	}
 	return &ExamplePlan{root: root, transport: transport}, nil
+}
+
+// NewCombinedExamplePlan records the imports used by runnable servers that
+// mount JSON-RPC and ordinary HTTP services from the same design.
+func NewCombinedExamplePlan(transport, application *Plan, examples *example.Plan) (*ExamplePlan, error) {
+	root, ok := examples.Root(transport.servicePlan)
+	if !ok {
+		return nil, fmt.Errorf("HTTP examples require server data created from the same service design")
+	}
+	if application != nil && application.servicePlan != transport.servicePlan {
+		return nil, fmt.Errorf("combined HTTP examples require transports created from the same service design")
+	}
+	if err := planExampleFileImports(transport, application, root); err != nil {
+		return nil, err
+	}
+	return &ExamplePlan{root: root, transport: transport}, nil
+}
+
+// planExampleFileImports records the packages named by runnable transport
+// files. application adds ordinary HTTP services to a JSON-RPC server file.
+func planExampleFileImports(transport, application *Plan, root *example.Root) error {
+	rootPath := path.Dir(transport.generation.GenPkg())
+	for _, server := range root.Servers {
+		serverOutput, err := transport.generation.ClaimOutputPackage(
+			path.Join(rootPath, "cmd", server.Dir),
+			path.Join("cmd", server.Dir),
+		)
+		if err != nil {
+			return err
+		}
+		fixed := []*codegen.ImportSpec{
+			codegen.SimpleImport("context"),
+			codegen.SimpleImport("net/http"),
+			codegen.SimpleImport("net/url"),
+			codegen.SimpleImport("os"),
+			codegen.SimpleImport("sync"),
+			codegen.SimpleImport("time"),
+			codegen.GoaNamedImport("http", "goahttp"),
+			codegen.SimpleImport("goa.design/clue/debug"),
+			codegen.SimpleImport("goa.design/clue/log"),
+		}
+		var generated []*codegen.ImportSpec
+		ordinary := application
+		if transport.transport == httpTransport {
+			ordinary = transport
+		}
+		if ordinary != nil {
+			services := configuredTransportServices(ordinary, server.Services)
+			if slices.ContainsFunc(services, func(service *expr.HTTPServiceExpr) bool {
+				return len(httpWebSocketEndpoints(service)) > 0
+			}) {
+				fixed = append(fixed, codegen.SimpleImport("github.com/gorilla/websocket"))
+			}
+			imports, err := exampleServerGeneratedImports(ordinary, services)
+			if err != nil {
+				return err
+			}
+			generated = append(generated, imports...)
+			if slices.ContainsFunc(services, serviceHasMultipartRequest) {
+				generated = append(generated, codegen.NewImport(examplePackageImportName(ordinary.root), rootPath))
+			}
+		}
+		if transport != ordinary {
+			imports, err := exampleServerGeneratedImports(transport, configuredTransportServices(transport, server.Services))
+			if err != nil {
+				return err
+			}
+			generated = append(generated, imports...)
+		}
+		if err := retainPlannedFileImports(
+			transport,
+			serverOutput,
+			fixed,
+			generated,
+			nil,
+			nil,
+			path.Join("cmd", server.Dir, "http.go"),
+		); err != nil {
+			return err
+		}
+
+		services := configuredTransportServices(transport, server.Services)
+		if len(services) == 0 {
+			continue
+		}
+		clientOutput, err := transport.generation.ClaimOutputPackage(
+			path.Join(rootPath, "cmd", server.Dir+"-cli"),
+			path.Join("cmd", server.Dir+"-cli"),
+		)
+		if err != nil {
+			return err
+		}
+		fixed = []*codegen.ImportSpec{
+			codegen.SimpleImport("context"),
+			codegen.SimpleImport("flag"),
+			codegen.SimpleImport("fmt"),
+			codegen.SimpleImport("io"),
+			codegen.SimpleImport("net/http"),
+			codegen.SimpleImport("time"),
+			codegen.GoaNamedImport("http", "goahttp"),
+		}
+		if exampleServicesHaveInputStreams(services) {
+			fixed = append(fixed, codegen.SimpleImport("errors"))
+		}
+		if slices.ContainsFunc(services, func(service *expr.HTTPServiceExpr) bool {
+			return len(httpWebSocketEndpoints(service)) > 0
+		}) {
+			fixed = append(fixed, codegen.SimpleImport("github.com/gorilla/websocket"))
+		}
+		generated = []*codegen.ImportSpec{codegen.NewImport(
+			"cli",
+			path.Join(transport.generation.GenPkg(), transportDirectory(transport.transport), "cli", server.Dir),
+		)}
+		hasInterceptors := false
+		for _, service := range services {
+			if len(service.ServiceExpr.ClientInterceptors) > 0 || exampleServiceHasOutputStream(service) {
+				servicePackage, _, err := servicePackagePreferences(transport.servicePlan, service)
+				if err != nil {
+					return err
+				}
+				generated = append(generated, servicePackage)
+			}
+			hasInterceptors = hasInterceptors || len(service.ServiceExpr.ClientInterceptors) > 0
+		}
+		if hasInterceptors {
+			generated = append(generated, codegen.NewImport("interceptors", path.Join(rootPath, "interceptors")))
+		}
+		if slices.ContainsFunc(services, serviceHasMultipartRequest) {
+			generated = append(generated, codegen.NewImport(examplePackageImportName(transport.root), rootPath))
+		}
+		if err := retainPlannedFileImports(
+			transport,
+			clientOutput,
+			fixed,
+			generated,
+			nil,
+			nil,
+			path.Join("cmd", server.Dir+"-cli", transportDirectory(transport.transport)+".go"),
+		); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// configuredTransportServices returns only services mounted by one server and
+// implemented by the selected transport.
+func configuredTransportServices(plan *Plan, names []string) []*expr.HTTPServiceExpr {
+	expressions := transportExpressions(plan.root, plan.transport)
+	services := make([]*expr.HTTPServiceExpr, 0, len(names))
+	for _, name := range names {
+		if service := expressions.Service(name); service != nil {
+			services = append(services, service)
+		}
+	}
+	return services
+}
+
+// exampleServerGeneratedImports returns service and transport server packages
+// named by one runnable server file.
+func exampleServerGeneratedImports(plan *Plan, services []*expr.HTTPServiceExpr) ([]*codegen.ImportSpec, error) {
+	imports := make([]*codegen.ImportSpec, 0, 2*len(services))
+	for _, service := range services {
+		servicePackage, _, err := servicePackagePreferences(plan.servicePlan, service)
+		if err != nil {
+			return nil, err
+		}
+		preferred := servicePackage.Name + "svr"
+		if plan.transport == jsonrpcTransport {
+			preferred = servicePackage.Name + "jssvr"
+		}
+		imports = append(imports,
+			servicePackage,
+			codegen.NewImport(preferred, path.Join(
+				plan.generation.GenPkg(),
+				transportDirectory(plan.transport),
+				plan.servicePaths[service],
+				"server",
+			)),
+		)
+	}
+	return imports, nil
+}
+
+// exampleServicesHaveInputStreams reports whether the example rejects any
+// configured method because it sends values after the call starts.
+func exampleServicesHaveInputStreams(services []*expr.HTTPServiceExpr) bool {
+	for _, service := range services {
+		for _, endpoint := range service.HTTPEndpoints {
+			kind := endpoint.MethodExpr.Stream
+			if kind == expr.ClientStreamKind || kind == expr.BidirectionalStreamKind {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// exampleServiceHasOutputStream reports whether the example asserts a direct
+// server-stream result to its generated service interface.
+func exampleServiceHasOutputStream(service *expr.HTTPServiceExpr) bool {
+	for _, endpoint := range service.HTTPEndpoints {
+		if endpoint.MethodExpr.Stream == expr.ServerStreamKind && !endpoint.MethodExpr.HasMixedResults() {
+			return true
+		}
+	}
+	return false
 }
 
 // MatchesHTTP reports whether NewPlans created p for root and servicePlan.
@@ -1029,40 +1224,10 @@ func (p *Plan) JSONRPCService(name string) (JSONRPCServiceSnapshot, bool) {
 		MountServer:             planned.data.MountServerDeclaration.Name(),
 		MountServerDeclaration:  planned.data.MountServerDeclaration,
 		ServerService:           planned.data.ServerService,
-		clientServiceImport:     cloneImportSpec(planned.clientServiceImport),
-		serverServiceImport:     cloneImportSpec(planned.serverServiceImport),
-		clientViewImport:        cloneImportSpec(planned.clientViewImport),
-		serverViewImport:        cloneImportSpec(planned.serverViewImport),
 		fileImports:             fileImports,
 		clientCodec:             planned.clientCodec,
 		serverCodec:             planned.serverCodec,
 	}, true
-}
-
-// ClientServiceImport returns the service import used by the JSON-RPC client package.
-func (p JSONRPCServiceSnapshot) ClientServiceImport() *codegen.ImportSpec {
-	return cloneImportSpec(p.clientServiceImport)
-}
-
-// ServerServiceImport returns the service import used by the JSON-RPC server package.
-func (p JSONRPCServiceSnapshot) ServerServiceImport() *codegen.ImportSpec {
-	return cloneImportSpec(p.serverServiceImport)
-}
-
-// ClientViewImport returns the result-view import used by the JSON-RPC client package.
-func (p JSONRPCServiceSnapshot) ClientViewImport() *codegen.ImportSpec {
-	if p.clientViewImport == nil {
-		panic("JSON-RPC service does not use result views")
-	}
-	return cloneImportSpec(p.clientViewImport)
-}
-
-// ServerViewImport returns the result-view import used by the JSON-RPC server package.
-func (p JSONRPCServiceSnapshot) ServerViewImport() *codegen.ImportSpec {
-	if p.serverViewImport == nil {
-		panic("JSON-RPC service does not use result views")
-	}
-	return cloneImportSpec(p.serverViewImport)
 }
 
 // FileImports returns a new copy of the service-type imports needed by one
@@ -1168,47 +1333,83 @@ func planImports(generation *codegen.Generation, transport transportKind, plans 
 				generation.Package(clientPath),
 				generation.Package(serverPath),
 			} {
-				if err := requireHTTPTransportImports(outputPackage, transportService, index == 0); err != nil {
-					return err
-				}
-				if err := outputPackage.ReserveGeneratedImport(servicePackage); err != nil {
-					return err
-				}
-				if viewsPackage != nil {
-					if err := outputPackage.ReserveGeneratedImport(viewsPackage); err != nil {
-						return err
-					}
-				}
-				allPaths, err := planHTTPAttributeImports(generation, outputPackage, serviceReferenceAttributes(transportService.HTTPEndpoints...)...)
-				if err != nil {
-					return err
-				}
 				side := "server"
 				if index == 0 {
 					side = "client"
 				}
-				retainPlannedFileImports(plan, outputPackage, allPaths,
-					path.Join(codegen.Gendir, dir, pathName, side, side+".go"),
-					path.Join(codegen.Gendir, dir, pathName, side, "encode_decode.go"),
-					path.Join(codegen.Gendir, dir, pathName, side, "types.go"),
-				)
-				if index == 0 {
-					retainPlannedFileImports(plan, outputPackage, allPaths, path.Join(codegen.Gendir, dir, pathName, side, "cli.go"))
+				fileKinds := []httpGeneratedFile{
+					{kind: httpCodecFile, name: "encode_decode.go"},
+					{kind: httpTypesFile, name: "types.go"},
 				}
-				webSocketPaths, err := planHTTPAttributeImports(generation, outputPackage, serviceReferenceAttributes(httpWebSocketEndpoints(transportService)...)...)
-				if err != nil {
-					return err
+				if transport == httpTransport {
+					fileKinds = append(fileKinds,
+						httpGeneratedFile{kind: httpTransportFile, name: side + ".go"},
+						httpGeneratedFile{kind: httpPathsFile, name: "paths.go"},
+					)
 				}
-				retainPlannedFileImports(plan, outputPackage, webSocketPaths, path.Join(codegen.Gendir, dir, pathName, side, "websocket.go"))
-				ssePaths, err := planHTTPAttributeImports(generation, outputPackage, serviceReferenceAttributes(httpSSEEndpoints(transportService)...)...)
-				if err != nil {
-					return err
+				if index == 0 && httpServiceHasPayloadBuilder(transportService) {
+					fileKinds = append(fileKinds, httpGeneratedFile{kind: httpPayloadBuilderFile, name: "cli.go"})
+				}
+				for _, file := range fileKinds {
+					var definitions, references []*expr.AttributeExpr
+					switch file.kind {
+					case httpTypesFile:
+						catalog := plan.wireTypes[transportService].server
+						if index == 0 {
+							catalog = plan.wireTypes[transportService].client
+						}
+						definitions, references = wireCatalogImportAttributes(catalog)
+						references = append(references, serviceReferenceAttributes(transportService.HTTPEndpoints...)...)
+					case httpCodecFile:
+						references = serviceReferenceAttributes(transportService.HTTPEndpoints...)
+					case httpPayloadBuilderFile:
+						references = httpCLIPayloadBuilderReferenceAttributes(transportService)
+					case httpTransportFile:
+						references = httpTransportReferenceAttributes(transportService)
+					}
+					filePath := path.Join(codegen.Gendir, dir, pathName, side, file.name)
+					if err := retainPlannedFileImports(
+						plan,
+						outputPackage,
+						httpFixedFileImports(transportService, index == 0, file.kind),
+						httpGeneratedImportPlan(transportService, index == 0, file.kind, servicePackage, viewsPackage),
+						definitions,
+						references,
+						filePath,
+					); err != nil {
+						return err
+					}
+				}
+				if transport == httpTransport && len(httpWebSocketEndpoints(transportService)) > 0 {
+					if err := retainPlannedFileImports(
+						plan,
+						outputPackage,
+						httpFixedFileImports(transportService, index == 0, httpWebSocketFile),
+						httpGeneratedImportPlan(transportService, index == 0, httpWebSocketFile, servicePackage, viewsPackage),
+						nil,
+						serviceReferenceAttributes(httpWebSocketEndpoints(transportService)...),
+						path.Join(codegen.Gendir, dir, pathName, side, "websocket.go"),
+					); err != nil {
+						return err
+					}
 				}
 				sseFile := "sse.go"
 				if transport == jsonrpcTransport && index == 0 {
 					sseFile = "stream.go"
 				}
-				retainPlannedFileImports(plan, outputPackage, ssePaths, path.Join(codegen.Gendir, dir, pathName, side, sseFile))
+				if transport == httpTransport && len(httpSSEEndpoints(transportService)) > 0 {
+					if err := retainPlannedFileImports(
+						plan,
+						outputPackage,
+						httpFixedFileImports(transportService, index == 0, httpSSEFile),
+						httpGeneratedImportPlan(transportService, index == 0, httpSSEFile, servicePackage, viewsPackage),
+						nil,
+						serviceReferenceAttributes(httpSSEEndpoints(transportService)...),
+						path.Join(codegen.Gendir, dir, pathName, side, sseFile),
+					); err != nil {
+						return err
+					}
+				}
 			}
 		}
 		if transport == httpTransport {
@@ -1225,126 +1426,74 @@ func planImports(generation *codegen.Generation, transport transportKind, plans 
 						return err
 					}
 				}
-				if err := rootOutput.RequireImport(codegen.SimpleImport("mime/multipart")); err != nil {
-					return err
-				}
 				servicePackage, _, err := servicePackagePreferences(plan.servicePlan, transportService)
 				if err != nil {
 					return err
 				}
 				servicePath := plan.servicePaths[transportService]
-				if err := rootOutput.ReserveGeneratedImport(codegen.NewImport(
+				serverPackage := codegen.NewImport(
 					servicePackage.Name+"svr",
 					path.Join(generation.GenPkg(), "http", servicePath, "server"),
-				)); err != nil {
-					return err
-				}
+				)
 				var multipartEndpoints []*expr.HTTPEndpointExpr
 				for _, endpoint := range transportService.HTTPEndpoints {
 					if endpoint.MultipartRequest {
 						multipartEndpoints = append(multipartEndpoints, endpoint)
 					}
 				}
-				importPaths, err := planHTTPAttributeImports(generation, rootOutput, serviceReferenceAttributes(multipartEndpoints...)...)
-				if err != nil {
+				if err := retainPlannedFileImports(
+					plan,
+					rootOutput,
+					[]*codegen.ImportSpec{codegen.SimpleImport("mime/multipart")},
+					[]*codegen.ImportSpec{servicePackage, serverPackage},
+					nil,
+					serviceReferenceAttributes(multipartEndpoints...),
+					"multipart.go",
+				); err != nil {
 					return err
 				}
-				retainPlannedFileImports(plan, rootOutput, importPaths, "multipart.go")
 			}
 		}
 		for _, server := range design.API.Servers {
 			serverName := codegen.SnakeCase(codegen.Goify(server.Name, true))
 			cliPath := path.Join(generation.GenPkg(), dir, "cli", serverName)
 			cliPackage := generation.Package(cliPath)
-			if err := requireHTTPCLIImports(cliPackage); err != nil {
-				return err
-			}
+			var cliGenerated []*codegen.ImportSpec
+			var cliServices []*expr.HTTPServiceExpr
 			for _, serviceName := range server.Services {
 				transportService := expressions.Service(serviceName)
 				if transportService == nil {
 					continue
 				}
+				cliServices = append(cliServices, transportService)
 				pathName := plan.servicePaths[transportService]
 				servicePackage, _, err := servicePackagePreferences(plan.servicePlan, transportService)
 				if err != nil {
 					return err
 				}
-				if err := cliPackage.ReserveGeneratedImport(codegen.NewImport(
+				clientImport := codegen.NewImport(
 					servicePackage.Name+"c",
 					path.Join(generation.GenPkg(), dir, pathName, "client"),
-				)); err != nil {
-					return err
-				}
+				)
+				cliGenerated = append(cliGenerated, clientImport)
 				if len(transportService.ServiceExpr.ClientInterceptors) > 0 {
 					servicePackage, _, err := plan.servicePlan.ServicePackageImports(transportService.ServiceExpr)
 					if err != nil {
 						return err
 					}
-					if err := cliPackage.ReserveGeneratedImport(servicePackage); err != nil {
-						return err
-					}
+					cliGenerated = append(cliGenerated, servicePackage)
 				}
 			}
-
-			rootPath := path.Dir(generation.GenPkg())
-			serverOutput, err := generation.ClaimOutputPackage(
-				path.Join(rootPath, "cmd", serverName),
-				path.Join("cmd", serverName),
-			)
-			if err != nil {
+			if err := retainPlannedFileImports(
+				plan,
+				cliPackage,
+				httpCLIParserFixedImports(cliServices...),
+				cliGenerated,
+				nil,
+				nil,
+				path.Join(codegen.Gendir, dir, "cli", serverName, "cli.go"),
+			); err != nil {
 				return err
-			}
-			for _, serviceName := range server.Services {
-				transportService := expressions.Service(serviceName)
-				if transportService == nil {
-					continue
-				}
-				pathName := plan.servicePaths[transportService]
-				servicePackage, _, err := servicePackagePreferences(plan.servicePlan, transportService)
-				if err != nil {
-					return err
-				}
-				preferred := servicePackage.Name + "svr"
-				if transport == jsonrpcTransport {
-					preferred = servicePackage.Name + "jssvr"
-				}
-				if err := serverOutput.ReserveGeneratedImport(codegen.NewImport(
-					preferred,
-					path.Join(generation.GenPkg(), dir, pathName, "server"),
-				)); err != nil {
-					return err
-				}
-			}
-			clientOutput, err := generation.ClaimOutputPackage(
-				path.Join(rootPath, "cmd", serverName+"-cli"),
-				path.Join("cmd", serverName+"-cli"),
-			)
-			if err != nil {
-				return err
-			}
-			if err := clientOutput.ReserveGeneratedImport(codegen.NewImport("cli", cliPath)); err != nil {
-				return err
-			}
-			for _, service := range design.Services {
-				servicePackage, _, err := plan.servicePlan.ServicePackageImports(service)
-				if err != nil {
-					return err
-				}
-				if err := clientOutput.ReserveGeneratedImport(servicePackage); err != nil {
-					return err
-				}
-			}
-			if err := clientOutput.ReserveGeneratedImport(codegen.NewImport(examplePackageImportName(design), rootPath)); err != nil {
-				return err
-			}
-			for _, service := range design.Services {
-				if len(service.ClientInterceptors) == 0 {
-					continue
-				}
-				if err := clientOutput.ReserveGeneratedImport(codegen.NewImport("interceptors", rootPath+"/interceptors")); err != nil {
-					return err
-				}
-				break
 			}
 		}
 	}
@@ -1389,30 +1538,36 @@ func servicePackagePreferences(plan *service.Plan, transportService *expr.HTTPSe
 	return servicePackage, viewsPackage, nil
 }
 
-// retainPlannedFileImports records each package path referenced by the named
-// generated files. Repeated calls merge paths when several services contribute
-// declarations to one output file such as multipart.go.
-func retainPlannedFileImports(plan *Plan, output *codegen.GeneratedPackage, importPaths []string, filePaths ...string) {
+// retainPlannedFileImports records every package named by one generated file.
+// Repeated calls merge imports when several services write the same file.
+func retainPlannedFileImports(
+	plan *Plan,
+	output *codegen.GeneratedPackage,
+	fixed, generated []*codegen.ImportSpec,
+	definitions, references []*expr.AttributeExpr,
+	filePaths ...string,
+) error {
 	for _, filePath := range filePaths {
 		key := filepathKey(filePath)
-		retained := plan.fileImports[key]
-		if retained == nil {
-			retained = &plannedFileImports{output: output}
-			plan.fileImports[key] = retained
+		imports := plan.fileImports[key]
+		if imports == nil {
+			imports = codegen.NewGeneratedImportPlan(output)
+			plan.fileImports[key] = imports
 		}
-		seen := make(map[string]struct{}, len(retained.paths))
-		for _, importPath := range retained.paths {
-			seen[importPath] = struct{}{}
+		if err := imports.Require(fixed...); err != nil {
+			return err
 		}
-		for _, importPath := range importPaths {
-			if _, ok := seen[importPath]; ok {
-				continue
-			}
-			seen[importPath] = struct{}{}
-			retained.paths = append(retained.paths, importPath)
+		if err := imports.AddGenerated(generated...); err != nil {
+			return err
 		}
-		slices.Sort(retained.paths)
+		if err := imports.AddTypeExpressions(definitions...); err != nil {
+			return err
+		}
+		if err := imports.AddRecursiveTypeReferences(references...); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 // examplePackageImportName returns the package name imported by runnable
@@ -1423,84 +1578,6 @@ func examplePackageImportName(root *expr.RootExpr) string {
 		scope.Unique(strings.ToLower(codegen.Goify(service.Name, false)))
 	}
 	return scope.Unique(strings.ToLower(codegen.Goify(root.API.Name, false)), "api")
-}
-
-// requireHTTPTransportImports records the fixed package names used by one
-// service's generated client or server files.
-func requireHTTPTransportImports(outputPackage *codegen.GeneratedPackage, service *expr.HTTPServiceExpr, client bool) error {
-	imports := []*codegen.ImportSpec{
-		codegen.SimpleImport("context"),
-		codegen.SimpleImport("encoding/json"),
-		codegen.SimpleImport("errors"),
-		codegen.SimpleImport("fmt"),
-		codegen.SimpleImport("io"),
-		codegen.SimpleImport("mime/multipart"),
-		codegen.SimpleImport("net/http"),
-		codegen.SimpleImport("strconv"),
-		codegen.SimpleImport("strings"),
-		codegen.SimpleImport("unicode/utf8"),
-		codegen.SimpleImport("github.com/gorilla/websocket"),
-		codegen.GoaImport(""),
-		codegen.GoaNamedImport("http", "goahttp"),
-	}
-	if client {
-		imports = append(imports,
-			codegen.SimpleImport("bytes"),
-			codegen.SimpleImport("net/url"),
-			codegen.SimpleImport("os"),
-			codegen.SimpleImport("time"),
-		)
-	} else {
-		imports = append(imports,
-			codegen.SimpleImport("bufio"),
-			codegen.SimpleImport("path"),
-		)
-	}
-	hasStream := false
-	for _, endpoint := range service.HTTPEndpoints {
-		if endpoint.UsesWebSocket() || endpoint.UsesSSE() {
-			hasStream = true
-		}
-		if client && endpoint.IsJSONRPC() {
-			imports = append(imports, codegen.GoaImport("jsonrpc"))
-			if jsonRPCRequestIDPolicyFor(endpoint).generates() {
-				imports = append(imports, codegen.SimpleImport("github.com/google/uuid"))
-			}
-		}
-	}
-	if hasStream {
-		imports = append(imports, codegen.SimpleImport("sync"))
-		if !client {
-			imports = append(imports, codegen.SimpleImport("time"))
-		}
-	}
-	for _, spec := range imports {
-		if err := outputPackage.RequireImport(spec); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// requireHTTPCLIImports records the fixed imports used by a generated command
-// parser and its payload builders.
-func requireHTTPCLIImports(outputPackage *codegen.GeneratedPackage) error {
-	for _, spec := range []*codegen.ImportSpec{
-		codegen.SimpleImport("encoding/json"),
-		codegen.SimpleImport("flag"),
-		codegen.SimpleImport("fmt"),
-		codegen.SimpleImport("net/http"),
-		codegen.SimpleImport("os"),
-		codegen.SimpleImport("strconv"),
-		codegen.SimpleImport("unicode/utf8"),
-		codegen.GoaImport(""),
-		codegen.GoaNamedImport("http", "goahttp"),
-	} {
-		if err := outputPackage.RequireImport(spec); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 // serviceHasMultipartRequest reports whether the example package writes a
@@ -1596,7 +1673,7 @@ func newPlan(generation *codegen.Generation, transport transportKind, input Plan
 		symbols:        make(map[*expr.HTTPServiceExpr]*httpSymbols),
 		servicePaths:   make(map[*expr.HTTPServiceExpr]string),
 		cliParsers:     make(map[string]*cli.ParserPlan),
-		fileImports:    make(map[string]*plannedFileImports),
+		fileImports:    make(map[string]*codegen.GeneratedImportPlan),
 	}
 	expressions := transportExpressions(input.Root, transport)
 	dir := transportDirectory(transport)
@@ -1840,12 +1917,29 @@ func (p *Plan) link() error {
 	services.plannedSymbols = p.symbols
 	services.cliParsers = p.cliParsers
 	services.fileImports = make(map[string][]*codegen.ImportSpec, len(p.fileImports))
+	services.clientServicePackages = make(map[string]string, len(expressions.Services))
 	for filePath, retained := range p.fileImports {
-		imports := make([]*codegen.ImportSpec, len(retained.paths))
-		for index, importPath := range retained.paths {
-			imports[index] = retained.output.Import(importPath)
+		if err := retained.Link(); err != nil {
+			return err
 		}
-		services.fileImports[filePath] = imports
+		services.fileImports[filePath] = retained.Imports()
+	}
+	for _, transportService := range expressions.Services {
+		servicePackage, _, err := servicePackagePreferences(p.servicePlan, transportService)
+		if err != nil {
+			return err
+		}
+		clientPath := path.Join(p.generation.GenPkg(), transportDirectory(p.transport), p.servicePaths[transportService], "client")
+		name := servicePackage.Name
+		filePrefix := path.Join(codegen.Gendir, transportDirectory(p.transport), p.servicePaths[transportService], "client") + "/"
+		for filePath, retained := range p.fileImports {
+			if !strings.HasPrefix(filePath, filePrefix) || !slices.Contains(retained.Paths(), servicePackage.Path) {
+				continue
+			}
+			name = p.generation.Package(clientPath).ImportName(servicePackage.Path)
+			break
+		}
+		services.clientServicePackages[transportService.Name()] = name
 	}
 	for _, transportService := range services.Expressions.Services {
 		if services.ServicesData.Get(transportService.Name()) == nil {
@@ -1887,17 +1981,6 @@ func (p *Plan) link() error {
 			fileImports: make(map[string][]*codegen.ImportSpec),
 			clientCodec: clientEncodeDecodeFile(transportService, services),
 			serverCodec: serverEncodeDecodeFile(transportService, services),
-		}
-		servicePackage, viewsPackage, err := servicePackagePreferences(p.servicePlan, transportService)
-		if err != nil {
-			return err
-		}
-		planned := p.wireTypes[transportService]
-		jsonService.clientServiceImport = planned.client.pkg.Import(servicePackage.Path)
-		jsonService.serverServiceImport = planned.server.pkg.Import(servicePackage.Path)
-		if viewsPackage != nil {
-			jsonService.clientViewImport = planned.client.pkg.Import(viewsPackage.Path)
-			jsonService.serverViewImport = planned.server.pkg.Import(viewsPackage.Path)
 		}
 		if p.transport == jsonrpcTransport {
 			jsonService.prepareFileImports(services)
@@ -2085,16 +2168,6 @@ func cloneImportSpecs(source []*codegen.ImportSpec) []*codegen.ImportSpec {
 		result[index] = &copy
 	}
 	return result
-}
-
-// cloneImportSpec copies one import so callers can change its path or name
-// without changing the import stored by the HTTP plan.
-func cloneImportSpec(source *codegen.ImportSpec) *codegen.ImportSpec {
-	if source == nil {
-		return nil
-	}
-	copy := *source
-	return &copy
 }
 
 // declareViewedResultConstructor records the function that converts one HTTP

@@ -28,7 +28,9 @@ func (p *Plan) Link() error {
 		return err
 	}
 	for _, facts := range p.facts.services {
-		linkServiceFileImports(facts, p.generation)
+		if err := linkServiceFileImports(facts); err != nil {
+			return err
+		}
 	}
 	if err := linkExternalConversions(p.facts, p.generation, aliases); err != nil {
 		return err

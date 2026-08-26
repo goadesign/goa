@@ -3,7 +3,6 @@
 package codegen
 
 import (
-	"path"
 	"path/filepath"
 
 	"goa.design/goa/v3/codegen"
@@ -13,7 +12,7 @@ import (
 func serverTypeFiles(services *ServicesData) []*codegen.File {
 	fw := make([]*codegen.File, len(services.servicePlans))
 	for i, servicePlan := range services.servicePlans {
-		fw[i] = addEndpointImports(typesFile(servicePlan, services, true), services, servicePlan)
+		fw[i] = addEndpointImports(typesFile(servicePlan, services, true), services)
 	}
 	return fw
 }
@@ -22,7 +21,7 @@ func serverTypeFiles(services *ServicesData) []*codegen.File {
 func clientTypeFiles(services *ServicesData) []*codegen.File {
 	fw := make([]*codegen.File, len(services.servicePlans))
 	for i, servicePlan := range services.servicePlans {
-		fw[i] = addEndpointImports(typesFile(servicePlan, services, false), services, servicePlan)
+		fw[i] = addEndpointImports(typesFile(servicePlan, services, false), services)
 	}
 	return fw
 }
@@ -103,24 +102,8 @@ func typesFile(servicePlan *grpcServicePlan, services *ServicesData, svr bool) *
 	)
 	{
 		svcName := sd.Service.PathName
-		outputPackage := path.Join(services.GenPkg(), "grpc", svcName, side)
 		fpath = filepath.Join(codegen.Gendir, "grpc", svcName, side, "types.go")
-		imports := []*codegen.ImportSpec{
-			{Path: "unicode/utf8"},
-			codegen.GoaImport(""),
-			services.ServiceImport(outputPackage, svc.Name()),
-			services.PackageImport(outputPackage, path.Join(services.GenPkg(), "grpc", svcName, pbPkgName)),
-		}
-		if serviceHasViewedResult(sd) {
-			imports = append(imports, services.ViewImport(outputPackage, svc.Name()))
-		}
-		// Add imports if Any type is used
-		if servicePlan.usesAnyInErrors {
-			imports = append(imports, &codegen.ImportSpec{Path: "fmt"})
-			imports = append(imports, &codegen.ImportSpec{Path: "google.golang.org/protobuf/types/known/structpb", Name: "structpb"})
-		}
-		imports = append(imports, sd.Service.ProtoImports...)
-		sections = []*codegen.SectionTemplate{codegen.Header(svc.Name()+" gRPC "+side+" types", side, imports)}
+		sections = []*codegen.SectionTemplate{codegen.Header(svc.Name()+" gRPC "+side+" types", side, nil)}
 		for _, init := range initData {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   side + "-type-init",

@@ -68,7 +68,7 @@ func exampleServiceFile(plan *Plan, facts *serviceFacts, apipkg string) *codegen
 	renderData := &exampleServiceData{Data: data, ServicePkg: servicePkg}
 	fpath := svcName + ".go"
 	sections := []*codegen.SectionTemplate{
-		codegen.Header("", apipkg, facts.imports.exampleService.specs),
+		codegen.Header("", apipkg, facts.imports.exampleService.Imports()),
 		{
 			Name:   "basic-service-struct",
 			Source: serviceTemplates.Read(exampleServiceStructT),

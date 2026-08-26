@@ -26,9 +26,9 @@ func clientFiles(services []*servicePlan) []*codegen.File {
 	files := make([]*codegen.File, 0, len(services)*3)
 	for _, planned := range services {
 		renderPlan := servicePlanForOutput(planned, true)
-		files = append(files, addFileImports(clientFile(renderPlan), planned.data))
+		files = append(files, setFileImports(clientFile(renderPlan), renderPlan))
 		if f := sseClientFile(renderPlan); f != nil {
-			files = append(files, addFileImports(f, planned.data))
+			files = append(files, setFileImports(f, renderPlan))
 		}
 	}
 	for _, planned := range services {
@@ -39,14 +39,7 @@ func clientFiles(services []*servicePlan) []*codegen.File {
 		sections := make([]*codegen.SectionTemplate, 0, len(f.SectionTemplates))
 		var decoders int
 		for _, s := range f.SectionTemplates {
-			switch s.Name {
-			case "source-header":
-				codegen.AddImport(s, &codegen.ImportSpec{Path: "bufio"})
-				codegen.AddImport(s, &codegen.ImportSpec{Path: "bytes"})
-				codegen.AddImport(s, &codegen.ImportSpec{Path: "errors"})
-				codegen.AddImport(s, &codegen.ImportSpec{Path: "sync"})
-				codegen.AddImport(s, codegen.GoaImport("jsonrpc"))
-			case "response-decoder":
+			if s.Name == "response-decoder" {
 				endpoint := s.Data.(*httpcodegen.JSONRPCEndpointSnapshot)
 				if endpoint.SSE != nil || endpoint.IsJSONRPCNotification {
 					continue
@@ -64,10 +57,6 @@ func clientFiles(services []*servicePlan) []*codegen.File {
 		f.SectionTemplates = sections
 		viewed := clientViewedResultSections(planned)
 		if len(viewed) > 0 {
-			header := f.SectionTemplates[0]
-			codegen.AddImport(header, &codegen.ImportSpec{Path: "encoding/json"})
-			codegen.AddImport(header, codegen.GoaImport(""))
-			codegen.AddImport(header, planned.data.ClientViewImport())
 			f.SectionTemplates = append(f.SectionTemplates, &codegen.SectionTemplate{
 				Name:   "jsonrpc-viewed-result-body-decoder",
 				Source: jsonrpcTemplates.Read(viewedResultBodyDecodeT),
@@ -85,7 +74,7 @@ func clientFiles(services []*servicePlan) []*codegen.File {
 		if decoders != expected {
 			panic(fmt.Sprintf("jsonrpc: wrote %d response decoders for service %q, expected %d", decoders, planned.name, expected))
 		}
-		files = append(files, addFileImports(f, planned.data))
+		files = append(files, setFileImports(f, planned))
 	}
 	return files
 }
@@ -110,25 +99,8 @@ func clientFile(planned *servicePlan) *codegen.File {
 	svcName := data.Service.PathName
 	path := filepath.Join(codegen.Gendir, "jsonrpc", svcName, "client", "client.go")
 	title := fmt.Sprintf("%s client JSON-RPC transport", planned.name)
-	imports := []*codegen.ImportSpec{
-		{Path: "bufio"},
-		{Path: "bytes"},
-		{Path: "context"},
-		{Path: "encoding/json"},
-		{Path: "errors"},
-		{Path: "fmt"},
-		{Path: "io"},
-		{Path: "mime"},
-		{Path: "net/http"},
-		{Path: "strconv"},
-		{Path: "sync"},
-		codegen.GoaImport(""),
-		codegen.GoaImport("jsonrpc"),
-		codegen.GoaNamedImport("http", "goahttp"),
-		data.ClientServiceImport(),
-	}
 	sections := make([]*codegen.SectionTemplate, 0, 3+len(planned.endpoints))
-	sections = append(sections, codegen.Header(title, "client", imports))
+	sections = append(sections, codegen.Header(title, "client", nil))
 	sections = append(sections, &codegen.SectionTemplate{
 		Name:   "jsonrpc-client-struct",
 		Source: jsonrpcTemplates.Read(clientStructT),

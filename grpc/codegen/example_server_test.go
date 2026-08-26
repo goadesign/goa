@@ -29,6 +29,9 @@ func TestExampleServerFiles(t *testing.T) {
 			fs := examples.ServerFiles()
 			require.Greater(t, len(fs), 0)
 			require.Greater(t, len(fs[0].SectionTemplates), 0)
+			header := sectionCode(t, fs[0].SectionTemplates[0])
+			require.NotContains(t, header, `goagrpc "goa.design/goa/v3/grpc"`)
+			require.NotContains(t, header, `"generated.local"`)
 			var buf bytes.Buffer
 			for _, s := range fs[0].SectionTemplates[1:] {
 				require.NoError(t, s.Write(&buf))

@@ -66,7 +66,7 @@ func exampleInterceptorsFile(plan *Plan, facts *serviceFacts) []*codegen.File {
 		files = append(files, &codegen.File{
 			Path: serverPath,
 			SectionTemplates: []*codegen.SectionTemplate{
-				codegen.Header(fmt.Sprintf("%s example server interceptors", sdata.Name), "interceptors", facts.imports.exampleServerInterceptors.specs),
+				codegen.Header(fmt.Sprintf("%s example server interceptors", sdata.Name), "interceptors", facts.imports.exampleServerInterceptors.Imports()),
 				{
 					Name:   "example-server-interceptor",
 					Source: serviceTemplates.Read(exampleServerInterceptorT),
@@ -90,7 +90,7 @@ func exampleInterceptorsFile(plan *Plan, facts *serviceFacts) []*codegen.File {
 		files = append(files, &codegen.File{
 			Path: clientPath,
 			SectionTemplates: []*codegen.SectionTemplate{
-				codegen.Header(fmt.Sprintf("%s example client interceptors", sdata.Name), "interceptors", facts.imports.exampleClientInterceptors.specs),
+				codegen.Header(fmt.Sprintf("%s example client interceptors", sdata.Name), "interceptors", facts.imports.exampleClientInterceptors.Imports()),
 				{
 					Name:   "example-client-interceptor",
 					Source: serviceTemplates.Read(exampleClientInterceptorT),

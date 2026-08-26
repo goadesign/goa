@@ -160,6 +160,7 @@ func TestGoTypePlanRebindsCustomTypeQualifier(t *testing.T) {
 		{name: "pointer", custom: "*wire.Value", want: "*wire2.Value"},
 		{name: "slice", custom: "[]wire.Value", want: "[]wire2.Value"},
 		{name: "nested pointer slice", custom: "[]*wire.Value", want: "[]*wire2.Value"},
+		{name: "map", custom: "map[wire.Key]wire.Value", want: "map[wire2.Key]wire2.Value"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

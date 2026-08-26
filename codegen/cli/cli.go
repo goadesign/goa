@@ -684,6 +684,50 @@ func PayloadBuilderSection(buildFunction *BuildFunctionData) *codegen.SectionTem
 // line flag. typeName is the concrete local type used for JSON values. typeRef
 // is the concrete non-pointer reference used for primitive casts.
 func NewFlagPlan(attribute *expr.AttributeExpr, typeName, typeRef string, validation func(string) string) *FlagPlan {
+	return &FlagPlan{
+		value:      newFlagValuePlan(attribute, typeName, typeRef),
+		validation: validation,
+	}
+}
+
+// FlagImportPreferences returns the packages used to convert and validate one
+// command-line flag. validation is true only when the generated flag code
+// writes validation checks.
+func FlagImportPreferences(attribute *expr.AttributeExpr, validation bool) []*codegen.ImportSpec {
+	value := newFlagValuePlan(attribute, "", "")
+	var imports []*codegen.ImportSpec
+	if value.isJSON() {
+		imports = append(imports, codegen.SimpleImport("encoding/json"))
+	} else {
+		switch value.kind {
+		case expr.BooleanKind, expr.IntKind, expr.Int32Kind, expr.Int64Kind,
+			expr.UIntKind, expr.UInt32Kind, expr.UInt64Kind,
+			expr.Float32Kind, expr.Float64Kind:
+			imports = append(imports, codegen.SimpleImport("strconv"))
+		}
+	}
+	if validation {
+		for _, preference := range codegen.ValidationRuntimeImports(attribute, codegen.GoLayoutPolicy{}) {
+			imports = append(imports, codegen.NewImport(preference.Name, preference.Path))
+		}
+	}
+	return imports
+}
+
+// FlagFieldImportPreferences returns the packages used when a payload builder
+// loads one flag into a field. Required flags without defaults also use fmt to
+// report omission, and conversions that can fail use fmt to report bad text.
+func FlagFieldImportPreferences(attribute *expr.AttributeExpr, validation, required, hasDefault bool) []*codegen.ImportSpec {
+	imports := FlagImportPreferences(attribute, validation)
+	value := newFlagValuePlan(attribute, "", "")
+	if required && !hasDefault || value.isJSON() || flagValueParsesNumber(value) {
+		imports = append(imports, codegen.SimpleImport("fmt"))
+	}
+	return imports
+}
+
+// newFlagValuePlan records how one flag's text becomes its concrete Go value.
+func newFlagValuePlan(attribute *expr.AttributeExpr, typeName, typeRef string) *flagValuePlan {
 	kind := expr.AnyKind
 	alias := expr.IsAlias(attribute.Type)
 	if custom, _ := codegen.GetMetaType(attribute); custom == "" && expr.IsPrimitive(attribute.Type) {
@@ -697,14 +741,23 @@ func NewFlagPlan(attribute *expr.AttributeExpr, typeName, typeRef string, valida
 		}
 		kind = dataType.Kind()
 	}
-	return &FlagPlan{
-		value: &flagValuePlan{
-			kind:     kind,
-			typeName: typeName,
-			typeRef:  typeRef,
-			alias:    alias,
-		},
-		validation: validation,
+	return &flagValuePlan{
+		kind:     kind,
+		typeName: typeName,
+		typeRef:  typeRef,
+		alias:    alias,
+	}
+}
+
+// flagValueParsesNumber reports whether flag text is parsed by strconv.
+func flagValueParsesNumber(value *flagValuePlan) bool {
+	switch value.kind {
+	case expr.BooleanKind, expr.IntKind, expr.Int32Kind, expr.Int64Kind,
+		expr.UIntKind, expr.UInt32Kind, expr.UInt64Kind,
+		expr.Float32Kind, expr.Float64Kind:
+		return true
+	default:
+		return false
 	}
 }
 

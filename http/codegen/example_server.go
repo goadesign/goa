@@ -57,38 +57,8 @@ func exampleServer(server *example.Data, services *ServicesData) *codegen.File {
 	genpkg := services.GenPkg()
 	fpath := filepath.Join("cmd", server.Dir, "http.go")
 	outputPackage := path.Join(path.Dir(genpkg), "cmd", server.Dir)
-	specs := make([]*codegen.ImportSpec, 0, 12+2*len(services.Expressions.Services))
-	baseSpecs := []*codegen.ImportSpec{
-		{Path: "context"},
-		{Path: "net/http"},
-		{Path: "net/url"},
-		{Path: "os"},
-		{Path: "sync"},
-		{Path: "time"},
-		codegen.GoaNamedImport("http", "goahttp"),
-		{Path: "goa.design/clue/debug"},
-		{Path: "goa.design/clue/log"},
-		codegen.GoaImport("middleware"),
-		{Path: "github.com/gorilla/websocket"},
-	}
-	specs = append(specs, baseSpecs...)
-
-	for _, serviceName := range server.Services {
-		sd := services.Get(serviceName)
-		if sd == nil {
-			continue
-		}
-		svcName := sd.Service.PathName
-		serverImport := services.PackageImport(outputPackage, path.Join(genpkg, "http", svcName, "server"))
-		serviceImport := services.ServiceImport(outputPackage, serviceName)
-		specs = append(specs, serverImport, serviceImport)
-	}
-
 	rootPath := path.Dir(genpkg)
-	apiImport := services.PackageImport(outputPackage, rootPath)
-	apiPkg := apiImport.Name
-	specs = append(specs, apiImport)
-
+	var apiPkg string
 	var svcdata []*ServiceData
 	for _, svc := range server.Services {
 		if data := services.Get(svc); data != nil {
@@ -98,11 +68,16 @@ func exampleServer(server *example.Data, services *ServicesData) *codegen.File {
 				path.Join(genpkg, "http", data.Service.PathName, "server"),
 			).Name
 			svcdata = append(svcdata, copy)
+			for _, endpoint := range data.Endpoints {
+				if endpoint.MultipartRequestDecoder != nil {
+					apiPkg = services.PackageImport(outputPackage, rootPath).Name
+				}
+			}
 		}
 	}
 
 	sections := []*codegen.SectionTemplate{
-		codegen.Header("", "main", specs),
+		plannedFileHeader("", "main", fpath, services),
 		{
 			Name:   "server-http-start",
 			Source: httpTemplates.Read(serverStartT),
@@ -181,20 +156,8 @@ func combinedExampleServerFiles(root *example.Root, jsonrpc, application *Servic
 // JSON-RPC lists because the code that writes main initializes them differently.
 func combinedExampleServer(server *example.Data, jsonrpc, application *ServicesData) *codegen.File {
 	outputPackage := path.Join(path.Dir(jsonrpc.GenPkg()), "cmd", server.Dir)
-	imports := []*codegen.ImportSpec{
-		{Path: "context"},
-		{Path: "net/http"},
-		{Path: "net/url"},
-		{Path: "os"},
-		{Path: "sync"},
-		{Path: "time"},
-		codegen.GoaNamedImport("http", "goahttp"),
-		{Path: "goa.design/clue/debug"},
-		{Path: "goa.design/clue/log"},
-		codegen.GoaImport("middleware"),
-		{Path: "github.com/gorilla/websocket"},
-	}
 	var ordinaryServices []*ServiceData
+	var apiPkg string
 	if application != nil {
 		for _, name := range server.Services {
 			data := application.Get(name)
@@ -207,10 +170,11 @@ func combinedExampleServer(server *example.Data, jsonrpc, application *ServicesD
 				path.Join(application.GenPkg(), "http", data.Service.PathName, "server"),
 			).Name
 			ordinaryServices = append(ordinaryServices, copy)
-			imports = append(imports,
-				application.PackageImport(outputPackage, path.Join(application.GenPkg(), "http", data.Service.PathName, "server")),
-				application.ServiceImport(outputPackage, name),
-			)
+			for _, endpoint := range data.Endpoints {
+				if endpoint.MultipartRequestDecoder != nil {
+					apiPkg = jsonrpc.PackageImport(outputPackage, path.Dir(jsonrpc.GenPkg())).Name
+				}
+			}
 		}
 	}
 	var jsonrpcServices []*ServiceData
@@ -225,24 +189,18 @@ func combinedExampleServer(server *example.Data, jsonrpc, application *ServicesD
 			path.Join(jsonrpc.GenPkg(), "jsonrpc", data.Service.PathName, "server"),
 		).Name
 		jsonrpcServices = append(jsonrpcServices, copy)
-		imports = append(imports,
-			jsonrpc.PackageImport(outputPackage, path.Join(jsonrpc.GenPkg(), "jsonrpc", data.Service.PathName, "server")),
-			jsonrpc.ServiceImport(outputPackage, name),
-		)
 	}
 	if len(ordinaryServices) == 0 && len(jsonrpcServices) == 0 {
 		return nil
 	}
-	apiImport := jsonrpc.PackageImport(outputPackage, path.Dir(jsonrpc.GenPkg()))
-	imports = append(imports, apiImport)
-	imports = uniqueExampleImports(imports)
 	data := map[string]any{
 		"Services":        ordinaryServices,
 		"JSONRPCServices": jsonrpcServices,
 		"HandlerArgs":     exampleServerArguments(server, ordinaryServices, jsonrpcServices),
 	}
+	filePath := filepath.Join("cmd", server.Dir, "http.go")
 	sections := []*codegen.SectionTemplate{
-		codegen.Header("", "main", imports),
+		plannedFileHeader("", "main", filePath, jsonrpc),
 		{Name: "server-http-start", Source: httpTemplates.Read(serverStartT), Data: data},
 		{Name: "server-http-encoding", Source: httpTemplates.Read(serverEncodingT)},
 		{Name: "server-http-mux", Source: httpTemplates.Read(serverMuxT)},
@@ -252,7 +210,7 @@ func combinedExampleServer(server *example.Data, jsonrpc, application *ServicesD
 			Data: map[string]any{
 				"Services":        ordinaryServices,
 				"JSONRPCServices": jsonrpcServices,
-				"APIPkg":          apiImport.Name,
+				"APIPkg":          apiPkg,
 			},
 			FuncMap: map[string]any{"needDialer": NeedDialer, "hasWebSocket": HasWebSocket},
 		},
@@ -261,7 +219,7 @@ func combinedExampleServer(server *example.Data, jsonrpc, application *ServicesD
 		{Name: "server-http-errorhandler", Source: httpTemplates.Read(serverErrorHandlerT)},
 	}
 	return &codegen.File{
-		Path:             filepath.Join("cmd", server.Dir, "http.go"),
+		Path:             filePath,
 		SectionTemplates: sections,
 		SkipExist:        true,
 	}
@@ -298,21 +256,6 @@ func exampleServerArguments(
 		arguments[index] = data
 	}
 	return arguments
-}
-
-// uniqueExampleImports keeps the first import for each Go package path. A
-// service exposed over both protocols uses the same generated service package.
-func uniqueExampleImports(imports []*codegen.ImportSpec) []*codegen.ImportSpec {
-	result := make([]*codegen.ImportSpec, 0, len(imports))
-	seen := make(map[string]struct{}, len(imports))
-	for _, spec := range imports {
-		if _, ok := seen[spec.Path]; ok {
-			continue
-		}
-		seen[spec.Path] = struct{}{}
-		result = append(result, spec)
-	}
-	return result
 }
 
 // cloneGeneratedFile copies a generated file and its section records so the
@@ -378,34 +321,19 @@ func dummyMultipartFile(svc *expr.HTTPServiceExpr, services *ServicesData) *code
 		mustGen     bool
 	)
 	{
-		specs := make([]*codegen.ImportSpec, 0, 2)
-		specs = append(specs, &codegen.ImportSpec{Path: "mime/multipart"})
 		data := services.Get(svc.Name())
-		var multipartEndpoints []*expr.HTTPEndpointExpr
-		for _, endpoint := range data.Endpoints {
-			if endpoint.MultipartRequestDecoder != nil || endpoint.MultipartRequestEncoder != nil {
-				multipartEndpoints = append(multipartEndpoints, svc.Endpoint(endpoint.Method.Name))
-			}
-		}
-		specs = append(specs, services.ServiceImport(outputPackage, svc.Name()))
-		rootPath := path.Dir(genpkg)
-		specs = append(specs, services.AttributeImports(rootPath, serviceReferenceAttributes(multipartEndpoints...)...)...)
 		for _, endpoint := range data.Endpoints {
 			if endpoint.MultipartRequestDecoder == nil {
 				continue
 			}
-			bodyType, bodyImport := exampleMultipartBodyType(svc, endpoint, services, outputPackage)
-			if bodyImport != nil {
-				specs = append(specs, bodyImport)
-			}
 			decoderData[endpoint.MultipartRequestDecoder] = &exampleMultipartDecoderData{
 				MultipartData: endpoint.MultipartRequestDecoder,
-				BodyType:      bodyType,
+				BodyType:      exampleMultipartBodyType(svc, endpoint, services, outputPackage),
 			}
 		}
 
 		apiPkg := examplePackageImportName(services.Root)
-		sections = []*codegen.SectionTemplate{codegen.Header("", apiPkg, specs)}
+		sections = []*codegen.SectionTemplate{plannedFileHeader("", apiPkg, mpath, services)}
 		for _, e := range data.Endpoints {
 			if e.MultipartRequestDecoder != nil {
 				mustGen = true
@@ -436,14 +364,14 @@ func dummyMultipartFile(svc *expr.HTTPServiceExpr, services *ServicesData) *code
 }
 
 // exampleMultipartBodyType returns the request body type visible from the
-// starter service package and the generated server import needed to name it.
-func exampleMultipartBodyType(svc *expr.HTTPServiceExpr, endpoint *EndpointData, services *ServicesData, outputPackage string) (string, *codegen.ImportSpec) {
+// starter service package.
+func exampleMultipartBodyType(svc *expr.HTTPServiceExpr, endpoint *EndpointData, services *ServicesData, outputPackage string) string {
 	serverBody := endpoint.Payload.Request.ServerBody
 	service := services.Get(svc.Name())
 	serverPath := path.Join(services.GenPkg(), "http", service.Service.PathName, "server")
 	serverImport := services.PackageImport(outputPackage, serverPath)
 	if serverBody.Declaration != nil {
-		return serverImport.Name + "." + serverBody.Declaration.Name(), serverImport
+		return serverImport.Name + "." + serverBody.Declaration.Name()
 	}
 	body := serverBody.attribute
 	usesServerType := false
@@ -458,7 +386,7 @@ func exampleMultipartBodyType(svc *expr.HTTPServiceExpr, endpoint *EndpointData,
 			policy:          jsonBodyPolicy(true, true, true, ""),
 			exactOccurrence: true,
 		}
-		return resolver.Name(body, serverImport.Name, true, false), serverImport
+		return resolver.Name(body, serverImport.Name, true, false)
 	}
-	return serverBody.VarName, nil
+	return serverBody.VarName
 }
