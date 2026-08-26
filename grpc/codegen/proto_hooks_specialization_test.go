@@ -99,17 +99,27 @@ func TestTransformPlanOneofLookupUsesOriginalBranch(t *testing.T) {
 	require.Same(t, targetBranch, branches[0])
 }
 
-// TestGRPCHelperDefinitionIgnoresOnlyFieldNumber checks that field positions
-// share a copy function while other metadata keeps separate definitions.
-func TestGRPCHelperDefinitionIgnoresOnlyFieldNumber(t *testing.T) {
+// TestGRPCHelperDefinitionUsesConversionFacts checks that prose and examples
+// do not split copy functions while a custom generated field type does.
+func TestGRPCHelperDefinitionUsesConversionFacts(t *testing.T) {
 	typeExpr := &expr.UserTypeExpr{
 		TypeName: "Child",
 		AttributeExpr: &expr.AttributeExpr{Type: &expr.Object{
 			{Name: "value", Attribute: &expr.AttributeExpr{Type: expr.String}},
 		}},
 	}
-	first := &expr.AttributeExpr{Type: typeExpr, Meta: expr.MetaExpr{"rpc:tag": {"1"}}}
-	second := &expr.AttributeExpr{Type: typeExpr, Meta: expr.MetaExpr{"rpc:tag": {"2"}}}
+	first := &expr.AttributeExpr{
+		Type:         typeExpr,
+		Description:  "First use of the child.",
+		Meta:         expr.MetaExpr{"rpc:tag": {"1"}},
+		UserExamples: []*expr.ExampleExpr{{Value: map[string]any{"value": "first"}}},
+	}
+	second := &expr.AttributeExpr{
+		Type:         typeExpr,
+		Description:  "Second use of the child.",
+		Meta:         expr.MetaExpr{"rpc:tag": {"2"}},
+		UserExamples: []*expr.ExampleExpr{{Value: map[string]any{"value": "second"}}},
+	}
 	hook := protoHooks(true).SameHelperDefinition
 	require.True(t, hook(first, first, second, second))
 

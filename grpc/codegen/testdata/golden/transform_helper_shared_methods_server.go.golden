@@ -32,6 +32,42 @@ func NewProtoReplaceResponse() *shared_method_helperspb.ReplaceResponse {
 	return message
 }
 
+// NewChoosePayload builds *sharedmethodhelpers.ChoosePayload from
+// *shared_method_helperspb.ChooseRequest.
+func NewChoosePayload(message *shared_method_helperspb.ChooseRequest) *sharedmethodhelpers.ChoosePayload {
+	v := &sharedmethodhelpers.ChoosePayload{}
+	if message.Choice != nil {
+		switch val := message.Choice.(type) {
+		case *shared_method_helperspb.ChooseRequest_First:
+			{
+				u := v.Choice
+				u.SetFirst(transformProtoSharedMethodChildToSharedMethodChild(val.First))
+				v.Choice = u
+			}
+		case *shared_method_helperspb.ChooseRequest_Second:
+			{
+				u := v.Choice
+				u.SetSecond(transformProtoSharedMethodChildToSharedMethodChild(val.Second))
+				v.Choice = u
+			}
+		case *shared_method_helperspb.ChooseRequest_Third:
+			{
+				u := v.Choice
+				u.SetThird(transformProtoSharedMethodChildToSharedMethodChild(val.Third))
+				v.Choice = u
+			}
+		}
+	}
+	return v
+}
+
+// NewProtoChooseResponse builds *shared_method_helperspb.ChooseResponse from
+// metadata values.
+func NewProtoChooseResponse() *shared_method_helperspb.ChooseResponse {
+	message := &shared_method_helperspb.ChooseResponse{}
+	return message
+}
+
 // NewInspectPayload builds *sharedmethodhelpers.InspectPayload from
 // *shared_method_helperspb.InspectRequest.
 func NewInspectPayload(message *shared_method_helperspb.InspectRequest) *sharedmethodhelpers.InspectPayload {
@@ -97,6 +133,103 @@ func ValidateReplaceRequest(message *shared_method_helperspb.ReplaceRequest) (er
 	}
 	if message.Child != nil {
 		if err2 := validatetest_20_api_SharedMethodHelpers_SharedMethodChild_At_child(message.Child); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	return
+}
+
+// ValidateChooseRequest runs the validations defined on ChooseRequest.
+func ValidateChooseRequest(message *shared_method_helperspb.ChooseRequest) (err error) {
+	if message.Choice == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("choice", "message"))
+	}
+	switch v := message.Choice.(type) {
+	case *shared_method_helperspb.ChooseRequest_First:
+		if v == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("First", "message.choice"))
+			break
+		}
+		if v.First == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("First", "message.choice"))
+			break
+		}
+		if v.First != nil {
+			if err2 := validatetest_20_api_SharedMethodHelpers_SharedMethodChild_Target_first_Context_First(v.First); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+
+	case *shared_method_helperspb.ChooseRequest_Second:
+		if v == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("Second", "message.choice"))
+			break
+		}
+		if v.Second == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("Second", "message.choice"))
+			break
+		}
+		if v.Second != nil {
+			if err2 := validatetest_20_api_SharedMethodHelpers_SharedMethodChild_Target_second_Context_Second(v.Second); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+
+	case *shared_method_helperspb.ChooseRequest_Third:
+		if v == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("Third", "message.choice"))
+			break
+		}
+		if v.Third == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("Third", "message.choice"))
+			break
+		}
+		if v.Third != nil {
+			if err2 := validatetest_20_api_SharedMethodHelpers_SharedMethodChild_Target_third_Context_Third(v.Third); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+
+	return
+}
+
+// validatetest_20_api_SharedMethodHelpers_SharedMethodChild_Target_first_Context_First
+// runs the validations defined on SharedMethodChild.
+func validatetest_20_api_SharedMethodHelpers_SharedMethodChild_Target_first_Context_First(first *shared_method_helperspb.SharedMethodChild) (err error) {
+	if first.Value == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("value", "First"))
+	}
+	if first.Next != nil {
+		if err2 := validatetest_20_api_SharedMethodHelpers_SharedMethodChild_At_next(first.Next); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	return
+}
+
+// validatetest_20_api_SharedMethodHelpers_SharedMethodChild_Target_second_Context_Second
+// runs the validations defined on SharedMethodChild.
+func validatetest_20_api_SharedMethodHelpers_SharedMethodChild_Target_second_Context_Second(second *shared_method_helperspb.SharedMethodChild) (err error) {
+	if second.Value == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("value", "Second"))
+	}
+	if second.Next != nil {
+		if err2 := validatetest_20_api_SharedMethodHelpers_SharedMethodChild_At_next(second.Next); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	return
+}
+
+// validatetest_20_api_SharedMethodHelpers_SharedMethodChild_Target_third_Context_Third
+// runs the validations defined on SharedMethodChild.
+func validatetest_20_api_SharedMethodHelpers_SharedMethodChild_Target_third_Context_Third(third *shared_method_helperspb.SharedMethodChild) (err error) {
+	if third.Value == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("value", "Third"))
+	}
+	if third.Next != nil {
+		if err2 := validatetest_20_api_SharedMethodHelpers_SharedMethodChild_At_next(third.Next); err2 != nil {
 			err = goa.MergeErrors(err, err2)
 		}
 	}

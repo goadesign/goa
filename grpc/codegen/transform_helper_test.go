@@ -13,18 +13,19 @@ import (
 	"goa.design/goa/v3/dsl"
 )
 
-// TestTransformHelpersShareAcrossMethods checks that conversions written to
-// one client or server package reuse the same recursive private function. A
-// nearly identical child with different required-field pointer rules keeps a
-// separate function and call sites.
-func TestTransformHelpersShareAcrossMethods(t *testing.T) {
+// TestTransformHelpersShareAcrossDocumentedUses checks that field prose and
+// examples do not split one recursive conversion used by several methods and
+// union branches. A nearly identical child with different required-field
+// pointer rules keeps a separate function and call sites.
+func TestTransformHelpersShareAcrossDocumentedUses(t *testing.T) {
 	root := RunGRPCDSL(t, sharedGRPCTransformHelperMethodsDSL)
 	services := CreateGRPCServices(root)
 	service := services.Get("SharedMethodHelpers")
-	require.Len(t, service.clientTransformHelpers, 4)
-	require.Len(t, service.serverTransformHelpers, 2)
+	require.NotEmpty(t, service.clientTransformHelpers)
+	require.NotEmpty(t, service.serverTransformHelpers)
 
 	var clientShared, clientNear *codegen.TransformFunctionData
+	clientSharedDeclarations := make(map[*codegen.NameDeclaration]struct{})
 	for _, helper := range service.clientTransformHelpers {
 		if !strings.Contains(helper.Declaration.Name(), "ToProto") {
 			continue
@@ -32,27 +33,32 @@ func TestTransformHelpersShareAcrossMethods(t *testing.T) {
 		switch helper.ParamTypeRef {
 		case "*sharedmethodhelpers.SharedMethodChild":
 			clientShared = helper
+			clientSharedDeclarations[helper.Declaration] = struct{}{}
 		case "*sharedmethodhelpers.NearMethodChild":
 			clientNear = helper
 		}
 	}
 	require.NotNil(t, clientShared)
 	require.NotNil(t, clientNear)
+	require.Len(t, clientSharedDeclarations, 1)
 	require.NotSame(t, clientShared.Declaration, clientNear.Declaration)
 	require.Contains(t, clientShared.Code, clientShared.Declaration.Name()+"(v.Next)")
 	require.Contains(t, clientNear.Code, clientNear.Declaration.Name()+"(v.Next)")
 
 	var serverShared, serverNear *codegen.TransformFunctionData
+	serverSharedDeclarations := make(map[*codegen.NameDeclaration]struct{})
 	for _, helper := range service.serverTransformHelpers {
 		switch helper.ParamTypeRef {
 		case "*shared_method_helperspb.SharedMethodChild":
 			serverShared = helper
+			serverSharedDeclarations[helper.Declaration] = struct{}{}
 		case "*shared_method_helperspb.NearMethodChild":
 			serverNear = helper
 		}
 	}
 	require.NotNil(t, serverShared)
 	require.NotNil(t, serverNear)
+	require.Len(t, serverSharedDeclarations, 1)
 	require.NotSame(t, serverShared.Declaration, serverNear.Declaration)
 	require.Contains(t, serverShared.Code, serverShared.Declaration.Name()+"(v.Next)")
 	require.Contains(t, serverNear.Code, serverNear.Declaration.Name()+"(v.Next)")
@@ -63,7 +69,14 @@ func TestTransformHelpersShareAcrossMethods(t *testing.T) {
 		require.Contains(t, endpoint.Request.ServerConvert.Init.Code,
 			"v.Child = "+serverShared.Declaration.Name()+"(message.Child)")
 	}
-	inspect := service.Endpoints[2]
+	var inspect *EndpointData
+	for _, endpoint := range service.Endpoints {
+		if endpoint.Method.Name == "Inspect" {
+			inspect = endpoint
+			break
+		}
+	}
+	require.NotNil(t, inspect)
 	require.Contains(t, inspect.Request.ClientConvert.Init.Code,
 		"message.Child = "+clientNear.Declaration.Name()+"(payload.Child)")
 	require.Contains(t, inspect.Request.ServerConvert.Init.Code,
@@ -226,9 +239,9 @@ func sharedGRPCTransformHelperDSL() {
 	})
 }
 
-// sharedGRPCTransformHelperMethodsDSL creates two request messages with the
-// same recursive child and one request with a separate recursive child whose
-// value field is optional instead of required.
+// sharedGRPCTransformHelperMethodsDSL uses one recursive child under different
+// method and union field prose. It also defines a separate recursive child
+// whose value field is optional instead of required.
 func sharedGRPCTransformHelperMethodsDSL() {
 	child := dsl.Type("SharedMethodChild", func() {
 		dsl.Field(1, "value", dsl.String)
@@ -243,12 +256,28 @@ func sharedGRPCTransformHelperMethodsDSL() {
 		for _, method := range []string{"Store", "Replace"} {
 			dsl.Method(method, func() {
 				dsl.Payload(func() {
-					dsl.Field(1, "child", child)
+					dsl.Field(1, "child", child, method+" uses the shared child.", func() {
+						dsl.Example(map[string]any{"value": method})
+					})
 					dsl.Required("child")
 				})
 				dsl.GRPC(func() {})
 			})
 		}
+		dsl.Method("Choose", func() {
+			dsl.Payload(func() {
+				dsl.OneOf("choice", func() {
+					dsl.TypeName("DescribedChoice")
+					for index, branch := range []string{"First", "Second", "Third"} {
+						dsl.Field(index+1, branch, child, branch+" documented branch.", func() {
+							dsl.Example(map[string]any{"value": branch})
+						})
+					}
+				})
+				dsl.Required("choice")
+			})
+			dsl.GRPC(func() {})
+		})
 		dsl.Method("Inspect", func() {
 			dsl.Payload(func() {
 				dsl.Field(1, "child", near)

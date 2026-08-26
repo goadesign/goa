@@ -5,8 +5,8 @@ package codegen
 import (
 	"bytes"
 	"fmt"
-	"maps"
 	"reflect"
+	"slices"
 	"strings"
 	"text/template"
 
@@ -173,9 +173,10 @@ func sameGRPCHelperDefinition(firstSource, firstTarget, nextSource, nextTarget *
 		sameGRPCHelperAttribute(firstTarget, nextTarget, make(map[grpcHelperAttributePair]struct{}))
 }
 
-// sameGRPCHelperAttribute compares the facts available to conversion hooks.
-// It follows copied type graphs by value so separate plans do not differ only
-// because their expression copies have different addresses.
+// sameGRPCHelperAttribute compares the facts that can change gRPC conversion
+// code. Field descriptions, documentation, examples, and validation limits do
+// not affect that code. Required fields, defaults, generated field types, and
+// protobuf wrappers do.
 func sameGRPCHelperAttribute(first, next *expr.AttributeExpr, seen map[grpcHelperAttributePair]struct{}) bool {
 	if first == nil || next == nil {
 		return first == next
@@ -185,26 +186,42 @@ func sameGRPCHelperAttribute(first, next *expr.AttributeExpr, seen map[grpcHelpe
 		return true
 	}
 	seen[pair] = struct{}{}
-	if first.Description != next.Description ||
-		!reflect.DeepEqual(first.Docs, next.Docs) ||
-		!reflect.DeepEqual(first.Validation, next.Validation) ||
-		!reflect.DeepEqual(grpcHelperMeta(first.Meta), grpcHelperMeta(next.Meta)) ||
-		!reflect.DeepEqual(first.DefaultValue, next.DefaultValue) ||
-		!reflect.DeepEqual(first.UserExamples, next.UserExamples) ||
-		len(first.Bases) != len(next.Bases) || len(first.References) != len(next.References) {
+	if !sameGRPCHelperMeta(first.Meta, next.Meta) ||
+		!reflect.DeepEqual(first.DefaultValue, next.DefaultValue) {
 		return false
 	}
-	for index := range first.Bases {
-		if !sameGRPCHelperDataType(first.Bases[index], next.Bases[index], seen) {
-			return false
-		}
+	firstObject := expr.AsObject(first.Type)
+	nextObject := expr.AsObject(next.Type)
+	if (firstObject == nil) != (nextObject == nil) {
+		return false
 	}
-	for index := range first.References {
-		if !sameGRPCHelperDataType(first.References[index], next.References[index], seen) {
-			return false
+	if firstObject != nil {
+		firstMapped := expr.NewMappedAttributeExpr(first)
+		nextMapped := expr.NewMappedAttributeExpr(next)
+		for _, field := range *firstObject {
+			name := strings.SplitN(field.Name, ":", 2)[0]
+			if firstMapped.IsRequired(name) != nextMapped.IsRequired(name) {
+				return false
+			}
 		}
 	}
 	return sameGRPCHelperDataType(first.Type, next.Type, seen)
+}
+
+// sameGRPCHelperMeta compares only metadata read while gRPC conversion code
+// is planned or written. Other metadata can change generated documentation or
+// validation, but it cannot change a conversion function.
+func sameGRPCHelperMeta(first, next expr.MetaExpr) bool {
+	for _, name := range []string{
+		"struct:field:proto",
+		"struct:field:type",
+		wrappedAttrMeta,
+	} {
+		if !slices.Equal(first[name], next[name]) {
+			return false
+		}
+	}
+	return true
 }
 
 // sameGRPCHelperDataType compares the nested fields and collection rules that
@@ -254,13 +271,6 @@ func sameGRPCHelperDataType(first, next expr.DataType, seen map[grpcHelperAttrib
 	default:
 		panic(fmt.Sprintf("cannot compare gRPC helper type %T", first))
 	}
-}
-
-// grpcHelperMeta copies metadata without the protobuf field number.
-func grpcHelperMeta(meta expr.MetaExpr) expr.MetaExpr {
-	copy := maps.Clone(meta)
-	delete(copy, "rpc:tag")
-	return copy
 }
 
 // renderArrayTransform writes code that copies sourceVar into the target array.
