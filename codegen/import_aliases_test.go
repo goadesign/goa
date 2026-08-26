@@ -148,6 +148,30 @@ func TestGeneratedImportPreferenceIsOrderIndependent(t *testing.T) {
 	require.Equal(t, freeze("alpha", "zeta"), freeze("zeta", "alpha"))
 }
 
+// TestNamedGeneratedImportBeatsPathGuess verifies that a generator which knows
+// a package's Go name wins over another generator which knows only its path.
+func TestNamedGeneratedImportBeatsPathGuess(t *testing.T) {
+	for _, reverse := range []bool{false, true} {
+		generation := mustTestGeneration(t, "generated.local/gen", nil)
+		pkg, err := generation.ClaimPackage("generated.local/gen/consumer")
+		require.NoError(t, err)
+		imports := []*ImportSpec{
+			NewImport("servicepkg", "generated.local/gen/service_pkg"),
+			SimpleImport("generated.local/gen/service_pkg"),
+		}
+		if reverse {
+			imports[0], imports[1] = imports[1], imports[0]
+		}
+		for _, spec := range imports {
+			require.NoError(t, pkg.ReserveGeneratedImport(spec))
+		}
+		require.NoError(t, generation.Freeze())
+
+		require.Equal(t, "servicepkg", pkg.ImportName("generated.local/gen/service_pkg"))
+		require.Equal(t, NewImport("servicepkg", "generated.local/gen/service_pkg"), pkg.Import("generated.local/gen/service_pkg"))
+	}
+}
+
 // TestImportAliasRejectsIncompatibleFixedRequirements verifies that static
 // templates cannot request two different mandatory spellings for one path.
 func TestImportAliasRejectsIncompatibleFixedRequirements(t *testing.T) {

@@ -197,14 +197,19 @@ func (p *GeneratedPackage) importBinding(importPath string) importAliasBinding {
 	return binding
 }
 
-// firstImportSpelling returns the alphabetically first requested name so the
-// order in which generators submit requests cannot change generated source.
+// firstImportSpelling prefers a supplied package name over a name inferred from
+// the import path, then sorts equal requests so call order cannot change source.
 func firstImportSpelling(spellings map[string]bool) (string, bool) {
 	names := make([]string, 0, len(spellings))
 	for name := range spellings {
 		names = append(names, name)
 	}
-	sort.Strings(names)
+	sort.Slice(names, func(i, j int) bool {
+		if spellings[names[i]] != spellings[names[j]] {
+			return spellings[names[i]]
+		}
+		return names[i] < names[j]
+	})
 	name := names[0]
 	return name, spellings[name]
 }
