@@ -1396,6 +1396,353 @@ func TestTransformPlanGroupsEquivalentHelpersIntoOneDefinition(t *testing.T) {
 	}
 }
 
+func TestTransformHelperRegistryGroupsEquivalentPlans(t *testing.T) {
+	first := siblingTransformPlan(t)
+	second := siblingTransformPlan(t)
+	registry := NewTransformHelperRegistry()
+	require.NoError(t, registry.Collect(
+		first,
+		transformTestLayout(t, first.sourceCopier.Original(first.source), GoLayoutPolicy{UseDefault: true}),
+		transformTestLayout(t, first.targetCopier.Original(first.target), GoLayoutPolicy{UseDefault: true}),
+	))
+	require.NoError(t, registry.Collect(
+		second,
+		transformTestLayout(t, second.sourceCopier.Original(second.source), GoLayoutPolicy{UseDefault: true}),
+		transformTestLayout(t, second.targetCopier.Original(second.target), GoLayoutPolicy{UseDefault: true}),
+	))
+
+	groups, err := registry.Finalize()
+	require.NoError(t, err)
+	require.Len(t, groups, 1)
+	declaration := NewExactName(NameFunction, "transformRecursive")
+	require.NoError(t, groups[0].Bind(declaration))
+	for _, plan := range []*TransformPlan{first, second} {
+		for _, helper := range plan.Helpers() {
+			require.Same(t, declaration, helper.Declaration)
+		}
+	}
+}
+
+func TestTransformHelperRegistryGroupsSeparateTypeWrappersForOneDeclaration(t *testing.T) {
+	first := siblingTransformPlan(t)
+	second := siblingTransformPlan(t)
+	declaration := NewExactName(NameType, "Recursive")
+	generation, err := NewGeneration("example.com/generated", nil)
+	require.NoError(t, err)
+	pkg, err := generation.ClaimPackage("example.com/generated")
+	require.NoError(t, err)
+	require.NoError(t, pkg.DeclareName(declaration))
+	registry := NewTransformHelperRegistry()
+	for _, plan := range []*TransformPlan{first, second} {
+		require.NoError(t, registry.Collect(
+			plan,
+			transformTestLayoutWithDeclaration(t, plan.sourceCopier.Original(plan.source), declaration),
+			transformTestLayoutWithDeclaration(t, plan.targetCopier.Original(plan.target), declaration),
+		))
+	}
+
+	groups, err := registry.Finalize()
+	require.NoError(t, err)
+	require.Len(t, groups, 1)
+}
+
+func TestTransformHelperRegistryKeepsSeparateDeclarationsApart(t *testing.T) {
+	first := siblingTransformPlan(t)
+	second := siblingTransformPlan(t)
+	generation, err := NewGeneration("example.com/generated", nil)
+	require.NoError(t, err)
+	pkg, err := generation.ClaimPackage("example.com/generated")
+	require.NoError(t, err)
+	firstDeclaration := NewPreferredName(NameType, "Recursive", ExportedName, testNameOrder{value: "first"})
+	secondDeclaration := NewPreferredName(NameType, "Recursive", ExportedName, testNameOrder{value: "second"})
+	require.NoError(t, pkg.DeclareName(firstDeclaration))
+	require.NoError(t, pkg.DeclareName(secondDeclaration))
+	registry := NewTransformHelperRegistry()
+	for _, entry := range []struct {
+		plan        *TransformPlan
+		declaration *NameDeclaration
+	}{
+		{plan: first, declaration: firstDeclaration},
+		{plan: second, declaration: secondDeclaration},
+	} {
+		require.NoError(t, registry.Collect(
+			entry.plan,
+			transformTestLayoutWithDeclaration(t, entry.plan.sourceCopier.Original(entry.plan.source), entry.declaration),
+			transformTestLayoutWithDeclaration(t, entry.plan.targetCopier.Original(entry.plan.target), entry.declaration),
+		))
+	}
+
+	groups, err := registry.Finalize()
+	require.NoError(t, err)
+	require.Len(t, groups, 2)
+}
+
+func TestTransformHelperRegistryKeepsGroupSpecificLocations(t *testing.T) {
+	plan := siblingTransformPlan(t)
+	sourceLayout := transformTestLayout(
+		t,
+		plan.sourceCopier.Original(plan.source),
+		GoLayoutPolicy{UseDefault: true},
+	)
+	targetLayout := transformTestLayout(
+		t,
+		plan.targetCopier.Original(plan.target),
+		GoLayoutPolicy{UseDefault: true},
+	)
+	firstDeclaration := NewExactName(NameType, "FirstRecursive")
+	secondDeclaration := NewExactName(NameType, "SecondRecursive")
+	for _, layout := range []*GoTypePlan{sourceLayout, targetLayout} {
+		layout.value.fields[0].declaration = firstDeclaration
+		layout.value.fields[1].declaration = secondDeclaration
+	}
+	registry := NewTransformHelperRegistry()
+	require.NoError(t, registry.Collect(plan, sourceLayout, targetLayout))
+
+	groups, err := registry.Finalize()
+	require.NoError(t, err)
+	require.Len(t, groups, 2)
+	require.NotEqual(t, groups[0].Definition().Location, groups[1].Definition().Location)
+}
+
+func TestTransformHelperRegistrySharesFieldAndMapValueHelpers(t *testing.T) {
+	root := RunDSL(t, testdata.TestTypesDSL)
+	recursive := root.UserType("Recursive")
+	container := &expr.AttributeExpr{Type: &expr.Object{
+		{Name: "direct", Attribute: &expr.AttributeExpr{Type: recursive}},
+		{Name: "mapped", Attribute: &expr.AttributeExpr{Type: &expr.Map{
+			KeyType:  &expr.AttributeExpr{Type: expr.String},
+			ElemType: &expr.AttributeExpr{Type: recursive},
+		}}},
+	}}
+	plan, err := NewTransformPlan(container, container, "", nil)
+	require.NoError(t, err)
+	require.Len(t, plan.helpers, 2)
+	require.NotEqual(t, plan.helpers[0].location, plan.helpers[1].location)
+	registry := NewTransformHelperRegistry()
+	require.NoError(t, registry.Collect(
+		plan,
+		transformTestLayout(t, container, GoLayoutPolicy{UseDefault: true}),
+		transformTestLayout(t, container, GoLayoutPolicy{UseDefault: true}),
+	))
+
+	groups, err := registry.Finalize()
+	require.NoError(t, err)
+	require.Len(t, groups, 1)
+}
+
+func TestTransformHelperRegistryFollowsNamedAliasChains(t *testing.T) {
+	node := &expr.UserTypeExpr{TypeName: "Node"}
+	node.AttributeExpr = &expr.AttributeExpr{Type: &expr.Object{
+		{Name: "next", Attribute: &expr.AttributeExpr{Type: node}},
+	}}
+	alias := &expr.UserTypeExpr{
+		TypeName:      "Alias",
+		AttributeExpr: &expr.AttributeExpr{Type: node},
+	}
+	container := &expr.AttributeExpr{Type: &expr.Object{
+		{Name: "alias", Attribute: &expr.AttributeExpr{Type: alias}},
+	}}
+	plan, err := NewTransformPlan(container, container, "", nil)
+	require.NoError(t, err)
+	registry := NewTransformHelperRegistry()
+
+	err = registry.Collect(
+		plan,
+		transformTestLayout(t, container, GoLayoutPolicy{UseDefault: true}),
+		transformTestLayout(t, container, GoLayoutPolicy{UseDefault: true}),
+	)
+	require.NoError(t, err)
+}
+
+func TestTransformHelperRegistryKeepsDifferentPlansSeparate(t *testing.T) {
+	tests := []struct {
+		name      string
+		first     func(*testing.T) *TransformPlan
+		second    func(*testing.T) *TransformPlan
+		firstRule GoLayoutPolicy
+		otherRule GoLayoutPolicy
+	}{
+		{
+			name:      "pointer policy",
+			first:     siblingTransformPlan,
+			second:    siblingTransformPlan,
+			firstRule: GoLayoutPolicy{UseDefault: true},
+			otherRule: GoLayoutPolicy{Pointer: true},
+		},
+		{
+			name:   "root default",
+			first:  func(t *testing.T) *TransformPlan { return singleTransformHelperPlan(t, "first", nil) },
+			second: func(t *testing.T) *TransformPlan { return singleTransformHelperPlan(t, "second", nil) },
+		},
+		{
+			name:   "required collection",
+			first:  func(t *testing.T) *TransformPlan { return collectionTransformHelperPlan(t, true) },
+			second: func(t *testing.T) *TransformPlan { return collectionTransformHelperPlan(t, false) },
+		},
+		{
+			name:  "custom hook",
+			first: func(t *testing.T) *TransformPlan { return singleTransformHelperPlan(t, nil, &TransformHooks{}) },
+			second: func(t *testing.T) *TransformPlan {
+				return singleTransformHelperPlan(t, nil, &TransformHooks{})
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			first := test.first(t)
+			second := test.second(t)
+			registry := NewTransformHelperRegistry()
+			for _, entry := range []struct {
+				plan   *TransformPlan
+				policy GoLayoutPolicy
+			}{
+				{plan: first, policy: test.firstRule},
+				{plan: second, policy: test.otherRule},
+			} {
+				require.NoError(t, registry.Collect(
+					entry.plan,
+					transformTestLayout(t, entry.plan.sourceCopier.Original(entry.plan.source), entry.policy),
+					transformTestLayout(t, entry.plan.targetCopier.Original(entry.plan.target), entry.policy),
+				))
+			}
+			groups, err := registry.Finalize()
+			require.NoError(t, err)
+			require.Len(t, groups, 2)
+		})
+	}
+}
+
+func TestTransformHelperRegistryKeepsHookDefinitionsSeparate(t *testing.T) {
+	root := RunDSL(t, testdata.TestTypesDSL)
+	recursive := root.UserType("Recursive")
+	source := &expr.AttributeExpr{Type: &expr.Object{
+		{Name: "left", Attribute: &expr.AttributeExpr{Type: recursive}},
+		{Name: "right", Attribute: &expr.AttributeExpr{Type: recursive}},
+	}}
+	target := &expr.AttributeExpr{Type: &expr.Object{
+		{Name: "left", Attribute: &expr.AttributeExpr{Type: recursive}},
+		{Name: "right", Attribute: &expr.AttributeExpr{Type: recursive}},
+	}}
+	plan, err := NewTransformPlan(source, target, "", &TransformHooks{
+		SameHelperDefinition: func(_, _, _, _ *expr.AttributeExpr) bool {
+			return false
+		},
+	})
+	require.NoError(t, err)
+	require.Len(t, plan.definitions, 2)
+	registry := NewTransformHelperRegistry()
+	require.NoError(t, registry.Collect(
+		plan,
+		transformTestLayout(t, source, GoLayoutPolicy{UseDefault: true}),
+		transformTestLayout(t, target, GoLayoutPolicy{UseDefault: true}),
+	))
+
+	groups, err := registry.Finalize()
+	require.NoError(t, err)
+	require.Len(t, groups, 2)
+}
+
+// collectionTransformHelperPlan builds a named object whose slice field may be
+// required. Required slices emit an empty target slice when the source is nil;
+// optional slices leave the target field unset.
+func collectionTransformHelperPlan(t *testing.T, required bool) *TransformPlan {
+	t.Helper()
+	value := &expr.UserTypeExpr{
+		TypeName: "CollectionValue",
+		AttributeExpr: &expr.AttributeExpr{Type: &expr.Object{
+			{Name: "items", Attribute: &expr.AttributeExpr{Type: &expr.Array{ElemType: &expr.AttributeExpr{Type: expr.String}}}},
+		}},
+	}
+	if required {
+		value.Attribute().Validation = &expr.ValidationExpr{Required: []string{"items"}}
+	}
+	container := &expr.AttributeExpr{Type: &expr.Object{
+		{Name: "value", Attribute: &expr.AttributeExpr{Type: value}},
+	}}
+	plan, err := NewTransformPlan(container, container, "", nil)
+	require.NoError(t, err)
+	return plan
+}
+
+func TestTransformHelperGroupBindIsAtomic(t *testing.T) {
+	first := siblingTransformPlan(t)
+	second := siblingTransformPlan(t)
+	registry := NewTransformHelperRegistry()
+	for _, plan := range []*TransformPlan{first, second} {
+		require.NoError(t, registry.Collect(
+			plan,
+			transformTestLayout(t, plan.sourceCopier.Original(plan.source), GoLayoutPolicy{UseDefault: true}),
+			transformTestLayout(t, plan.targetCopier.Original(plan.target), GoLayoutPolicy{UseDefault: true}),
+		))
+	}
+	groups, err := registry.Finalize()
+	require.NoError(t, err)
+	require.Len(t, groups, 1)
+	existing := NewExactName(NameFunction, "existingTransform")
+	require.NoError(t, second.BindHelperDeclaration(second.Helpers()[0].ID, existing))
+
+	err = groups[0].Bind(NewExactName(NameFunction, "sharedTransform"))
+	require.ErrorContains(t, err, "already has a different declaration")
+	for _, helper := range first.Helpers() {
+		require.Nil(t, helper.Declaration)
+	}
+}
+
+// singleTransformHelperPlan builds one helper whose root target attribute can
+// carry a default and whose hook set is retained by the plan.
+func singleTransformHelperPlan(t *testing.T, targetDefault any, hooks *TransformHooks) *TransformPlan {
+	t.Helper()
+	root := RunDSL(t, testdata.TestTypesDSL)
+	recursive := root.UserType("Recursive")
+	sourceChild := &expr.AttributeExpr{Type: recursive}
+	targetChild := &expr.AttributeExpr{Type: recursive, DefaultValue: targetDefault}
+	source := &expr.AttributeExpr{Type: &expr.Object{{Name: "child", Attribute: sourceChild}}}
+	target := &expr.AttributeExpr{Type: &expr.Object{{Name: "child", Attribute: targetChild}}}
+	plan, err := NewTransformPlan(source, target, "", hooks)
+	require.NoError(t, err)
+	return plan
+}
+
+// transformTestLayout records a complete Go type before final package names
+// are chosen. Equal authored type names use the same fixed declaration so the
+// tests compare conversion behavior instead of Goa value addresses.
+func transformTestLayout(t *testing.T, attribute *expr.AttributeExpr, policy GoLayoutPolicy) *GoTypePlan {
+	t.Helper()
+	layout, err := PlanGoType(attribute, GoTypePlanOptions{
+		Owner:            "example.com/generated",
+		Policy:           policy,
+		RetainNamedValue: true,
+		Bind: func(request GoTypeBindingRequest) (GoTypeBinding, error) {
+			return GoTypeBinding{
+				Owner: "example.com/generated",
+				name:  request.Attribute.Type.Name(),
+			}, nil
+		},
+	})
+	require.NoError(t, err)
+	return layout
+}
+
+// transformTestLayoutWithDeclaration builds new type wrappers around one
+// package declaration, matching independent planners that resolve the same Go
+// type through separate wrapper values.
+func transformTestLayoutWithDeclaration(t *testing.T, attribute *expr.AttributeExpr, declaration *NameDeclaration) *GoTypePlan {
+	t.Helper()
+	layout, err := PlanGoType(attribute, GoTypePlanOptions{
+		Owner:            "example.com/generated",
+		Policy:           GoLayoutPolicy{UseDefault: true},
+		RetainNamedValue: true,
+		Bind: func(GoTypeBindingRequest) (GoTypeBinding, error) {
+			return GoTypeBinding{
+				Owner: "example.com/generated",
+				Type:  &TypeDeclaration{declaration: declaration},
+			}, nil
+		},
+	})
+	require.NoError(t, err)
+	return layout
+}
+
 func TestTransformHelperDefinitionLocationComparesStructuralPaths(t *testing.T) {
 	root := TransformHelperDefinitionLocation{}
 	emptyField := root.objectField("")

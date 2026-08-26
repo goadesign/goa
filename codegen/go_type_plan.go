@@ -297,9 +297,22 @@ func (p *GoTypePlan) Import() (GoTypeImport, bool) {
 // generated type package found in this plan, in field order. It keeps different
 // requested names for the same path so Generation can choose the final name.
 func (p *GoTypePlan) ImportPreferences() []GoTypeImport {
+	return p.importPreferences(p.walkImports)
+}
+
+// CompleteImportPreferences returns every imported package used by the full
+// retained type. Unlike ImportPreferences, it follows fields below named types
+// and union branches. Generators use it when one file writes code that reads or
+// constructs those nested values.
+func (p *GoTypePlan) CompleteImportPreferences() []GoTypeImport {
+	return p.importPreferences(p.walk)
+}
+
+// importPreferences collects each distinct package request in traversal order.
+func (p *GoTypePlan) importPreferences(walk func(func(*GoTypePlan))) []GoTypeImport {
 	seen := make(map[GoTypeImport]struct{})
 	var imports []GoTypeImport
-	p.walkImports(func(candidate *GoTypePlan) {
+	walk(func(candidate *GoTypePlan) {
 		var goImport GoTypeImport
 		switch {
 		case candidate.hasDirectImport:
@@ -762,18 +775,31 @@ func (b GoTypeBinding) declarationCount() int {
 
 // walk visits this plan and then its children in their stored order.
 func (p *GoTypePlan) walk(visit func(*GoTypePlan)) {
+	p.walkOnce(visit, make(map[*GoTypePlan]struct{}))
+}
+
+// walkOnce visits retained named values once so recursive types cannot cause
+// the layout walk to repeat forever.
+func (p *GoTypePlan) walkOnce(visit func(*GoTypePlan), seen map[*GoTypePlan]struct{}) {
+	if _, ok := seen[p]; ok {
+		return
+	}
+	seen[p] = struct{}{}
 	visit(p)
 	if p.key != nil {
-		p.key.walk(visit)
+		p.key.walkOnce(visit, seen)
 	}
 	if p.element != nil {
-		p.element.walk(visit)
+		p.element.walkOnce(visit, seen)
 	}
 	for _, field := range p.fields {
-		field.walk(visit)
+		field.walkOnce(visit, seen)
 	}
 	for _, branch := range p.branches {
-		branch.walk(visit)
+		branch.walkOnce(visit, seen)
+	}
+	if p.value != nil {
+		p.value.walkOnce(visit, seen)
 	}
 }
 

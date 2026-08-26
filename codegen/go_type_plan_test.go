@@ -554,6 +554,45 @@ func TestGoTypePlanSeparatesImportPreferencesFromLinkedImports(t *testing.T) {
 	require.Equal(t, "struct {\n\tFirst *shared2.Value\n\tSecond *shared2.Value\n}", linked.Def())
 }
 
+// TestGoTypePlanSeparatesNamedReferencesFromCompleteImports verifies ordinary
+// files import the named types they mention while conversion files can request
+// every package used below those named types.
+func TestGoTypePlanSeparatesNamedReferencesFromCompleteImports(t *testing.T) {
+	const (
+		owner           = "generated.local/gen/service"
+		childOwner      = "generated.local/gen/child"
+		grandchildOwner = "generated.local/gen/grandchild"
+	)
+	grandchild := goTypeTestUserType("Grandchild", &expr.Object{
+		{Name: "value", Attribute: &expr.AttributeExpr{Type: expr.String}},
+	})
+	child := goTypeTestUserType("Child", &expr.Object{
+		{Name: "grandchild", Attribute: &expr.AttributeExpr{Type: grandchild}},
+	})
+	generation, err := NewGeneration("generated.local/gen", nil)
+	require.NoError(t, err)
+	childDeclaration := declareGoTypeTestUserType(t, generation, childOwner, child)
+	grandchildDeclaration := declareGoTypeTestUserType(t, generation, grandchildOwner, grandchild)
+	attribute := &expr.AttributeExpr{Type: &expr.Object{
+		{Name: "child", Attribute: &expr.AttributeExpr{Type: child}},
+	}}
+	plan, err := PlanGoType(attribute, GoTypePlanOptions{
+		Owner:            owner,
+		RetainNamedValue: true,
+		Bind: goTypeTestBinder(map[expr.DataType]GoTypeBinding{
+			child:      {Owner: childOwner, Type: childDeclaration},
+			grandchild: {Owner: grandchildOwner, Type: grandchildDeclaration},
+		}),
+	})
+	require.NoError(t, err)
+
+	require.Equal(t, []GoTypeImport{{Path: childOwner}}, plan.ImportPreferences())
+	require.Equal(t, []GoTypeImport{
+		{Path: childOwner},
+		{Path: grandchildOwner},
+	}, plan.CompleteImportPreferences())
+}
+
 // TestGoTypePlanEquivalence compares symbolic layouts without relying on the
 // expression pointers from which independently retained copies were planned.
 func TestGoTypePlanEquivalence(t *testing.T) {
@@ -585,6 +624,28 @@ func TestGoTypePlanEquivalence(t *testing.T) {
 	require.NoError(t, err)
 	require.False(t, first.Equivalent(different))
 	require.False(t, different.Equivalent(first))
+}
+
+func TestGoTypePlanFindsOccurrenceInsideNamedValue(t *testing.T) {
+	field := &expr.AttributeExpr{Type: expr.String}
+	named := goTypeTestUserType("Record", &expr.Object{
+		{Name: "value", Attribute: field},
+	})
+	plan, err := PlanGoType(&expr.AttributeExpr{Type: named}, GoTypePlanOptions{
+		Owner:            "generated.local/gen/service",
+		RetainNamedValue: true,
+		Bind: func(GoTypeBindingRequest) (GoTypeBinding, error) {
+			return GoTypeBinding{
+				Owner: "generated.local/gen/service",
+				name:  "Record",
+			}, nil
+		},
+	})
+	require.NoError(t, err)
+
+	matches := plan.PlansForOccurrence(field)
+	require.Len(t, matches, 1)
+	require.Equal(t, "Value", matches[0].FieldName(true))
 }
 
 // goTypeTestUserType constructs one named type without running the DSL.

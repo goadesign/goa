@@ -1436,6 +1436,7 @@ func planTransformOperationWithHelper(source, target *expr.AttributeExpr, requir
 			Target:     helperTarget,
 			Required:   required,
 			Occurrence: id.index + 1,
+			location:   location,
 		})
 		plan.recordHelperDefinition(id, helperSource, helperTarget, location)
 		operation.calls = append(operation.calls, transformCall{

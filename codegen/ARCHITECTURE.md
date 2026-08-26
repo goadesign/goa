@@ -397,7 +397,26 @@ difference cannot change the function body. gRPC uses this for protobuf field
 numbers: a field number changes the serialized position, not the Go code that
 copies the field value.
 
-Both methods return detached type descriptions with plan-owned IDs. A caller
+When several `TransformPlan` values write helpers to the same Go package, the
+caller collects them in one `TransformHelperRegistry` before package names are
+final. Each plan is supplied with the source and target `GoTypePlan` values that
+describe the actual generated parameter and result types. After every plan has
+been collected, the registry groups functions only when those Go types, the
+conversion rules, and the ordered child function calls are equivalent. It
+repeats the child comparison until recursive call graphs stop changing. The
+registry never compares rendered Go source, hashes, or preferred names. The
+caller declares one function for each returned group and binds that declaration
+to the complete group before rendering.
+
+Each helper occurrence retains its own authored location. A shared function
+definition still keeps the earliest location for stable name ordering, but that
+location cannot be used to find the generated type at another call. For
+example, identical recursive values reached through a direct field and a map
+value may share one function even though their generated layouts must first be
+resolved at two different paths.
+
+`Helpers` and `HelperDefinitions` return detached type descriptions with
+plan-owned IDs. A caller
 may inspect or change those descriptions while choosing a function declaration,
 but cannot change the type graph used for rendering. Rendering also rejects a
 hook that changes the retained graph and checks that calls sharing a declaration

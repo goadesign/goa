@@ -15,12 +15,13 @@ import (
 // every declaration and import name.
 func planServiceTypeLayouts(facts *serviceFacts, rootTypes *rootTypeSet, generation *codegen.Generation) error {
 	binder := serviceGoTypeBinder(rootTypes, generation)
-	plan := func(attribute *expr.AttributeExpr, owner string) (*codegen.GoTypePlan, error) {
+	plan := func(attribute *expr.AttributeExpr, owner string, retainNamedValue bool) (*codegen.GoTypePlan, error) {
 		if attribute == nil {
 			return nil, nil
 		}
 		return codegen.PlanGoType(attribute, codegen.GoTypePlanOptions{
-			Owner: owner,
+			Owner:            owner,
+			RetainNamedValue: retainNamedValue,
 			Policy: codegen.GoLayoutPolicy{
 				UseDefault: true,
 				SumType:    true,
@@ -30,14 +31,14 @@ func planServiceTypeLayouts(facts *serviceFacts, rootTypes *rootTypeSet, generat
 	}
 	userTypes := append(append([]*userTypeFacts(nil), facts.userTypes...), facts.errorTypes...)
 	for _, userType := range userTypes {
-		layout, err := plan(userType.userType.Attribute(), userType.declaration.PackagePath())
+		layout, err := plan(userType.userType.Attribute(), userType.declaration.PackagePath(), false)
 		if err != nil {
 			return err
 		}
 		userType.layout = layout
 	}
 	for _, errorFacts := range facts.errorFacts {
-		layout, err := plan(errorFacts.attribute, facts.packagePath)
+		layout, err := plan(errorFacts.attribute, facts.packagePath, false)
 		if err != nil {
 			return err
 		}
@@ -53,7 +54,7 @@ func planServiceTypeLayouts(facts *serviceFacts, rootTypes *rootTypeSet, generat
 			if attribute == nil {
 				continue
 			}
-			layout, err := plan(attribute.attribute, facts.packagePath)
+			layout, err := plan(attribute.attribute, facts.packagePath, true)
 			if err != nil {
 				return err
 			}
@@ -63,7 +64,7 @@ func planServiceTypeLayouts(facts *serviceFacts, rootTypes *rootTypeSet, generat
 			}
 			if layout.TypeDeclaration() != nil {
 				userType := attribute.attribute.Type.(expr.UserType)
-				definition, err := plan(userType.Attribute(), layout.Owner())
+				definition, err := plan(userType.Attribute(), layout.Owner(), true)
 				if err != nil {
 					return err
 				}
@@ -71,7 +72,7 @@ func planServiceTypeLayouts(facts *serviceFacts, rootTypes *rootTypeSet, generat
 			}
 		}
 		for _, errorFacts := range method.errors {
-			layout, err := plan(errorFacts.attribute, facts.packagePath)
+			layout, err := plan(errorFacts.attribute, facts.packagePath, false)
 			if err != nil {
 				return err
 			}

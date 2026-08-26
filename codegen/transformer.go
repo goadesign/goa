@@ -155,6 +155,7 @@ type (
 		// Declaration holds the package-level function name chosen before source
 		// is written. Render returns an error when it is missing.
 		Declaration *NameDeclaration
+		location    TransformHelperDefinitionLocation
 	}
 
 	// TransformFunctionData describes a helper function used to transform
