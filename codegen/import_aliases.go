@@ -157,19 +157,25 @@ func (p *GeneratedPackage) freezeImports() error {
 		}
 		fixedPaths[name] = importPath
 	}
-	scope := NewNameScope()
 	bindings := make(map[string]importAliasBinding, len(paths))
 	for _, importPath := range paths {
 		candidate := p.importPlan.candidates[importPath]
 		spellings := candidate.spellings[candidate.priority()]
 		preferred, explicit := firstImportSpelling(spellings)
-		name := scope.Unique(preferred)
+		name := p.scope.Unique(preferred)
+		if candidate.priority() == fixedImportPriority && name != preferred {
+			return fmt.Errorf(
+				"generated package %q cannot preserve fixed import qualifier %q for %q",
+				p.path,
+				preferred,
+				importPath,
+			)
+		}
 		bindings[importPath] = importAliasBinding{
 			name:     name,
 			explicit: explicit || name != path.Base(importPath),
 		}
 	}
-	scope.Freeze()
 	p.imports = bindings
 	return nil
 }

@@ -674,9 +674,6 @@ func (p *GeneratedPackage) freeze() error {
 // freezeIndependentNames chooses names that do not depend on another generated
 // declaration and returns the names that still need their base to be chosen.
 func (p *GeneratedPackage) freezeIndependentNames() ([]*NameDeclaration, error) {
-	if err := p.freezeImports(); err != nil {
-		return nil, err
-	}
 	exact := make([]*NameDeclaration, 0, len(p.names))
 	preferred := make([]*NameDeclaration, 0, len(p.names))
 	dependent := make([]*NameDeclaration, 0, len(p.names))
@@ -704,6 +701,9 @@ func (p *GeneratedPackage) freezeIndependentNames() ([]*NameDeclaration, error) 
 			)
 		}
 		declaration.frozen = true
+	}
+	if err := p.freezeImports(); err != nil {
+		return nil, err
 	}
 	slices.SortFunc(preferred, comparePackageNames)
 	for _, declaration := range preferred {

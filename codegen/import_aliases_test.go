@@ -143,3 +143,39 @@ func TestImportAliasesAreIndependentAcrossOutputPackages(t *testing.T) {
 	require.Equal(t, "calcc", httpPackage.ImportName("generated.local/gen/http/calc/client"))
 	require.Equal(t, "calcc", grpcPackage.ImportName("generated.local/gen/grpc/calc/client"))
 }
+
+// TestImportAliasSharesPackageDeclarationScope verifies that an import and a
+// package declaration cannot receive the same Go name.
+func TestImportAliasSharesPackageDeclarationScope(t *testing.T) {
+	generation := mustTestGeneration(t, "generated.local/gen", nil)
+	pkg := mustClaimTestPackage(t, generation, "generated.local/gen/service")
+	require.NoError(t, pkg.ReserveGeneratedImport(NewImport(
+		"inspectPayloadFieldDescs",
+		"example.com/inspect-payload-field-descs",
+	)))
+	declaration := NewPreferredName(
+		NameVariable,
+		"inspectPayloadFieldDescs",
+		UnexportedName,
+		testNameOrder{value: "inspect-payload-field-descs"},
+	)
+	require.NoError(t, pkg.DeclareName(declaration))
+
+	require.NoError(t, generation.Freeze())
+	require.Equal(t, "inspectPayloadFieldDescs", pkg.ImportName("example.com/inspect-payload-field-descs"))
+	require.Equal(t, "inspectPayloadFieldDescs2", declaration.Name())
+}
+
+// TestGeneratedImportYieldsToExactPackageDeclaration verifies that a package
+// declaration which must keep its spelling is chosen before a renamable import.
+func TestGeneratedImportYieldsToExactPackageDeclaration(t *testing.T) {
+	generation := mustTestGeneration(t, "generated.local/gen", nil)
+	pkg := mustClaimTestPackage(t, generation, "generated.local/gen/service")
+	require.NoError(t, pkg.ReserveGeneratedImport(NewImport("widget", "example.com/widget")))
+	declaration := NewExactName(NameVariable, "widget")
+	require.NoError(t, pkg.DeclareName(declaration))
+
+	require.NoError(t, generation.Freeze())
+	require.Equal(t, "widget", declaration.Name())
+	require.Equal(t, "widget2", pkg.ImportName("example.com/widget"))
+}
