@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"path/filepath"
 	"regexp"
+	"strconv"
+	"strings"
 	"text/template"
 
 	"gopkg.in/yaml.v3"
@@ -66,26 +68,33 @@ func toJSON(meta expr.MetaExpr) func(any) string {
 
 // toYAML encodes its argument in YAML.
 func toYAML(d any) string {
-	var document yaml.Node
-	if err := document.Encode(d); err != nil {
-		panic("openapi: " + err.Error()) // bug
-	}
-	quoteDateShapedYAMLStrings(&document)
-	b, err := yaml.Marshal(&document)
+	b, err := yaml.Marshal(d)
 	if err != nil {
 		panic("openapi: " + err.Error()) // bug
 	}
-	return string(b)
+	return quoteDateShapedYAMLStrings(string(b))
 }
 
 // quoteDateShapedYAMLStrings keeps YAML readers from treating string examples
 // as timestamps. Some readers reject date-shaped strings with invalid months
 // or days before they can see that the OpenAPI schema declares a string.
-func quoteDateShapedYAMLStrings(node *yaml.Node) {
-	if node.Kind == yaml.ScalarNode && node.Tag == "!!str" && yamlDatePrefix.MatchString(node.Value) {
-		node.Style = yaml.DoubleQuotedStyle
+func quoteDateShapedYAMLStrings(source string) string {
+	lines := strings.Split(source, "\n")
+	for index, line := range lines {
+		valueStart := strings.LastIndex(line, ": ")
+		if valueStart >= 0 {
+			valueStart += 2
+		} else {
+			trimmed := strings.TrimLeft(line, " ")
+			if !strings.HasPrefix(trimmed, "- ") {
+				continue
+			}
+			valueStart = len(line) - len(trimmed) + 2
+		}
+		value := line[valueStart:]
+		if yamlDatePrefix.MatchString(value) {
+			lines[index] = line[:valueStart] + strconv.Quote(value)
+		}
 	}
-	for _, child := range node.Content {
-		quoteDateShapedYAMLStrings(child)
-	}
+	return strings.Join(lines, "\n")
 }
