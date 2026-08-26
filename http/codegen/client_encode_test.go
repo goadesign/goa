@@ -219,6 +219,7 @@ func TestClientBuildRequest(t *testing.T) {
 		DSL  func()
 	}{
 		{"path-string", testdata.PayloadPathStringDSL},
+		{"path-int-alias", testdata.PathIntAliasDSL},
 		{"path-string-required", testdata.PayloadPathStringValidateDSL},
 		{"path-string-default", testdata.PayloadPathStringDefaultDSL},
 		{"path-object", testdata.PayloadPathObjectDSL},

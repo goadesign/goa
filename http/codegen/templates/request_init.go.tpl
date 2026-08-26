@@ -28,7 +28,7 @@
 		if p{{ if $.HasFields }}.{{ .FieldName }}{{ end }} != nil {
 		{{- end }}
 			{{- if .IsAliased }}
-			{{ .VarName }} = {{ .ServiceTypeRef }}({{ if .Pointer }}*{{ end }}p{{ if $.HasFields }}.{{ .FieldName }}{{ end }})
+			{{ .VarName }} = {{ .TypeRef }}({{ if .Pointer }}*{{ end }}p{{ if $.HasFields }}.{{ .FieldName }}{{ end }})
 			{{- else }}
 			{{ .VarName }} = {{ if .Pointer }}*{{ end }}p{{ if $.HasFields }}.{{ .FieldName }}{{ end }}
 			{{- end }}
