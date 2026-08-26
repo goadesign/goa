@@ -23,8 +23,9 @@ type (
 	}
 
 	// TransformHelperGroup describes helper occurrences that can use one Go
-	// function declaration. Definition returns the first occurrence for naming;
-	// Bind assigns the supplied declaration to every occurrence in the group.
+	// function declaration. Definition and Order return facts from the same
+	// occurrence; Bind assigns the supplied declaration to every occurrence in
+	// the group.
 	TransformHelperGroup struct {
 		definition TransformHelperDefinition
 		order      PackageNameOrder

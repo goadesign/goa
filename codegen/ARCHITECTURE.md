@@ -289,6 +289,12 @@ and generating examples. It keeps unrelated same-named types separate, but it
 does not by itself prove that two generated declarations have the same fields
 or behavior.
 
+A `GoTypePlan` records the exact attribute copy used at each occurrence. Two
+copies may bind to one generated declaration, but their retained child layouts
+remain separate so later transforms can find the fields from either copy. The
+only child layout shared while planning is an active recursive reference, which
+stops a type that refers to itself from expanding forever.
+
 Plugins that write a named type call `DeclareGeneratedType` to reserve its Go
 name, then call `BindGeneratedType` for every user type expression that must
 refer to that declaration. The binding follows `UserType.Origin()`, so copies

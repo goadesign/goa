@@ -134,10 +134,10 @@ type (
 
 	// goTypePlanner reads attributes and builds GoTypePlan values.
 	goTypePlanner struct {
-		policy           GoLayoutPolicy
-		bind             GoTypeBinder
-		namedValues      map[expr.UserType]*GoTypePlan
-		retainNamedValue bool
+		policy            GoLayoutPolicy
+		bind              GoTypeBinder
+		activeNamedValues map[expr.UserType]*GoTypePlan
+		retainNamedValue  bool
 	}
 )
 
@@ -171,10 +171,10 @@ func PlanGoType(attribute *expr.AttributeExpr, options GoTypePlanOptions) (*GoTy
 		return nil, fmt.Errorf("plan Go type: inherited owner must not be empty")
 	}
 	planner := goTypePlanner{
-		policy:           options.Policy,
-		bind:             options.Bind,
-		namedValues:      make(map[expr.UserType]*GoTypePlan),
-		retainNamedValue: options.RetainNamedValue,
+		policy:            options.Policy,
+		bind:              options.Bind,
+		activeNamedValues: make(map[expr.UserType]*GoTypePlan),
+		retainNamedValue:  options.RetainNamedValue,
 	}
 	return planner.plan(attribute, options.Owner, options.FieldName, nil, false)
 }
@@ -670,16 +670,17 @@ func (p goTypePlanner) plan(attribute *expr.AttributeExpr, owner, fieldName stri
 			plan.declaration = binding.declaration()
 			plan.fixedName = binding.name
 			if p.retainNamedValue {
-				origin := actual.Origin()
-				value := p.namedValues[origin]
+				value := p.activeNamedValues[actual]
 				if value == nil {
 					value = &GoTypePlan{}
-					p.namedValues[origin] = value
+					p.activeNamedValues[actual] = value
 					planned, err := p.plan(actual.Attribute(), binding.Owner, "", nil, false)
 					if err != nil {
+						delete(p.activeNamedValues, actual)
 						return nil, err
 					}
 					*value = *planned
+					delete(p.activeNamedValues, actual)
 				}
 				plan.value = value
 			}

@@ -663,6 +663,84 @@ func TestGoTypePlanFindsOccurrenceInsideNamedValue(t *testing.T) {
 	require.Equal(t, "Value", matches[0].FieldName(true))
 }
 
+// TestGoTypePlanFindsOccurrencesInsideCopiedNamedValues verifies that separate
+// copies of one named type retain the fields that belong to each copy.
+func TestGoTypePlanFindsOccurrencesInsideCopiedNamedValues(t *testing.T) {
+	source := goTypeTestUserType("Record", &expr.Object{
+		{Name: "value", Attribute: &expr.AttributeExpr{Type: expr.String}},
+	})
+	first := expr.DupAtt(&expr.AttributeExpr{Type: source})
+	second := expr.DupAtt(&expr.AttributeExpr{Type: source})
+	attribute := &expr.AttributeExpr{Type: &expr.Object{
+		{Name: "first", Attribute: first},
+		{Name: "second", Attribute: second},
+	}}
+	plan, err := PlanGoType(attribute, GoTypePlanOptions{
+		Owner:            "generated.local/gen/service",
+		RetainNamedValue: true,
+		Bind: func(GoTypeBindingRequest) (GoTypeBinding, error) {
+			return GoTypeBinding{
+				Owner: "generated.local/gen/service",
+				name:  "Record",
+			}, nil
+		},
+	})
+	require.NoError(t, err)
+
+	firstField := (*expr.AsObject(first.Type.(expr.UserType).Attribute().Type))[0].Attribute
+	secondField := (*expr.AsObject(second.Type.(expr.UserType).Attribute().Type))[0].Attribute
+	require.Len(t, plan.PlansForOccurrence(firstField), 1)
+	require.Len(t, plan.PlansForOccurrence(secondField), 1)
+}
+
+// TestGoTypePlanSeparatesNestedCopiesWithOneOrigin verifies that a nested copy
+// is not mistaken for a recursive reference to the copy that contains it.
+func TestGoTypePlanSeparatesNestedCopiesWithOneOrigin(t *testing.T) {
+	source := goTypeTestUserType("Record", &expr.Object{
+		{Name: "value", Attribute: &expr.AttributeExpr{Type: expr.String}},
+	})
+	outer := expr.DupAtt(&expr.AttributeExpr{Type: source}).Type.(expr.UserType)
+	nested := expr.DupAtt(&expr.AttributeExpr{Type: source}).Type.(expr.UserType)
+	nestedField := (*expr.AsObject(nested.Attribute().Type))[0].Attribute
+	outer.SetAttribute(&expr.AttributeExpr{Type: &expr.Object{
+		{Name: "nested", Attribute: &expr.AttributeExpr{Type: nested}},
+	}})
+	plan, err := PlanGoType(&expr.AttributeExpr{Type: outer}, GoTypePlanOptions{
+		Owner:            "generated.local/gen/service",
+		RetainNamedValue: true,
+		Bind: func(GoTypeBindingRequest) (GoTypeBinding, error) {
+			return GoTypeBinding{
+				Owner: "generated.local/gen/service",
+				name:  "Record",
+			}, nil
+		},
+	})
+	require.NoError(t, err)
+	require.Len(t, plan.PlansForOccurrence(nestedField), 1)
+}
+
+// TestGoTypePlanRetainsRecursiveNamedValue verifies that retaining a named
+// value stops when the type refers back to itself.
+func TestGoTypePlanRetainsRecursiveNamedValue(t *testing.T) {
+	record := &expr.UserTypeExpr{TypeName: "Record"}
+	record.AttributeExpr = &expr.AttributeExpr{Type: &expr.Object{
+		{Name: "next", Attribute: &expr.AttributeExpr{Type: record}},
+	}}
+	plan, err := PlanGoType(&expr.AttributeExpr{Type: record}, GoTypePlanOptions{
+		Owner:            "generated.local/gen/service",
+		RetainNamedValue: true,
+		Bind: func(GoTypeBindingRequest) (GoTypeBinding, error) {
+			return GoTypeBinding{
+				Owner: "generated.local/gen/service",
+				name:  "Record",
+			}, nil
+		},
+	})
+	require.NoError(t, err)
+	require.Len(t, plan.value.fields, 1)
+	require.Same(t, plan.value, plan.value.fields[0].value)
+}
+
 // goTypeTestUserType constructs one named type without running the DSL.
 func goTypeTestUserType(name string, dataType expr.DataType) expr.UserType {
 	return &expr.UserTypeExpr{
