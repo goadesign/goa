@@ -7,6 +7,7 @@ import (
 	"go/parser"
 	"go/token"
 	"path"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -113,8 +114,9 @@ func jsonRPCImportPaths(file *codegen.File) []string {
 // the design did not produce that file.
 func jsonRPCFileByPath(t *testing.T, files []*codegen.File, filePath string) *codegen.File {
 	t.Helper()
+	expected := filepath.FromSlash(filePath)
 	for _, file := range files {
-		if file.Path == filePath {
+		if file.Path == expected {
 			return file
 		}
 	}
