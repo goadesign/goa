@@ -7,9 +7,7 @@
 
 package server
 
-import (
-	feed "generated.local/gen/feed"
-)
+import feed "generated.local/gen/feed"
 
 // WatchResponseBody is the type of the "Feed" service "watch" endpoint HTTP
 // response body.

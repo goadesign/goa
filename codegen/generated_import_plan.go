@@ -178,6 +178,9 @@ func walkAttributeImports(
 	}
 	switch actual := attribute.Type.(type) {
 	case expr.UserType:
+		if expr.IsErrorResult(actual) {
+			return visit(GoaImport(""), false)
+		}
 		if location := UserTypeLocation(actual); location != nil {
 			importPath := path.Join(output.genpkg, location.RelImportPath)
 			if importPath != output.path {

@@ -1352,6 +1352,7 @@ func planImports(generation *codegen.Generation, transport transportKind, plans 
 				}
 				for _, file := range fileKinds {
 					var definitions, references []*expr.AttributeExpr
+					fixedImports := httpFixedFileImports(transportService, index == 0, file.kind)
 					switch file.kind {
 					case httpTypesFile:
 						catalog := plan.wireTypes[transportService].server
@@ -1359,6 +1360,7 @@ func planImports(generation *codegen.Generation, transport transportKind, plans 
 							catalog = plan.wireTypes[transportService].client
 						}
 						definitions, references = wireCatalogImportAttributes(catalog)
+						fixedImports = append(fixedImports, wireCatalogValidationImports(catalog)...)
 						references = append(references, serviceReferenceAttributes(transportService.HTTPEndpoints...)...)
 					case httpCodecFile:
 						references = serviceReferenceAttributes(transportService.HTTPEndpoints...)
@@ -1371,7 +1373,7 @@ func planImports(generation *codegen.Generation, transport transportKind, plans 
 					if err := retainPlannedFileImports(
 						plan,
 						outputPackage,
-						httpFixedFileImports(transportService, index == 0, file.kind),
+						fixedImports,
 						httpGeneratedImportPlan(transportService, index == 0, file.kind, servicePackage, viewsPackage),
 						definitions,
 						references,

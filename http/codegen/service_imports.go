@@ -137,9 +137,6 @@ func httpFixedFileImports(service *expr.HTTPServiceExpr, client bool, kind httpF
 		if httpServiceHasUnion(service) {
 			paths = append(paths, "bytes", "encoding/json", "fmt", codegen.GoaImport("").Path)
 		}
-		for _, spec := range httpTransportValidationImports(service) {
-			paths = append(paths, spec.Path)
-		}
 	case httpPathsFile:
 		paths = httpPathImportPaths(service)
 	case httpPayloadBuilderFile:
@@ -674,6 +671,15 @@ func httpCodecUsesStrings(service *expr.HTTPServiceExpr, client bool) bool {
 // boolean values to or from HTTP text.
 func httpCodecUsesStrconv(service *expr.HTTPServiceExpr) bool {
 	for _, endpoint := range service.HTTPEndpoints {
+		if endpoint.MapQueryParams != nil {
+			attribute := endpoint.MethodExpr.Payload
+			if name := *endpoint.MapQueryParams; name != "" {
+				attribute = attribute.Find(name)
+			}
+			if dataTypeHasTextConvertedValue(attribute.Type) {
+				return true
+			}
+		}
 		attributes := make([]*expr.MappedAttributeExpr, 0, 4+2*len(endpoint.Responses))
 		attributes = append(attributes,
 			endpoint.PathParams(), endpoint.QueryParams(), endpoint.Headers, endpoint.Cookies,
@@ -690,28 +696,32 @@ func httpCodecUsesStrconv(service *expr.HTTPServiceExpr) bool {
 	return false
 }
 
-// httpTransportValidationImports returns the runtime packages used by checks
-// emitted beside copied HTTP transport types.
-func httpTransportValidationImports(service *expr.HTTPServiceExpr) []*codegen.ImportSpec {
-	policy := codegen.GoLayoutPolicy{
-		Pointer:             true,
-		UnionPointer:        true,
-		ArrayElementPointer: true,
-		SumType:             true,
-	}
+// wireCatalogValidationImports returns the packages used by every validator
+// emitted in one HTTP types file.
+func wireCatalogValidationImports(catalog *wireTypeCatalog) []*codegen.ImportSpec {
 	seen := make(map[string]struct{})
 	var imports []*codegen.ImportSpec
-	for _, attribute := range serviceReferenceAttributes(service.HTTPEndpoints...) {
-		if attribute == nil {
+	for _, record := range catalog.records {
+		if !record.needsValidator {
 			continue
 		}
-		for _, preference := range codegen.ValidationRuntimeImports(attribute, policy) {
-			if _, ok := seen[preference.Path]; ok {
-				continue
-			}
-			seen[preference.Path] = struct{}{}
-			imports = append(imports, codegen.NewImport(preference.Name, preference.Path))
+		imports = appendWireValidationImports(imports, seen, record.identity.attribute, record.identity.policy)
+	}
+	for _, root := range catalog.validationRoots {
+		imports = appendWireValidationImports(imports, seen, root.attribute, root.policy)
+	}
+	return imports
+}
+
+// appendWireValidationImports adds each runtime package once for one validator
+// emitted in the current HTTP types file.
+func appendWireValidationImports(imports []*codegen.ImportSpec, seen map[string]struct{}, attribute *expr.AttributeExpr, policy wireTypePolicy) []*codegen.ImportSpec {
+	for _, preference := range codegen.ValidationRuntimeImports(attribute, wireGoLayoutPolicy(policy)) {
+		if _, ok := seen[preference.Path]; ok {
+			continue
 		}
+		seen[preference.Path] = struct{}{}
+		imports = append(imports, codegen.NewImport(preference.Name, preference.Path))
 	}
 	return imports
 }
@@ -766,11 +776,26 @@ func mappedAttributeHasTextConvertedValue(attribute *expr.MappedAttributeExpr) b
 	if attribute == nil || attribute.IsEmpty() {
 		return false
 	}
-	for _, named := range *expr.AsObject(attribute.Attribute().Type) {
-		dataType := underlyingDataType(named.Attribute.Type)
-		if array, ok := dataType.(*expr.Array); ok {
-			dataType = underlyingDataType(array.ElemType.Type)
+	return dataTypeHasTextConvertedValue(attribute.Attribute().Type)
+}
+
+// dataTypeHasTextConvertedValue reports whether one mapped HTTP value contains
+// a number or boolean that generated code converts with strconv.
+func dataTypeHasTextConvertedValue(dataType expr.DataType) bool {
+	dataType = underlyingDataType(dataType)
+	switch actual := dataType.(type) {
+	case *expr.Object:
+		for _, field := range *actual {
+			if dataTypeHasTextConvertedValue(field.Attribute.Type) {
+				return true
+			}
 		}
+	case *expr.Array:
+		return dataTypeHasTextConvertedValue(actual.ElemType.Type)
+	case *expr.Map:
+		return dataTypeHasTextConvertedValue(actual.KeyType.Type) ||
+			dataTypeHasTextConvertedValue(actual.ElemType.Type)
+	default:
 		switch dataType.Kind() {
 		case expr.BooleanKind, expr.IntKind, expr.Int32Kind, expr.Int64Kind,
 			expr.UIntKind, expr.UInt32Kind, expr.UInt64Kind, expr.Float32Kind, expr.Float64Kind:

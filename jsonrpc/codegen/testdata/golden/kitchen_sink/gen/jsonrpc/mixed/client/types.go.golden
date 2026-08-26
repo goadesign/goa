@@ -7,9 +7,7 @@
 
 package client
 
-import (
-	mixed "generated.local/gen/mixed"
-)
+import mixed "generated.local/gen/mixed"
 
 // LookupRequestBody is the type of the "Mixed" service "lookup" endpoint HTTP
 // request body.

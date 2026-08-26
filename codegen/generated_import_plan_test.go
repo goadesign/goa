@@ -128,6 +128,18 @@ func TestGeneratedImportPlanTraversesEveryTypeCopy(t *testing.T) {
 	require.Equal(t, []string{"generated.local/first", "generated.local/second"}, imports.Paths())
 }
 
+// TestGeneratedImportPlanIncludesBuiltInServiceError verifies that signatures
+// using Goa's standard error reserve the package that defines ServiceError.
+func TestGeneratedImportPlanIncludesBuiltInServiceError(t *testing.T) {
+	generation := mustTestGeneration(t, "generated.local/gen", nil)
+	pkg := mustClaimTestPackage(t, generation, "generated.local/gen/service")
+	imports := NewGeneratedImportPlan(pkg)
+	attribute := expr.DupAtt(&expr.AttributeExpr{Type: expr.ErrorResult})
+
+	require.NoError(t, imports.AddTypeExpressions(attribute))
+	require.Equal(t, []string{GoaImport("").Path}, imports.Paths())
+}
+
 // TestGeneratedImportPlanRejectsLateChangesAndRepeatedLink verifies that the
 // planning and linking phases each run exactly once.
 func TestGeneratedImportPlanRejectsLateChangesAndRepeatedLink(t *testing.T) {

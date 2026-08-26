@@ -21,6 +21,7 @@ import (
 	"goa.design/goa/v3/dsl"
 	"goa.design/goa/v3/eval"
 	"goa.design/goa/v3/expr"
+	"goa.design/goa/v3/http/codegen/testdata"
 )
 
 func TestPlanDoesNotReserveUnusedStaticAliasesBeforeFreeze(t *testing.T) {
@@ -490,6 +491,47 @@ func TestHTTPFilePlansMatchRenderedImports(t *testing.T) {
 		}
 		require.ElementsMatch(t, actual, planned, file.Path)
 	}
+}
+
+// TestHTTPFilePlansIncludeGeneratedUses verifies that files reserve the
+// packages named by copied validators, constructors, and query conversion.
+func TestHTTPFilePlansIncludeGeneratedUses(t *testing.T) {
+	t.Run("nested string validation", func(t *testing.T) {
+		root := expr.RunDSL(t, testdata.ResultWithResultCollectionDSL)
+		plan := linkedHTTPPlanForRoot(t, root)
+		file := plan.ClientTypeFiles()[0]
+		imports := importPaths(file.SectionTemplates[0].Data.(map[string]any)["Imports"].([]*codegen.ImportSpec))
+		require.Contains(t, imports, "unicode/utf8")
+	})
+
+	t.Run("numeric map query", func(t *testing.T) {
+		root := expr.RunDSL(t, testdata.PayloadMapQueryObjectDSL)
+		plan := linkedHTTPPlanForRoot(t, root)
+		client := plan.ClientFiles()[1]
+		server := plan.ServerFiles()[1]
+		clientImports := importPaths(client.SectionTemplates[0].Data.(map[string]any)["Imports"].([]*codegen.ImportSpec))
+		serverImports := importPaths(server.SectionTemplates[0].Data.(map[string]any)["Imports"].([]*codegen.ImportSpec))
+		require.Contains(t, clientImports, "strconv")
+		require.Contains(t, serverImports, "strconv")
+	})
+
+	t.Run("built-in error constructor", func(t *testing.T) {
+		root := expr.RunDSL(t, func() {
+			dsl.Service("Records", func() {
+				dsl.Method("Read", func() {
+					dsl.Error("not_found")
+					dsl.HTTP(func() {
+						dsl.GET("/records")
+						dsl.Response("not_found", dsl.StatusNotFound)
+					})
+				})
+			})
+		})
+		plan := linkedHTTPPlanForRoot(t, root)
+		file := plan.ServerTypeFiles()[0]
+		imports := importPaths(file.SectionTemplates[0].Data.(map[string]any)["Imports"].([]*codegen.ImportSpec))
+		require.Contains(t, imports, codegen.GoaImport("").Path)
+	})
 }
 
 // importPaths returns the package paths from one generated file header.
