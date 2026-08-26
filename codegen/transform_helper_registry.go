@@ -27,8 +27,14 @@ type (
 	// Bind assigns the supplied declaration to every occurrence in the group.
 	TransformHelperGroup struct {
 		definition TransformHelperDefinition
+		order      PackageNameOrder
 		candidates []*transformHelperCandidate
 	}
+
+	// TransformHelperOrder returns the package name order for one helper at its
+	// exact field or collection location. The caller supplies the stable identity
+	// of the conversion that contains the helper.
+	TransformHelperOrder func(TransformHelperDefinitionLocation) PackageNameOrder
 
 	// transformHelperCandidate stores one planned function call and the Go types
 	// selected at that call's field or collection position.
@@ -37,6 +43,7 @@ type (
 		plan         *TransformPlan
 		helper       TransformHelper
 		definition   TransformHelperDefinition
+		order        PackageNameOrder
 		sourceLayout *GoTypePlan
 		targetLayout *GoTypePlan
 		children     []*transformHelperCandidate
@@ -64,8 +71,9 @@ func NewTransformHelperRegistry() *TransformHelperRegistry {
 
 // Collect adds every helper occurrence in plan. sourceLayout and targetLayout
 // must describe the complete source and target values supplied to plan and
-// retain the fields beneath named types.
-func (r *TransformHelperRegistry) Collect(plan *TransformPlan, sourceLayout, targetLayout *GoTypePlan) error {
+// retain the fields beneath named types. order must combine the conversion's
+// stable identity with the location supplied to it.
+func (r *TransformHelperRegistry) Collect(plan *TransformPlan, sourceLayout, targetLayout *GoTypePlan, order TransformHelperOrder) error {
 	if r.finalized {
 		return fmt.Errorf("transform helper registry is already finalized")
 	}
@@ -74,6 +82,9 @@ func (r *TransformHelperRegistry) Collect(plan *TransformPlan, sourceLayout, tar
 	}
 	if sourceLayout == nil || targetLayout == nil {
 		return fmt.Errorf("transform helper layouts must not be nil")
+	}
+	if order == nil {
+		return fmt.Errorf("transform helper order must not be nil")
 	}
 	definitions := make(map[int]TransformHelperDefinition, len(plan.helpers))
 	for _, definition := range plan.definitions {
@@ -94,11 +105,16 @@ func (r *TransformHelperRegistry) Collect(plan *TransformPlan, sourceLayout, tar
 		if err != nil {
 			return fmt.Errorf("find target layout for transform helper occurrence %d: %w", helper.Occurrence, err)
 		}
+		candidateOrder := order(helper.location)
+		if err := validatePackageNameOrder(candidateOrder); err != nil {
+			return fmt.Errorf("order transform helper occurrence %d: %w", helper.Occurrence, err)
+		}
 		r.candidates = append(r.candidates, &transformHelperCandidate{
 			index:        len(r.candidates),
 			plan:         plan,
 			helper:       helper,
 			definition:   definition,
+			order:        candidateOrder,
 			sourceLayout: source,
 			targetLayout: target,
 		})
@@ -146,15 +162,20 @@ func (r *TransformHelperRegistry) Finalize() ([]*TransformHelperGroup, error) {
 		}
 		group := groups[class]
 		candidate := r.candidates[index]
-		if len(group.candidates) == 0 {
+		if len(group.candidates) == 0 || comparePackageNameOrders(candidate.order, group.order) < 0 {
 			group.definition = candidate.definition
 			group.definition.Location = candidate.helper.location
-		} else if candidate.helper.location.Compare(group.definition.Location) < 0 {
-			group.definition.Location = candidate.helper.location
+			group.order = candidate.order
 		}
 		group.candidates = append(group.candidates, candidate)
 	}
 	return groups, nil
+}
+
+// Order returns the stable package name order from the same helper occurrence
+// returned by Definition.
+func (g *TransformHelperGroup) Order() PackageNameOrder {
+	return g.order
 }
 
 // Definition returns a detached description used to choose the group's Go

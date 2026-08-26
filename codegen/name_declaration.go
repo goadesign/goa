@@ -142,15 +142,21 @@ func newDependentName(kind PackageNameKind, base *NameDeclaration, prefix, suffi
 // order in which generators added them. Two distinct declarations must not
 // compare equal.
 func comparePackageNames(left, right *NameDeclaration) int {
-	leftType := reflect.TypeOf(left.order)
-	rightType := reflect.TypeOf(right.order)
+	return comparePackageNameOrders(left.order, right.order)
+}
+
+// comparePackageNameOrders compares two validated order values without reading
+// discovery order or pointer identity.
+func comparePackageNameOrders(left, right PackageNameOrder) int {
+	leftType := reflect.TypeOf(left)
+	rightType := reflect.TypeOf(right)
 	if compared := strings.Compare(leftType.PkgPath(), rightType.PkgPath()); compared != 0 {
 		return compared
 	}
 	if compared := strings.Compare(leftType.Name(), rightType.Name()); compared != 0 {
 		return compared
 	}
-	return left.order.ComparePackageName(right.order)
+	return left.ComparePackageName(right)
 }
 
 // validateNameDeclaration checks that declaration has a valid kind, visibility,

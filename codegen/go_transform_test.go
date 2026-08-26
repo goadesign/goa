@@ -34,7 +34,16 @@ type (
 		Attributor
 		fields *[]*expr.AttributeExpr
 	}
+
+	// transformTestOrderFactory combines a test conversion key with each exact
+	// helper location supplied by the registry.
+	transformTestOrderFactory string
 )
+
+// order returns one stable package name order for a helper occurrence.
+func (f transformTestOrderFactory) order(location TransformHelperDefinitionLocation) PackageNameOrder {
+	return testNameOrder{value: string(f) + location.encoded}
+}
 
 func TestGoTransform(t *testing.T) {
 	root := RunDSL(t, testdata.TestTypesDSL)
@@ -1404,11 +1413,13 @@ func TestTransformHelperRegistryGroupsEquivalentPlans(t *testing.T) {
 		first,
 		transformTestLayout(t, first.sourceCopier.Original(first.source), GoLayoutPolicy{UseDefault: true}),
 		transformTestLayout(t, first.targetCopier.Original(first.target), GoLayoutPolicy{UseDefault: true}),
+		transformTestOrderFactory("first").order,
 	))
 	require.NoError(t, registry.Collect(
 		second,
 		transformTestLayout(t, second.sourceCopier.Original(second.source), GoLayoutPolicy{UseDefault: true}),
 		transformTestLayout(t, second.targetCopier.Original(second.target), GoLayoutPolicy{UseDefault: true}),
+		transformTestOrderFactory("second").order,
 	))
 
 	groups, err := registry.Finalize()
@@ -1433,11 +1444,12 @@ func TestTransformHelperRegistryGroupsSeparateTypeWrappersForOneDeclaration(t *t
 	require.NoError(t, err)
 	require.NoError(t, pkg.DeclareName(declaration))
 	registry := NewTransformHelperRegistry()
-	for _, plan := range []*TransformPlan{first, second} {
+	for index, plan := range []*TransformPlan{first, second} {
 		require.NoError(t, registry.Collect(
 			plan,
 			transformTestLayoutWithDeclaration(t, plan.sourceCopier.Original(plan.source), declaration),
 			transformTestLayoutWithDeclaration(t, plan.targetCopier.Original(plan.target), declaration),
+			transformTestOrderFactory(fmt.Sprintf("plan-%d", index)).order,
 		))
 	}
 
@@ -1458,7 +1470,7 @@ func TestTransformHelperRegistryKeepsSeparateDeclarationsApart(t *testing.T) {
 	require.NoError(t, pkg.DeclareName(firstDeclaration))
 	require.NoError(t, pkg.DeclareName(secondDeclaration))
 	registry := NewTransformHelperRegistry()
-	for _, entry := range []struct {
+	for index, entry := range []struct {
 		plan        *TransformPlan
 		declaration *NameDeclaration
 	}{
@@ -1469,6 +1481,7 @@ func TestTransformHelperRegistryKeepsSeparateDeclarationsApart(t *testing.T) {
 			entry.plan,
 			transformTestLayoutWithDeclaration(t, entry.plan.sourceCopier.Original(entry.plan.source), entry.declaration),
 			transformTestLayoutWithDeclaration(t, entry.plan.targetCopier.Original(entry.plan.target), entry.declaration),
+			transformTestOrderFactory(fmt.Sprintf("plan-%d", index)).order,
 		))
 	}
 
@@ -1496,11 +1509,43 @@ func TestTransformHelperRegistryKeepsGroupSpecificLocations(t *testing.T) {
 		layout.value.fields[1].declaration = secondDeclaration
 	}
 	registry := NewTransformHelperRegistry()
-	require.NoError(t, registry.Collect(plan, sourceLayout, targetLayout))
+	require.NoError(t, registry.Collect(plan, sourceLayout, targetLayout, transformTestOrderFactory("plan").order))
 
 	groups, err := registry.Finalize()
 	require.NoError(t, err)
 	require.Len(t, groups, 2)
+	require.NotEqual(t, groups[0].Definition().Location, groups[1].Definition().Location)
+}
+
+func TestTransformHelperRegistryKeepsOnePlanAndLocationTogether(t *testing.T) {
+	first := siblingTransformPlan(t)
+	second := siblingTransformPlan(t)
+	firstSource := transformTestLayout(t, first.sourceCopier.Original(first.source), GoLayoutPolicy{UseDefault: true})
+	firstTarget := transformTestLayout(t, first.targetCopier.Original(first.target), GoLayoutPolicy{UseDefault: true})
+	secondSource := transformTestLayout(t, second.sourceCopier.Original(second.source), GoLayoutPolicy{UseDefault: true})
+	secondTarget := transformTestLayout(t, second.targetCopier.Original(second.target), GoLayoutPolicy{UseDefault: true})
+	alpha := NewExactName(NameType, "AlphaRecursive")
+	beta := NewExactName(NameType, "BetaRecursive")
+	for _, layout := range []*GoTypePlan{firstSource, firstTarget} {
+		layout.value.fields[0].declaration = alpha
+		layout.value.fields[1].declaration = beta
+	}
+	for _, layout := range []*GoTypePlan{secondSource, secondTarget} {
+		layout.value.fields[0].declaration = beta
+		layout.value.fields[1].declaration = alpha
+	}
+
+	registry := NewTransformHelperRegistry()
+	require.NoError(t, registry.Collect(first, firstSource, firstTarget, transformTestOrderFactory("first").order))
+	require.NoError(t, registry.Collect(second, secondSource, secondTarget, transformTestOrderFactory("second").order))
+	groups, err := registry.Finalize()
+	require.NoError(t, err)
+	require.Len(t, groups, 2)
+	firstOrder := groups[0].Order().(testNameOrder)
+	secondOrder := groups[1].Order().(testNameOrder)
+	require.True(t, strings.HasPrefix(firstOrder.value, "first"))
+	require.True(t, strings.HasPrefix(secondOrder.value, "first"))
+	require.NotEqual(t, firstOrder, secondOrder)
 	require.NotEqual(t, groups[0].Definition().Location, groups[1].Definition().Location)
 }
 
@@ -1523,6 +1568,7 @@ func TestTransformHelperRegistrySharesFieldAndMapValueHelpers(t *testing.T) {
 		plan,
 		transformTestLayout(t, container, GoLayoutPolicy{UseDefault: true}),
 		transformTestLayout(t, container, GoLayoutPolicy{UseDefault: true}),
+		transformTestOrderFactory("plan").order,
 	))
 
 	groups, err := registry.Finalize()
@@ -1550,6 +1596,7 @@ func TestTransformHelperRegistryFollowsNamedAliasChains(t *testing.T) {
 		plan,
 		transformTestLayout(t, container, GoLayoutPolicy{UseDefault: true}),
 		transformTestLayout(t, container, GoLayoutPolicy{UseDefault: true}),
+		transformTestOrderFactory("plan").order,
 	)
 	require.NoError(t, err)
 }
@@ -1592,7 +1639,7 @@ func TestTransformHelperRegistryKeepsDifferentPlansSeparate(t *testing.T) {
 			first := test.first(t)
 			second := test.second(t)
 			registry := NewTransformHelperRegistry()
-			for _, entry := range []struct {
+			for index, entry := range []struct {
 				plan   *TransformPlan
 				policy GoLayoutPolicy
 			}{
@@ -1603,6 +1650,7 @@ func TestTransformHelperRegistryKeepsDifferentPlansSeparate(t *testing.T) {
 					entry.plan,
 					transformTestLayout(t, entry.plan.sourceCopier.Original(entry.plan.source), entry.policy),
 					transformTestLayout(t, entry.plan.targetCopier.Original(entry.plan.target), entry.policy),
+					transformTestOrderFactory(fmt.Sprintf("plan-%d", index)).order,
 				))
 			}
 			groups, err := registry.Finalize()
@@ -1635,6 +1683,7 @@ func TestTransformHelperRegistryKeepsHookDefinitionsSeparate(t *testing.T) {
 		plan,
 		transformTestLayout(t, source, GoLayoutPolicy{UseDefault: true}),
 		transformTestLayout(t, target, GoLayoutPolicy{UseDefault: true}),
+		transformTestOrderFactory("plan").order,
 	))
 
 	groups, err := registry.Finalize()
@@ -1668,11 +1717,12 @@ func TestTransformHelperGroupBindIsAtomic(t *testing.T) {
 	first := siblingTransformPlan(t)
 	second := siblingTransformPlan(t)
 	registry := NewTransformHelperRegistry()
-	for _, plan := range []*TransformPlan{first, second} {
+	for index, plan := range []*TransformPlan{first, second} {
 		require.NoError(t, registry.Collect(
 			plan,
 			transformTestLayout(t, plan.sourceCopier.Original(plan.source), GoLayoutPolicy{UseDefault: true}),
 			transformTestLayout(t, plan.targetCopier.Original(plan.target), GoLayoutPolicy{UseDefault: true}),
+			transformTestOrderFactory(fmt.Sprintf("plan-%d", index)).order,
 		))
 	}
 	groups, err := registry.Finalize()

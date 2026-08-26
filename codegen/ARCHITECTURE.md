@@ -400,13 +400,16 @@ copies the field value.
 When several `TransformPlan` values write helpers to the same Go package, the
 caller collects them in one `TransformHelperRegistry` before package names are
 final. Each plan is supplied with the source and target `GoTypePlan` values that
-describe the actual generated parameter and result types. After every plan has
-been collected, the registry groups functions only when those Go types, the
+describe the actual generated parameter and result types. The caller also
+supplies the package name order for each exact helper location. After every plan
+has been collected, the registry groups functions only when those Go types, the
 conversion rules, and the ordered child function calls are equivalent. It
-repeats the child comparison until recursive call graphs stop changing. The
-registry never compares rendered Go source, hashes, or preferred names. The
-caller declares one function for each returned group and binds that declaration
-to the complete group before rendering.
+repeats the child comparison until recursive call graphs stop changing. Each
+group returns the complete order and definition from one real helper occurrence;
+it never combines the conversion identity from one occurrence with the location
+from another. The registry never compares rendered Go source, hashes, or
+preferred names. The caller declares one function for each returned group and
+binds that declaration to the complete group before rendering.
 
 Each helper occurrence retains its own authored location. A shared function
 definition still keeps the earliest location for stable name ordering, but that
