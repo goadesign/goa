@@ -240,6 +240,26 @@ func httpCLIRequestFlags(endpoint *expr.HTTPEndpointExpr) []httpCLIFlag {
 			hasDefault: policy.defaultValue != nil,
 		})
 	}
+	flags = append(flags, httpBasicAuthFlags(endpoint)...)
+	return flags
+}
+
+// httpBasicAuthFlags returns the username and password fields added to the
+// generated client command for a method that uses Basic authentication.
+func httpBasicAuthFlags(endpoint *expr.HTTPEndpointExpr) []httpCLIFlag {
+	if !httpEndpointUsesBasicAuth(endpoint) {
+		return nil
+	}
+	payload := endpoint.MethodExpr.Payload
+	flags := make([]httpCLIFlag, 0, 2)
+	for _, tag := range []string{"security:username", "security:password"} {
+		name := expr.TaggedAttribute(payload, tag)
+		flags = append(flags, httpCLIFlag{
+			attribute:  payload.Find(name),
+			required:   payload.IsRequired(name),
+			hasDefault: payload.GetDefault(name) != nil,
+		})
+	}
 	return flags
 }
 
@@ -583,6 +603,11 @@ func httpCodecUsesGoa(service *expr.HTTPServiceExpr, client bool) bool {
 			len(endpoint.HTTPErrors) > 0 {
 			return true
 		}
+		for _, flag := range httpBasicAuthFlags(endpoint) {
+			if flag.required {
+				return true
+			}
+		}
 	}
 	return false
 }
@@ -652,7 +677,10 @@ func httpCodecUsesStrings(service *expr.HTTPServiceExpr, client bool) bool {
 		if endpoint.MapQueryParams != nil || mappedAttributeHasArray(endpoint.PathParams()) || mappedAttributeHasArray(endpoint.QueryParams()) {
 			return true
 		}
-		if !client && len(endpoint.Requirements) > 0 {
+		if client && httpEndpointUsesBearerAuthorizationHeader(endpoint) {
+			return true
+		}
+		if !client && httpEndpointUsesHeaderSecurity(endpoint) {
 			return true
 		}
 		if mappedAttributeHasArray(endpoint.Headers) || mappedAttributeHasArray(endpoint.Cookies) {
@@ -660,6 +688,49 @@ func httpCodecUsesStrings(service *expr.HTTPServiceExpr, client bool) bool {
 		}
 		for _, response := range endpoint.Responses {
 			if mappedAttributeHasArray(response.Headers) || mappedAttributeHasArray(response.Cookies) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// httpEndpointUsesBasicAuth reports whether the method reads a username and
+// password from the HTTP Authorization header.
+func httpEndpointUsesBasicAuth(endpoint *expr.HTTPEndpointExpr) bool {
+	for _, requirement := range endpoint.Requirements {
+		for _, scheme := range requirement.Schemes {
+			if scheme.Kind == expr.BasicAuthKind {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// httpEndpointUsesBearerAuthorizationHeader reports whether the client adds a
+// Bearer prefix to the Authorization header when the supplied token has none.
+func httpEndpointUsesBearerAuthorizationHeader(endpoint *expr.HTTPEndpointExpr) bool {
+	for _, requirement := range endpoint.Requirements {
+		for _, scheme := range requirement.Schemes {
+			if scheme.In != "header" || scheme.Name != "Authorization" {
+				continue
+			}
+			switch scheme.Kind {
+			case expr.BearerKind, expr.JWTKind, expr.OAuth2Kind:
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// httpEndpointUsesHeaderSecurity reports whether the server removes an
+// authentication prefix from a credential read from an HTTP header.
+func httpEndpointUsesHeaderSecurity(endpoint *expr.HTTPEndpointExpr) bool {
+	for _, requirement := range endpoint.Requirements {
+		for _, scheme := range requirement.Schemes {
+			if scheme.Kind != expr.BasicAuthKind && scheme.In == "header" {
 				return true
 			}
 		}

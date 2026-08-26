@@ -496,6 +496,39 @@ func TestHTTPFilePlansMatchRenderedImports(t *testing.T) {
 // TestHTTPFilePlansIncludeGeneratedUses verifies that files reserve the
 // packages named by copied validators, constructors, and query conversion.
 func TestHTTPFilePlansIncludeGeneratedUses(t *testing.T) {
+	t.Run("required basic authentication", func(t *testing.T) {
+		root := expr.RunDSL(t, func() {
+			basic := dsl.BasicAuthSecurity("basic")
+			dsl.API("secure", func() {
+				dsl.Security(basic)
+			})
+			dsl.Service("Account", func() {
+				dsl.Method("Read", func() {
+					dsl.Payload(func() {
+						dsl.Username("username")
+						dsl.Password("password")
+						dsl.Required("username", "password")
+					})
+					dsl.HTTP(func() {
+						dsl.GET("/account")
+					})
+				})
+			})
+		})
+		plan := linkedHTTPPlanForRoot(t, root)
+		serverImports := plannedHTTPFileImports(t, plan.ServerFiles(), "/server/encode_decode.go")
+		clientCLIImports := plannedHTTPFileImports(t, plan.ClientCLIFiles(), "/client/cli.go")
+		require.Contains(t, serverImports, codegen.GoaImport("").Path)
+		require.Contains(t, clientCLIImports, "fmt")
+	})
+
+	t.Run("authorization bearer header", func(t *testing.T) {
+		root := expr.RunDSL(t, testdata.PayloadJWTAuthorizationHeaderDSL)
+		plan := linkedHTTPPlanForRoot(t, root)
+		clientImports := plannedHTTPFileImports(t, plan.ClientFiles(), "/client/encode_decode.go")
+		require.Contains(t, clientImports, "strings")
+	})
+
 	t.Run("nested string validation", func(t *testing.T) {
 		root := expr.RunDSL(t, testdata.ResultWithResultCollectionDSL)
 		plan := linkedHTTPPlanForRoot(t, root)
@@ -541,6 +574,19 @@ func importPaths(imports []*codegen.ImportSpec) []string {
 		paths[index] = spec.Path
 	}
 	return paths
+}
+
+// plannedHTTPFileImports returns the packages recorded for the generated file
+// whose path ends in suffix.
+func plannedHTTPFileImports(t *testing.T, files []*codegen.File, suffix string) []string {
+	t.Helper()
+	for _, file := range files {
+		if strings.HasSuffix(filepath.ToSlash(file.Path), suffix) {
+			return importPaths(file.SectionTemplates[0].Data.(map[string]any)["Imports"].([]*codegen.ImportSpec))
+		}
+	}
+	require.Fail(t, "generated HTTP file was not planned", suffix)
+	return nil
 }
 
 // TestJSONRPCSnapshotsExposeReleasedNames checks that copied JSON-RPC data
