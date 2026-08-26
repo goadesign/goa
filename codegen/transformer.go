@@ -73,6 +73,13 @@ type (
 		pkg string
 	}
 
+	// goTypeLayoutAttributor uses names retained in one linked Go type. The
+	// wrapped resolver supplies operations that the type plan does not record.
+	goTypeLayoutAttributor struct {
+		Attributor
+		layout LinkedGoType
+	}
+
 	// TransformAttrs are the attributes that help in the transformation.
 	TransformAttrs struct {
 		// SourceCtx and TargetCtx are the source and target attribute context.
@@ -505,6 +512,29 @@ func (a *AttributeContext) Enter(att *expr.AttributeExpr) *AttributeContext {
 	return entered
 }
 
+// WithGoTypeLayout returns a copy that uses the final generated type, field,
+// and package names retained in layout.
+func (a *AttributeContext) WithGoTypeLayout(layout LinkedGoType) (*AttributeContext, error) {
+	if a == nil {
+		return nil, fmt.Errorf("attach Go type layout: attribute context must not be nil")
+	}
+	if a.Scope == nil {
+		return nil, fmt.Errorf("attach Go type layout: attribute resolver must not be nil")
+	}
+	if layout.plan == nil {
+		return nil, fmt.Errorf("attach Go type layout: linked Go type must not be empty")
+	}
+	if layout.plan.policy != a.LayoutPolicy() {
+		return nil, fmt.Errorf("attach Go type layout: pointer and default rules do not match the attribute context")
+	}
+	linked := a.Dup()
+	linked.Scope = &goTypeLayoutAttributor{
+		Attributor: a.Scope,
+		layout:     layout,
+	}
+	return linked, nil
+}
+
 // Dup creates a shallow copy of the AttributeContext.
 func (a *AttributeContext) Dup() *AttributeContext {
 	return &AttributeContext{
@@ -597,6 +627,112 @@ func (*AttributeScope) Field(att *expr.AttributeExpr, name string, firstUpper bo
 // Scope returns the name scope.
 func (a *AttributeScope) Scope() *NameScope {
 	return a.scope
+}
+
+// Name returns the final planned type name when layout contains attribute.
+func (a *goTypeLayoutAttributor) Name(attribute *expr.AttributeExpr, pkg string, pointer, useDefault bool) string {
+	return a.mustFind(attribute).Name()
+}
+
+// Ref returns the final planned type reference when layout contains attribute.
+func (a *goTypeLayoutAttributor) Ref(attribute *expr.AttributeExpr, pkg string) string {
+	return a.mustFind(attribute).Ref()
+}
+
+// Field returns the final planned field name when layout contains attribute.
+func (a *goTypeLayoutAttributor) Field(attribute *expr.AttributeExpr, name string, firstUpper bool) string {
+	expected := a.Attributor.Field(attribute, name, firstUpper)
+	for _, layout := range a.findAll(attribute) {
+		if layout.Field(firstUpper) == expected {
+			return expected
+		}
+	}
+	panic(fmt.Sprintf("Go type layout does not contain field %q", name)) // bug
+}
+
+// Package returns the final package qualifier when layout contains attribute.
+func (a *goTypeLayoutAttributor) Package(attribute *expr.AttributeExpr) string {
+	if attribute == nil {
+		return a.Attributor.Package(nil)
+	}
+	return a.mustFind(attribute).Package()
+}
+
+// Enter narrows the retained type when attribute identifies one planned child.
+func (a *goTypeLayoutAttributor) Enter(attribute *expr.AttributeExpr) Attributor {
+	return &goTypeLayoutAttributor{
+		Attributor: a.Attributor.Enter(attribute),
+		layout:     a.mustFind(attribute),
+	}
+}
+
+// GoTypeLayout returns the retained type when it contains attribute.
+func (a *goTypeLayoutAttributor) GoTypeLayout(attribute *expr.AttributeExpr, policy GoLayoutPolicy) (LinkedGoType, error) {
+	if layout, ok := a.find(attribute); ok {
+		if layout.plan.policy != policy {
+			return LinkedGoType{}, fmt.Errorf("resolve Go type layout: pointer and default rules do not match the retained type")
+		}
+		return layout, nil
+	}
+	return LinkedGoType{}, fmt.Errorf("resolve Go type layout: retained type does not contain %q", attribute.Type.Name())
+}
+
+// OneofWrapper asks the wrapped transport resolver for its protobuf wrapper.
+func (a *goTypeLayoutAttributor) OneofWrapper(attribute *expr.AttributeExpr) string {
+	resolver, ok := a.Attributor.(interface {
+		OneofWrapper(*expr.AttributeExpr) string
+	})
+	if !ok {
+		panic("Go type layout resolver cannot resolve a protobuf oneof wrapper") // bug
+	}
+	return resolver.OneofWrapper(attribute)
+}
+
+// UnionConstructor asks the wrapped resolver for the generated branch constructor.
+func (a *goTypeLayoutAttributor) UnionConstructor(attribute *expr.AttributeExpr, branch string) (string, error) {
+	resolver, ok := a.Attributor.(interface {
+		UnionConstructor(*expr.AttributeExpr, string) (string, error)
+	})
+	if !ok {
+		return "", fmt.Errorf("Go type layout resolver cannot resolve a OneOf constructor")
+	}
+	return resolver.UnionConstructor(attribute, branch)
+}
+
+// find returns one retained type for attribute and rejects different planned
+// references for the same expression.
+func (a *goTypeLayoutAttributor) find(attribute *expr.AttributeExpr) (LinkedGoType, bool) {
+	layouts := a.findAll(attribute)
+	if len(layouts) == 0 {
+		return LinkedGoType{}, false
+	}
+	selected := layouts[0]
+	for _, layout := range layouts[1:] {
+		if layout.Name() != selected.Name() || layout.Ref() != selected.Ref() || layout.Package() != selected.Package() {
+			panic(fmt.Sprintf("Go type layout has different references for %q", attribute.Type.Name())) // bug
+		}
+	}
+	return selected, true
+}
+
+// mustFind returns the retained type for attribute or stops generation because
+// a linked context must contain every type requested from it.
+func (a *goTypeLayoutAttributor) mustFind(attribute *expr.AttributeExpr) LinkedGoType {
+	layout, ok := a.find(attribute)
+	if !ok {
+		panic(fmt.Sprintf("Go type layout does not contain %q", attribute.Type.Name())) // bug
+	}
+	return layout
+}
+
+// findAll returns every retained occurrence of attribute below the current type.
+func (a *goTypeLayoutAttributor) findAll(attribute *expr.AttributeExpr) []LinkedGoType {
+	plans := a.layout.plan.PlansForOccurrence(attribute)
+	layouts := make([]LinkedGoType, len(plans))
+	for index, plan := range plans {
+		layouts[index] = a.layout.Enter(plan)
+	}
+	return layouts
 }
 
 // newAttributeScope builds an attribute scope with explicit package

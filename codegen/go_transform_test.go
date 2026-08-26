@@ -1998,6 +1998,99 @@ func TestTransformPlanBindsContextsOnce(t *testing.T) {
 	require.EqualError(t, plan.BindContexts(source, target), "transform contexts are already bound")
 }
 
+func TestTransformPlanUsesFinalTypeLayoutNames(t *testing.T) {
+	const owner = "example.com/generated"
+	branch := &expr.UserTypeExpr{
+		TypeName:      "LegacySince",
+		AttributeExpr: &expr.AttributeExpr{Type: expr.String},
+	}
+	choice := &expr.Union{
+		TypeName: "Choice",
+		Values: []*expr.NamedAttributeExpr{
+			{Name: "since", Attribute: &expr.AttributeExpr{Type: branch}},
+		},
+	}
+	attribute := &expr.AttributeExpr{Type: choice}
+
+	generation, err := NewGeneration(owner, nil)
+	require.NoError(t, err)
+	pkg, err := generation.ClaimPackage(owner)
+	require.NoError(t, err)
+	choiceName := NewExactName(NameType, "Choice")
+	branchName := NewExactName(NameType, "ChoiceBranchSince")
+	require.NoError(t, pkg.DeclareName(choiceName))
+	require.NoError(t, pkg.DeclareName(branchName))
+	require.NoError(t, generation.Freeze())
+
+	layout, err := PlanGoType(attribute, GoTypePlanOptions{
+		Owner:            owner,
+		Policy:           GoLayoutPolicy{UseDefault: true, SumType: true},
+		RetainNamedValue: true,
+		Bind: func(request GoTypeBindingRequest) (GoTypeBinding, error) {
+			switch request.Kind {
+			case GoUnion:
+				return GoTypeBinding{
+					Owner: owner,
+					Union: &UnionDeclaration{declaration: choiceName},
+				}, nil
+			case GoNamed:
+				return GoTypeBinding{
+					Owner: owner,
+					Type:  &TypeDeclaration{declaration: branchName},
+				}, nil
+			default:
+				return GoTypeBinding{}, fmt.Errorf("unexpected type kind %s", request.Kind)
+			}
+		},
+	})
+	require.NoError(t, err)
+
+	plan, err := NewTransformPlan(attribute, attribute, "", nil)
+	require.NoError(t, err)
+	context := NewAttributeContext(false, false, true, "", NewNameScope())
+	linked := layout.Link(owner, func(string) string { return "" })
+	plannedContext, err := context.WithGoTypeLayout(linked)
+	require.NoError(t, err)
+	require.NoError(t, plan.BindContexts(plannedContext, plannedContext))
+	code, helpers, err := plan.Render("in", "out", false)
+	require.NoError(t, err)
+	require.Empty(t, helpers)
+	require.Contains(t, code, "u.SetSince((ChoiceBranchSince)(obj))")
+	require.NotContains(t, code, "LegacySince")
+}
+
+func TestAttributeContextRejectsGoTypeLayoutWithDifferentPointerRules(t *testing.T) {
+	attribute := &expr.AttributeExpr{Type: expr.String}
+	layout, err := PlanGoType(attribute, GoTypePlanOptions{
+		Owner:  "example.com/generated",
+		Policy: GoLayoutPolicy{Pointer: true, SumType: true},
+	})
+	require.NoError(t, err)
+	context := NewAttributeContext(false, false, true, "", NewNameScope())
+
+	_, err = context.WithGoTypeLayout(layout.Link("example.com/generated", nil))
+	require.EqualError(t, err, "attach Go type layout: pointer and default rules do not match the attribute context")
+}
+
+func TestAttributeContextUsesRequestedNameForReusedField(t *testing.T) {
+	shared := &expr.AttributeExpr{Type: expr.String}
+	attribute := &expr.AttributeExpr{Type: &expr.Object{
+		{Name: "first", Attribute: shared},
+		{Name: "second", Attribute: shared},
+	}}
+	layout, err := PlanGoType(attribute, GoTypePlanOptions{
+		Owner:  "example.com/generated",
+		Policy: GoLayoutPolicy{UseDefault: true, SumType: true},
+	})
+	require.NoError(t, err)
+	context := NewAttributeContext(false, false, true, "", NewNameScope())
+	context, err = context.WithGoTypeLayout(layout.Link("example.com/generated", nil))
+	require.NoError(t, err)
+
+	require.Equal(t, "First", context.Scope.Field(shared, "first", true))
+	require.Equal(t, "Second", context.Scope.Field(shared, "second", true))
+}
+
 func TestTransformPlanRejectsNonFunctionHelperDeclaration(t *testing.T) {
 	plan := siblingTransformPlan(t)
 	err := plan.BindHelperDeclaration(
