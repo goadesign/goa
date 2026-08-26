@@ -95,6 +95,7 @@ func TestExampleServerFiles(t *testing.T) {
 			{"server-hosting-service-with-file-server", ctestdata.ServerHostingServiceWithFileServerDSL},
 			{"server-hosting-service-subset", ctestdata.ServerHostingServiceSubsetDSL},
 			{"server-hosting-multiple-services", ctestdata.ServerHostingMultipleServicesDSL},
+			{"colliding-service-names", collidingServiceNamesDSL},
 			{"streaming", testdata.StreamingMultipleServicesDSL},
 		}
 		for _, c := range cases {

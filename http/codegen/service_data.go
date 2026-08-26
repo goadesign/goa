@@ -1217,8 +1217,12 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 				}
 			}
 			pkg = svc.PkgName
-			if len(routes[0].PathInit.ClientArgs) > 0 && expr.IsObject(httpEndpoint.MethodExpr.Payload.Type) {
-				payloadRef = svcctx.Scope.Ref(httpEndpoint.MethodExpr.Payload, svcctx.Pkg(httpEndpoint.MethodExpr.Payload))
+			if len(routes[0].PathInit.ClientArgs) > 0 && httpEndpoint.MethodExpr.Payload.Type != expr.Empty {
+				payloadPkg := ""
+				if attributeUsesServiceType(httpEndpoint.MethodExpr.Payload, make(map[expr.UserType]struct{})) {
+					payloadPkg = svcctx.Pkg(httpEndpoint.MethodExpr.Payload)
+				}
+				payloadRef = svcctx.Scope.Ref(httpEndpoint.MethodExpr.Payload, payloadPkg)
 			}
 		}
 		data := map[string]any{

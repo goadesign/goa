@@ -222,6 +222,7 @@ func TestClientBuildRequest(t *testing.T) {
 		{"path-int-alias", testdata.PathIntAliasDSL},
 		{"path-string-required", testdata.PayloadPathStringValidateDSL},
 		{"path-string-default", testdata.PayloadPathStringDefaultDSL},
+		{"path-primitive-string", testdata.PayloadPathPrimitiveStringFormatIPValidateDSL},
 		{"path-object", testdata.PayloadPathObjectDSL},
 	}
 	for _, c := range cases {

@@ -896,10 +896,15 @@ func plannedFileHeader(title, packageName, filePath string, services *ServicesDa
 }
 
 // generatedFileOutputPackage returns the import path of the package that owns
-// a file written below the generated directory.
+// a generated file. Files below gen use the generated package as their base.
+// Root files such as cmd/server/http.go use the module containing gen.
 func generatedFileOutputPackage(services *ServicesData, filePath string) string {
-	outputPath := strings.TrimPrefix(strings.ReplaceAll(filePath, "\\", "/"), codegen.Gendir+"/")
-	return path.Join(services.GenPkg(), path.Dir(outputPath))
+	outputPath := strings.TrimPrefix(strings.ReplaceAll(filePath, "\\", "/"), "./")
+	if strings.HasPrefix(outputPath, codegen.Gendir+"/") {
+		outputPath = strings.TrimPrefix(outputPath, codegen.Gendir+"/")
+		return path.Join(services.GenPkg(), path.Dir(outputPath))
+	}
+	return path.Join(path.Dir(services.GenPkg()), path.Dir(outputPath))
 }
 
 // serviceDataForOutput copies the package-name fields that a template writes
