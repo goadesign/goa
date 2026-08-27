@@ -15,9 +15,9 @@
 # - "all" is the default target, it runs "lint" and "test"
 #
 MAJOR=3
-MINOR=30
+MINOR=31
 BUILD=0
-PREVIEW_NUMBER?=
+PREVIEW_NUMBER?=1
 
 PREVIEW_TAG=v$(MAJOR).$(MINOR).$(BUILD)-preview.$(PREVIEW_NUMBER)
 
