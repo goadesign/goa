@@ -1,6 +1,7 @@
 package grpc
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -29,6 +30,14 @@ type (
 		Timeout bool
 		// Is the error a server-side fault?
 		Fault bool
+	}
+
+	// contextError preserves both the gRPC status and the matching Go context
+	// error for callers that inspect either contract.
+	contextError struct {
+		transportErr    error
+		transportStatus *status.Status
+		ctxErr          error
 	}
 )
 
@@ -95,6 +104,27 @@ func NewTransportError(err error) *goa.ServiceError {
 	)
 }
 
+// ContextError returns a context error when the gRPC status code matches the
+// ended caller context. The returned error retains the transport text and
+// unwraps to ctx.Err(). It returns nil when the caller context remains active
+// or the status codes differ. Deadlines added internally by gRPC are not part
+// of the caller context.
+func ContextError(ctx context.Context, transportErr error) error {
+	ctxErr := ctx.Err()
+	if ctxErr == nil {
+		return nil
+	}
+	transportStatus, ok := status.FromError(transportErr)
+	if !ok || transportStatus.Code() != status.FromContextError(ctxErr).Code() {
+		return nil
+	}
+	return &contextError{
+		transportErr:    transportErr,
+		transportStatus: transportStatus,
+		ctxErr:          ctxErr,
+	}
+}
+
 // NewStatusError creates a gRPC status error with the error response
 // messages added to its details.
 func NewStatusError(code codes.Code, err error, details ...protoiface.MessageV1) error {
@@ -154,10 +184,9 @@ func EncodeError(err error) error {
 	return NewStatusError(codes.Unknown, err, NewErrorResponse(err))
 }
 
-// DecodeError returns the error message encoded in the status details if error
-// is a gRPC status error. It assumes that the error message is encoded as the
-// first item in the details. It returns nil if the error is not a gRPC status
-// error or if no detail is found.
+// DecodeError returns the protobuf error message encoded as the first gRPC
+// status detail. It returns nil when the error is not a gRPC status error, has
+// no details, or the peer sent a detail type unavailable to this process.
 func DecodeError(err error) proto.Message {
 	st, ok := status.FromError(err)
 	if !ok {
@@ -167,7 +196,11 @@ func DecodeError(err error) proto.Message {
 	if len(details) == 0 {
 		return nil
 	}
-	return details[0].(proto.Message)
+	detail, ok := details[0].(proto.Message)
+	if !ok {
+		return nil
+	}
+	return detail
 }
 
 // ErrInvalidType is the error returned when the wrong type is given to a
@@ -180,4 +213,21 @@ func ErrInvalidType(svc, m, expected string, actual any) error {
 // Error builds an error message.
 func (c *ClientError) Error() string {
 	return fmt.Sprintf("[%s %s]: %s", c.Service, c.Method, c.Message)
+}
+
+// Error retains the original gRPC diagnostic text.
+func (e *contextError) Error() string {
+	return e.transportErr.Error()
+}
+
+// GRPCStatus returns the original transport status without rewriting its
+// message or dropping status details.
+func (e *contextError) GRPCStatus() *status.Status {
+	return e.transportStatus
+}
+
+// Unwrap exposes the gRPC status and matching context error without discarding
+// either inspection contract.
+func (e *contextError) Unwrap() []error {
+	return []error{e.transportErr, e.ctxErr}
 }

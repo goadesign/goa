@@ -9,6 +9,7 @@ func DecodeMethodServerStreamingUserTypeRPCResponse(ctx context.Context, v any, 
 	}
 	return &MethodServerStreamingUserTypeRPCClientStream{
 		stream: v.(service_server_streaming_user_type_rpcpb.ServiceServerStreamingUserTypeRPC_MethodServerStreamingUserTypeRPCClient),
+		ctx:    ctx,
 		view:   view,
 	}, nil
 }

@@ -1,12 +1,18 @@
 package grpc
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	statuspb "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/anypb"
 
 	goapb "goa.design/goa/v3/grpc/pb"
 	goa "goa.design/goa/v3/pkg"
@@ -123,4 +129,83 @@ func TestNewTransportError(t *testing.T) {
 			assert.ErrorIs(t, err, cause)
 		})
 	}
+}
+
+func TestDecodeErrorUnknownDetail(t *testing.T) {
+	transportErr := status.FromProto(&statuspb.Status{
+		Code:    int32(codes.Unknown),
+		Message: "unknown remote detail",
+		Details: []*anypb.Any{{
+			TypeUrl: "type.googleapis.com/example.UnknownError",
+		}},
+	}).Err()
+
+	assert.NotPanics(t, func() {
+		assert.Nil(t, DecodeError(transportErr))
+	})
+}
+
+func TestContextError(t *testing.T) {
+	transportErr := errors.New("transport failed")
+
+	t.Run("active context has no context error", func(t *testing.T) {
+		require.NoError(t, ContextError(context.Background(), transportErr))
+	})
+
+	t.Run("matching canceled status preserves text and context error", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		transportStatus, statusErr := status.New(codes.Canceled, "transport canceled").WithDetails(
+			&goapb.ErrorResponse{Name: "remote_canceled", Msg: "remote detail"},
+		)
+		require.NoError(t, statusErr)
+		transportErr := transportStatus.Err()
+		err := ContextError(ctx, transportErr)
+		require.ErrorContains(t, err, transportErr.Error())
+		require.ErrorIs(t, err, context.Canceled)
+		require.Equal(t, codes.Canceled, status.Code(err))
+		require.Equal(t, transportStatus.Proto(), status.Convert(err).Proto())
+	})
+
+	t.Run("matching deadline status preserves text and context error", func(t *testing.T) {
+		ctx, cancel := context.WithDeadline(context.Background(), time.Unix(0, 0))
+		defer cancel()
+
+		transportErr := status.Error(codes.DeadlineExceeded, "transport deadline")
+		err := ContextError(ctx, transportErr)
+		require.ErrorContains(t, err, transportErr.Error())
+		require.ErrorIs(t, err, context.DeadlineExceeded)
+		require.Equal(t, codes.DeadlineExceeded, status.Code(err))
+	})
+
+	t.Run("independent transport failure remains separate", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		require.NoError(t, ContextError(ctx, status.Error(codes.Internal, "server failed")))
+	})
+
+	t.Run("mismatched context and transport statuses remain separate", func(t *testing.T) {
+		canceledCtx, cancel := context.WithCancel(context.Background())
+		cancel()
+		require.NoError(t, ContextError(
+			canceledCtx,
+			status.Error(codes.DeadlineExceeded, "transport deadline"),
+		))
+
+		deadlineCtx, deadlineCancel := context.WithDeadline(context.Background(), time.Unix(0, 0))
+		defer deadlineCancel()
+		require.NoError(t, ContextError(
+			deadlineCtx,
+			status.Error(codes.Canceled, "transport canceled"),
+		))
+	})
+
+	t.Run("non-gRPC context error remains separate", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		require.NoError(t, ContextError(ctx, context.Canceled))
+	})
 }

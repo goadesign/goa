@@ -9,6 +9,7 @@ func DecodeMethodBidirectionalStreamingRPCResponse(ctx context.Context, v any, h
 	}
 	return &MethodBidirectionalStreamingRPCClientStream{
 		stream: v.(service_bidirectional_streaming_rpcpb.ServiceBidirectionalStreamingRPC_MethodBidirectionalStreamingRPCClient),
+		ctx:    ctx,
 		view:   view,
 	}, nil
 }

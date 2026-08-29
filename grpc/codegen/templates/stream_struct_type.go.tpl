@@ -1,6 +1,9 @@
 {{ printf "%s implements the %s interface." .VarName .ServiceInterface | comment }}
 type {{ .VarName }} struct {
 	stream {{ .Interface }}
+{{- if eq .Type "client" }}
+	ctx context.Context
+{{- end }}
 {{- if and (eq .Type "server") .Endpoint.Request.LegacyDecode }}
 	// legacy indicates that the client speaks the legacy stream protocol
 	// which sends raw stream item frames instead of typed envelopes.

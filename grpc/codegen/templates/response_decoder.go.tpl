@@ -39,6 +39,7 @@ func Decode{{ .Method.VarName }}Response(ctx context.Context, v any, hdr, trlr m
 {{- if .ClientStream }}
 	return &{{ .ClientStream.VarName }}{
 		stream: v.({{ .ClientStream.Interface }}),
+		ctx: ctx,
 	{{- if .ViewedResultRef }}
 		view: view,
 	{{- end }}

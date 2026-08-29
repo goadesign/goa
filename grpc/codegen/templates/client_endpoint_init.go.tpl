@@ -29,6 +29,9 @@ func (c *{{ .ClientStruct }}) {{ .Method.VarName }}() goa.Endpoint {
 			case *goapb.ErrorResponse:
 				return nil, goagrpc.NewServiceError(message)
 			default:
+				if ctxErr := goagrpc.ContextError(ctx, err); ctxErr != nil {
+					return nil, ctxErr
+				}
 				{{- if $retry }}
 				return nil, goagrpc.NewTransportError(err)
 				{{- else }}
@@ -37,13 +40,16 @@ func (c *{{ .ClientStruct }}) {{ .Method.VarName }}() goa.Endpoint {
 			}
 		{{- else }}
 			{{- if $retry }}
-			// Try to decode a Goa error response detail before preserving the transport error.
+			// Decode a Goa error detail before returning a matching context error or preserving the transport error.
 			{{- else }}
-			// Try to decode a Goa error response detail before falling back to Fault.
+			// Decode a Goa error detail before returning a matching context error or falling back to Fault.
 			{{- end }}
 			resp := goagrpc.DecodeError(err)
 			if eresp, ok := resp.(*goapb.ErrorResponse); ok {
 				return nil, goagrpc.NewServiceError(eresp)
+			}
+			if ctxErr := goagrpc.ContextError(ctx, err); ctxErr != nil {
+				return nil, ctxErr
 			}
 			{{- if $retry }}
 			return nil, goagrpc.NewTransportError(err)
