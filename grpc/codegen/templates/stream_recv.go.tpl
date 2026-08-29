@@ -38,9 +38,17 @@ func (s *{{ .Declaration.Name }}) {{ .RecvName }}() ({{ .RecvRef }}, error) {
 		case *goapb.ErrorResponse:
 			return res, goagrpc.NewServiceError(message)
 		default:
+			if ctxErr := goagrpc.ContextError(s.ctx, err); ctxErr != nil {
+				return res, ctxErr
+			}
 			return res, err
 		}
 	{{- else }}
+		{{- if eq .Type "client" }}
+		if ctxErr := goagrpc.ContextError(s.ctx, err); ctxErr != nil {
+			return res, ctxErr
+		}
+		{{- end }}
 		return res, err
 	{{- end }}
 	}

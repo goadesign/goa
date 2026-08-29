@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"goa.design/goa/v3/codegen"
 	. "goa.design/goa/v3/dsl"
 	"goa.design/goa/v3/grpc/codegen/testdata"
 )
@@ -81,6 +82,66 @@ func TestStreamingWithErrors(t *testing.T) {
 			c.testFunc(t, code, services)
 		})
 	}
+}
+
+func TestClientStreamingContextErrorCodegen(t *testing.T) {
+	root := RunGRPCDSL(t, testdata.BidirectionalStreamingRPCWithErrorsDSL)
+	services := CreateGRPCServices(root)
+	clientFiles := ClientFiles(services.GenPkg(), services)
+	require.NotEmpty(t, clientFiles)
+
+	recvCode := codegen.SectionsCode(t, clientFiles[0].Section("client-stream-recv"))
+	serviceErrorIndex := strings.Index(recvCode, "goagrpc.NewServiceError(message)")
+	contextErrorIndex := strings.Index(recvCode, "goagrpc.ContextError(s.ctx, err)")
+	require.NotEqual(t, -1, serviceErrorIndex)
+	require.NotEqual(t, -1, contextErrorIndex)
+	assert.Less(t, serviceErrorIndex, contextErrorIndex)
+
+	sendCode := codegen.SectionsCode(t, clientFiles[0].Section("client-stream-send"))
+	assert.NotContains(t, sendCode, "goagrpc.ContextError")
+
+	closeCode := codegen.SectionsCode(t, clientFiles[0].Section("client-stream-close"))
+	assert.NotContains(t, closeCode, "goagrpc.ContextError")
+
+	noResultRoot := RunGRPCDSL(t, testdata.ClientStreamingNoResultDSL)
+	noResultServices := CreateGRPCServices(noResultRoot)
+	noResultFiles := ClientFiles(noResultServices.GenPkg(), noResultServices)
+	require.NotEmpty(t, noResultFiles)
+	closeAndRecvCode := codegen.SectionsCode(t, noResultFiles[0].Section("client-stream-close"))
+	assert.Contains(t, closeAndRecvCode, "s.stream.CloseAndRecv()")
+	assert.NotContains(t, closeAndRecvCode, "goagrpc.DecodeError(err)")
+	assert.NotContains(t, closeAndRecvCode, "goagrpc.NewServiceError(message)")
+	assert.Contains(t, closeAndRecvCode, "goagrpc.ContextError(s.ctx, err)")
+
+	closeErrorDSL := func() {
+		var StreamError = Type("StreamError", func() {
+			ErrorName(1, "name", String, "error name")
+			Field(2, "message", String, "error message")
+			Required("name", "message")
+		})
+		Service("ClientStreamErrorService", func() {
+			Method("Upload", func() {
+				StreamingPayload(String)
+				Error("stream_error", StreamError)
+				GRPC(func() {
+					Response("stream_error", CodeCanceled)
+				})
+			})
+		})
+	}
+	closeErrorRoot := RunGRPCDSL(t, closeErrorDSL)
+	closeErrorServices := CreateGRPCServices(closeErrorRoot)
+	closeErrorFiles := ClientFiles(closeErrorServices.GenPkg(), closeErrorServices)
+	require.NotEmpty(t, closeErrorFiles)
+	closeErrorCode := codegen.SectionsCode(t, closeErrorFiles[0].Section("client-stream-close"))
+	typedErrorIndex := strings.Index(
+		closeErrorCode,
+		"case *client_stream_error_servicepb.UploadStreamErrorError:",
+	)
+	closeContextIndex := strings.Index(closeErrorCode, "goagrpc.ContextError(s.ctx, err)")
+	require.NotEqual(t, -1, typedErrorIndex)
+	require.NotEqual(t, -1, closeContextIndex)
+	assert.Less(t, typedErrorIndex, closeContextIndex)
 }
 
 // TestStreamingErrorsWithValidation verifies that custom errors with

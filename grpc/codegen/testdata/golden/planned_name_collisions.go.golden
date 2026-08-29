@@ -68,6 +68,7 @@ func DecodeWatchResponse2(ctx context.Context, v any, hdr, trlr metadata.MD) (an
 	}
 	return &WatchClientStream2{
 		stream: v.(saved_transportpb.SavedTransport_WatchClient),
+		ctx:    ctx,
 	}, nil
 }
 
@@ -81,10 +82,13 @@ func (c *Client) Watch() goa.Endpoint {
 			DecodeWatchResponse2)
 		res, err := inv.Invoke(ctx, v)
 		if err != nil {
-			// Try to decode a Goa error response detail before falling back to Fault.
+			// Decode a Goa error detail before returning a matching context error or falling back to Fault.
 			resp := goagrpc.DecodeError(err)
 			if eresp, ok := resp.(*goapb.ErrorResponse); ok {
 				return nil, goagrpc.NewServiceError(eresp)
+			}
+			if ctxErr := goagrpc.ContextError(ctx, err); ctxErr != nil {
+				return nil, ctxErr
 			}
 			return nil, goa.Fault("%s", err.Error())
 		}
@@ -95,6 +99,7 @@ func (c *Client) Watch() goa.Endpoint {
 // WatchClientStream2 implements the savedtransport.WatchClientStream interface.
 type WatchClientStream2 struct {
 	stream saved_transportpb.SavedTransport_WatchClient
+	ctx    context.Context
 }
 
 // DecodeWatchRequest2 decodes requests sent to "SavedTransport" service

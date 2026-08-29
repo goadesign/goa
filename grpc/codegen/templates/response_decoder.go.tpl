@@ -39,9 +39,7 @@ func {{ .ClientDecodeDeclaration.Name }}(ctx context.Context, v any, hdr, trlr m
 {{- if .ClientStream }}
 	return &{{ .ClientStream.Declaration.Name }}{
 		stream: v.({{ .ClientStream.Interface }}),
-	{{- if and .ViewedResultRef (not .Method.ViewedResult.ViewName) (not .ClientStream) }}
-		view: view,
-	{{- end }}
+		ctx:    ctx,
 	}, nil
 {{- else }}
 	{{ if hasInitArg .Response.ClientConvert.Init.Args "message" }}message{{ else }}_{{ end }}, ok := v.({{ .Response.ClientConvert.SrcRef }})

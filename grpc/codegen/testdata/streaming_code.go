@@ -36,6 +36,7 @@ var ServerStreamingClientStructCode = `// MethodServerStreamingUserTypeRPCClient
 // interface.
 type MethodServerStreamingUserTypeRPCClientStream struct {
 	stream service_server_streaming_user_type_rpcpb.ServiceServerStreamingUserTypeRPC_MethodServerStreamingUserTypeRPCClient
+	ctx    context.Context
 }
 `
 
@@ -46,6 +47,9 @@ func (s *MethodServerStreamingUserTypeRPCClientStream) Recv() (*serviceserverstr
 	var res *serviceserverstreamingusertyperpc.UserType
 	v, err := s.stream.Recv()
 	if err != nil {
+		if ctxErr := goagrpc.ContextError(s.ctx, err); ctxErr != nil {
+			return res, ctxErr
+		}
 		return res, err
 	}
 	return NewMethodServerStreamingUserTypeRPCResponseUserType(v), nil
@@ -121,6 +125,7 @@ var ServerStreamingResultWithViewsClientStructCode = `// MethodServerStreamingUs
 // interface.
 type MethodServerStreamingUserTypeRPCClientStream struct {
 	stream  service_server_streaming_user_type_rpcpb.ServiceServerStreamingUserTypeRPC_MethodServerStreamingUserTypeRPCClient
+	ctx     context.Context
 	view    string
 	viewSet bool
 }
@@ -133,6 +138,9 @@ func (s *MethodServerStreamingUserTypeRPCClientStream) Recv() (*serviceserverstr
 	var res *serviceserverstreamingusertyperpc.ResultType
 	v, err := s.stream.Recv()
 	if err != nil {
+		if ctxErr := goagrpc.ContextError(s.ctx, err); ctxErr != nil {
+			return res, ctxErr
+		}
 		return res, err
 	}
 	if !s.viewSet {
@@ -210,6 +218,9 @@ func (s *MethodServerStreamingResultTypeCollectionWithExplicitViewClientStream) 
 	var res serviceserverstreamingresulttypecollectionwithexplicitview.ResultTypeCollection
 	v, err := s.stream.Recv()
 	if err != nil {
+		if ctxErr := goagrpc.ContextError(s.ctx, err); ctxErr != nil {
+			return res, ctxErr
+		}
 		return res, err
 	}
 	proj := NewResultTypeCollectionResultTypeCollection(v)
@@ -252,6 +263,9 @@ func (s *MethodServerStreamingRPCClientStream) Recv() (string, error) {
 	var res string
 	v, err := s.stream.Recv()
 	if err != nil {
+		if ctxErr := goagrpc.ContextError(s.ctx, err); ctxErr != nil {
+			return res, ctxErr
+		}
 		return res, err
 	}
 	if err = ValidateMethodServerStreamingRPCResponse(v); err != nil {
@@ -291,6 +305,9 @@ func (s *MethodServerStreamingArrayClientStream) Recv() ([]int, error) {
 	var res []int
 	v, err := s.stream.Recv()
 	if err != nil {
+		if ctxErr := goagrpc.ContextError(s.ctx, err); ctxErr != nil {
+			return res, ctxErr
+		}
 		return res, err
 	}
 	return NewMethodServerStreamingArrayResponseMethodServerStreamingArrayResponse(v), nil
@@ -327,6 +344,9 @@ func (s *MethodServerStreamingMapClientStream) Recv() (map[string]*serviceserver
 	var res map[string]*serviceserverstreamingmap.UserType
 	v, err := s.stream.Recv()
 	if err != nil {
+		if ctxErr := goagrpc.ContextError(s.ctx, err); ctxErr != nil {
+			return res, ctxErr
+		}
 		return res, err
 	}
 	return NewMethodServerStreamingMapResponseMethodServerStreamingMapResponse(v), nil
@@ -347,6 +367,9 @@ func (s *MethodServerStreamingRPCClientStream) Recv() (*serviceserverstreamingrp
 	var res *serviceserverstreamingrpc.UserType
 	v, err := s.stream.Recv()
 	if err != nil {
+		if ctxErr := goagrpc.ContextError(s.ctx, err); ctxErr != nil {
+			return res, ctxErr
+		}
 		return res, err
 	}
 	return NewMethodServerStreamingRPCResponseUserType(v), nil
@@ -366,6 +389,9 @@ func (s *OtherMethodServerStreamingRPCClientStream) Recv() (*serviceserverstream
 	var res *serviceserverstreamingrpc.UserType
 	v, err := s.stream.Recv()
 	if err != nil {
+		if ctxErr := goagrpc.ContextError(s.ctx, err); ctxErr != nil {
+			return res, ctxErr
+		}
 		return res, err
 	}
 	return NewOtherMethodServerStreamingRPCResponseUserType(v), nil
@@ -429,6 +455,7 @@ var ClientStreamingClientStructCode = `// MethodClientStreamingRPCClientStream i
 // serviceclientstreamingrpc.MethodClientStreamingRPCClientStream interface.
 type MethodClientStreamingRPCClientStream struct {
 	stream service_client_streaming_rpcpb.ServiceClientStreamingRPC_MethodClientStreamingRPCClient
+	ctx    context.Context
 }
 `
 
@@ -455,6 +482,9 @@ func (s *MethodClientStreamingRPCClientStream) CloseAndRecv() (string, error) {
 	var res string
 	v, err := s.stream.CloseAndRecv()
 	if err != nil {
+		if ctxErr := goagrpc.ContextError(s.ctx, err); ctxErr != nil {
+			return res, ctxErr
+		}
 		return res, err
 	}
 	if err = ValidateMethodClientStreamingRPCResponse(v); err != nil {
@@ -480,6 +510,12 @@ var ClientStreamingServerNoResultCloseCode = `func (s *MethodClientStreamingNoRe
 var ClientStreamingClientNoResultCloseCode = `func (s *MethodClientStreamingNoResultClientStream) Close() error {
 	// synchronize and report any server error
 	_, err := s.stream.CloseAndRecv()
+	if err != nil {
+		if ctxErr := goagrpc.ContextError(s.ctx, err); ctxErr != nil {
+			return ctxErr
+		}
+		return err
+	}
 	return err
 }
 `
@@ -543,6 +579,7 @@ var BidirectionalStreamingClientStructCode = `// MethodBidirectionalStreamingRPC
 // interface.
 type MethodBidirectionalStreamingRPCClientStream struct {
 	stream service_bidirectional_streaming_rpcpb.ServiceBidirectionalStreamingRPC_MethodBidirectionalStreamingRPCClient
+	ctx    context.Context
 }
 `
 
@@ -569,6 +606,9 @@ func (s *MethodBidirectionalStreamingRPCClientStream) Recv() (*servicebidirectio
 	var res *servicebidirectionalstreamingrpc.ID
 	v, err := s.stream.Recv()
 	if err != nil {
+		if ctxErr := goagrpc.ContextError(s.ctx, err); ctxErr != nil {
+			return res, ctxErr
+		}
 		return res, err
 	}
 	proj := NewMethodBidirectionalStreamingRPCResponseIDView(v)

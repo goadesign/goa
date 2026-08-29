@@ -27,4 +27,9 @@ func TestIdempotentRPCCodegen(t *testing.T) {
 	clientCode := codegen.SectionsCode(t, clientFiles[0].Section("client-endpoint-init"))
 	assert.Contains(t, clientCode, `goa.RetryEndpoint(endpoint, "busy")`)
 	assert.Equal(t, 1, strings.Count(clientCode, "goa.RetryEndpoint("))
+	contextErrorIndex := strings.Index(clientCode, "goagrpc.ContextError(ctx, err)")
+	transportErrorIndex := strings.Index(clientCode, "goagrpc.NewTransportError(err)")
+	require.NotEqual(t, -1, contextErrorIndex)
+	require.NotEqual(t, -1, transportErrorIndex)
+	assert.Less(t, contextErrorIndex, transportErrorIndex)
 }
