@@ -64,11 +64,11 @@ go install goa.design/goa/v3/cmd/goa@fix/goa-generation-plan
 goa version
 ```
 
-The Go command records the exact branch commit as a pseudo-version. The final
-command should therefore print a version shaped like:
+The Go command records the exact branch commit as a pseudo-version in
+`go.mod`. The installed command reports the preview release line:
 
 ```text
-Goa version v3.31.0-preview.1.0.yyyymmddhhmmss-xxxxxxxxxxxx
+Goa version v3.31.0-preview.1
 ```
 
 Do not use an older `goa` command with the preview module. Also install the
