@@ -59,10 +59,13 @@ preview is published, install both the Goa module and the `goa` command from
 the preview branch:
 
 ```bash
-go get goa.design/goa/v3@fix/goa-generation-plan
-go install goa.design/goa/v3/cmd/goa@fix/goa-generation-plan
+GOPROXY=direct go get goa.design/goa/v3@fix/goa-generation-plan
+GOPROXY=direct go install goa.design/goa/v3/cmd/goa@fix/goa-generation-plan
 goa version
 ```
+
+The direct module lookup is required because the public Go module proxy rejects
+branch queries that contain `/` instead of asking the Git repository.
 
 The Go command records the exact branch commit as a pseudo-version in
 `go.mod`. The installed command reports the preview release line:
