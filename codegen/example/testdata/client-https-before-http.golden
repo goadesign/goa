@@ -1,7 +1,9 @@
 func main() {
 	var (
-		hostF = flag.String("host", "public", "Server host (valid values: public)")
-		addrF = flag.String("url", "", "URL to service host")
+		hostF    = flag.String("host", "public", "Server host (valid values: public)")
+		addrF    = flag.String("url", "", "URL to service host")
+		regionF  = flag.String("region", "west", "")
+		versionF = flag.String("version", "v1", "")
 
 		verboseF = flag.Bool("verbose", false, "Print request and response details")
 		vF       = flag.Bool("v", false, "Print request and response details")
@@ -20,7 +22,15 @@ func main() {
 		if addr == "" {
 			switch *hostF {
 			case "public":
-				addr = "https://api.example.com:9443/base/status"
+				addr = "https://{region}.example.com:9443/base/{version}/status"
+				addr = strings.ReplaceAll(addr, "{region}", *regionF)
+				switch *versionF {
+				case "v1", "v2":
+				default:
+					fmt.Fprintf(os.Stderr, "invalid value for URL 'version' variable: %q (valid values: v1,v2)\n", *versionF)
+					os.Exit(1)
+				}
+				addr = strings.ReplaceAll(addr, "{version}", *versionF)
 			default:
 				fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: public)\n", *hostF)
 				os.Exit(1)
@@ -98,12 +108,14 @@ func usage() {
 	fmt.Fprintf(os.Stderr, `%s is a command line client for the ordered HTTP API.
 
 Usage:
-    %s [-host HOST][-url URL][-timeout SECONDS][-verbose|-v] SERVICE ENDPOINT [flags]
+    %s [-host HOST][-url URL][-timeout SECONDS][-verbose|-v][-region REGION][-version VERSION] SERVICE ENDPOINT [flags]
 
     -host HOST:  server host (public). valid values: public
-    -url URL:    specify service URL overriding host URL (https://api.example.com:9443/base/status)
+    -url URL:    specify service URL overriding host URL (https://west.example.com:9443/base/v1/status)
     -timeout:    maximum number of seconds to wait for response (30)
     -verbose|-v: print request and response details (false)
+    -region:     (west)
+    -version:     (v1)
 
 Commands:
 %s

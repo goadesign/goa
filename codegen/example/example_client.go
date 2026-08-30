@@ -38,6 +38,8 @@ type (
 		Transports []*TransportData
 		// Schemes lists only URL schemes accepted by Transports.
 		Schemes []string
+		// HelpURL is the literal default URL shown for the URL override flag.
+		HelpURL string
 		// Variables lists every URL variable with its client flag names.
 		Variables []*mainVariableData
 		// Hosts lists each host with the same planned URL variables.
@@ -156,10 +158,17 @@ func planClientMainServer(server *Data) *clientMainServerData {
 	}
 	variables := planMainVariables(server.Variables, fixedFlags)
 	schemes := clientSchemes(server)
+	// Replace each placeholder with the default value used by its generated flag.
+	defaultHost := server.DefaultHost()
+	helpURL := defaultHost.DefaultURL(server.DefaultClientTransport().Type)
+	for _, variable := range defaultHost.Variables {
+		helpURL = strings.ReplaceAll(helpURL, "{"+variable.Name+"}", variables.byName[variable.Name].DefaultValue)
+	}
 	planned := &clientMainServerData{
 		Data:       server,
 		Transports: server.clientTransports,
 		Schemes:    schemes,
+		HelpURL:    helpURL,
 		Variables:  variables.all,
 		Hosts:      make([]*clientMainHostData, len(server.Hosts)),
 	}

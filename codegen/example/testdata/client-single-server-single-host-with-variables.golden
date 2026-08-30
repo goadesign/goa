@@ -119,7 +119,7 @@ Usage:
     %s [-host HOST][-url URL][-timeout SECONDS][-verbose|-v][-int INT][-uint UINT][-float32 FLOAT32][-int32 INT32][-int64 INT64][-uint32 UINT32][-uint64 UINT64][-float64 FLOAT64][-bool BOOL] SERVICE ENDPOINT [flags]
 
     -host HOST:  server host (dev). valid values: dev
-    -url URL:    specify service URL overriding host URL (http://example-{int}-{uint}-{float32}:8090)
+    -url URL:    specify service URL overriding host URL (http://example-1-1-1.1:8090)
     -timeout:    maximum number of seconds to wait for response (30)
     -verbose|-v: print request and response details (false)
     -int:     (1)

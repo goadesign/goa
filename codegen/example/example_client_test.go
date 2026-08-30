@@ -98,6 +98,13 @@ func TestExampleCLIUsesOnlyTransportsWithCallableMethods(t *testing.T) {
 	require.Contains(t, code, "valid schemes: grpc")
 }
 
+func TestExampleCLIPlansLiteralHelpURL(t *testing.T) {
+	plannedRoot := plannedExampleRoot(t, httpsBeforeHTTPClientDSL)
+	plannedServer := planClientMainServer(plannedRoot.Servers[0])
+
+	require.Equal(t, "https://west.example.com:9443/base/v1/status", plannedServer.HelpURL)
+}
+
 // plannedExampleRoot evaluates design and returns the server data used by
 // generated example programs.
 func plannedExampleRoot(t *testing.T, design func()) *Root {
@@ -167,8 +174,14 @@ var httpsBeforeHTTPClientDSL = func() {
 		dsl.Server("ordered", func() {
 			dsl.Services("status")
 			dsl.Host("public", func() {
-				dsl.URI("https://api.example.com:9443/base/status")
+				dsl.URI("https://{region}.example.com:9443/base/{version}/status")
 				dsl.URI("http://localhost:8080")
+				dsl.Variable("region", dsl.String, func() {
+					dsl.Default("west")
+				})
+				dsl.Variable("version", dsl.String, func() {
+					dsl.Enum("v1", "v2")
+				})
 			})
 		})
 	})
