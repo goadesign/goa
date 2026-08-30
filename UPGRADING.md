@@ -54,19 +54,21 @@ new planning work leaves ordinary generated APIs and wire behavior unchanged.
 
 ## Install the preview
 
-Start from a branch with the current generated tree committed. Pin both the Goa
-module and the `goa` command to the exact preview:
+Start from a branch with the current generated tree committed. Until the next
+preview is published, install both the Goa module and the `goa` command from
+the preview branch:
 
 ```bash
-go get goa.design/goa/v3@v3.31.0-preview.1
-go install goa.design/goa/v3/cmd/goa@v3.31.0-preview.1
+go get goa.design/goa/v3@fix/goa-generation-plan
+go install goa.design/goa/v3/cmd/goa@fix/goa-generation-plan
 goa version
 ```
 
-The final command should print:
+The Go command records the exact branch commit as a pseudo-version. The final
+command should therefore print a version shaped like:
 
 ```text
-Goa version v3.31.0-preview.1
+Goa version v3.31.0-preview.1.0.yyyymmddhhmmss-xxxxxxxxxxxx
 ```
 
 Do not use an older `goa` command with the preview module. Also install the
