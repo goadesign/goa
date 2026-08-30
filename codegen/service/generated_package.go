@@ -98,7 +98,6 @@ const (
 	generatedResultEmission
 	generatedStreamingResultEmission
 	generatedUserTypeEmission
-	generatedErrorTypeEmission
 )
 
 const (
@@ -158,6 +157,10 @@ func collectGeneratedPackageEmissions(roots []*rootFacts) error {
 		root.generatedTypes = nil
 		root.generatedUnions = nil
 		for _, service := range root.services {
+			errorTypes := make(map[*codegen.TypeDeclaration]struct{}, len(service.errorTypes))
+			for _, errorType := range service.errorTypes {
+				errorTypes[errorType.declaration] = struct{}{}
+			}
 			for _, union := range service.unions {
 				emission := &generatedUnionEmissionFacts{root: root, service: service, union: union}
 				if existing := unions[union.declaration]; existing != nil {
@@ -218,23 +221,7 @@ func collectGeneratedPackageEmissions(roots []*rootFacts) error {
 					userType:    userType,
 					uses:        generatedTypeMethodUses(service, userType.declaration),
 				}
-				if err := selectGeneratedTypeEmission(types, emission); err != nil {
-					return err
-				}
-			}
-			for _, errorType := range service.errorTypes {
-				if errorType.location == nil || errorType.serviceError {
-					continue
-				}
-				emission := &generatedTypeEmissionFacts{
-					kind:        generatedErrorTypeEmission,
-					declaration: errorType.declaration,
-					location:    copyGeneratedLocation(errorType.location),
-					root:        root,
-					service:     service,
-					userType:    errorType,
-					error:       true,
-				}
+				_, emission.error = errorTypes[userType.declaration]
 				if err := selectGeneratedTypeEmission(types, emission); err != nil {
 					return err
 				}
@@ -270,11 +257,14 @@ func selectGeneratedTypeEmission(selected map[*codegen.TypeDeclaration]*generate
 		return err
 	}
 	uses := mergeGeneratedTypeMethodUses(existing.uses, candidate.uses)
+	errorBehavior := existing.error || candidate.error
 	if generatedTypeEmissionLess(candidate, existing) {
 		candidate.uses = uses
+		candidate.error = errorBehavior
 		selected[candidate.declaration] = candidate
 	} else {
 		existing.uses = uses
+		existing.error = errorBehavior
 	}
 	return nil
 }
@@ -367,11 +357,8 @@ func generatedTypeEmissionLayout(emission *generatedTypeEmissionFacts) *codegen.
 }
 
 // sameGeneratedTypeEmissionContent reports whether two services would write
-// the same comment and error behavior for one type declaration.
+// the same declaration text. Error methods may be added by either service.
 func sameGeneratedTypeEmissionContent(left, right *generatedTypeEmissionFacts) bool {
-	if left.error != right.error {
-		return false
-	}
 	if left.userType != nil || right.userType != nil {
 		return left.userType != nil && right.userType != nil &&
 			left.userType.name == right.userType.name &&

@@ -528,6 +528,8 @@ type (
 		VarName string
 		// Description is the type human description.
 		Description string
+		// ErrorDescription is the authored text returned by Error.
+		ErrorDescription string
 		// ErrorName is the Go expression returned by GoaErrorName during planning.
 		ErrorName string
 		// IsServiceError reports whether this is Goa's built-in service error.

@@ -4,6 +4,7 @@
 package expr
 
 import (
+	"cmp"
 	"fmt"
 	"maps"
 	"reflect"
@@ -234,6 +235,7 @@ func (r *RootExpr) Validate() error {
 		verr.Merge(resultType.Attribute().validateDefaultValues(fmt.Sprintf("result type %q", resultType.Name()), resultType))
 	}
 	verr.Merge(r.validateErrorDefaults())
+	verr.Merge(ValidateSharedErrorNames(r))
 
 	verr.Merge(r.validateRelocatedUserTypes())
 	verr.Merge(validateTypeMappings("conversion", r.Conversions))
@@ -243,6 +245,87 @@ func (r *RootExpr) Validate() error {
 	}
 
 	return &verr
+}
+
+// ValidateSharedErrorNames rejects an authored type with several static error
+// names unless each value carries its selected name in an ErrorName field. The
+// roots must include every design linked by one generation command.
+func ValidateSharedErrorNames(roots ...*RootExpr) *eval.ValidationErrors {
+	type errorUse struct {
+		expression  *ErrorExpr
+		userType    UserType
+		names       map[string]struct{}
+		carriesName bool
+	}
+	verr := new(eval.ValidationErrors)
+	uses := make(map[UserType]*errorUse)
+	collect := func(designError *ErrorExpr) {
+		userType, ok := designError.Type.(UserType)
+		if !ok {
+			return
+		}
+		use := uses[userType.Origin()]
+		if use == nil {
+			use = &errorUse{
+				expression: designError,
+				userType:   userType,
+				names:      make(map[string]struct{}),
+			}
+			uses[userType.Origin()] = use
+		}
+		use.names[designError.Name] = struct{}{}
+		use.carriesName = use.carriesName || hasErrorNameAttribute(userType.Attribute())
+	}
+	for _, root := range roots {
+		for _, designError := range root.Errors {
+			collect(designError)
+		}
+		for _, service := range root.Services {
+			for _, designError := range service.Errors {
+				collect(designError)
+			}
+			for _, method := range service.Methods {
+				for _, designError := range method.Errors {
+					collect(designError)
+				}
+			}
+		}
+	}
+	ordered := slices.Collect(maps.Values(uses))
+	slices.SortFunc(ordered, func(left, right *errorUse) int {
+		if compared := cmp.Compare(left.userType.Name(), right.userType.Name()); compared != 0 {
+			return compared
+		}
+		leftNames := strings.Join(slices.Sorted(maps.Keys(left.names)), "\x00")
+		rightNames := strings.Join(slices.Sorted(maps.Keys(right.names)), "\x00")
+		return cmp.Compare(leftNames, rightNames)
+	})
+	for _, use := range ordered {
+		if len(use.names) < 2 || use.carriesName {
+			continue
+		}
+		names := slices.Sorted(maps.Keys(use.names))
+		verr.Add(
+			use.expression,
+			"type %q defines errors %s and must identify the attribute containing the error name with ErrorName",
+			use.userType.Name(),
+			strings.Join(names, ", "),
+		)
+	}
+	return verr
+}
+
+// hasErrorNameAttribute reports whether the type stores its error name in one
+// generated field.
+func hasErrorNameAttribute(attribute *AttributeExpr) bool {
+	found := false
+	walkAttribute(attribute, func(_ string, nested *AttributeExpr) error { // nolint: errcheck
+		if _, ok := nested.Meta["struct:error:name"]; ok {
+			found = true
+		}
+		return nil
+	})
+	return found
 }
 
 // validateErrorDefaults checks each declared error once. Services and methods

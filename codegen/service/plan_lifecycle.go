@@ -50,6 +50,13 @@ func NewPlans(generation *codegen.Generation, inputs ...PlanInput) ([]*Plan, err
 			len(inputs),
 		)
 	}
+	roots := make([]*expr.RootExpr, len(inputs))
+	for index, input := range inputs {
+		roots[index] = input.Root
+	}
+	if validation := expr.ValidateSharedErrorNames(roots...); len(validation.Errors) > 0 {
+		return nil, validation
+	}
 	servicePaths, err := allocateServicePackagePaths(generation.GenPkg(), inputs)
 	if err != nil {
 		return nil, err

@@ -203,7 +203,7 @@ func httpCodecValidationImports(service *expr.HTTPServiceExpr, client bool) []*c
 			for _, response := range endpoint.Responses {
 				if response.Body != nil && response.Body.Type != expr.Empty {
 					if _, named := response.Body.Type.(expr.UserType); !named {
-						add(response.Body, codegen.GoLayoutPolicy{})
+						add(response.Body, codegen.GoLayoutPolicy{ArrayElementPointer: true})
 					}
 				}
 				addMapped(response.Headers)

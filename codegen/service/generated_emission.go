@@ -82,7 +82,7 @@ func generatedTypeSections(emission *generatedTypeEmissionFacts) (*codegen.Secti
 	}
 	data := generatedUserTypeData(emission)
 	name := "service-user-type"
-	if emission.kind == generatedErrorTypeEmission {
+	if emission.error {
 		name = "error-user-type"
 	}
 	section := &codegen.SectionTemplate{Name: name, Source: serviceTemplates.Read(userTypeT), Data: data}
@@ -95,11 +95,7 @@ func generatedTypeSections(emission *generatedTypeEmissionFacts) (*codegen.Secti
 // generatedUserTypeData returns the template data for one authored type
 // declaration selected for a generated package.
 func generatedUserTypeData(emission *generatedTypeEmissionFacts) *UserTypeData {
-	candidates := emission.service.data.userTypes
-	if emission.kind == generatedErrorTypeEmission {
-		candidates = emission.service.data.errorTypes
-	}
-	for _, candidate := range candidates {
+	for _, candidate := range emission.service.data.userTypes {
 		if candidate.Declaration == emission.declaration {
 			data := *candidate
 			if data.Description == "" {

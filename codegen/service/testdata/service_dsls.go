@@ -385,6 +385,20 @@ var CustomErrorsDSL = func() {
 	})
 }
 
+var NestedCustomErrorDSL = func() {
+	var Detail = Type("Detail", func() {
+		Attribute("Message", String)
+	})
+	var Failure = Type("Failure", func() {
+		Attribute("Detail", Detail)
+	})
+	Service("NestedCustomError", func() {
+		Method("Fail", func() {
+			Error("failure", Failure)
+		})
+	})
+}
+
 var CustomErrorsCustomFieldDSL = func() {
 	var Result = ResultType("application/vnd.goa.error", func() {
 		ErrorName("error", String, func() {
@@ -1116,9 +1130,15 @@ var PkgPathDupeDSL = func() {
 }
 
 var PkgPathSharedRolesDSL = func() {
+	var Detail = Type("Detail", func() {
+		Attribute("Message", String)
+		Meta("struct:pkg:path", "shared")
+	})
 	var Shared = Type("Shared", func() {
 		Attribute("IntField", Int)
+		Attribute("Detail", Detail)
 		Meta("struct:pkg:path", "shared")
+		Meta("type:generate:force")
 	})
 
 	Service("PkgPathSharedRoles", func() {
@@ -1127,6 +1147,13 @@ var PkgPathSharedRolesDSL = func() {
 			StreamingPayload(Shared)
 			Result(Shared)
 			StreamingResult(Shared)
+			Error("shared_error", Shared)
+		})
+	})
+
+	Service("PkgPathSharedError", func() {
+		Method("Fail", func() {
+			Error("shared_error", Shared)
 		})
 	})
 }

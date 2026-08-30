@@ -246,7 +246,7 @@ func planServiceFileImports(facts *serviceFacts, rootTypes *rootTypeSet, generat
 			return err
 		}
 	}
-	for _, userType := range append(append([]*userTypeFacts(nil), facts.userTypes...), facts.errorTypes...) {
+	for _, userType := range facts.userTypes {
 		if userType.location == nil {
 			continue
 		}
@@ -512,7 +512,7 @@ func serviceDefinitionAttributes(facts *serviceFacts) []*expr.AttributeExpr {
 			}
 		}
 	}
-	for _, userType := range append(append([]*userTypeFacts(nil), facts.userTypes...), facts.errorTypes...) {
+	for _, userType := range facts.userTypes {
 		if userType.location == nil {
 			definitions = append(definitions, userType.userType.Attribute())
 		}

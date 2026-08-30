@@ -45,6 +45,21 @@ func grpcEndpointAttributes(endpoints ...*expr.GRPCEndpointExpr) []*expr.Attribu
 	return attributes
 }
 
+// grpcErrorAttributes returns the service error values named by generated
+// gRPC handlers when they attach typed details to an error response.
+func grpcErrorAttributes(endpoints ...*expr.GRPCEndpointExpr) []*expr.AttributeExpr {
+	var attributes []*expr.AttributeExpr
+	for _, endpoint := range endpoints {
+		for _, transportError := range endpoint.GRPCErrors {
+			if expr.IsErrorResult(transportError.ErrorExpr.Type) || !expr.IsObject(transportError.ErrorExpr.Type) {
+				continue
+			}
+			attributes = append(attributes, transportError.ErrorExpr.AttributeExpr)
+		}
+	}
+	return attributes
+}
+
 // grpcCodecAttributes returns the payload and result values converted by the
 // client and server encoder files.
 func grpcCodecAttributes(endpoints ...*expr.GRPCEndpointExpr) []*expr.AttributeExpr {

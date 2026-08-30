@@ -180,10 +180,10 @@ func serviceFiles(plan *Plan, facts *serviceFacts) []*codegen.File {
 		if et.IsServiceError || et.Loc != nil {
 			continue
 		}
-		if _, ok := seenErrs[et.Name]; !ok {
-			seenErrs[et.Name] = struct{}{}
-			if _, ok := seen[et.Name]; !ok {
-				addTypeDefSection(et.Name, &codegen.SectionTemplate{
+		if _, ok := seenErrs[et.VarName]; !ok {
+			seenErrs[et.VarName] = struct{}{}
+			if _, ok := seen[et.VarName]; !ok {
+				addTypeDefSection(et.VarName, &codegen.SectionTemplate{
 					Name:   "error-user-type",
 					Source: serviceTemplates.Read(userTypeT),
 					Data:   et,
@@ -191,7 +191,7 @@ func serviceFiles(plan *Plan, facts *serviceFacts) []*codegen.File {
 			}
 			typeSections = append(typeSections, serviceTypeSection{
 				phase: serviceErrorImplementationPhase,
-				name:  et.Name,
+				name:  et.VarName,
 				section: &codegen.SectionTemplate{
 					Name:   "service-error",
 					Source: serviceTemplates.Read(errorT),

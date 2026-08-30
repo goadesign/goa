@@ -30,8 +30,12 @@ func planServiceTypeLayouts(facts *serviceFacts, rootTypes *rootTypeSet, generat
 			Bind: binder,
 		})
 	}
-	userTypes := append(append([]*userTypeFacts(nil), facts.userTypes...), facts.errorTypes...)
-	for _, userType := range userTypes {
+	plannedTypes := make(map[*codegen.TypeDeclaration]struct{}, len(facts.userTypes)+len(facts.errorTypes))
+	for _, userType := range append(append([]*userTypeFacts(nil), facts.userTypes...), facts.errorTypes...) {
+		if _, planned := plannedTypes[userType.declaration]; planned {
+			continue
+		}
+		plannedTypes[userType.declaration] = struct{}{}
 		layout, err := plan(userType.userType.Attribute(), userType.declaration.PackagePath(), false)
 		if err != nil {
 			return err
@@ -243,11 +247,6 @@ func collectServiceUnionFacts(facts *serviceFacts, rootTypes *rootTypeSet, gener
 			return err
 		}
 	}
-	for _, errorType := range facts.errorTypes {
-		if err := collect(&expr.AttributeExpr{Type: errorType.userType}, errorType.location); err != nil {
-			return err
-		}
-	}
 	for _, method := range facts.methods {
 		attributes := []*expr.AttributeExpr{method.Payload, method.StreamingPayload, method.Result}
 		if method.HasMixedResults() {
@@ -348,12 +347,13 @@ func typeMapMatchesFacts(typeMap *expr.TypeMap, facts *serviceFacts) bool {
 // again or deciding which generated package contains them.
 func collectServiceTypeFacts(facts *serviceFacts, rootTypes []expr.UserType, canonical *rootTypeSet, generation *codegen.Generation) error {
 	seen := make(map[userTypeDataKey]struct{})
-	for _, serviceError := range facts.errors {
-		selected, err := collectUserTypeFacts(serviceError.AttributeExpr, facts.packagePath, nil, canonical, generation, seen)
-		if err != nil {
-			return err
+	selectedTypes := make(map[userTypeDataKey]*userTypeFacts)
+	appendTypes := func(selected []*userTypeFacts) {
+		for _, userType := range selected {
+			key := userTypeDataKey{origin: userType.userType.Origin(), declaration: userType.declaration}
+			selectedTypes[key] = userType
+			facts.userTypes = append(facts.userTypes, userType)
 		}
-		facts.errorTypes = append(facts.errorTypes, selected...)
 	}
 	for _, method := range facts.methods {
 		attributes := []*expr.AttributeExpr{method.Payload, method.StreamingPayload, method.Result}
@@ -376,14 +376,7 @@ func collectServiceTypeFacts(facts *serviceFacts, rootTypes []expr.UserType, can
 			if err != nil {
 				return err
 			}
-			facts.userTypes = append(facts.userTypes, selected...)
-		}
-		for _, methodError := range method.Errors {
-			selected, err := collectUserTypeFacts(methodError.AttributeExpr, facts.packagePath, nil, canonical, generation, seen)
-			if err != nil {
-				return err
-			}
-			facts.errorTypes = append(facts.errorTypes, selected...)
+			appendTypes(selected)
 		}
 	}
 	for _, method := range facts.methods {
@@ -422,7 +415,46 @@ func collectServiceTypeFacts(facts *serviceFacts, rootTypes []expr.UserType, can
 		if err != nil {
 			return err
 		}
-		facts.userTypes = append(facts.userTypes, selected...)
+		appendTypes(selected)
+	}
+	errorTypesSeen := make(map[userTypeDataKey]struct{})
+	recordError := func(serviceError *expr.ErrorExpr) error {
+		if expr.IsErrorResult(serviceError.Type) {
+			return nil
+		}
+		selected, err := collectUserTypeFacts(
+			serviceError.AttributeExpr, facts.packagePath, nil, canonical, generation, seen,
+		)
+		if err != nil {
+			return err
+		}
+		appendTypes(selected)
+		userType := serviceError.Type.(expr.UserType)
+		errorType, key, err := makeUserTypeFacts(userType, facts.packagePath, nil, canonical, generation)
+		if err != nil {
+			return err
+		}
+		if _, recorded := errorTypesSeen[key]; recorded {
+			return nil
+		}
+		errorTypesSeen[key] = struct{}{}
+		if selected := selectedTypes[key]; selected != nil {
+			errorType = selected
+		}
+		facts.errorTypes = append(facts.errorTypes, errorType)
+		return nil
+	}
+	for _, serviceError := range facts.errors {
+		if err := recordError(serviceError); err != nil {
+			return err
+		}
+	}
+	for _, method := range facts.methods {
+		for _, methodError := range method.Errors {
+			if err := recordError(methodError); err != nil {
+				return err
+			}
+		}
 	}
 	for _, userType := range facts.userTypes {
 		facts.reachableTypes[userType.userType.Origin()] = struct{}{}
@@ -442,31 +474,16 @@ func collectUserTypeFacts(attribute *expr.AttributeExpr, servicePath string, loc
 	var result []*userTypeFacts
 	switch actual := attribute.Type.(type) {
 	case expr.UserType:
-		typeLocation := codegen.UserTypeLocation(actual)
-		if typeLocation == nil {
-			typeLocation = location
-		}
-		declaration, err := generation.Package(
-			generatedPackagePath(generation.GenPkg(), servicePath, typeLocation),
-		).Type(canonical.canonical(actual))
+		facts, key, err := makeUserTypeFacts(actual, servicePath, location, canonical, generation)
 		if err != nil {
 			return nil, err
 		}
-		key := userTypeDataKey{origin: actual.Origin(), declaration: declaration}
 		if _, exists := seen[key]; exists {
 			return nil, nil
 		}
 		seen[key] = struct{}{}
-		result = append(result, &userTypeFacts{
-			userType:     actual,
-			name:         actual.Name(),
-			description:  actual.Attribute().Description,
-			errorName:    retainedErrorName(actual),
-			serviceError: expr.IsErrorResult(actual),
-			location:     typeLocation,
-			declaration:  declaration,
-		})
-		nested, err := collect(actual.Attribute(), typeLocation)
+		result = append(result, facts)
+		nested, err := collect(actual.Attribute(), facts.location)
 		return append(result, nested...), err
 	case *expr.Object:
 		for _, field := range *actual {
@@ -506,6 +523,31 @@ func collectUserTypeFacts(attribute *expr.AttributeExpr, servicePath string, loc
 		}
 	}
 	return result, nil
+}
+
+// makeUserTypeFacts records one authored type and the generated declaration
+// that every use of that type must share.
+func makeUserTypeFacts(userType expr.UserType, servicePath string, location *codegen.Location, canonical *rootTypeSet, generation *codegen.Generation) (*userTypeFacts, userTypeDataKey, error) {
+	typeLocation := codegen.UserTypeLocation(userType)
+	if typeLocation == nil {
+		typeLocation = location
+	}
+	declaration, err := generation.Package(
+		generatedPackagePath(generation.GenPkg(), servicePath, typeLocation),
+	).Type(canonical.canonical(userType))
+	if err != nil {
+		return nil, userTypeDataKey{}, err
+	}
+	key := userTypeDataKey{origin: userType.Origin(), declaration: declaration}
+	return &userTypeFacts{
+		userType:     userType,
+		name:         userType.Name(),
+		description:  userType.Attribute().Description,
+		errorName:    retainedErrorName(userType),
+		serviceError: expr.IsErrorResult(userType),
+		location:     typeLocation,
+		declaration:  declaration,
+	}, key, nil
 }
 
 // generatedUnionBranchLocation gives a compiler-created OneOf branch one file

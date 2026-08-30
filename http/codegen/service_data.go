@@ -1645,7 +1645,7 @@ func collectPlannedTransforms(
 			}
 		}
 
-		if !needInit(result.Type) {
+		if !needClientResponseInit(result.Type) {
 			continue
 		}
 		clientViewCount := 1
@@ -3028,7 +3028,7 @@ func (sds *ServicesData) buildResponses(e *expr.HTTPEndpointExpr, result *expr.A
 					}
 				}
 				variableWire := viewed && origin == "" && clientResponseViewName(e, md) == "" && (e.UsesSSE() || e.IsJSONRPC())
-				if needInit(result.Type) && !variableWire {
+				if needClientResponseInit(result.Type) && !variableWire {
 					init = sds.buildResponseResultInit(
 						e, resp, result, clientRespBody, origin,
 						headersData, cookiesData, sd, "", clientBodyData,
@@ -3692,7 +3692,7 @@ func (sds *ServicesData) buildResponseBodyType(
 	} else {
 		ref = httpctx.Scope.Ref(body, "")
 	}
-	mustInit = att.Type != expr.Empty && needInit(body.Type)
+	mustInit = att.Type != expr.Empty && (needInit(body.Type) || !svr && needClientResponseInit(att.Type))
 
 	if ut, ok := body.Type.(expr.UserType); ok {
 		// response body is a user type.
@@ -4552,6 +4552,29 @@ func needInit(dt expr.DataType) bool {
 		return true
 	default:
 		panic(fmt.Sprintf("unknown data type %T", actual)) // bug
+	}
+}
+
+// needClientResponseInit reports whether decoding a response requires a
+// separate transport value before Goa can return the service result. In
+// addition to named types, required primitive array elements need pointers so
+// validation can distinguish JSON null from the primitive zero value.
+func needClientResponseInit(dt expr.DataType) bool {
+	if needInit(dt) {
+		return true
+	}
+	switch actual := dt.(type) {
+	case *expr.Array:
+		if actual.NonNullableElems && expr.IsPrimitive(actual.ElemType.Type) &&
+			!codegen.IsNilable(actual.ElemType.Type) {
+			return true
+		}
+		return needClientResponseInit(actual.ElemType.Type)
+	case *expr.Map:
+		return needClientResponseInit(actual.KeyType.Type) ||
+			needClientResponseInit(actual.ElemType.Type)
+	default:
+		return false
 	}
 }
 

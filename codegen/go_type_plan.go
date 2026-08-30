@@ -409,12 +409,20 @@ func (l LinkedGoType) Name() string {
 			l.qualify(l.plan.directImport.Path),
 		)
 	case GoArray:
-		return "[]" + l.Enter(l.plan.element).Ref()
+		element := l.Enter(l.plan.element)
+		return "[]" + element.RefWithPointer(
+			element.ReferenceIsPointer() ||
+				l.plan.element.definitionPointer && l.plan.element.kind != GoStruct,
+		)
 	case GoMap:
+		key := l.Enter(l.plan.key)
+		element := l.Enter(l.plan.element)
 		return fmt.Sprintf(
 			"map[%s]%s",
-			l.Enter(l.plan.key).Ref(),
-			l.Enter(l.plan.element).Ref(),
+			key.RefWithPointer(key.ReferenceIsPointer() ||
+				l.plan.key.definitionPointer && l.plan.key.kind != GoStruct),
+			element.RefWithPointer(element.ReferenceIsPointer() ||
+				l.plan.element.definitionPointer && l.plan.element.kind != GoStruct),
 		)
 	case GoStruct:
 		return l.Def()

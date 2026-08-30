@@ -276,16 +276,17 @@ func formatUserTypeFacts(facts []*userTypeFacts, aliases *importAliases) []*User
 			retainedTypeQualifier(aliases, facts.declaration.PackagePath()),
 		)
 		data[index] = &UserTypeData{
-			Declaration:    facts.declaration,
-			Name:           facts.name,
-			VarName:        facts.declaration.Name(),
-			Description:    facts.description,
-			ErrorName:      facts.errorName,
-			IsServiceError: facts.serviceError,
-			Def:            linked.Def(),
-			Ref:            facts.declaration.Ref(facts.userType),
-			Loc:            facts.location,
-			Type:           facts.userType,
+			Declaration:      facts.declaration,
+			Name:             facts.name,
+			VarName:          facts.declaration.Name(),
+			Description:      facts.description,
+			ErrorDescription: facts.description,
+			ErrorName:        facts.errorName,
+			IsServiceError:   facts.serviceError,
+			Def:              linked.Def(),
+			Ref:              facts.declaration.Ref(facts.userType),
+			Loc:              facts.location,
+			Type:             facts.userType,
 		}
 	}
 	return data

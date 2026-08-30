@@ -26,10 +26,11 @@ func sharedErrorDescriptionDSL(reverse bool, typeDescription string) func() {
 			if typeDescription != "" {
 				Description(typeDescription)
 			}
+			ErrorName("name", String, "Selected error name")
 			Attribute("message", String, "Error message", func() {
 				Example("shared failure")
 			})
-			Required("message")
+			Required("name", "message")
 		})
 
 		Service("errors", func() {

@@ -213,6 +213,34 @@ keeps its type, validation, default, description, and fault settings. Supplying
 another argument defines a separate local error. Add explicit selections to
 designs that relied on the old automatic lookup.
 
+### Custom errors use the exact declared type
+
+Goa adds `Error`, `ErrorName`, and `GoaErrorName` methods only to the exact
+authored type passed to `Error`. A named type nested inside that error remains
+an ordinary generated type and no longer receives error methods accidentally.
+Update application code that returned or inspected the nested type as though it
+were the declared service error.
+
+When the exact error type is also used as a payload or result, Goa emits one Go
+declaration and adds the error methods beside it. The same rule applies when
+`struct:pkg:path` places the type in a shared generated package: every service
+imports the one declaration instead of generating competing data and error
+copies. This is a generated Go source correction. It does not change the
+transport body or require a persisted-data migration.
+
+One authored error type must also have one static error name across the complete
+generation. Goa now rejects a type used as, for example, `not_found` in one
+service and `missing` in another service, even when the services are evaluated
+through different generation roots. The old generator checked only errors in
+the same method, so its generated `ErrorName` result could depend on which
+service happened to emit the shared type.
+
+If one type intentionally represents several names, add an `ErrorName` field to
+the type and set the name on each error value. Otherwise, define a separate type
+for each static name. Regenerate the complete design after making the choice;
+generating services separately does not create separate names for a type placed
+in one shared Go package.
+
 ## Transport changes
 
 ### JSON-RPC supports unary calls and explicit server-sent-event streams

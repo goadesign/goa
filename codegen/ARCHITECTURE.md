@@ -6,7 +6,7 @@ one retained plan, freezes every emitted name, and renders that exact plan.
 
 ## Why this contract exists
 
-The original AURA failure produced a reference to one validation function name
+The original downstream failure produced a reference to one validation function name
 and a declaration with another name. The function and its caller were emitted
 into the same generated Go package, but separate analyses allocated their names
 from separately initialized scopes. The first ownership work fixed concrete
@@ -1092,7 +1092,7 @@ Fresh factories make repeated and concurrent generation independent. The main
 operational risks are an uncollected template symbol, an incomplete emitted
 identity, or an inaccurate protoc family name. Focused catalog tests, reversed-
 order tests, concurrent-run tests, real generated-module compilation, the
-supported protoc toolchain, goa-ai generation, and full AURA regeneration are
+supported protoc toolchain, goa-ai generation, and full downstream regeneration are
 the required proof.
 
 ## Review gate

@@ -138,9 +138,11 @@ func planGRPCImports(generation *codegen.Generation, plan *Plan) error {
 		server := generation.Package(serverPath)
 		protobufImport := codegen.NewImport(pathName+"pb", protobufPath)
 		allReferences := grpcEndpointAttributes(service.GRPCEndpoints...)
+		errorReferences := grpcErrorAttributes(service.GRPCEndpoints...)
 		codecReferences := grpcCodecAttributes(service.GRPCEndpoints...)
 		payloadReferences := grpcPayloadAttributes(service.GRPCEndpoints...)
 		streamReferences := grpcStreamAttributes(service.GRPCEndpoints...)
+		serverDefinitions := append(append([]*expr.AttributeExpr(nil), streamReferences...), errorReferences...)
 		hasReferences := grpcAttributesHaveValues(allReferences)
 		hasCodecReferences := grpcAttributesHaveValues(codecReferences)
 		hasPayloadReferences := grpcAttributesHaveValues(payloadReferences)
@@ -307,7 +309,7 @@ func planGRPCImports(generation *codegen.Generation, plan *Plan) error {
 			grpcFileImportInput{
 				required:        serverFileRequired,
 				generated:       serverFileGenerated,
-				typeDefinitions: streamReferences,
+				typeDefinitions: serverDefinitions,
 			},
 		); err != nil {
 			return err

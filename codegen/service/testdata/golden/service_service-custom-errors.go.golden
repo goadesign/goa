@@ -29,13 +29,13 @@ type APayload struct {
 	OptionalField *string
 }
 
+// primitive error description
+type Primitive string
+
 type Result struct {
 	A *string
 	B string
 }
-
-// primitive error description
-type Primitive string
 
 // Error returns an error description.
 func (e *APayload) Error() string {
@@ -55,23 +55,6 @@ func (e *APayload) GoaErrorName() string {
 }
 
 // Error returns an error description.
-func (e *Result) Error() string {
-	return ""
-}
-
-// ErrorName returns the error name.
-//
-// Deprecated: Use GoaErrorName - https://github.com/goadesign/goa/issues/3105
-func (e *Result) ErrorName() string {
-	return e.GoaErrorName()
-}
-
-// GoaErrorName returns the error name.
-func (e *Result) GoaErrorName() string {
-	return e.B
-}
-
-// Error returns an error description.
 func (e Primitive) Error() string {
 	return "primitive error description"
 }
@@ -86,4 +69,21 @@ func (e Primitive) ErrorName() string {
 // GoaErrorName returns the error name.
 func (e Primitive) GoaErrorName() string {
 	return "primitive"
+}
+
+// Error returns an error description.
+func (e *Result) Error() string {
+	return ""
+}
+
+// ErrorName returns the error name.
+//
+// Deprecated: Use GoaErrorName - https://github.com/goadesign/goa/issues/3105
+func (e *Result) ErrorName() string {
+	return e.GoaErrorName()
+}
+
+// GoaErrorName returns the error name.
+func (e *Result) GoaErrorName() string {
+	return e.B
 }

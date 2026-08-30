@@ -404,6 +404,51 @@ func TestFilesEmitCanonicalSharedDeclarationAcrossRoots(t *testing.T) {
 	require.Equal(t, forward, renderSingleFileAtPath(t, reverseFiles, sharedPath))
 }
 
+// TestFilesAddSharedErrorMethodsAcrossRoots checks that an ordinary use and an
+// error use contribute one declaration and one error method set in either root
+// order.
+func TestFilesAddSharedErrorMethodsAcrossRoots(t *testing.T) {
+	forwardPlans := sharedErrorDeclarationPlans(t, false)
+	forwardFiles := mustServiceFiles(t, forwardPlans...)
+	sharedPath := filepath.Join("gen", "types", "shared_error.go")
+	require.Equal(t, 1, countFiles(forwardFiles, sharedPath))
+	forward := renderSingleFileAtPath(t, forwardFiles, sharedPath)
+	require.Equal(t, 1, strings.Count(forward, "type SharedError struct"))
+	require.Equal(t, 1, strings.Count(forward, "func (e *SharedError) Error() string"))
+
+	reversePlans := sharedErrorDeclarationPlans(t, true)
+	reverseFiles := mustServiceFiles(t, reversePlans...)
+	require.Equal(t, forward, renderSingleFileAtPath(t, reverseFiles, sharedPath))
+	compileGeneratedServiceFiles(t, forwardFiles)
+}
+
+func TestNewPlansRejectSharedErrorNamesAcrossRoots(t *testing.T) {
+	firstRoot, secondRoot := sharedErrorNameRoots(t, false)
+	for _, roots := range [][]*expr.RootExpr{
+		{firstRoot, secondRoot},
+		{secondRoot, firstRoot},
+	} {
+		generation := mustTestGeneration(t, "generated.local/gen", []eval.Root{roots[0], roots[1]})
+		_, err := NewPlans(
+			generation,
+			PlanInput{Root: roots[0], Examples: expr.NewExampleGenerator(roots[0].API.RandomizerFactory)},
+			PlanInput{Root: roots[1], Examples: expr.NewExampleGenerator(roots[1].API.RandomizerFactory)},
+		)
+		require.ErrorContains(t, err, "defines errors first_error, second_error")
+	}
+}
+
+func TestNewPlansAcceptSharedDynamicErrorNamesAcrossRoots(t *testing.T) {
+	firstRoot, secondRoot := sharedErrorNameRoots(t, true)
+	generation := mustTestGeneration(t, "generated.local/gen", []eval.Root{firstRoot, secondRoot})
+	_, err := NewPlans(
+		generation,
+		PlanInput{Root: firstRoot, Examples: expr.NewExampleGenerator(firstRoot.API.RandomizerFactory)},
+		PlanInput{Root: secondRoot, Examples: expr.NewExampleGenerator(secondRoot.API.RandomizerFactory)},
+	)
+	require.NoError(t, err)
+}
+
 func TestNewPlansRejectConflictingSharedDeclarationEmissionCandidates(t *testing.T) {
 	firstRoot, secondRoot := conflictingSharedDeclarationRoots(t)
 	generation := mustTestGeneration(t, "goa.design/goa/example", []eval.Root{firstRoot, secondRoot})
@@ -517,6 +562,81 @@ func sharedDeclarationPlans(t *testing.T, reverse bool) []*Plan {
 		require.NoError(t, plan.Link())
 	}
 	return plans
+}
+
+// sharedErrorDeclarationPlans builds and links roots where one service uses a
+// shared type as data and another declares that exact type as an error.
+func sharedErrorDeclarationPlans(t *testing.T, reverse bool) []*Plan {
+	t.Helper()
+	var shared expr.UserType
+	firstRoot := codegen.RunDSL(t, func() {
+		shared = dsl.Type("SharedError", func() {
+			dsl.Meta("struct:pkg:path", "types")
+			dsl.Meta("type:generate:force")
+			dsl.Attribute("message", dsl.String)
+		})
+		dsl.Service("Reader", func() {
+			dsl.Method("Read", func() {
+				dsl.Result(shared)
+			})
+		})
+	})
+	secondRoot := codegen.RunDSL(t, func() {
+		dsl.Service("Writer", func() {
+			dsl.Method("Write", func() {
+				dsl.Error("shared_error", shared)
+			})
+		})
+	})
+	roots := []*expr.RootExpr{firstRoot, secondRoot}
+	if reverse {
+		slices.Reverse(roots)
+	}
+	evaluated := make([]eval.Root, len(roots))
+	inputs := make([]PlanInput, len(roots))
+	for index, root := range roots {
+		evaluated[index] = root
+		inputs[index] = PlanInput{Root: root, Examples: expr.NewExampleGenerator(root.API.RandomizerFactory)}
+	}
+	generation := mustTestGeneration(t, "generated.local/gen", evaluated)
+	plans, err := NewPlans(generation, inputs...)
+	require.NoError(t, err)
+	require.NoError(t, generation.Freeze())
+	for _, plan := range plans {
+		require.NoError(t, plan.Link())
+	}
+	return plans
+}
+
+// sharedErrorNameRoots builds two separately evaluated designs that share one
+// authored error type under different names.
+func sharedErrorNameRoots(t *testing.T, dynamic bool) (*expr.RootExpr, *expr.RootExpr) {
+	t.Helper()
+	var shared expr.UserType
+	firstRoot := codegen.RunDSL(t, func() {
+		shared = dsl.Type("SharedError", func() {
+			dsl.Meta("struct:pkg:path", "types")
+			dsl.Meta("type:generate:force")
+			if dynamic {
+				dsl.ErrorName("name", dsl.String)
+				dsl.Required("name")
+			}
+			dsl.Attribute("message", dsl.String)
+		})
+		dsl.Service("FirstService", func() {
+			dsl.Method("Read", func() {
+				dsl.Error("first_error", shared)
+			})
+		})
+	})
+	secondRoot := codegen.RunDSL(t, func() {
+		dsl.Service("SecondService", func() {
+			dsl.Method("Read", func() {
+				dsl.Error("second_error", shared)
+			})
+		})
+	})
+	return firstRoot, secondRoot
 }
 
 // sharedDeclarationRoots builds two services that use the same type declared
@@ -738,6 +858,7 @@ func TestService(t *testing.T) {
 		{"service-service-level-error", testdata.ServiceErrorDSL},
 		{"service-api-error-reference", testdata.APIErrorReferenceDSL},
 		{"service-custom-errors", testdata.CustomErrorsDSL},
+		{"service-nested-custom-error", testdata.NestedCustomErrorDSL},
 		{"service-custom-errors-custom-field", testdata.CustomErrorsCustomFieldDSL},
 		{"service-repeated-inline-errors", testdata.RepeatedInlineErrorsDSL},
 		{"service-force-generate-type", testdata.ForceGenerateTypeDSL},
@@ -795,7 +916,7 @@ func TestStructPkgPath(t *testing.T) {
 		{"multiple", testdata.PkgPathMultipleDSL, []string{barPath, bazPath}},
 		{"nopkg", testdata.PkgPathNoDirDSL, nil},
 		{"dupes", testdata.PkgPathDupeDSL, []string{fooPath}},
-		{"shared_roles", testdata.PkgPathSharedRolesDSL, []string{sharedPath}},
+		{"shared_roles", testdata.PkgPathSharedRolesDSL, []string{sharedPath, filepath.Join("gen", "shared", "detail.go")}},
 		{"payload_attribute", testdata.PkgPathPayloadAttributeDSL, []string{fooPath}},
 	}
 	for _, c := range cases {

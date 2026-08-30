@@ -245,29 +245,11 @@ func (m *MethodExpr) validateRequirements() *eval.ValidationErrors {
 // validateErrors validates the method errors.
 func (m *MethodExpr) validateErrors() *eval.ValidationErrors {
 	verr := new(eval.ValidationErrors)
-	for i, e := range m.Errors {
+	for _, e := range m.Errors {
 		if err := e.Validate(); err != nil {
 			var verrs *eval.ValidationErrors
 			if errors.As(err, &verrs) {
 				verr.Merge(verrs)
-			}
-		}
-		for j, e2 := range m.Errors {
-			// If an object type is used to define more than one errors validate the
-			// presence of struct:error:name meta in the object type.
-			if i != j && e.Type == e2.Type && IsObject(e.Type) {
-				var found bool
-				walkAttribute(e.AttributeExpr, func(_ string, att *AttributeExpr) error { // nolint: errcheck
-					if _, ok := att.Meta["struct:error:name"]; ok {
-						found = true
-						return fmt.Errorf("struct:error:name found: stop iteration")
-					}
-					return nil
-				})
-				if !found {
-					verr.Add(e, "type %q is used to define multiple errors and must identify the attribute containing the error name with ErrorName", e.Type.Name())
-					break
-				}
 			}
 		}
 	}

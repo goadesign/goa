@@ -233,12 +233,14 @@ func TestErrorExprValidate(t *testing.T) {
 	}{
 		{"no error", testdata.ValidErrorsDSL, ""},
 		{"invalid-struct-error-name-meta", testdata.InvalidStructErrorNameDSL,
-			`attribute: error name "a" must be required in type "ServiceError"
+			`attribute: type "ErrorType" defines errors error1, error2 and must identify the attribute containing the error name with ErrorName
+attribute: error name "a" must be required in type "ServiceError"
 attribute: duplicate error names in type "Error"
 attribute: error name "a" must be a string in type "Error"
-attribute: error name "a" must be required in type "Error"
-attribute: type "ErrorType" is used to define multiple errors and must identify the attribute containing the error name with ErrorName
-attribute: type "ErrorType" is used to define multiple errors and must identify the attribute containing the error name with ErrorName`,
+attribute: error name "a" must be required in type "Error"`,
+		},
+		{"shared error names across services", testdata.InvalidSharedErrorNamesDSL,
+			`attribute: type "SharedError" defines errors first_error, second_error and must identify the attribute containing the error name with ErrorName`,
 		},
 	}
 	for _, tc := range cases {

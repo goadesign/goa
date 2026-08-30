@@ -26,6 +26,7 @@ paths:
                     schema:
                         $ref: '#/definitions/SharedError'
                         required:
+                            - name
                             - message
             schemes:
                 - http
@@ -43,6 +44,7 @@ paths:
                     schema:
                         $ref: '#/definitions/SharedError'
                         required:
+                            - name
                             - message
             schemes:
                 - http
@@ -55,8 +57,14 @@ definitions:
                 type: string
                 description: Error message
                 example: shared failure
+            name:
+                type: string
+                description: Selected error name
+                example: Assumenda temporibus in exercitationem alias et.
         description: Shared error value
         example:
             message: shared failure
+            name: Assumenda temporibus in exercitationem alias et.
         required:
+            - name
             - message

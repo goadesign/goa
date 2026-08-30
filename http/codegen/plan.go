@@ -1774,7 +1774,7 @@ func newPlan(generation *codegen.Generation, transport transportKind, input Plan
 				}
 				plan.streams[endpoint] = declaration
 			}
-			if needInit(endpoint.MethodExpr.Result.Type) {
+			if needClientResponseInit(endpoint.MethodExpr.Result.Type) {
 				resultType, viewed := endpoint.MethodExpr.Result.Type.(*expr.ResultTypeExpr)
 				var projectedResult *codegen.TypeDeclaration
 				if viewed {

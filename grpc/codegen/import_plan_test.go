@@ -68,6 +68,70 @@ func TestGRPCErrorAnyImportsArePlannedForTypeFiles(t *testing.T) {
 	}
 }
 
+// TestGRPCRelocatedCustomErrorServerCompiles checks that server handlers
+// import the package of a custom error type that is generated outside the
+// service package.
+func TestGRPCRelocatedCustomErrorServerCompiles(t *testing.T) {
+	root := expr.RunDSL(t, func() {
+		detail := dsl.Type("Detail", func() {
+			dsl.Field(1, "message", dsl.String)
+			dsl.Meta("struct:pkg:path", "details")
+		})
+		failure := dsl.Type("Failure", func() {
+			dsl.Field(1, "detail", detail)
+			dsl.Required("detail")
+			dsl.Meta("struct:pkg:path", "types")
+		})
+		dsl.Service("Imports", func() {
+			dsl.Method("Read", func() {
+				dsl.Error("failure", failure)
+				dsl.GRPC(func() {
+					dsl.Response("failure", dsl.CodeFailedPrecondition)
+				})
+			})
+		})
+	})
+
+	generation, servicePlans := grpcServicePlans(t, []*expr.RootExpr{root})
+	plans, err := NewPlans(generation, PlanInput{Root: root, Service: servicePlans[0]})
+	require.NoError(t, err)
+	require.NoError(t, generation.Freeze())
+	require.NoError(t, servicePlans[0].Link())
+	require.NoError(t, plans[0].Link())
+	header := sectionCode(t, plans[0].ServerFiles()[0].SectionTemplates[0])
+	require.Contains(t, header, `types "generated.local/gen/types"`)
+	require.NotContains(t, header, `"generated.local/gen/details"`)
+	compileProtobufMethodServer(t, plans[0], servicePlans)
+}
+
+// TestGRPCRelocatedPrimitiveErrorServerCompiles checks that a primitive error
+// does not add a type import because its handler uses Goa's generic error
+// response.
+func TestGRPCRelocatedPrimitiveErrorServerCompiles(t *testing.T) {
+	root := expr.RunDSL(t, func() {
+		failure := dsl.Type("FailureCode", dsl.String)
+		failure.Attribute().AddMeta("struct:pkg:path", "types")
+		dsl.Service("Imports", func() {
+			dsl.Method("Read", func() {
+				dsl.Error("failure", failure)
+				dsl.GRPC(func() {
+					dsl.Response("failure", dsl.CodeFailedPrecondition)
+				})
+			})
+		})
+	})
+
+	generation, servicePlans := grpcServicePlans(t, []*expr.RootExpr{root})
+	plans, err := NewPlans(generation, PlanInput{Root: root, Service: servicePlans[0]})
+	require.NoError(t, err)
+	require.NoError(t, generation.Freeze())
+	require.NoError(t, servicePlans[0].Link())
+	require.NoError(t, plans[0].Link())
+	header := sectionCode(t, plans[0].ServerFiles()[0].SectionTemplates[0])
+	require.NotContains(t, header, `"generated.local/gen/types"`)
+	compileProtobufMethodServer(t, plans[0], servicePlans)
+}
+
 // TestGRPCStandardImportsAreReservedOnlyWhenGeneratedFilesUseThem checks that
 // a generated service package keeps its preferred fmt, strconv, or errors name
 // until source in the same output package calls that standard package.

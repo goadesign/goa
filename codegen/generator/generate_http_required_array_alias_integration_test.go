@@ -22,6 +22,7 @@ func TestGenerateHTTPRequiredPrimitiveAliasArray(t *testing.T) {
 		alias := dsl.Type("Alias", dsl.String, func() {
 			dsl.Pattern("^[a-z]*$")
 		})
+		plainAlias := dsl.Type("PlainAlias", dsl.String)
 		nested := dsl.Type("Nested", func() {
 			dsl.Field(1, "values", dsl.ArrayOfRequired(alias))
 			dsl.Required("values")
@@ -51,6 +52,18 @@ func TestGenerateHTTPRequiredPrimitiveAliasArray(t *testing.T) {
 					dsl.Param("values")
 				})
 			})
+			dsl.Method("ListNames", func() {
+				dsl.Result(dsl.ArrayOfRequired(dsl.String))
+				dsl.HTTP(func() {
+					dsl.GET("/names")
+				})
+			})
+			dsl.Method("ListAliases", func() {
+				dsl.Result(dsl.ArrayOfRequired(plainAlias))
+				dsl.HTTP(func() {
+					dsl.GET("/alias-values")
+				})
+			})
 		})
 	})
 
@@ -65,6 +78,12 @@ func TestGenerateHTTPRequiredPrimitiveAliasArray(t *testing.T) {
 		directory,
 		filepath.Join("http", "aliases", "server"),
 		requiredPrimitiveAliasArrayRuntimeTest,
+	)
+	writeGeneratedContractTest(
+		t,
+		directory,
+		filepath.Join("http", "aliases", "client"),
+		requiredPrimitiveAliasArrayResponseRuntimeTest,
 	)
 	runGeneratedTests(t, directory)
 }
@@ -116,5 +135,65 @@ func TestRequiredPrimitiveArrayElements(t *testing.T) {
 	assertNullElement("{\"names\":[null],\"values\":[\"ok\"],\"nested\":{\"values\":[\"ok\"]}}", "body.names")
 	assertNullElement("{\"names\":[\"ok\"],\"values\":[null],\"nested\":{\"values\":[\"ok\"]}}", "body.values")
 	assertNullElement("{\"names\":[\"ok\"],\"values\":[\"ok\"],\"nested\":{\"values\":[null]}}", "body.nested.values")
+}
+`
+
+const requiredPrimitiveAliasArrayResponseRuntimeTest = `package client
+
+import (
+	"context"
+	"io"
+	"net/http"
+	"strings"
+	"testing"
+
+	aliases "generated.local/gen/aliases"
+	goahttp "goa.design/goa/v3/http"
+	goa "goa.design/goa/v3/pkg"
+)
+
+func TestRequiredPrimitiveArrayResponseElements(t *testing.T) {
+	decodeNames := DecodeListNamesResponse(goahttp.ResponseDecoder, false)
+	decoded, err := decodeNames(response("[\"\"]"))
+	if err != nil {
+		t.Fatalf("decode empty string: %v", err)
+	}
+	names := decoded.([]string)
+	if len(names) != 1 || names[0] != "" {
+		t.Fatalf("decoded names = %#v", names)
+	}
+	assertNullResponse(t, decodeNames, "body")
+
+	decodeAliases := DecodeListAliasesResponse(goahttp.ResponseDecoder, false)
+	decoded, err = decodeAliases(response("[\"\"]"))
+	if err != nil {
+		t.Fatalf("decode empty alias: %v", err)
+	}
+	aliasValues := decoded.([]aliases.PlainAlias)
+	if len(aliasValues) != 1 || aliasValues[0] != aliases.PlainAlias("") {
+		t.Fatalf("decoded aliases = %#v", aliasValues)
+	}
+	assertNullResponse(t, decodeAliases, "body")
+}
+
+func assertNullResponse(t *testing.T, decode func(*http.Response) (any, error), context string) {
+	t.Helper()
+	_, err := decode(response("[null]"))
+	if err == nil {
+		t.Fatal("null element passed validation")
+	}
+	want := goa.MissingFieldError(context, "[*]").Error()
+	if !strings.Contains(err.Error(), want) {
+		t.Fatalf("validation error = %q, want it to contain %q", err, want)
+	}
+}
+
+func response(body string) *http.Response {
+	return &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       io.NopCloser(strings.NewReader(body)),
+		Header:     make(http.Header),
+		Request:    (&http.Request{}).WithContext(context.Background()),
+	}
 }
 `

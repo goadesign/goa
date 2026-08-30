@@ -4,16 +4,23 @@
       "SharedError": {
         "description": "Shared error value",
         "example": {
-          "message": "shared failure"
+          "message": "shared failure",
+          "name": "Assumenda temporibus in exercitationem alias et."
         },
         "properties": {
           "message": {
             "description": "Error message",
             "example": "shared failure",
             "type": "string"
+          },
+          "name": {
+            "description": "Selected error name",
+            "example": "Assumenda temporibus in exercitationem alias et.",
+            "type": "string"
           }
         },
         "required": [
+          "name",
           "message"
         ],
         "type": "object"
@@ -37,7 +44,8 @@
             "content": {
               "application/json": {
                 "example": {
-                  "message": "shared failure"
+                  "message": "shared failure",
+                  "name": "Assumenda temporibus in exercitationem alias et."
                 },
                 "schema": {
                   "$ref": "#/components/schemas/SharedError"
@@ -64,7 +72,8 @@
             "content": {
               "application/json": {
                 "example": {
-                  "message": "shared failure"
+                  "message": "shared failure",
+                  "name": "Reprehenderit eaque non ipsam rerum temporibus."
                 },
                 "schema": {
                   "$ref": "#/components/schemas/SharedError"

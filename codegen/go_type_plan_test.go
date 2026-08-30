@@ -419,7 +419,10 @@ func TestGoTypePlanRetainsRequiredArrayElementPointers(t *testing.T) {
 				Bind: binder,
 			})
 			require.NoError(t, err)
-			require.Equal(t, test.want, plan.Link(owner, goTypeTestQualifier).Def())
+			linked := plan.Link(owner, goTypeTestQualifier)
+			require.Equal(t, test.want, linked.Name())
+			require.Equal(t, test.want, linked.Def())
+			require.Equal(t, test.want, linked.Ref())
 		})
 	}
 }
