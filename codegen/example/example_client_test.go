@@ -34,6 +34,8 @@ func TestExampleCLIFiles(t *testing.T) {
 		{"input-stream", inputStreamClientDSL, false, false},
 		{"mixed-results", mixedResultClientDSL, true, false},
 		{"files-with-grpc", filesWithGRPCClientDSL, true, false},
+		{"https-only", httpsOnlyClientDSL, true, false},
+		{"grpcs-only", grpcsOnlyClientDSL, true, false},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -117,6 +119,42 @@ var filesWithGRPCClientDSL = func() {
 	dsl.Service("assets", func() {
 		dsl.Files("/index.html", "index.html")
 		dsl.Method("read_status", func() {
+			dsl.Result(dsl.String)
+			dsl.GRPC(func() {})
+		})
+	})
+}
+
+var httpsOnlyClientDSL = func() {
+	dsl.API("secure HTTP", func() {
+		dsl.Server("secure", func() {
+			dsl.Services("status")
+			dsl.Host("local", func() {
+				dsl.URI("https://localhost:8443")
+			})
+		})
+	})
+	dsl.Service("status", func() {
+		dsl.Method("read", func() {
+			dsl.Result(dsl.String)
+			dsl.HTTP(func() {
+				dsl.GET("/status")
+			})
+		})
+	})
+}
+
+var grpcsOnlyClientDSL = func() {
+	dsl.API("secure gRPC", func() {
+		dsl.Server("secure", func() {
+			dsl.Services("status")
+			dsl.Host("local", func() {
+				dsl.URI("grpcs://localhost:8443")
+			})
+		})
+	})
+	dsl.Service("status", func() {
+		dsl.Method("read", func() {
 			dsl.Result(dsl.String)
 			dsl.GRPC(func() {})
 		})

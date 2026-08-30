@@ -1,0 +1,13 @@
+assets.go
+cmd/public/http.go
+cmd/public/main.go
+gen/assets/client.go
+gen/assets/endpoints.go
+gen/assets/service.go
+gen/http/assets/client/client.go
+gen/http/assets/client/encode_decode.go
+gen/http/assets/client/paths.go
+gen/http/assets/client/types.go
+gen/http/assets/server/paths.go
+gen/http/assets/server/server.go
+gen/http/assets/server/types.go

@@ -12,7 +12,7 @@ Usage:
     %s [-host HOST][-url URL][-timeout SECONDS][-verbose|-v]{{ range .Server.Variables }}[-{{ .FlagName }} {{ toUpper .Name }}]{{ end }} SERVICE ENDPOINT [flags]
 
     -host HOST:  server host ({{ .Server.DefaultHost.Name }}). valid values: {{ (join .Server.AvailableHosts ", ") }}
-    -url URL:    specify service URL overriding host URL (http://localhost:8080)
+    -url URL:    specify service URL overriding host URL ({{ .Server.DefaultScheme }}://localhost:8080)
 {{- if and .HasJSONRPC .HasHTTP }}
     -jsonrpc|-j: force JSON-RPC (false)
 {{- end }}
