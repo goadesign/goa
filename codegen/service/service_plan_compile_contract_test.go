@@ -15,6 +15,7 @@ import (
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/service/testdata"
+	"goa.design/goa/v3/codegen/testutil"
 	"goa.design/goa/v3/dsl"
 	"goa.design/goa/v3/eval"
 	"goa.design/goa/v3/expr"
@@ -66,6 +67,62 @@ func TestRepeatedInlineMethodErrorsCompile(t *testing.T) {
 	rendered := renderedServiceFiles(t, files)
 	serviceSource := string(rendered[filepath.Join(codegen.Gendir, "secured", "service.go")])
 	require.Equal(t, 1, strings.Count(serviceSource, "type InvalidScopes string"))
+}
+
+// TestExtendedLocatedUnionBranchAliasesCompile verifies that Goa writes each
+// compiler-created branch type once when several relocated payloads extend the
+// same OneOf owner.
+func TestExtendedLocatedUnionBranchAliasesCompile(t *testing.T) {
+	root := codegen.RunDSL(t, func() {
+		owner := dsl.Type("RunOwner", func() {
+			dsl.Meta("struct:pkg:path", "types")
+			dsl.Meta("type:generate:force")
+			dsl.OneOf("owner", func() {
+				dsl.Attribute("session_id", dsl.String, func() {
+					dsl.MinLength(1)
+				})
+				dsl.Attribute("task_id", dsl.String, func() {
+					dsl.MinLength(1)
+				})
+			})
+			dsl.Required("owner")
+		})
+		first := dsl.Type("FirstPayload", func() {
+			dsl.Meta("struct:pkg:path", "types")
+			dsl.Extend(owner)
+			dsl.Attribute("first", dsl.String)
+		})
+		second := dsl.Type("SecondPayload", func() {
+			dsl.Meta("struct:pkg:path", "types")
+			dsl.Extend(owner)
+			dsl.Attribute("second", dsl.String)
+		})
+		dsl.Service("Runs", func() {
+			dsl.Method("First", func() {
+				dsl.Payload(first)
+			})
+			dsl.Method("Second", func() {
+				dsl.Payload(second)
+			})
+		})
+	})
+
+	plan := retainedServicePlanForPackage(t, root)
+	files, err := Files(plan)
+	require.NoError(t, err)
+	compileGeneratedServiceFiles(t, files)
+
+	rendered := renderedServiceFiles(t, files)
+	for _, name := range []string{"owner_session_id.go", "owner_task_id.go", "unions.go"} {
+		path := filepath.Join(codegen.Gendir, "types", name)
+		source, ok := rendered[path]
+		require.True(t, ok, "generated file %s", path)
+		testutil.AssertGo(
+			t,
+			filepath.Join("testdata", "golden", "service_extended_located_union_"+name+".golden"),
+			string(source),
+		)
+	}
 }
 
 // TestNestedViewValidatorCollisionCompiles catches a parent validator that

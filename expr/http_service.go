@@ -64,9 +64,13 @@ func (svc *HTTPServiceExpr) Description() string {
 	return svc.ServiceExpr.Description
 }
 
-// Error returns the error with the given name declared by the service, if any.
+// Error returns the error contract available to service-level HTTP mappings.
+// Service declarations take precedence over reusable API declarations.
 func (svc *HTTPServiceExpr) Error(name string) *ErrorExpr {
-	return svc.ServiceExpr.Error(name)
+	if serviceError := svc.ServiceExpr.Error(name); serviceError != nil {
+		return serviceError
+	}
+	return svc.ServiceExpr.design.Error(name)
 }
 
 // Endpoint returns the service endpoint with the given name or nil if there

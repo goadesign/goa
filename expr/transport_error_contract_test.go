@@ -137,18 +137,44 @@ func TestInheritedErrorMappingRejectsExplicitQualifierOverride(t *testing.T) {
 	}
 }
 
-func TestTransportErrorResponseRequiresSelectedError(t *testing.T) {
+func TestServiceTransportErrorResponseMayDefineUnusedDefault(t *testing.T) {
 	for _, test := range []struct {
 		name string
 		dsl  func()
 	}{
 		{
-			name: "HTTP service",
-			dsl: unselectedErrorResponseDSL(
-				func() { HTTP(func() { Response(StatusServiceUnavailable, "busy") }) },
-				func() { HTTP(func() { POST("/run") }) },
-			),
+			name: "HTTP",
+			dsl:  serviceDefaultErrorResponseDSL("HTTP"),
 		},
+		{
+			name: "gRPC",
+			dsl:  serviceDefaultErrorResponseDSL("gRPC"),
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			root := expr.RunDSL(t, test.dsl)
+			if test.name == "HTTP" {
+				service := root.API.HTTP.Service("Jobs")
+				selected := service.Endpoint("Selected")
+				require.Len(t, selected.HTTPErrors, 1)
+				require.Same(t, root.Error("busy"), selected.HTTPErrors[0].ErrorExpr)
+				require.Empty(t, service.Endpoint("Unselected").HTTPErrors)
+			} else {
+				service := root.API.GRPC.Service("Jobs")
+				selected := service.Endpoint("Selected")
+				require.Len(t, selected.GRPCErrors, 1)
+				require.Same(t, root.Error("busy"), selected.GRPCErrors[0].ErrorExpr)
+				require.Empty(t, service.Endpoint("Unselected").GRPCErrors)
+			}
+		})
+	}
+}
+
+func TestMethodTransportErrorResponseRequiresSelectedError(t *testing.T) {
+	for _, test := range []struct {
+		name string
+		dsl  func()
+	}{
 		{
 			name: "HTTP method",
 			dsl: unselectedErrorResponseDSL(
@@ -159,13 +185,6 @@ func TestTransportErrorResponseRequiresSelectedError(t *testing.T) {
 						Response(StatusServiceUnavailable, "busy")
 					})
 				},
-			),
-		},
-		{
-			name: "gRPC service",
-			dsl: unselectedErrorResponseDSL(
-				func() { GRPC(func() { Response("busy", CodeUnavailable) }) },
-				func() { GRPC(func() {}) },
 			),
 		},
 		{
@@ -238,6 +257,36 @@ func unselectedErrorResponseDSL(serviceTransport, methodTransport func()) func()
 			serviceTransport()
 			Method("Run", func() {
 				methodTransport()
+			})
+		})
+	}
+}
+
+func serviceDefaultErrorResponseDSL(transport string) func() {
+	return func() {
+		API("errors", func() {
+			Error("busy", Temporary)
+		})
+		Service("Jobs", func() {
+			if transport == "HTTP" {
+				HTTP(func() { Response(StatusServiceUnavailable, "busy") })
+			} else {
+				GRPC(func() { Response("busy", CodeUnavailable) })
+			}
+			Method("Selected", func() {
+				Error("busy")
+				if transport == "HTTP" {
+					HTTP(func() { POST("/selected") })
+				} else {
+					GRPC(func() {})
+				}
+			})
+			Method("Unselected", func() {
+				if transport == "HTTP" {
+					HTTP(func() { POST("/unselected") })
+				} else {
+					GRPC(func() {})
+				}
 			})
 		})
 	}

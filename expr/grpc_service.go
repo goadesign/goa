@@ -60,9 +60,13 @@ func (svc *GRPCServiceExpr) EndpointFor(name string, m *MethodExpr) *GRPCEndpoin
 	return a
 }
 
-// Error returns the error with the given name declared by the service, if any.
+// Error returns the error contract available to service-level gRPC mappings.
+// Service declarations take precedence over reusable API declarations.
 func (svc *GRPCServiceExpr) Error(name string) *ErrorExpr {
-	return svc.ServiceExpr.Error(name)
+	if serviceError := svc.ServiceExpr.Error(name); serviceError != nil {
+		return serviceError
+	}
+	return svc.ServiceExpr.design.Error(name)
 }
 
 // GRPCError returns the service gRPC error with given name if any.

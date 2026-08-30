@@ -5,6 +5,7 @@ package service
 import (
 	"fmt"
 	"path"
+	"path/filepath"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
@@ -487,7 +488,10 @@ func collectUserTypeFacts(attribute *expr.AttributeExpr, servicePath string, loc
 	case *expr.Union:
 		for _, branch := range actual.Values {
 			if userType, generated := generatedUnionBranch(branch, canonical); generated && location != nil {
-				selected, err := collect(&expr.AttributeExpr{Type: userType}, location)
+				selected, err := collect(
+					&expr.AttributeExpr{Type: userType},
+					generatedUnionBranchLocation(userType, location),
+				)
 				if err != nil {
 					return nil, err
 				}
@@ -502,6 +506,15 @@ func collectUserTypeFacts(attribute *expr.AttributeExpr, servicePath string, loc
 		}
 	}
 	return result, nil
+}
+
+// generatedUnionBranchLocation gives a compiler-created OneOf branch one file
+// regardless of which relocated type contains the union.
+func generatedUnionBranchLocation(userType expr.UserType, location *codegen.Location) *codegen.Location {
+	return &codegen.Location{
+		FilePath:      filepath.Join(filepath.Dir(location.FilePath), codegen.SnakeCase(userType.Name())+".go"),
+		RelImportPath: location.RelImportPath,
+	}
 }
 
 // This helper copies the Go expression returned by GoaErrorName while the
