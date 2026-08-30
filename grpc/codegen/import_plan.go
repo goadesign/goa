@@ -508,7 +508,7 @@ func planGRPCExampleImports(generation *codegen.Generation, plan *Plan, root *ex
 			return err
 		}
 
-		if server.DefaultTransport() == nil {
+		if plan.cli.parser(server.Name) == nil {
 			continue
 		}
 		clientPath := path.Join(rootPath, "cmd", server.Dir+"-cli")

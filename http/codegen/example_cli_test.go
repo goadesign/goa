@@ -46,6 +46,14 @@ func TestExampleCLIFiles(t *testing.T) {
 	}
 }
 
+func TestExampleCLIFilesOmitFilesOnlyServer(t *testing.T) {
+	root := codegen.RunDSL(t, ctestdata.ServerHostingServiceWithFileServerDSL)
+	examples := linkedHTTPExamplePlanForRoot(t, root)
+
+	require.NotEmpty(t, examples.ServerFiles())
+	require.Empty(t, examples.CLIFiles())
+}
+
 func TestExampleCLIUsesServicePathsForCommands(t *testing.T) {
 	root := codegen.RunDSL(t, collidingServiceNamesDSL)
 	examples := linkedHTTPExamplePlanForRoot(t, root)

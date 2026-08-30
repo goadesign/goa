@@ -43,6 +43,9 @@ type (
 		HasHTTP bool
 		// HasJSONRPC reports whether the server exposes a JSON-RPC service.
 		HasJSONRPC           bool
+		clientTransports     []*TransportData
+		clientHasHTTP        bool
+		clientHasJSONRPC     bool
 		writesEndpointResult bool
 		writesStreamResults  bool
 		usageCommands        []string
@@ -171,15 +174,13 @@ func (s *Data) AvailableHosts() []string {
 // DefaultTransport returns the default transport for the given server.
 // If multiple transports are defined, HTTP transport is used as the default.
 func (s *Data) DefaultTransport() *TransportData {
-	if len(s.Transports) == 1 {
-		return s.Transports[0]
-	}
-	for _, t := range s.Transports {
-		if t.Type == TransportHTTP {
-			return t
-		}
-	}
-	return nil
+	return defaultTransport(s.Transports)
+}
+
+// DefaultClientTransport returns the transport selected by the generated
+// command-line client. It returns nil when the server has no callable method.
+func (s *Data) DefaultClientTransport() *TransportData {
+	return defaultTransport(s.clientTransports)
 }
 
 // HasTransport checks if the server supports the given transport.
@@ -242,39 +243,40 @@ func buildServerData(svr *expr.ServerExpr, root *expr.RootExpr, serviceCommands 
 	}
 
 	var (
-		transports   []*TransportData
-		httpServices []string
-		grpcServices []string
-		hasHTTP      bool
-		hasJSONRPC   bool
+		transports    []*TransportData
+		httpServices  []string
+		grpcServices  []string
+		hasHTTP       bool
+		hasJSONRPC    bool
+		clientHTTP    bool
+		clientJSONRPC bool
 
-		foundTrans = make(map[Transport]struct{})
+		clientTransports []*TransportData
 	)
 	for _, svc := range svr.Services {
-		_, seenHTTP := foundTrans[TransportHTTP]
-		_, seenGRPC := foundTrans[TransportGRPC]
-		if root.API.HTTP.Service(svc) != nil {
+		if service := root.API.HTTP.Service(svc); service != nil {
 			hasHTTP = true
 			httpServices = append(httpServices, svc)
-			if !seenHTTP {
-				transports = append(transports, newHTTPTransport())
-				foundTrans[TransportHTTP] = struct{}{}
+			transports = appendTransport(transports, newHTTPTransport())
+			if len(service.HTTPEndpoints) > 0 {
+				clientHTTP = true
+				clientTransports = appendTransport(clientTransports, newHTTPTransport())
 			}
-			seenHTTP = true
 		}
-		if root.API.JSONRPC.Service(svc) != nil {
+		if service := root.API.JSONRPC.Service(svc); service != nil {
 			hasJSONRPC = true
 			// JSON-RPC runs over HTTP, so both use the same server listener.
-			if !seenHTTP {
-				transports = append(transports, newHTTPTransport())
-				foundTrans[TransportHTTP] = struct{}{}
+			transports = appendTransport(transports, newHTTPTransport())
+			if len(service.HTTPEndpoints) > 0 {
+				clientJSONRPC = true
+				clientTransports = appendTransport(clientTransports, newHTTPTransport())
 			}
 		}
-		if root.API.GRPC.Service(svc) != nil {
+		if service := root.API.GRPC.Service(svc); service != nil {
 			grpcServices = append(grpcServices, svc)
-			if !seenGRPC {
-				transports = append(transports, newGRPCTransport())
-				foundTrans[TransportGRPC] = struct{}{}
+			transports = appendTransport(transports, newGRPCTransport())
+			if len(service.GRPCEndpoints) > 0 {
+				clientTransports = appendTransport(clientTransports, newGRPCTransport())
 			}
 		}
 	}
@@ -288,20 +290,23 @@ func buildServerData(svr *expr.ServerExpr, root *expr.RootExpr, serviceCommands 
 	}
 	dir := codegen.SnakeCase(codegen.Goify(svr.Name, true))
 	sd := &Data{
-		Name:           svr.Name,
-		Description:    svr.Description,
-		Services:       append([]string(nil), svr.Services...),
-		Schemes:        svr.Schemes(),
-		Hosts:          hosts,
-		Variables:      variables,
-		Transports:     transports,
-		Dir:            dir,
-		serverMainPath: filepath.Join("cmd", dir, "main.go"),
-		clientMainPath: filepath.Join("cmd", dir+"-cli", "main.go"),
-		HasHTTP:        hasHTTP,
-		HasJSONRPC:     hasJSONRPC,
-		usageCommands:  usageCommands(svr, root, serviceCommands),
-		jsonRPCOnly:    jsonRPCOnlyCommands(svr, root, serviceCommands),
+		Name:             svr.Name,
+		Description:      svr.Description,
+		Services:         append([]string(nil), svr.Services...),
+		Schemes:          svr.Schemes(),
+		Hosts:            hosts,
+		Variables:        variables,
+		Transports:       transports,
+		Dir:              dir,
+		serverMainPath:   filepath.Join("cmd", dir, "main.go"),
+		clientMainPath:   filepath.Join("cmd", dir+"-cli", "main.go"),
+		HasHTTP:          hasHTTP,
+		HasJSONRPC:       hasJSONRPC,
+		clientTransports: clientTransports,
+		clientHasHTTP:    clientHTTP,
+		clientHasJSONRPC: clientJSONRPC,
+		usageCommands:    usageCommands(svr, root, serviceCommands),
+		jsonRPCOnly:      jsonRPCOnlyCommands(svr, root, serviceCommands),
 	}
 	sd.writesEndpointResult, sd.writesStreamResults = clientResultWriters(svr, root)
 	// Keep the handler argument order while the complete design is still available.
@@ -311,6 +316,31 @@ func buildServerData(svr *expr.ServerExpr, root *expr.RootExpr, serviceCommands 
 		}
 	}
 	return sd
+}
+
+// defaultTransport returns the only available transport, or HTTP when both
+// HTTP and gRPC are available. It returns nil when no transport is available.
+func defaultTransport(transports []*TransportData) *TransportData {
+	if len(transports) == 1 {
+		return transports[0]
+	}
+	for _, transport := range transports {
+		if transport.Type == TransportHTTP {
+			return transport
+		}
+	}
+	return nil
+}
+
+// appendTransport adds candidate unless the list already contains the same
+// transport type.
+func appendTransport(transports []*TransportData, candidate *TransportData) []*TransportData {
+	for _, transport := range transports {
+		if transport.Type == candidate.Type {
+			return transports
+		}
+	}
+	return append(transports, candidate)
 }
 
 // clientResultWriters reports which result helpers the server's example

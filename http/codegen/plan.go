@@ -856,7 +856,7 @@ func planExampleFileImports(transport, application *Plan, root *example.Root) er
 			return err
 		}
 
-		services := configuredTransportServices(transport, server.Services)
+		services := configuredTransportClientServices(transport, server.Services)
 		if len(services) == 0 {
 			continue
 		}
@@ -931,6 +931,15 @@ func configuredTransportServices(plan *Plan, names []string) []*expr.HTTPService
 		}
 	}
 	return services
+}
+
+// configuredTransportClientServices returns configured services that expose
+// at least one method through the selected transport.
+func configuredTransportClientServices(plan *Plan, names []string) []*expr.HTTPServiceExpr {
+	services := configuredTransportServices(plan, names)
+	return slices.DeleteFunc(services, func(service *expr.HTTPServiceExpr) bool {
+		return len(service.HTTPEndpoints) == 0
+	})
 }
 
 // exampleServerGeneratedImports returns service and transport server packages
@@ -1458,6 +1467,9 @@ func planImports(generation *codegen.Generation, transport transportKind, plans 
 			}
 		}
 		for _, server := range design.API.Servers {
+			if plan.cliParsers[server.Name] == nil {
+				continue
+			}
 			serverName := codegen.SnakeCase(codegen.Goify(server.Name, true))
 			cliPath := path.Join(generation.GenPkg(), dir, "cli", serverName)
 			cliPackage := generation.Package(cliPath)
@@ -1465,7 +1477,7 @@ func planImports(generation *codegen.Generation, transport transportKind, plans 
 			var cliServices []*expr.HTTPServiceExpr
 			for _, serviceName := range server.Services {
 				transportService := expressions.Service(serviceName)
-				if transportService == nil {
+				if transportService == nil || len(transportService.HTTPEndpoints) == 0 {
 					continue
 				}
 				cliServices = append(cliServices, transportService)
@@ -1832,11 +1844,6 @@ func newPlan(generation *codegen.Generation, transport transportKind, input Plan
 		}
 	}
 	for _, server := range input.Root.API.Servers {
-		serverPath := path.Join(generation.GenPkg(), dir, "cli", codegen.SnakeCase(codegen.Goify(server.Name, true)))
-		serverPackage, err := generation.ClaimPackage(serverPath)
-		if err != nil {
-			return nil, err
-		}
 		var commands []cli.CommandDeclarationInput
 		for _, serviceName := range server.Services {
 			transportService := expressions.Service(serviceName)
@@ -1849,6 +1856,14 @@ func newPlan(generation *codegen.Generation, transport transportKind, input Plan
 				command.NeedsFlagPresence = command.NeedsFlagPresence || httpEndpointNeedsCLIFlagPresence(endpoint)
 			}
 			commands = append(commands, command)
+		}
+		if len(commands) == 0 {
+			continue
+		}
+		serverPath := path.Join(generation.GenPkg(), dir, "cli", codegen.SnakeCase(codegen.Goify(server.Name, true)))
+		serverPackage, err := generation.ClaimPackage(serverPath)
+		if err != nil {
+			return nil, err
 		}
 		parser, err := cli.DeclareParser(serverPackage, dir, input.Root.API.Name, server.Name, commands)
 		if err != nil {

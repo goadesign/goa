@@ -9,6 +9,7 @@ import (
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/cli"
+	ctestdata "goa.design/goa/v3/codegen/example/testdata"
 	"goa.design/goa/v3/codegen/testutil"
 	"goa.design/goa/v3/dsl"
 	"goa.design/goa/v3/expr"
@@ -67,6 +68,14 @@ func TestClientCLIFiles(t *testing.T) {
 			testutil.AssertGo(t, "testdata/golden/client_cli_"+c.Name+".go.golden", code)
 		})
 	}
+}
+
+func TestClientCLIFilesOmitFilesOnlyServer(t *testing.T) {
+	root := codegen.RunDSL(t, ctestdata.ServerHostingServiceWithFileServerDSL)
+	plan := linkedHTTPPlanForRoot(t, root)
+
+	require.NotEmpty(t, plan.ServerFiles())
+	require.Empty(t, plan.ClientCLIFiles())
 }
 
 // TestClientCLIFlagPresenceGolden shows how generated HTTP commands preserve

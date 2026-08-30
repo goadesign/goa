@@ -101,7 +101,7 @@ func planMainPackages(generation *codegen.Generation, servicePlan *service.Plan,
 		return err
 	}
 
-	if server.DefaultTransport() == nil {
+	if server.DefaultClientTransport() == nil {
 		return nil
 	}
 	clientPath := path.Join(rootPath, "cmd", server.Dir+"-cli")

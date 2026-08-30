@@ -983,14 +983,16 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 	if sds.jsonrpc {
 		serverPkgName = strings.ToLower(codegen.Goify(svc.Name, false)) + "jssvr"
 	}
-	for _, server := range sds.Root.API.Servers {
-		if !slices.Contains(server.Services, svc.Name) {
-			continue
+	if len(httpSvc.HTTPEndpoints) > 0 {
+		for _, server := range sds.Root.API.Servers {
+			if !slices.Contains(server.Services, svc.Name) || sds.cliParsers[server.Name] == nil {
+				continue
+			}
+			serverName := codegen.SnakeCase(codegen.Goify(server.Name, true))
+			cliOutputPackage := path.Join(sds.GenPkg(), sds.dir(), "cli", serverName)
+			clientPkgName = sds.PackageImport(cliOutputPackage, clientOutputPackage).Name
+			break
 		}
-		serverName := codegen.SnakeCase(codegen.Goify(server.Name, true))
-		cliOutputPackage := path.Join(sds.GenPkg(), sds.dir(), "cli", serverName)
-		clientPkgName = sds.PackageImport(cliOutputPackage, clientOutputPackage).Name
-		break
 	}
 	sd := &ServiceData{
 		Service:                             svc,

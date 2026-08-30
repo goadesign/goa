@@ -97,7 +97,7 @@ func main() {
 				}
 			}
 		default:
-			fmt.Fprintf(os.Stderr, "invalid scheme: %q (valid schemes: grpc|http)\n", scheme)
+			fmt.Fprintf(os.Stderr, "invalid scheme: %q (valid schemes: http)\n", scheme)
 			os.Exit(1)
 		}
 	}

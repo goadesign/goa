@@ -20,7 +20,7 @@ func main() {
 		if addr == "" {
 			switch *hostF {
 			case "localhost":
-				addr = "http://localhost:80"
+				addr = "grpc://localhost:8080"
 			default:
 				fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: localhost)\n", *hostF)
 				os.Exit(1)
@@ -49,10 +49,10 @@ func main() {
 	)
 	{
 		switch scheme {
-		case "http", "https":
-			err = doHTTP(context.Background(), scheme, host, timeout, debug, os.Stdout)
+		case "grpc", "grpcs":
+			err = doGRPC(context.Background(), scheme, host, timeout, debug, os.Stdout)
 		default:
-			fmt.Fprintf(os.Stderr, "invalid scheme: %q (valid schemes: http)\n", scheme)
+			fmt.Fprintf(os.Stderr, "invalid scheme: %q (valid schemes: grpc)\n", scheme)
 			os.Exit(1)
 		}
 	}
@@ -93,7 +93,7 @@ func writeJSON(stdout io.Writer, data any) error {
 
 func usage() {
 	usageCommands := []string{
-		"events create",
+		"assets read-status",
 	}
 	fmt.Fprintf(os.Stderr, `%s is a command line client for the test api API.
 
@@ -112,7 +112,7 @@ Additional help:
 
 Example:
 %s
-`, os.Args[0], os.Args[0], indent(strings.Join(usageCommands, "\n")), os.Args[0], indent(httpUsageExamples()))
+`, os.Args[0], os.Args[0], indent(strings.Join(usageCommands, "\n")), os.Args[0], indent(grpcUsageExamples()))
 }
 
 func indent(s string) string {

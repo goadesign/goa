@@ -33,6 +33,7 @@ func TestExampleCLIFiles(t *testing.T) {
 		{"server-stream", serverStreamClientDSL, false, true},
 		{"input-stream", inputStreamClientDSL, false, false},
 		{"mixed-results", mixedResultClientDSL, true, false},
+		{"files-with-grpc", filesWithGRPCClientDSL, true, false},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -62,6 +63,64 @@ func TestExampleCLIFiles(t *testing.T) {
 			compareOrUpdateGolden(t, code, golden)
 		})
 	}
+}
+
+func TestExampleCLIOmitsServerWithoutCallableMethods(t *testing.T) {
+	plannedRoot := plannedExampleRoot(t, func() {
+		dsl.Service("assets", func() {
+			dsl.Files("/index.html", "index.html")
+		})
+	})
+
+	require.True(t, plannedRoot.Servers[0].HasHTTP)
+	require.NotNil(t, plannedRoot.Servers[0].DefaultTransport())
+	require.Nil(t, plannedRoot.Servers[0].DefaultClientTransport())
+	require.Empty(t, CLIFiles(plannedRoot))
+}
+
+func TestExampleCLIUsesOnlyTransportsWithCallableMethods(t *testing.T) {
+	plannedRoot := plannedExampleRoot(t, filesWithGRPCClientDSL)
+
+	server := plannedRoot.Servers[0]
+	require.True(t, server.HasTransport(TransportHTTP))
+	require.True(t, server.HasTransport(TransportGRPC))
+	require.Equal(t, TransportHTTP, server.DefaultTransport().Type)
+	require.Equal(t, Transport(TransportGRPC), server.DefaultClientTransport().Type)
+	files := CLIFiles(plannedRoot)
+	require.Len(t, files, 1)
+	code := renderExampleSections(t, files[0])
+	require.Contains(t, code, `case "grpc", "grpcs":`)
+	require.NotContains(t, code, `case "http", "https":`)
+	require.NotContains(t, code, "doHTTP(")
+	require.Contains(t, code, "valid schemes: grpc")
+}
+
+// plannedExampleRoot evaluates design and returns the server data used by
+// generated example programs.
+func plannedExampleRoot(t *testing.T, design func()) *Root {
+	t.Helper()
+	root := codegen.RunDSL(t, design)
+	generation, err := codegen.NewGeneration("example.local/gen", []eval.Root{root})
+	require.NoError(t, err)
+	servicePlan, err := service.NewPlan(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
+	require.NoError(t, err)
+	plan, err := NewPlan(generation, servicePlan)
+	require.NoError(t, err)
+	require.NoError(t, generation.Freeze())
+	require.NoError(t, servicePlan.Link())
+	plannedRoot, ok := plan.Root(servicePlan)
+	require.True(t, ok)
+	return plannedRoot
+}
+
+var filesWithGRPCClientDSL = func() {
+	dsl.Service("assets", func() {
+		dsl.Files("/index.html", "index.html")
+		dsl.Method("read_status", func() {
+			dsl.Result(dsl.String)
+			dsl.GRPC(func() {})
+		})
+	})
 }
 
 var serverStreamClientDSL = func() {

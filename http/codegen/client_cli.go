@@ -105,6 +105,9 @@ func clientCLIFiles(data *ServicesData) []*codegen.File {
 	}
 	files := make([]*codegen.File, 0, len(data.Root.API.Servers)*2) // preallocate for CLI files
 	for _, svr := range data.Root.API.Servers {
+		if data.cliParsers[svr.Name] == nil {
+			continue
+		}
 		var svrData []*commandData
 		for _, name := range svr.Services {
 			for i, svc := range svcs {

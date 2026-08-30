@@ -35,10 +35,9 @@ func exampleCLI(server *example.Data, services *ServicesData) *codegen.File {
 		funcSuffix = "JSONRPC"
 	}
 	rootPath := path.Dir(genpkg)
-	cliImport := services.PackageImport(outputPackage, path.Join(genpkg, services.dir(), "cli", server.Dir))
 	parser := services.cliParsers[server.Name]
 	if parser == nil {
-		panic("HTTP command parser names are missing for server " + server.Name)
+		return nil
 	}
 	var svcData []*ServiceData
 	hasClientInterceptors := false
@@ -48,6 +47,9 @@ func exampleCLI(server *example.Data, services *ServicesData) *codegen.File {
 		if data == nil {
 			continue
 		}
+		if len(data.Endpoints) == 0 {
+			continue
+		}
 		copy := exampleServiceDataForOutput(data, services, outputPackage)
 		svcData = append(svcData, copy)
 		hasClientInterceptors = hasClientInterceptors || len(data.Service.ClientInterceptors) > 0
@@ -55,6 +57,7 @@ func exampleCLI(server *example.Data, services *ServicesData) *codegen.File {
 			hasMultipart = hasMultipart || endpoint.MultipartRequestDecoder != nil
 		}
 	}
+	cliImport := services.PackageImport(outputPackage, path.Join(genpkg, services.dir(), "cli", server.Dir))
 	var interceptorsPkg string
 	if hasClientInterceptors {
 		interceptorImport := services.PackageImport(outputPackage, rootPath+"/interceptors")

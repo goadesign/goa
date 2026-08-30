@@ -316,11 +316,6 @@ func planGRPCCLI(generation *codegen.Generation, input PlanInput, packages map[*
 		return plan, nil
 	}
 	for _, server := range design.API.Servers {
-		serverName := codegen.SnakeCase(codegen.Goify(server.Name, true))
-		serverPackage, err := generation.ClaimPackage(path.Join(generation.GenPkg(), "grpc", "cli", serverName))
-		if err != nil {
-			return nil, err
-		}
 		var commands []cli.CommandDeclarationInput
 		for _, serviceName := range server.Services {
 			grpcService := design.API.GRPC.Service(serviceName)
@@ -336,6 +331,14 @@ func planGRPCCLI(generation *codegen.Generation, input PlanInput, packages map[*
 				command.NeedsFlagPresence = command.NeedsFlagPresence || grpcEndpointNeedsCLIFlagPresence(endpoint)
 			}
 			commands = append(commands, command)
+		}
+		if len(commands) == 0 {
+			continue
+		}
+		serverName := codegen.SnakeCase(codegen.Goify(server.Name, true))
+		serverPackage, err := generation.ClaimPackage(path.Join(generation.GenPkg(), "grpc", "cli", serverName))
+		if err != nil {
+			return nil, err
 		}
 		parser, err := cli.DeclareParser(serverPackage, "grpc", design.API.Name, server.Name, commands)
 		if err != nil {

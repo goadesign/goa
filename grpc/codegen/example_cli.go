@@ -30,20 +30,23 @@ func exampleCLI(services *ServicesData, server *example.Data) *codegen.File {
 	mainPath := filepath.Join("cmd", server.Dir+"-cli", "grpc.go")
 	rootPath := path.Dir(genpkg)
 	outputPackage := path.Join(rootPath, "cmd", server.Dir+"-cli")
-	cliImport := services.PackageImport(outputPackage, path.Join(genpkg, "grpc", "cli", server.Dir))
 	parser := services.cliPlan.parser(server.Name)
 	if parser == nil {
-		panic("gRPC command parser names are missing for server " + server.Name)
+		return nil
 	}
 
 	var svcData []*ServiceData
 	hasClientInterceptors := false
 	for _, svc := range server.Services {
 		if data := services.Get(svc); data != nil {
+			if len(data.Endpoints) == 0 {
+				continue
+			}
 			svcData = append(svcData, services.exampleServiceData(data, outputPackage, false))
 			hasClientInterceptors = hasClientInterceptors || len(data.Service.ClientInterceptors) > 0
 		}
 	}
+	cliImport := services.PackageImport(outputPackage, path.Join(genpkg, "grpc", "cli", server.Dir))
 	var interceptorsPkg string
 	if hasClientInterceptors {
 		interceptorImport := services.PackageImport(outputPackage, rootPath+"/interceptors")
@@ -56,7 +59,7 @@ func exampleCLI(services *ServicesData, server *example.Data) *codegen.File {
 			Name:   "do-grpc-cli",
 			Source: grpcTemplates.Read(grpcDoGRPCCLIT),
 			Data: map[string]any{
-				"DefaultTransport": server.DefaultTransport(),
+				"DefaultTransport": server.DefaultClientTransport(),
 				"Services":         svcData,
 				"InterceptorsPkg":  interceptorsPkg,
 				"CLIPkg":           cliImport.Name,

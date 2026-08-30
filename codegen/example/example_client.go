@@ -34,6 +34,10 @@ type (
 	// main and the hosts that use them.
 	clientMainServerData struct {
 		*Data
+		// Transports lists only transports with commands that this client can call.
+		Transports []*TransportData
+		// Schemes lists only URL schemes accepted by Transports.
+		Schemes []string
 		// Variables lists every URL variable with its client flag names.
 		Variables []*mainVariableData
 		// Hosts lists each host with the same planned URL variables.
@@ -61,8 +65,8 @@ func CLIFiles(root *Root) []*codegen.File {
 
 // exampleCLIMain writes the command-line program for server.
 func exampleCLIMain(root *Root, server *Data) *codegen.File {
-	// A server with no HTTP, JSON-RPC, or gRPC service has no client to run.
-	if server.DefaultTransport() == nil {
+	// A server with no callable method has no client to run.
+	if server.DefaultClientTransport() == nil {
 		return nil
 	}
 
@@ -70,8 +74,8 @@ func exampleCLIMain(root *Root, server *Data) *codegen.File {
 	main := &clientMainData{
 		APIName:              root.APIName,
 		Server:               planClientMainServer(server),
-		HasJSONRPC:           server.HasJSONRPC,
-		HasHTTP:              server.HasHTTP,
+		HasJSONRPC:           server.clientHasJSONRPC,
+		HasHTTP:              server.clientHasHTTP,
 		UsageCommands:        server.usageCommands,
 		JSONRPCOnly:          server.jsonRPCOnly,
 		WritesEndpointResult: server.writesEndpointResult,
@@ -147,14 +151,16 @@ func clientMainFixedImports(server *Data) []*codegen.ImportSpec {
 // built-in client flags.
 func planClientMainServer(server *Data) *clientMainServerData {
 	fixedFlags := []string{"host", "url", "timeout", "verbose", "v"}
-	if server.HasJSONRPC {
+	if server.clientHasJSONRPC {
 		fixedFlags = append(fixedFlags, "jsonrpc", "j")
 	}
 	variables := planMainVariables(server.Variables, fixedFlags)
 	planned := &clientMainServerData{
-		Data:      server,
-		Variables: variables.all,
-		Hosts:     make([]*clientMainHostData, len(server.Hosts)),
+		Data:       server,
+		Transports: server.clientTransports,
+		Schemes:    clientSchemes(server),
+		Variables:  variables.all,
+		Hosts:      make([]*clientMainHostData, len(server.Hosts)),
 	}
 	for index, host := range server.Hosts {
 		plannedHost := &clientMainHostData{
@@ -167,4 +173,35 @@ func planClientMainServer(server *Data) *clientMainServerData {
 		planned.Hosts[index] = plannedHost
 	}
 	return planned
+}
+
+// DefaultTransport returns the transport selected when the caller does not
+// choose one. Only transports with generated commands are considered.
+func (s *clientMainServerData) DefaultTransport() *TransportData {
+	return defaultTransport(s.Transports)
+}
+
+// clientSchemes returns the server URL schemes that lead to a generated
+// client command.
+func clientSchemes(server *Data) []string {
+	selected := make(map[Transport]struct{}, len(server.clientTransports))
+	for _, transport := range server.clientTransports {
+		selected[transport.Type] = struct{}{}
+	}
+	var schemes []string
+	for _, scheme := range server.Schemes {
+		var transport Transport
+		switch scheme {
+		case "http", "https":
+			transport = TransportHTTP
+		case "grpc", "grpcs":
+			transport = TransportGRPC
+		default:
+			panic("unsupported server scheme " + scheme)
+		}
+		if _, ok := selected[transport]; ok {
+			schemes = append(schemes, scheme)
+		}
+	}
+	return schemes
 }

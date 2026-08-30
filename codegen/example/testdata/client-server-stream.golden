@@ -52,7 +52,7 @@ func main() {
 		case "grpc", "grpcs":
 			err = doGRPC(context.Background(), scheme, host, timeout, debug, os.Stdout)
 		default:
-			fmt.Fprintf(os.Stderr, "invalid scheme: %q (valid schemes: grpc|http)\n", scheme)
+			fmt.Fprintf(os.Stderr, "invalid scheme: %q (valid schemes: grpc)\n", scheme)
 			os.Exit(1)
 		}
 	}
