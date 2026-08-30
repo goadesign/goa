@@ -36,6 +36,7 @@ func TestExampleCLIFiles(t *testing.T) {
 		{"files-with-grpc", filesWithGRPCClientDSL, true, false},
 		{"https-only", httpsOnlyClientDSL, true, false},
 		{"grpcs-only", grpcsOnlyClientDSL, true, false},
+		{"https-before-http", httpsBeforeHTTPClientDSL, true, false},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -157,6 +158,26 @@ var grpcsOnlyClientDSL = func() {
 		dsl.Method("read", func() {
 			dsl.Result(dsl.String)
 			dsl.GRPC(func() {})
+		})
+	})
+}
+
+var httpsBeforeHTTPClientDSL = func() {
+	dsl.API("ordered HTTP", func() {
+		dsl.Server("ordered", func() {
+			dsl.Services("status")
+			dsl.Host("public", func() {
+				dsl.URI("https://api.example.com:9443/base/status")
+				dsl.URI("http://localhost:8080")
+			})
+		})
+	})
+	dsl.Service("status", func() {
+		dsl.Method("read", func() {
+			dsl.Result(dsl.String)
+			dsl.HTTP(func() {
+				dsl.GET("/status")
+			})
 		})
 	})
 }

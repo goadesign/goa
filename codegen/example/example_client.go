@@ -38,8 +38,6 @@ type (
 		Transports []*TransportData
 		// Schemes lists only URL schemes accepted by Transports.
 		Schemes []string
-		// DefaultScheme is the first configured scheme for the default client transport.
-		DefaultScheme string
 		// Variables lists every URL variable with its client flag names.
 		Variables []*mainVariableData
 		// Hosts lists each host with the same planned URL variables.
@@ -159,12 +157,11 @@ func planClientMainServer(server *Data) *clientMainServerData {
 	variables := planMainVariables(server.Variables, fixedFlags)
 	schemes := clientSchemes(server)
 	planned := &clientMainServerData{
-		Data:          server,
-		Transports:    server.clientTransports,
-		Schemes:       schemes,
-		DefaultScheme: defaultClientScheme(server.DefaultClientTransport().Type, schemes),
-		Variables:     variables.all,
-		Hosts:         make([]*clientMainHostData, len(server.Hosts)),
+		Data:       server,
+		Transports: server.clientTransports,
+		Schemes:    schemes,
+		Variables:  variables.all,
+		Hosts:      make([]*clientMainHostData, len(server.Hosts)),
 	}
 	for index, host := range server.Hosts {
 		plannedHost := &clientMainHostData{
@@ -199,17 +196,6 @@ func clientSchemes(server *Data) []string {
 		}
 	}
 	return schemes
-}
-
-// defaultClientScheme returns the first accepted scheme served by the
-// transport that the generated client uses by default.
-func defaultClientScheme(selected Transport, schemes []string) string {
-	for _, scheme := range schemes {
-		if transportForScheme(scheme) == selected {
-			return scheme
-		}
-	}
-	panic("default client transport has no configured scheme")
 }
 
 // transportForScheme returns the transport used by one validated server URL

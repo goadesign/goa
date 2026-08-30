@@ -134,8 +134,7 @@ func moduleDirectory(t *testing.T, module string) string {
 	return dir
 }
 
-// runGeneratedTests compiles every generated service and HTTP transport
-// package in the isolated module.
+// runGeneratedTests compiles every rendered package in the isolated module.
 func runGeneratedTests(t *testing.T, dir string) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)

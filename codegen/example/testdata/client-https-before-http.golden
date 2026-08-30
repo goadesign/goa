@@ -1,6 +1,6 @@
 func main() {
 	var (
-		hostF = flag.String("host", "localhost", "Server host (valid values: localhost)")
+		hostF = flag.String("host", "public", "Server host (valid values: public)")
 		addrF = flag.String("url", "", "URL to service host")
 
 		verboseF = flag.Bool("verbose", false, "Print request and response details")
@@ -19,10 +19,10 @@ func main() {
 		addr = *addrF
 		if addr == "" {
 			switch *hostF {
-			case "localhost":
-				addr = "http://localhost:80"
+			case "public":
+				addr = "https://api.example.com:9443/base/status"
 			default:
-				fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: localhost)\n", *hostF)
+				fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: public)\n", *hostF)
 				os.Exit(1)
 			}
 		}
@@ -51,10 +51,8 @@ func main() {
 		switch scheme {
 		case "http", "https":
 			err = doHTTP(context.Background(), scheme, host, timeout, debug, os.Stdout)
-		case "grpc", "grpcs":
-			err = doGRPC(context.Background(), scheme, host, timeout, debug, os.Stdout)
 		default:
-			fmt.Fprintf(os.Stderr, "invalid scheme: %q (valid schemes: grpc|http)\n", scheme)
+			fmt.Fprintf(os.Stderr, "invalid scheme: %q (valid schemes: http|https)\n", scheme)
 			os.Exit(1)
 		}
 	}
@@ -69,17 +67,41 @@ func main() {
 
 }
 
+// writeEndpointResult calls one normal endpoint and writes its result as JSON.
+func writeEndpointResult(ctx context.Context, stdout io.Writer, endpoint goa.Endpoint, payload any) error {
+	data, err := endpoint(ctx, payload)
+	if err != nil {
+		return err
+	}
+	return writeJSON(stdout, data)
+}
+
+// writeJSON writes one indented JSON value followed by a newline.
+func writeJSON(stdout io.Writer, data any) error {
+	if data == nil {
+		return nil
+	}
+	encoded, err := json.MarshalIndent(data, "", "    ")
+	if err != nil {
+		return fmt.Errorf("encode result: %w", err)
+	}
+	if _, err := fmt.Fprintln(stdout, string(encoded)); err != nil {
+		return fmt.Errorf("write result: %w", err)
+	}
+	return nil
+}
+
 func usage() {
 	usageCommands := []string{
-		"events upload",
+		"status read",
 	}
-	fmt.Fprintf(os.Stderr, `%s is a command line client for the test api API.
+	fmt.Fprintf(os.Stderr, `%s is a command line client for the ordered HTTP API.
 
 Usage:
     %s [-host HOST][-url URL][-timeout SECONDS][-verbose|-v] SERVICE ENDPOINT [flags]
 
-    -host HOST:  server host (localhost). valid values: localhost
-    -url URL:    specify service URL overriding host URL (http://localhost:80)
+    -host HOST:  server host (public). valid values: public
+    -url URL:    specify service URL overriding host URL (https://api.example.com:9443/base/status)
     -timeout:    maximum number of seconds to wait for response (30)
     -verbose|-v: print request and response details (false)
 
