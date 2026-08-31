@@ -14,7 +14,7 @@ const (
 	// Build number
 	Build = 0
 	// Suffix - set to empty string in release tag commits.
-	Suffix = "preview.2"
+	Suffix = "preview.3"
 )
 
 var (
