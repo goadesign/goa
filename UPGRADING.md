@@ -1,6 +1,6 @@
 # Testing the Planned Generation Preview
 
-Goa `v3.31.0-preview.2` is an opt-in preview of a broad correction to code
+Goa `v3.31.0-preview.3` is an opt-in preview of a broad correction to code
 generation. It is intended for application authors and plugin authors who can
 regenerate their code, review the result, and report problems before the work
 becomes a stable release.
@@ -58,8 +58,8 @@ Start from a branch with the current generated tree committed. Install both the
 Goa module and the `goa` command from the exact preview version:
 
 ```bash
-go get goa.design/goa/v3@v3.31.0-preview.2
-go install goa.design/goa/v3/cmd/goa@v3.31.0-preview.2
+go get goa.design/goa/v3@v3.31.0-preview.3
+go install goa.design/goa/v3/cmd/goa@v3.31.0-preview.3
 goa version
 ```
 
@@ -67,7 +67,7 @@ The Go command records the exact preview version in `go.mod`. The installed
 command reports the same version:
 
 ```text
-Goa version v3.31.0-preview.2
+Goa version v3.31.0-preview.3
 ```
 
 Do not use an older `goa` command with the preview module. Also install the

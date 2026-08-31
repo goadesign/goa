@@ -184,7 +184,7 @@ curl -X POST http://localhost:8000/jsonrpc \
 
 ## Test the Generation Preview
 
-`v3.31.0-preview.2` is an opt-in preview of Goa's planned generation changes.
+`v3.31.0-preview.3` is an opt-in preview of Goa's planned generation changes.
 It fixes generated names and contracts across services, transports, examples,
 and plugins. It also includes intentional source changes that need community
 testing before a stable release.
