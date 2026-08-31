@@ -12,6 +12,7 @@ import (
 	"goa.design/goa/v3/codegen/testutil"
 	. "goa.design/goa/v3/dsl"
 	"goa.design/goa/v3/expr"
+	"goa.design/goa/v3/http/codegen/testdata"
 )
 
 // renderFileToString renders all sections of a file to a string without writing to disk
@@ -39,6 +40,9 @@ func TestWebSocketGoldenFiles(t *testing.T) {
 		{"websocket-server-streaming-object", serverStreamingObjectDSL, "server"},
 		{"websocket-server-streaming-user-type", serverStreamingUserTypeDSL, "server"},
 		{"websocket-server-streaming-with-views", serverStreamingWithViewsDSL, "server"},
+		{"websocket-server-streaming-with-views-client", serverStreamingWithViewsDSL, "client"},
+		{"websocket-server-streaming-collection-with-views-client", testdata.StreamingResultCollectionWithViewsDSL, "client"},
+		{"websocket-server-streaming-with-explicit-body-client", serverStreamingWithExplicitBodyDSL, "client"},
 
 		// Client Streaming (Payload only)
 		{"websocket-client-streaming-primitive", clientStreamingPrimitiveDSL, "client"},
@@ -234,6 +238,41 @@ func serverStreamingWithViewsDSL() {
 			StreamingResult(UserType)
 			HTTP(func() {
 				GET("/stream/user/views")
+			})
+		})
+	})
+}
+
+func serverStreamingWithExplicitBodyDSL() {
+	var UserType = ResultType("User", func() {
+		Attribute("id", String, func() {
+			MinLength(3)
+		})
+		Attribute("name", String)
+		Required("id", "name")
+		View("default", func() {
+			Attribute("id")
+			Attribute("name")
+		})
+		View("tiny", func() {
+			Attribute("id")
+		})
+	})
+	var StreamBody = Type("StreamBody", func() {
+		Attribute("id", String, func() {
+			MinLength(3)
+		})
+		Required("id")
+	})
+
+	Service("TestService", func() {
+		Method("StreamUserID", func() {
+			StreamingResult(UserType)
+			HTTP(func() {
+				GET("/stream/user/id")
+				Response(func() {
+					Body(StreamBody)
+				})
 			})
 		})
 	})

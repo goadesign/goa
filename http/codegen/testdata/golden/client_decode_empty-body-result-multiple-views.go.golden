@@ -24,18 +24,38 @@ func DecodeMethodEmptyBodyResultMultipleViewResponse(decoder func(*http.Response
 		}
 		switch resp.StatusCode {
 		case http.StatusOK:
-			var (
-				c *string
-			)
-			cRaw := resp.Header.Get("Location")
-			if cRaw != "" {
-				c = &cRaw
-			}
-			p := NewMethodEmptyBodyResultMultipleViewResulttypemultipleviewsOK(c)
 			view := resp.Header.Get("goa-view")
-			vres := &serviceemptybodyresultmultipleviewviews.Resulttypemultipleviews{Projected: p, View: view}
-			res := serviceemptybodyresultmultipleview.NewResulttypemultipleviews(vres)
-			return res, nil
+			if view == "" {
+				view = "default"
+			}
+			switch view {
+			case "default":
+				var (
+					c *string
+				)
+				cRaw := resp.Header.Get("Location")
+				if cRaw != "" {
+					c = &cRaw
+				}
+				p := NewMethodEmptyBodyResultMultipleViewResultDefaultOK(c)
+				vres := &serviceemptybodyresultmultipleviewviews.Resulttypemultipleviews{Projected: p, View: view}
+				res := serviceemptybodyresultmultipleview.NewResulttypemultipleviews(vres)
+				return res, nil
+			case "tiny":
+				var (
+					c *string
+				)
+				cRaw := resp.Header.Get("Location")
+				if cRaw != "" {
+					c = &cRaw
+				}
+				p := NewMethodEmptyBodyResultMultipleViewResultTinyOK(c)
+				vres := &serviceemptybodyresultmultipleviewviews.Resulttypemultipleviews{Projected: p, View: view}
+				res := serviceemptybodyresultmultipleview.NewResulttypemultipleviews(vres)
+				return res, nil
+			default:
+				return nil, goahttp.ErrValidationError("ServiceEmptyBodyResultMultipleView", "MethodEmptyBodyResultMultipleView", goa.InvalidEnumValueError("view", view, []any{"default", "tiny"}))
+			}
 		default:
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {

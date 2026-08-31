@@ -1805,8 +1805,10 @@ func newPlan(generation *codegen.Generation, transport transportKind, input Plan
 					}
 					views := []string{""}
 					body := planned.bodies.response(response)
-					_, explicitBody := body.Meta["origin:attribute"]
-					if viewed && !explicitBody && clientResponseViewNameExpr(endpoint, resultType) == "" && (endpoint.UsesSSE() || endpoint.IsJSONRPC()) {
+					_, explicitBody := body.Meta["http:body"]
+					if viewed &&
+						clientResponseViewNameExpr(endpoint, resultType) == "" &&
+						!explicitBody {
 						views = make([]string, len(resultType.Views))
 						for index, view := range resultType.Views {
 							views[index] = view.Name

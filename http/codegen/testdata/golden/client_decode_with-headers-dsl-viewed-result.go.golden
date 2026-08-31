@@ -23,53 +23,108 @@ func DecodeMethodAResponse(decoder func(*http.Response) goahttp.Decoder, restore
 		}
 		switch resp.StatusCode {
 		case http.StatusOK:
-			var (
-				required            int
-				optional            *float32
-				optionalButRequired uint
-				err                 error
-			)
-			{
-				requiredRaw := resp.Header.Get("X-Request-Id")
-				if requiredRaw == "" {
-					return nil, goahttp.ErrValidationError("ServiceWithHeadersBlockViewedResult", "MethodA", goa.MissingFieldError("required", "header"))
-				}
-				v, err2 := strconv.ParseInt(requiredRaw, 10, strconv.IntSize)
-				if err2 != nil {
-					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("required", requiredRaw, "integer"))
-				}
-				required = int(v)
-			}
-			{
-				optionalRaw := resp.Header.Get("Authorization")
-				if optionalRaw != "" {
-					v, err2 := strconv.ParseFloat(optionalRaw, 32)
-					if err2 != nil {
-						err = goa.MergeErrors(err, goa.InvalidFieldTypeError("optional", optionalRaw, "float"))
-					}
-					pv := float32(v)
-					optional = &pv
-				}
-			}
-			{
-				optionalButRequiredRaw := resp.Header.Get("Location")
-				if optionalButRequiredRaw == "" {
-					return nil, goahttp.ErrValidationError("ServiceWithHeadersBlockViewedResult", "MethodA", goa.MissingFieldError("optional_but_required", "header"))
-				}
-				v, err2 := strconv.ParseUint(optionalButRequiredRaw, 10, strconv.IntSize)
-				if err2 != nil {
-					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("optional_but_required", optionalButRequiredRaw, "unsigned integer"))
-				}
-				optionalButRequired = uint(v)
-			}
-			if err != nil {
-				return nil, goahttp.ErrValidationError("ServiceWithHeadersBlockViewedResult", "MethodA", err)
-			}
-			p := NewMethodAResultOK(required, optional, optionalButRequired)
 			view := resp.Header.Get("goa-view")
-			vres := &servicewithheadersblockviewedresultviews.AResult{Projected: p, View: view}
-			res := servicewithheadersblockviewedresult.NewAResult(vres)
-			return res, nil
+			if view == "" {
+				view = "default"
+			}
+			switch view {
+			case "tiny":
+				var (
+					required            int
+					optional            *float32
+					optionalButRequired uint
+					err                 error
+				)
+				{
+					requiredRaw := resp.Header.Get("X-Request-Id")
+					if requiredRaw == "" {
+						return nil, goahttp.ErrValidationError("ServiceWithHeadersBlockViewedResult", "MethodA", goa.MissingFieldError("required", "header"))
+					}
+					v, err2 := strconv.ParseInt(requiredRaw, 10, strconv.IntSize)
+					if err2 != nil {
+						err = goa.MergeErrors(err, goa.InvalidFieldTypeError("required", requiredRaw, "integer"))
+					}
+					required = int(v)
+				}
+				{
+					optionalRaw := resp.Header.Get("Authorization")
+					if optionalRaw != "" {
+						v, err2 := strconv.ParseFloat(optionalRaw, 32)
+						if err2 != nil {
+							err = goa.MergeErrors(err, goa.InvalidFieldTypeError("optional", optionalRaw, "float"))
+						}
+						pv := float32(v)
+						optional = &pv
+					}
+				}
+				{
+					optionalButRequiredRaw := resp.Header.Get("Location")
+					if optionalButRequiredRaw == "" {
+						return nil, goahttp.ErrValidationError("ServiceWithHeadersBlockViewedResult", "MethodA", goa.MissingFieldError("optional_but_required", "header"))
+					}
+					v, err2 := strconv.ParseUint(optionalButRequiredRaw, 10, strconv.IntSize)
+					if err2 != nil {
+						err = goa.MergeErrors(err, goa.InvalidFieldTypeError("optional_but_required", optionalButRequiredRaw, "unsigned integer"))
+					}
+					optionalButRequired = uint(v)
+				}
+				if err != nil {
+					return nil, goahttp.ErrValidationError("ServiceWithHeadersBlockViewedResult", "MethodA", err)
+				}
+				p := NewMethodAResultTinyOK(required, optional, optionalButRequired)
+				vres := &servicewithheadersblockviewedresultviews.AResult{Projected: p, View: view}
+				res := servicewithheadersblockviewedresult.NewAResult(vres)
+				return res, nil
+			case "default":
+				var (
+					required            int
+					optional            *float32
+					optionalButRequired uint
+					err                 error
+				)
+				{
+					requiredRaw := resp.Header.Get("X-Request-Id")
+					if requiredRaw == "" {
+						return nil, goahttp.ErrValidationError("ServiceWithHeadersBlockViewedResult", "MethodA", goa.MissingFieldError("required", "header"))
+					}
+					v, err2 := strconv.ParseInt(requiredRaw, 10, strconv.IntSize)
+					if err2 != nil {
+						err = goa.MergeErrors(err, goa.InvalidFieldTypeError("required", requiredRaw, "integer"))
+					}
+					required = int(v)
+				}
+				{
+					optionalRaw := resp.Header.Get("Authorization")
+					if optionalRaw != "" {
+						v, err2 := strconv.ParseFloat(optionalRaw, 32)
+						if err2 != nil {
+							err = goa.MergeErrors(err, goa.InvalidFieldTypeError("optional", optionalRaw, "float"))
+						}
+						pv := float32(v)
+						optional = &pv
+					}
+				}
+				{
+					optionalButRequiredRaw := resp.Header.Get("Location")
+					if optionalButRequiredRaw == "" {
+						return nil, goahttp.ErrValidationError("ServiceWithHeadersBlockViewedResult", "MethodA", goa.MissingFieldError("optional_but_required", "header"))
+					}
+					v, err2 := strconv.ParseUint(optionalButRequiredRaw, 10, strconv.IntSize)
+					if err2 != nil {
+						err = goa.MergeErrors(err, goa.InvalidFieldTypeError("optional_but_required", optionalButRequiredRaw, "unsigned integer"))
+					}
+					optionalButRequired = uint(v)
+				}
+				if err != nil {
+					return nil, goahttp.ErrValidationError("ServiceWithHeadersBlockViewedResult", "MethodA", err)
+				}
+				p := NewMethodAResultDefaultOK(required, optional, optionalButRequired)
+				vres := &servicewithheadersblockviewedresultviews.AResult{Projected: p, View: view}
+				res := servicewithheadersblockviewedresult.NewAResult(vres)
+				return res, nil
+			default:
+				return nil, goahttp.ErrValidationError("ServiceWithHeadersBlockViewedResult", "MethodA", goa.InvalidEnumValueError("view", view, []any{"tiny", "default"}))
+			}
 		default:
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {

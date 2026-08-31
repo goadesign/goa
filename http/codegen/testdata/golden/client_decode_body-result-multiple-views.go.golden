@@ -24,29 +24,60 @@ func DecodeMethodBodyMultipleViewResponse(decoder func(*http.Response) goahttp.D
 		}
 		switch resp.StatusCode {
 		case http.StatusOK:
-			var (
-				body MethodBodyMultipleViewResponseBody
-				err  error
-			)
-			err = decoder(resp).Decode(&body)
-			if err != nil {
-				return nil, goahttp.ErrDecodingError("ServiceBodyMultipleView", "MethodBodyMultipleView", err)
-			}
-			var (
-				c *string
-			)
-			cRaw := resp.Header.Get("Location")
-			if cRaw != "" {
-				c = &cRaw
-			}
-			p := NewMethodBodyMultipleViewResulttypemultipleviewsOK(&body, c)
 			view := resp.Header.Get("goa-view")
-			vres := &servicebodymultipleviewviews.Resulttypemultipleviews{Projected: p, View: view}
-			if err = servicebodymultipleviewviews.ValidateResulttypemultipleviews(vres); err != nil {
-				return nil, goahttp.ErrValidationError("ServiceBodyMultipleView", "MethodBodyMultipleView", err)
+			if view == "" {
+				view = "default"
 			}
-			res := servicebodymultipleview.NewResulttypemultipleviews(vres)
-			return res, nil
+			switch view {
+			case "default":
+				var (
+					body MethodBodyMultipleViewResponseBody
+					err  error
+				)
+				err = decoder(resp).Decode(&body)
+				if err != nil {
+					return nil, goahttp.ErrDecodingError("ServiceBodyMultipleView", "MethodBodyMultipleView", err)
+				}
+				var (
+					c *string
+				)
+				cRaw := resp.Header.Get("Location")
+				if cRaw != "" {
+					c = &cRaw
+				}
+				p := NewMethodBodyMultipleViewResultDefaultOK(&body, c)
+				vres := &servicebodymultipleviewviews.Resulttypemultipleviews{Projected: p, View: view}
+				if err = servicebodymultipleviewviews.ValidateResulttypemultipleviews(vres); err != nil {
+					return nil, goahttp.ErrValidationError("ServiceBodyMultipleView", "MethodBodyMultipleView", err)
+				}
+				res := servicebodymultipleview.NewResulttypemultipleviews(vres)
+				return res, nil
+			case "tiny":
+				var (
+					body MethodBodyMultipleViewResponseBodyTiny
+					err  error
+				)
+				err = decoder(resp).Decode(&body)
+				if err != nil {
+					return nil, goahttp.ErrDecodingError("ServiceBodyMultipleView", "MethodBodyMultipleView", err)
+				}
+				var (
+					c *string
+				)
+				cRaw := resp.Header.Get("Location")
+				if cRaw != "" {
+					c = &cRaw
+				}
+				p := NewMethodBodyMultipleViewResultTinyOK(&body, c)
+				vres := &servicebodymultipleviewviews.Resulttypemultipleviews{Projected: p, View: view}
+				if err = servicebodymultipleviewviews.ValidateResulttypemultipleviews(vres); err != nil {
+					return nil, goahttp.ErrValidationError("ServiceBodyMultipleView", "MethodBodyMultipleView", err)
+				}
+				res := servicebodymultipleview.NewResulttypemultipleviews(vres)
+				return res, nil
+			default:
+				return nil, goahttp.ErrValidationError("ServiceBodyMultipleView", "MethodBodyMultipleView", goa.InvalidEnumValueError("view", view, []any{"default", "tiny"}))
+			}
 		default:
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {

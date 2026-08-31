@@ -554,45 +554,6 @@ func (c *Client) StreamingResultWithViewsMethod() goa.Endpoint {
 }
 `
 
-var StreamingResultWithViewsClientStreamRecvCode = `// Recv reads instances of "streamingresultwithviewsservice.Usertype" from the
-// "StreamingResultWithViewsMethod" endpoint websocket connection.
-func (s *StreamingResultWithViewsMethodClientStream) Recv() (*streamingresultwithviewsservice.Usertype, error) {
-	var (
-		rv   *streamingresultwithviewsservice.Usertype
-		body StreamingResultWithViewsMethodResponseBody
-		err  error
-	)
-	err = s.conn.ReadJSON(&body)
-	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-		s.conn.Close()
-		return rv, io.EOF
-	}
-	if err != nil {
-		return rv, err
-	}
-	res := NewStreamingResultWithViewsMethodUsertypeOK(&body)
-	vres := &streamingresultwithviewsserviceviews.Usertype{Projected: res, View: s.view}
-	if err := streamingresultwithviewsserviceviews.ValidateUsertype(vres); err != nil {
-		return rv, goahttp.ErrValidationError("StreamingResultWithViewsService", "StreamingResultWithViewsMethod", err)
-	}
-	return streamingresultwithviewsservice.NewUsertype(vres), nil
-}
-
-// RecvWithContext reads instances of
-// "streamingresultwithviewsservice.Usertype" from the
-// "StreamingResultWithViewsMethod" endpoint websocket connection with context.
-func (s *StreamingResultWithViewsMethodClientStream) RecvWithContext(ctx context.Context) (*streamingresultwithviewsservice.Usertype, error) {
-	return s.Recv()
-}
-`
-
-var StreamingResultWithViewsClientStreamSetViewCode = `// SetView sets the view to render the  type before sending to the
-// "StreamingResultWithViewsMethod" endpoint websocket connection.
-func (s *StreamingResultWithViewsMethodClientStream) SetView(view string) {
-	s.view = view
-}
-`
-
 var StreamingResultWithExplicitViewClientEndpointCode = `// StreamingResultWithExplicitViewMethod returns an endpoint that makes HTTP
 // requests to the StreamingResultWithExplicitViewService service
 // StreamingResultWithExplicitViewMethod server.
@@ -773,47 +734,6 @@ var StreamingResultCollectionWithViewsServerStreamSetViewCode = `// SetView sets
 // sending to the "StreamingResultCollectionWithViewsMethod" endpoint websocket
 // connection.
 func (s *StreamingResultCollectionWithViewsMethodServerStream) SetView(view string) {
-	s.view = view
-}
-`
-
-var StreamingResultCollectionWithViewsClientStreamRecvCode = `// Recv reads instances of
-// "streamingresultcollectionwithviewsservice.UsertypeCollection" from the
-// "StreamingResultCollectionWithViewsMethod" endpoint websocket connection.
-func (s *StreamingResultCollectionWithViewsMethodClientStream) Recv() (streamingresultcollectionwithviewsservice.UsertypeCollection, error) {
-	var (
-		rv   streamingresultcollectionwithviewsservice.UsertypeCollection
-		body UsertypeResponseCollection
-		err  error
-	)
-	err = s.conn.ReadJSON(&body)
-	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-		s.conn.Close()
-		return rv, io.EOF
-	}
-	if err != nil {
-		return rv, err
-	}
-	res := NewStreamingResultCollectionWithViewsMethodUsertypeCollectionOK(body)
-	vres := streamingresultcollectionwithviewsserviceviews.UsertypeCollection{Projected: res, View: s.view}
-	if err := streamingresultcollectionwithviewsserviceviews.ValidateUsertypeCollection(vres); err != nil {
-		return rv, goahttp.ErrValidationError("StreamingResultCollectionWithViewsService", "StreamingResultCollectionWithViewsMethod", err)
-	}
-	return streamingresultcollectionwithviewsservice.NewUsertypeCollection(vres), nil
-}
-
-// RecvWithContext reads instances of
-// "streamingresultcollectionwithviewsservice.UsertypeCollection" from the
-// "StreamingResultCollectionWithViewsMethod" endpoint websocket connection
-// with context.
-func (s *StreamingResultCollectionWithViewsMethodClientStream) RecvWithContext(ctx context.Context) (streamingresultcollectionwithviewsservice.UsertypeCollection, error) {
-	return s.Recv()
-}
-`
-
-var StreamingResultCollectionWithViewsClientStreamSetViewCode = `// SetView sets the view to render the  type before sending to the
-// "StreamingResultCollectionWithViewsMethod" endpoint websocket connection.
-func (s *StreamingResultCollectionWithViewsMethodClientStream) SetView(view string) {
 	s.view = view
 }
 `

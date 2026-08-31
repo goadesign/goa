@@ -235,18 +235,12 @@ func TestClientStreaming(t *testing.T) {
 		}},
 		{"client-streaming-result-with-views", testdata.StreamingResultWithViewsDSL, []*sectionExpectation{
 			{"client-endpoint-init", &testdata.StreamingResultWithViewsClientEndpointCode},
-			{"client-websocket-recv", &testdata.StreamingResultWithViewsClientStreamRecvCode},
 			{"client-websocket-close", nil},
-			{"client-websocket-set-view", &testdata.StreamingResultWithViewsClientStreamSetViewCode},
 		}},
 		{"client-streaming-result-with-explicit-view", testdata.StreamingResultWithExplicitViewDSL, []*sectionExpectation{
 			{"client-endpoint-init", &testdata.StreamingResultWithExplicitViewClientEndpointCode},
 			{"client-websocket-recv", &testdata.StreamingResultWithExplicitViewClientStreamRecvCode},
 			{"client-websocket-set-view", nil},
-		}},
-		{"client-streaming-result-collection-with-views", testdata.StreamingResultCollectionWithViewsDSL, []*sectionExpectation{
-			{"client-websocket-recv", &testdata.StreamingResultCollectionWithViewsClientStreamRecvCode},
-			{"client-websocket-set-view", &testdata.StreamingResultCollectionWithViewsClientStreamSetViewCode},
 		}},
 		{"client-streaming-result-collection-with-explicit-view", testdata.StreamingResultCollectionWithExplicitViewDSL, []*sectionExpectation{
 			{"client-endpoint-init", &testdata.StreamingResultCollectionWithExplicitViewClientEndpointCode},

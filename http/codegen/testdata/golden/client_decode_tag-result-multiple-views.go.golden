@@ -24,48 +24,105 @@ func DecodeMethodTagMultipleViewsResponse(decoder func(*http.Response) goahttp.D
 		}
 		switch resp.StatusCode {
 		case http.StatusAccepted:
-			var (
-				body MethodTagMultipleViewsAcceptedResponseBody
-				err  error
-			)
-			err = decoder(resp).Decode(&body)
-			if err != nil {
-				return nil, goahttp.ErrDecodingError("ServiceTagMultipleViews", "MethodTagMultipleViews", err)
-			}
-			var (
-				c *string
-			)
-			cRaw := resp.Header.Get("C")
-			if cRaw != "" {
-				c = &cRaw
-			}
-			p := NewMethodTagMultipleViewsResulttypemultipleviewsAccepted(&body, c)
-			tmp := "value"
-			p.B = &tmp
 			view := resp.Header.Get("goa-view")
-			vres := &servicetagmultipleviewsviews.Resulttypemultipleviews{Projected: p, View: view}
-			if err = servicetagmultipleviewsviews.ValidateResulttypemultipleviews(vres); err != nil {
-				return nil, goahttp.ErrValidationError("ServiceTagMultipleViews", "MethodTagMultipleViews", err)
+			if view == "" {
+				view = "default"
 			}
-			res := servicetagmultipleviews.NewResulttypemultipleviews(vres)
-			return res, nil
+			switch view {
+			case "default":
+				var (
+					body MethodTagMultipleViewsAcceptedResponseBody
+					err  error
+				)
+				err = decoder(resp).Decode(&body)
+				if err != nil {
+					return nil, goahttp.ErrDecodingError("ServiceTagMultipleViews", "MethodTagMultipleViews", err)
+				}
+				var (
+					c *string
+				)
+				cRaw := resp.Header.Get("C")
+				if cRaw != "" {
+					c = &cRaw
+				}
+				p := NewMethodTagMultipleViewsResultDefaultAccepted(&body, c)
+				tmp := "value"
+				p.B = &tmp
+				vres := &servicetagmultipleviewsviews.Resulttypemultipleviews{Projected: p, View: view}
+				if err = servicetagmultipleviewsviews.ValidateResulttypemultipleviews(vres); err != nil {
+					return nil, goahttp.ErrValidationError("ServiceTagMultipleViews", "MethodTagMultipleViews", err)
+				}
+				res := servicetagmultipleviews.NewResulttypemultipleviews(vres)
+				return res, nil
+			case "tiny":
+				var (
+					body MethodTagMultipleViewsAcceptedResponseBodyTiny
+					err  error
+				)
+				err = decoder(resp).Decode(&body)
+				if err != nil {
+					return nil, goahttp.ErrDecodingError("ServiceTagMultipleViews", "MethodTagMultipleViews", err)
+				}
+				var (
+					c *string
+				)
+				cRaw := resp.Header.Get("C")
+				if cRaw != "" {
+					c = &cRaw
+				}
+				p := NewMethodTagMultipleViewsResultTinyAccepted(&body, c)
+				tmp := "value"
+				p.B = &tmp
+				vres := &servicetagmultipleviewsviews.Resulttypemultipleviews{Projected: p, View: view}
+				if err = servicetagmultipleviewsviews.ValidateResulttypemultipleviews(vres); err != nil {
+					return nil, goahttp.ErrValidationError("ServiceTagMultipleViews", "MethodTagMultipleViews", err)
+				}
+				res := servicetagmultipleviews.NewResulttypemultipleviews(vres)
+				return res, nil
+			default:
+				return nil, goahttp.ErrValidationError("ServiceTagMultipleViews", "MethodTagMultipleViews", goa.InvalidEnumValueError("view", view, []any{"default", "tiny"}))
+			}
 		case http.StatusOK:
-			var (
-				body MethodTagMultipleViewsOKResponseBody
-				err  error
-			)
-			err = decoder(resp).Decode(&body)
-			if err != nil {
-				return nil, goahttp.ErrDecodingError("ServiceTagMultipleViews", "MethodTagMultipleViews", err)
-			}
-			p := NewMethodTagMultipleViewsResulttypemultipleviewsOK(&body)
 			view := resp.Header.Get("goa-view")
-			vres := &servicetagmultipleviewsviews.Resulttypemultipleviews{Projected: p, View: view}
-			if err = servicetagmultipleviewsviews.ValidateResulttypemultipleviews(vres); err != nil {
-				return nil, goahttp.ErrValidationError("ServiceTagMultipleViews", "MethodTagMultipleViews", err)
+			if view == "" {
+				view = "default"
 			}
-			res := servicetagmultipleviews.NewResulttypemultipleviews(vres)
-			return res, nil
+			switch view {
+			case "default":
+				var (
+					body MethodTagMultipleViewsOKResponseBody
+					err  error
+				)
+				err = decoder(resp).Decode(&body)
+				if err != nil {
+					return nil, goahttp.ErrDecodingError("ServiceTagMultipleViews", "MethodTagMultipleViews", err)
+				}
+				p := NewMethodTagMultipleViewsResultDefaultOK(&body)
+				vres := &servicetagmultipleviewsviews.Resulttypemultipleviews{Projected: p, View: view}
+				if err = servicetagmultipleviewsviews.ValidateResulttypemultipleviews(vres); err != nil {
+					return nil, goahttp.ErrValidationError("ServiceTagMultipleViews", "MethodTagMultipleViews", err)
+				}
+				res := servicetagmultipleviews.NewResulttypemultipleviews(vres)
+				return res, nil
+			case "tiny":
+				var (
+					body MethodTagMultipleViewsOKResponseBodyTiny
+					err  error
+				)
+				err = decoder(resp).Decode(&body)
+				if err != nil {
+					return nil, goahttp.ErrDecodingError("ServiceTagMultipleViews", "MethodTagMultipleViews", err)
+				}
+				p := NewMethodTagMultipleViewsResultTinyOK(&body)
+				vres := &servicetagmultipleviewsviews.Resulttypemultipleviews{Projected: p, View: view}
+				if err = servicetagmultipleviewsviews.ValidateResulttypemultipleviews(vres); err != nil {
+					return nil, goahttp.ErrValidationError("ServiceTagMultipleViews", "MethodTagMultipleViews", err)
+				}
+				res := servicetagmultipleviews.NewResulttypemultipleviews(vres)
+				return res, nil
+			default:
+				return nil, goahttp.ErrValidationError("ServiceTagMultipleViews", "MethodTagMultipleViews", goa.InvalidEnumValueError("view", view, []any{"default", "tiny"}))
+			}
 		default:
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {

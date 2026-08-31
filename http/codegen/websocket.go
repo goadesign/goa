@@ -78,6 +78,9 @@ type (
 		// MustClose indicates whether to generate the Close() function
 		// for the stream.
 		MustClose bool
+		// SelectClientBodyByView is true when the client stream must choose a
+		// response body, validator, and constructor from its selected view.
+		SelectClientBodyByView bool
 		// PkgName is the service package name.
 		PkgName string
 		// Kind is the kind of the stream (payload, result or
@@ -220,27 +223,28 @@ func (sds *ServicesData) initWebSocketData(ed *EndpointData, e *expr.HTTPEndpoin
 		MustClose:           md.ServerStream.MustClose,
 	}
 	ed.ClientWebSocket = &WebSocketData{
-		VarName:             md.ClientStream.VarName,
-		Interface:           fmt.Sprintf("%s.%s", svc.PkgName, md.ClientStream.Interface),
-		Endpoint:            ed,
-		Payload:             cliPayload,
-		Response:            ed.Result.Responses[0],
-		PkgName:             svc.PkgName,
-		Type:                "client",
-		Kind:                md.ClientStream.Kind,
-		SendName:            md.ClientStream.SendName,
-		SendDesc:            cliSendDesc,
-		SendWithContextName: md.ClientStream.SendWithContextName,
-		SendWithContextDesc: cliSendWithContextDesc,
-		SendTypeName:        svrRecvTypeName,
-		SendTypeRef:         svrRecvTypeRef,
-		RecvName:            md.ClientStream.RecvName,
-		RecvDesc:            cliRecvDesc,
-		RecvWithContextName: md.ClientStream.RecvWithContextName,
-		RecvWithContextDesc: cliRecvWithContextDesc,
-		RecvTypeName:        svrSendTypeName,
-		RecvTypeRef:         svrSendTypeRef,
-		MustClose:           md.ClientStream.MustClose,
+		VarName:                md.ClientStream.VarName,
+		Interface:              fmt.Sprintf("%s.%s", svc.PkgName, md.ClientStream.Interface),
+		Endpoint:               ed,
+		Payload:                cliPayload,
+		Response:               ed.Result.Responses[0],
+		PkgName:                svc.PkgName,
+		Type:                   "client",
+		Kind:                   md.ClientStream.Kind,
+		SendName:               md.ClientStream.SendName,
+		SendDesc:               cliSendDesc,
+		SendWithContextName:    md.ClientStream.SendWithContextName,
+		SendWithContextDesc:    cliSendWithContextDesc,
+		SendTypeName:           svrRecvTypeName,
+		SendTypeRef:            svrRecvTypeRef,
+		RecvName:               md.ClientStream.RecvName,
+		RecvDesc:               cliRecvDesc,
+		RecvWithContextName:    md.ClientStream.RecvWithContextName,
+		RecvWithContextDesc:    cliRecvWithContextDesc,
+		RecvTypeName:           svrSendTypeName,
+		RecvTypeRef:            svrSendTypeRef,
+		MustClose:              md.ClientStream.MustClose,
+		SelectClientBodyByView: !e.IsJSONRPC() && len(ed.Result.Responses[0].ViewedRepresentations) > 0,
 	}
 }
 

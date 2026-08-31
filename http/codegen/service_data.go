@@ -577,6 +577,9 @@ type (
 		// legal result view. A response that supports several views includes its
 		// view name so the client can choose the matching entry.
 		ViewedRepresentations []*ViewedRepresentationData
+		// SelectClientBodyByView is true when a unary HTTP client must read the
+		// goa-view response header before choosing the body type and constructor.
+		SelectClientBodyByView bool
 	}
 
 	// ViewedRepresentationData describes the HTTP body used for one legal result
@@ -1469,6 +1472,7 @@ func collectPlannedWireTypes(api string, httpService *expr.HTTPServiceExpr, plan
 			if value, ok := body.Meta["origin:attribute"]; ok {
 				origin = value[0]
 			}
+			_, explicitBody := body.Meta["http:body"]
 			emptyView := ""
 			switch {
 			case origin != "":
@@ -1492,7 +1496,7 @@ func collectPlannedWireTypes(api string, httpService *expr.HTTPServiceExpr, plan
 				collectResponseWireType(api, body, body, endpoint, client, false, &emptyView, "")
 				continue
 			}
-			if clientView == "" && !endpoint.UsesSSE() && !endpoint.IsJSONRPC() {
+			if clientView == "" && explicitBody {
 				emptyView := ""
 				collectResponseWireType(api, body, body, endpoint, client, false, &emptyView, "")
 				continue
@@ -1609,6 +1613,7 @@ func collectPlannedTransforms(
 		if value, ok := body.Meta["origin:attribute"]; ok {
 			origin = value[0]
 		}
+		_, explicitBody := body.Meta["http:body"]
 		resultAttribute := result
 		if origin != "" {
 			resultAttribute = expr.AsObject(result.Type).Attribute(origin)
@@ -1665,7 +1670,7 @@ func collectPlannedTransforms(
 				clientViews = append(clientViews, &empty)
 			case selected != "":
 				clientViews = append(clientViews, &selected)
-			case !endpoint.UsesSSE() && !endpoint.IsJSONRPC():
+			case explicitBody:
 				empty := ""
 				clientViews = append(clientViews, &empty)
 			default:
@@ -2959,6 +2964,7 @@ func (sds *ServicesData) buildResponses(e *expr.HTTPEndpointExpr, result *expr.A
 						resAttr = expr.AsObject(resAttr.Type).Attribute(origin)
 					}
 				}
+				_, explicitBody := respBody.Meta["http:body"]
 				if viewed {
 					vname := ""
 					clientView := clientResponseViewName(e, md)
@@ -2998,7 +3004,7 @@ func (sds *ServicesData) buildResponses(e *expr.HTTPEndpointExpr, result *expr.A
 						clientRespBody = effectiveClientResponseBodyForView(respBody, clientView, e)
 						clientBodyData = sds.buildResponseBodyType(clientRespBody, result, e, false, &clientView, sd, nil, resultOwner, bodyOwner)
 						clientBodyView = &clientView
-					case origin != "" || !e.UsesSSE() && !e.IsJSONRPC():
+					case origin != "" || explicitBody:
 						clientBodyData = sds.buildResponseBodyType(respBody, result, e, false, &vname, sd, nil, resultOwner, bodyOwner)
 						clientBodyView = &vname
 					default:
@@ -3029,7 +3035,11 @@ func (sds *ServicesData) buildResponses(e *expr.HTTPEndpointExpr, result *expr.A
 						break
 					}
 				}
-				variableWire := viewed && origin == "" && clientResponseViewName(e, md) == "" && (e.UsesSSE() || e.IsJSONRPC())
+				variableView := viewed && origin == "" && clientResponseViewName(e, md) == ""
+				variableWire := variableView && !explicitBody
+				selectClientBodyByView := variableWire &&
+					!e.IsJSONRPC() &&
+					(!e.MethodExpr.IsStreaming() || e.MethodExpr.HasMixedResults())
 				if needClientResponseInit(result.Type) && !variableWire {
 					init = sds.buildResponseResultInit(
 						e, resp, result, clientRespBody, origin,
@@ -3038,9 +3048,9 @@ func (sds *ServicesData) buildResponses(e *expr.HTTPEndpointExpr, result *expr.A
 				}
 
 				var representations []*ViewedRepresentationData
-				if viewed && (e.UsesSSE() || e.IsJSONRPC()) {
+				if viewed && (e.UsesSSE() || e.IsJSONRPC() || (e.UsesWebSocket() && variableWire) || selectClientBodyByView) {
 					clientView := clientResponseViewName(e, md)
-					if origin != "" {
+					if explicitBody {
 						views := md.ViewedResult.Views
 						if clientView != "" {
 							views = []*service.ViewData{{Name: clientView}}
@@ -3115,21 +3125,22 @@ func (sds *ServicesData) buildResponses(e *expr.HTTPEndpointExpr, result *expr.A
 					tagPtr = viewed || result.IsPrimitivePointer(resp.Tag[0], true)
 				}
 				responses = append(responses, &ResponseData{
-					StatusCode:            statusCodeToHTTPConst(resp.StatusCode),
-					Description:           resp.Description,
-					Headers:               headersData,
-					Cookies:               cookiesData,
-					ContentType:           resp.ContentType,
-					ServerBody:            serverBodyData,
-					ClientBody:            clientBodyData,
-					ResultInit:            init,
-					TagName:               tagName,
-					TagValue:              tagVal,
-					TagPointer:            tagPtr,
-					MustValidate:          mustValidate,
-					ResultAttr:            codegen.Goify(origin, true),
-					ViewedResult:          md.ViewedResult,
-					ViewedRepresentations: representations,
+					StatusCode:             statusCodeToHTTPConst(resp.StatusCode),
+					Description:            resp.Description,
+					Headers:                headersData,
+					Cookies:                cookiesData,
+					ContentType:            resp.ContentType,
+					ServerBody:             serverBodyData,
+					ClientBody:             clientBodyData,
+					ResultInit:             init,
+					TagName:                tagName,
+					TagValue:               tagVal,
+					TagPointer:             tagPtr,
+					MustValidate:           mustValidate,
+					ResultAttr:             codegen.Goify(origin, true),
+					ViewedResult:           md.ViewedResult,
+					ViewedRepresentations:  representations,
+					SelectClientBodyByView: selectClientBodyByView,
 				})
 			}
 		}
@@ -4230,9 +4241,9 @@ func clientSSEDataPointer(endpoint *expr.HTTPEndpointExpr, body *expr.AttributeE
 }
 
 // clientResponseViewName returns the response view used by client code
-// generation when the design fixes the response to a single view. An empty
-// string means the client must keep the unprojected transport body because the
-// server may render multiple views.
+// generation when the design fixes a viewed result to one view. It also
+// returns an empty string for unviewed methods and for responses that choose
+// among the authored views at runtime.
 func clientResponseViewName(e *expr.HTTPEndpointExpr, md *service.MethodData) string {
 	if md.ViewedResult == nil {
 		return ""

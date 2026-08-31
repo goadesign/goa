@@ -56,6 +56,10 @@ func (s *BidirectionalWithViewsClientStream) Recv() (*testservice.Response, erro
 	if err != nil {
 		return rv, err
 	}
+	err = ValidateBidirectionalWithViewsResponseBodyMinimal(&body)
+	if err != nil {
+		return rv, err
+	}
 	res := NewBidirectionalWithViewsResponseOK(&body)
 	vres := &testserviceviews.Response{Projected: res, View: "minimal"}
 	if err := testserviceviews.ValidateResponse(vres); err != nil {

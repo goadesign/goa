@@ -89,7 +89,8 @@ func clientEncodeDecodeFile(svc *expr.HTTPServiceExpr, services *ServicesData) *
 				"goTypeRef": func(dt expr.DataType) string {
 					return data.Scope.GoTypeRef(&expr.AttributeExpr{Type: dt})
 				},
-				"buildResponseData": buildResponseData,
+				"buildResponseData":       buildResponseData,
+				"buildViewedResponseData": buildViewedResponseData,
 			},
 		})
 		if e.Method.SkipRequestBodyEncodeDecode {
@@ -220,6 +221,19 @@ func buildResponseData(data *ResponseData, serviceName string, method *service.M
 		"ServiceName": serviceName,
 		"Method":      method,
 	}
+}
+
+// buildViewedResponseData selects the body type planned for one response view
+// while retaining the response's headers and cookies.
+func buildViewedResponseData(
+	data *ResponseData,
+	representation *ViewedRepresentationData,
+	serviceName string,
+	method *service.MethodData,
+) map[string]any {
+	selected := *data
+	selected.ClientBody = representation.ClientBody
+	return buildResponseData(&selected, serviceName, method)
 }
 
 func fieldType(ft expr.DataType) expr.DataType {

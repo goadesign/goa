@@ -48,6 +48,9 @@ func DecodeMethodExplicitBodyPrimitiveResultMultipleViewResponse(decoder func(*h
 			}
 			p := NewMethodExplicitBodyPrimitiveResultMultipleViewResulttypemultipleviewsOK(body, c)
 			view := resp.Header.Get("goa-view")
+			if view == "" {
+				view = "default"
+			}
 			vres := &serviceexplicitbodyprimitiveresultmultipleviewviews.Resulttypemultipleviews{Projected: p, View: view}
 			if err = serviceexplicitbodyprimitiveresultmultipleviewviews.ValidateResulttypemultipleviews(vres); err != nil {
 				return nil, goahttp.ErrValidationError("ServiceExplicitBodyPrimitiveResultMultipleView", "MethodExplicitBodyPrimitiveResultMultipleView", err)

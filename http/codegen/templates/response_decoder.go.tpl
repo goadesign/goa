@@ -33,6 +33,34 @@ func {{ .ResponseDecoderDeclaration.Name }}(decoder func(*http.Response) goahttp
 		switch resp.StatusCode {
 	{{- range .Result.Responses }}
 		case {{ .StatusCode }}:
+		{{- if .SelectClientBodyByView }}
+			view := resp.Header.Get("goa-view")
+			if view == "" {
+				view = "default"
+			}
+			switch view {
+			{{- $response := . }}
+			{{- range .ViewedRepresentations }}
+			case {{ printf "%q" .View }}:
+				{{- template "partial_single_response" (buildViewedResponseData $response . $.ServiceName $.Method) }}
+				p := {{ .ResultInit.Declaration.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }})
+				{{- if $response.TagName }}
+				tmp := {{ printf "%q" $response.TagValue }}
+				p.{{ $response.TagName }} = &tmp
+				{{- end }}
+				vres := {{ if not $.Method.ViewedResult.IsCollection }}&{{ end }}{{ $.Method.ViewedResult.ViewsPkg}}.{{ $.Method.ViewedResult.VarName }}{Projected: p, View: view}
+				{{- if .ClientBody }}
+				if err = {{ $.Method.ViewedResult.ViewsPkg}}.{{ $.Method.ViewedResult.Validate.Declaration.Name }}(vres); err != nil {
+					return nil, goahttp.ErrValidationError("{{ $.ServiceName }}", "{{ $.Method.Name }}", err)
+				}
+				{{- end }}
+				res := {{ $.ServicePkgName }}.{{ $.Method.ViewedResult.ResultInit.Declaration.Name }}(vres)
+				return res, nil
+			{{- end }}
+			default:
+				return nil, goahttp.ErrValidationError("{{ $.ServiceName }}", "{{ $.Method.Name }}", goa.InvalidEnumValueError("view", view, []any{ {{ range $.Method.ViewedResult.Views }}{{ printf "%q" .Name }}, {{ end }} }))
+			}
+		{{- else }}
 			{{- template "partial_single_response" (buildResponseData . $.ServiceName $.Method) }}
 		{{- if .ResultInit }}
 			{{- if .ViewedResult }}
@@ -45,6 +73,9 @@ func {{ .ResponseDecoderDeclaration.Name }}(decoder func(*http.Response) goahttp
 			view := {{ printf "%q" $.Method.ViewedResult.ViewName }}
 				{{- else }}
 			view := resp.Header.Get("goa-view")
+			if view == "" {
+				view = "default"
+			}
 				{{- end }}
 			vres := {{ if not $.Method.ViewedResult.IsCollection }}&{{ end }}{{ $.Method.ViewedResult.ViewsPkg}}.{{ $.Method.ViewedResult.VarName }}{Projected: p, View: view}
 				{{- if .ClientBody }}
@@ -71,8 +102,9 @@ func {{ .ResponseDecoderDeclaration.Name }}(decoder func(*http.Response) goahttp
 			return {{ (index .Headers 0).VarName }}, nil
 		{{- else if .Cookies }}
 			return {{ (index .Cookies 0).VarName }}, nil
-		{{- else }}
-			return nil, nil
+			{{- else }}
+				return nil, nil
+			{{- end }}
 		{{- end }}
 	{{- end }}
 	{{- range .Errors }}
