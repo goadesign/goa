@@ -1607,7 +1607,16 @@ func collectPlannedTransforms(
 			panic(err)
 		}
 	}
+	// Generation renders only the first response without a tag, so collecting
+	// conversions for the rest would retain conversions that are never written.
+	noTagSeen := false
 	for _, response := range endpoint.Responses {
+		if response.Tag[0] == "" {
+			if noTagSeen {
+				continue
+			}
+			noTagSeen = true
+		}
 		body := bodies.response(response)
 		origin := ""
 		if value, ok := body.Meta["origin:attribute"]; ok {

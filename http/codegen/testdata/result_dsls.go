@@ -850,6 +850,29 @@ var ResultTypeNestedUserTypeFieldsDSL = func() {
 	})
 }
 
+// ResultTwoUntaggedSuccessResponsesDSL defines a method with two success
+// responses that carry no Tag. Generation renders only the first one, so no
+// conversion must be retained for the second.
+var ResultTwoUntaggedSuccessResponsesDSL = func() {
+	var RT = ResultType("application/vnd.goa.two.untagged", func() {
+		Attributes(func() {
+			Attribute("name", String)
+			Required("name")
+		})
+	})
+
+	Service("ServiceTwoUntaggedResponses", func() {
+		Method("MethodTwoUntaggedResponses", func() {
+			Result(RT)
+			HTTP(func() {
+				POST("/")
+				Response(StatusOK)
+				Response(StatusAccepted)
+			})
+		})
+	})
+}
+
 var ResultWithCustomPkgTypeDSL = func() {
 	var Foo = Type("Foo", func() {
 		Meta("struct:pkg:path", "foo")
