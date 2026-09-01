@@ -3000,11 +3000,14 @@ func (sds *ServicesData) buildResponses(e *expr.HTTPEndpointExpr, result *expr.A
 						}
 					}
 					switch {
+					case origin != "":
+						clientBodyData = sds.buildResponseBodyType(respBody, result, e, false, &vname, sd, nil, resultOwner, bodyOwner)
+						clientBodyView = &vname
 					case clientView != "":
 						clientRespBody = effectiveClientResponseBodyForView(respBody, clientView, e)
 						clientBodyData = sds.buildResponseBodyType(clientRespBody, result, e, false, &clientView, sd, nil, resultOwner, bodyOwner)
 						clientBodyView = &clientView
-					case origin != "" || explicitBody:
+					case explicitBody:
 						clientBodyData = sds.buildResponseBodyType(respBody, result, e, false, &vname, sd, nil, resultOwner, bodyOwner)
 						clientBodyView = &vname
 					default:

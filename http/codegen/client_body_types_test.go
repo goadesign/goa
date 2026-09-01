@@ -46,6 +46,7 @@ func TestBodyTypeInit(t *testing.T) {
 		{"result-body-user-required", testdata.ResultBodyUserRequiredDSL, 3},
 		{"result-body-inline-object", testdata.ResultBodyInlineObjectDSL, 2},
 		{"result-explicit-body-primitive", testdata.ExplicitBodyPrimitiveResultMultipleViewsDSL, 1},
+		{"result-explicit-body-primitive-default-view", testdata.ExplicitBodyPrimitiveResultDefaultViewDSL, 1},
 		{"result-explicit-body-user-type", testdata.ExplicitBodyUserResultMultipleViewsDSL, 3},
 		{"result-explicit-body-object", testdata.ExplicitBodyUserResultObjectDSL, 3},
 		{"result-explicit-body-object-views", testdata.ExplicitBodyUserResultObjectMultipleViewDSL, 3},

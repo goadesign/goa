@@ -1076,6 +1076,30 @@ var EmptyBodyResultMultipleViewsDSL = func() {
 	})
 }
 
+// ExplicitBodyPrimitiveResultDefaultViewDSL sets the response body to one
+// attribute of a result type that declares no view. The body is an attribute of
+// the result, so no view projection applies to it.
+var ExplicitBodyPrimitiveResultDefaultViewDSL = func() {
+	var ResultType = ResultType("ResultTypeDefaultView", func() {
+		Attribute("a", String, func() {
+			MinLength(5)
+		})
+		Attribute("b", String)
+	})
+	Service("ServiceExplicitBodyPrimitiveResultDefaultView", func() {
+		Method("MethodExplicitBodyPrimitiveResultDefaultView", func() {
+			Result(ResultType)
+			HTTP(func() {
+				POST("/")
+				Response(StatusOK, func() {
+					Header("b:Location")
+					Body("a")
+				})
+			})
+		})
+	})
+}
+
 var ExplicitBodyPrimitiveResultMultipleViewsDSL = func() {
 	var ResultType = ResultType("ResultTypeMultipleViews", func() {
 		Attribute("a", String, func() {
