@@ -5,6 +5,7 @@ package expr
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"goa.design/goa/v3/eval"
 )
@@ -144,6 +145,22 @@ func (m *MethodExpr) Validate() error {
 // validateRequirements validates the security requirements.
 func (m *MethodExpr) validateRequirements() *eval.ValidationErrors {
 	verr := new(eval.ValidationErrors)
+	if payload := AsObject(m.Payload.Type); payload != nil {
+		for _, field := range *payload {
+			if !isSecurityAttribute(field.Attribute.Meta) {
+				continue
+			}
+			if !isStringType(field.Attribute.Type) {
+				verr.Add(m, "security attribute %q must use String or a named String type", field.Name)
+			}
+			if _, custom := field.Attribute.Meta["struct:field:type"]; custom {
+				verr.Add(m, "security attribute %q cannot use struct:field:type because authorization functions receive strings", field.Name)
+			}
+			if m.Payload.HasDefaultValue(field.Name) {
+				verr.Add(m, "security attribute %q cannot have a default value because missing credentials must remain missing", field.Name)
+			}
+		}
+	}
 	var requirements []*SecurityExpr
 	switch {
 	case len(m.Requirements) > 0:
@@ -240,6 +257,35 @@ func (m *MethodExpr) validateRequirements() *eval.ValidationErrors {
 		}
 	}
 	return verr
+}
+
+// isSecurityAttribute reports whether metadata marks a method payload field as
+// a username, password, token, or API key used by a security scheme.
+func isSecurityAttribute(meta MetaExpr) bool {
+	for name := range meta {
+		switch name {
+		case "security:username", "security:password", "security:bearer", "security:token", "security:accesstoken":
+			return true
+		}
+		if strings.HasPrefix(name, "security:apikey:") {
+			return true
+		}
+	}
+	return false
+}
+
+// isStringType reports whether a design type is String or a named String type.
+func isStringType(dt DataType) bool {
+	for {
+		switch actual := dt.(type) {
+		case Primitive:
+			return actual == String
+		case UserType:
+			dt = actual.Attribute().Type
+		default:
+			return false
+		}
+	}
 }
 
 // validateErrors validates the method errors.

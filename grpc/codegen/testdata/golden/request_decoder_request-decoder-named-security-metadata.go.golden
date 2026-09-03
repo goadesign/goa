@@ -1,0 +1,80 @@
+// DecodeAuthenticateRequest decodes requests sent to "NamedSecurityMetadata"
+// service "Authenticate" endpoint.
+func DecodeAuthenticateRequest(ctx context.Context, v any, md metadata.MD) (any, error) {
+	var (
+		jwtToken    string
+		oauthToken  *string
+		key         string
+		username    string
+		password    *string
+		bearerToken *string
+		err         error
+	)
+	{
+		if vals := md.Get("authorization"); len(vals) == 0 {
+			err = goa.MergeErrors(err, goa.MissingFieldError("authorization", "metadata"))
+		} else {
+			jwtToken = vals[0]
+		}
+		if vals := md.Get("authorization"); len(vals) > 0 {
+			oauthToken = &vals[0]
+		}
+		if vals := md.Get("authorization"); len(vals) == 0 {
+			err = goa.MergeErrors(err, goa.MissingFieldError("authorization", "metadata"))
+		} else {
+			key = vals[0]
+		}
+		if vals := md.Get("username"); len(vals) == 0 {
+			err = goa.MergeErrors(err, goa.MissingFieldError("username", "metadata"))
+		} else {
+			username = vals[0]
+		}
+		if vals := md.Get("password"); len(vals) > 0 {
+			password = &vals[0]
+		}
+		if vals := md.Get("authorization"); len(vals) > 0 {
+			bearerToken = &vals[0]
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	var (
+		message *named_security_metadatapb.AuthenticateRequest
+		ok      bool
+	)
+	{
+		if message, ok = v.(*named_security_metadatapb.AuthenticateRequest); !ok {
+			return nil, goagrpc.ErrInvalidType("NamedSecurityMetadata", "Authenticate", "*named_security_metadatapb.AuthenticateRequest", v)
+		}
+	}
+	var payload *namedsecuritymetadata.NamedSecurityRequest
+	{
+		payload = NewAuthenticatePayload(message, jwtToken, oauthToken, key, username, password, bearerToken)
+		if index := strings.IndexByte(string(payload.JWTToken), ' '); index >= 0 {
+			// Remove authorization scheme prefix (e.g. "Bearer")
+			payload.JWTToken = payload.JWTToken[index+1:]
+		}
+		if payload.OauthToken != nil {
+			cred := *payload.OauthToken
+			if index := strings.IndexByte(string(cred), ' '); index >= 0 {
+				// Remove authorization scheme prefix (e.g. "Bearer")
+				cred = cred[index+1:]
+				payload.OauthToken = &cred
+			}
+		}
+		if index := strings.IndexByte(string(payload.Key), ' '); index >= 0 {
+			// Remove authorization scheme prefix (e.g. "Bearer")
+			payload.Key = payload.Key[index+1:]
+		}
+		if payload.BearerToken != nil {
+			cred := *payload.BearerToken
+			if index := strings.IndexByte(string(cred), ' '); index >= 0 {
+				// Remove authorization scheme prefix (e.g. "Bearer")
+				cred = cred[index+1:]
+				payload.BearerToken = &cred
+			}
+		}
+	}
+	return payload, nil
+}

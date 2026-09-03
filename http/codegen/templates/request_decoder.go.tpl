@@ -125,6 +125,28 @@ func {{ .RequestDecoderDeclaration.Name }}(mux goahttp.Muxer, decoder func(*http
 			return payload, err
 		}
 	{{- end }}
+{{- if .BasicScheme }}{{ with .BasicScheme }}
+	user, pass, ok := r.BasicAuth()
+		{{- if or .UsernameRequired .PasswordRequired}}
+	if !ok {
+		return payload, goa.MissingFieldError("Authorization", "header")
+	}
+		{{- end }}
+		{{- if and .UsernamePointer .PasswordPointer }}
+	var userPtr, passPtr *string
+	if ok {
+		userPtr = &user
+		passPtr = &pass
+	}
+		{{- else }}
+			{{- if .UsernamePointer }}
+	userPtr := &user
+			{{- end }}
+			{{- if .PasswordPointer }}
+	passPtr := &pass
+			{{- end }}
+		{{- end }}
+{{- end }}{{ end }}
 	{{- if .Payload.Request.PayloadInit }}
 	payload = {{ .Payload.Request.PayloadInit.Declaration.Name }}({{ range .Payload.Request.PayloadInit.ServerArgs }}{{ .Ref }}, {{ end }})
 	{{- else if .Payload.DecoderReturnValue }}
@@ -132,26 +154,20 @@ func {{ .RequestDecoderDeclaration.Name }}(mux goahttp.Muxer, decoder func(*http
 	{{- else }}
 	payload = body
 	{{- end }}
-{{- if .BasicScheme }}{{ with .BasicScheme }}
-	user, pass, {{ if or .UsernameRequired .PasswordRequired }}ok{{ else }}_{{ end }} := r.BasicAuth()
-		{{- if or .UsernameRequired .PasswordRequired}}
-	if !ok {
-		return payload, goa.MissingFieldError("Authorization", "header")
-	}
-		{{- end }}
-	payload.{{ .UsernameField }} = {{ if .UsernamePointer }}&{{ end }}user
-	payload.{{ .PasswordField }} = {{ if .PasswordPointer }}&{{ end }}pass
-{{- end }}{{ end }}
 {{- range .HeaderSchemes }}
 	{{- if not .CredRequired }}
 	if payload.{{ .CredField }} != nil {
-	{{- end }}
-	if strings.Contains({{ if .CredPointer }}*{{ end }}payload.{{ .CredField }}, " ") {
-		// Remove authorization scheme prefix (e.g. "Bearer")
-		cred := strings.SplitN({{ if .CredPointer }}*{{ end }}payload.{{ .CredField }}, " ", 2)[1]
-		payload.{{ .CredField }} = {{ if .CredPointer }}&{{ end }}cred
+		cred := *payload.{{ .CredField }}
+		if index := strings.IndexByte(string(cred), ' '); index >= 0 {
+			// Remove authorization scheme prefix (e.g. "Bearer")
+			cred = cred[index+1:]
+			payload.{{ .CredField }} = &cred
+		}
 	}
-	{{- if not .CredRequired }}
+	{{- else }}
+	if index := strings.IndexByte(string(payload.{{ .CredField }}), ' '); index >= 0 {
+		// Remove authorization scheme prefix (e.g. "Bearer")
+		payload.{{ .CredField }} = payload.{{ .CredField }}[index+1:]
 	}
 	{{- end }}
 {{- end }}
