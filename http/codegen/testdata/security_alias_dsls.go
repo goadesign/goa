@@ -36,6 +36,17 @@ var NamedSecurityTypesDSL = func() {
 				GET("/basic-optional")
 			})
 		})
+		Method("BasicPasswordRequired", func() {
+			Security(basic)
+			Payload(func() {
+				Username("username", credential)
+				Password("password", credential)
+				Required("password")
+			})
+			HTTP(func() {
+				GET("/basic-password-required")
+			})
+		})
 		Method("APIKey", func() {
 			Security(apiKey)
 			Payload(func() {

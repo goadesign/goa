@@ -31,6 +31,22 @@ func DecodeBasicOptionalRequest(mux goahttp.Muxer, decoder func(*http.Request) g
 	}
 }
 
+// DecodeBasicPasswordRequiredRequest returns a decoder for requests sent to
+// the NamedSecurityTypes BasicPasswordRequired endpoint.
+func DecodeBasicPasswordRequiredRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*namedsecuritytypes.BasicPasswordRequiredPayload, error) {
+	return func(r *http.Request) (*namedsecuritytypes.BasicPasswordRequiredPayload, error) {
+		var payload *namedsecuritytypes.BasicPasswordRequiredPayload
+		user, pass, ok := r.BasicAuth()
+		if !ok {
+			return payload, goa.MissingFieldError("Authorization", "header")
+		}
+		userPtr := &user
+		payload = NewBasicPasswordRequiredPayload(userPtr, pass)
+
+		return payload, nil
+	}
+}
+
 // DecodeAPIKeyRequest returns a decoder for requests sent to the
 // NamedSecurityTypes APIKey endpoint.
 func DecodeAPIKeyRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*namedsecuritytypes.APIKeyPayload, error) {
@@ -159,6 +175,19 @@ func NewBasicOptionalPayload(username *string, password *string) *namedsecurityt
 		tmppassword := namedsecuritytypes.Credential(*password)
 		v.Password = &tmppassword
 	}
+
+	return v
+}
+
+// NewBasicPasswordRequiredPayload builds a NamedSecurityTypes service
+// BasicPasswordRequired endpoint payload.
+func NewBasicPasswordRequiredPayload(username *string, password string) *namedsecuritytypes.BasicPasswordRequiredPayload {
+	v := &namedsecuritytypes.BasicPasswordRequiredPayload{}
+	if username != nil {
+		tmpusername := namedsecuritytypes.Credential(*username)
+		v.Username = &tmpusername
+	}
+	v.Password = namedsecuritytypes.Credential(password)
 
 	return v
 }

@@ -38,6 +38,23 @@ func EncodeBasicOptionalRequest(encoder func(*http.Request) goahttp.Encoder) fun
 	}
 }
 
+// EncodeBasicPasswordRequiredRequest returns an encoder for requests sent to
+// the NamedSecurityTypes BasicPasswordRequired server.
+func EncodeBasicPasswordRequiredRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*namedsecuritytypes.BasicPasswordRequiredPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("NamedSecurityTypes", "BasicPasswordRequired", "*namedsecuritytypes.BasicPasswordRequiredPayload", v)
+		}
+		var user string
+		if p.Username != nil {
+			user = string(*p.Username)
+		}
+		req.SetBasicAuth(user, string(p.Password))
+		return nil
+	}
+}
+
 // EncodeAPIKeyRequest returns an encoder for requests sent to the
 // NamedSecurityTypes APIKey server.
 func EncodeAPIKeyRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
