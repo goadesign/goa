@@ -172,7 +172,11 @@ func (b *schemaBuilder) typeSchemaWithPrefix(api *expr.APIExpr, t expr.DataType,
 		}
 	case *expr.Map:
 		schema.Type = openapi.Object
-		if actual.KeyType.Type == expr.String && actual.ElemType.Type != expr.Any {
+		keyType := actual.KeyType.Type
+		for expr.IsAlias(keyType) {
+			keyType = keyType.(expr.UserType).Attribute().Type
+		}
+		if keyType == expr.String && actual.ElemType.Type != expr.Any {
 			value := openapi.NewSchema()
 			schema.AdditionalProperties = b.buildAttributeSchema(api, value, actual.ElemType, gen.MapValue(0))
 		} else {

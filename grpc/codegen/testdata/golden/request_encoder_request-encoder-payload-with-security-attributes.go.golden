@@ -6,7 +6,7 @@ func EncodeMethodMessageWithSecurityRequest(ctx context.Context, v any, md *meta
 		return nil, goagrpc.ErrInvalidType("ServiceMessageWithSecurity", "MethodMessageWithSecurity", "*servicemessagewithsecurity.RequestUT", v)
 	}
 	if payload.Token != nil {
-		tokenWire := *payload.Token
+		tokenWire := string(*payload.Token)
 		(*md).Append("authorization", tokenWire)
 	}
 	if payload.Key != nil {

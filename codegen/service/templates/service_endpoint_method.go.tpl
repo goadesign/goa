@@ -32,17 +32,17 @@ func {{ .EndpointDeclaration.Name }}(s {{ .ServiceDeclaration.Name }}{{ range .S
 				{{- if .UsernamePointer }}
 				var user string
 				if {{ $payload }}.{{ .UsernameField }} != nil {
-					user = *{{ $payload }}.{{ .UsernameField }}
+					user = {{ if .UsernameIsAlias }}string({{ end }}*{{ $payload }}.{{ .UsernameField }}{{ if .UsernameIsAlias }}){{ end }}
 				}
 				{{- end }}
 				{{- if .PasswordPointer }}
 				var pass string
 				if {{ $payload }}.{{ .PasswordField }} != nil {
-					pass = *{{ $payload }}.{{ .PasswordField }}
+					pass = {{ if .PasswordIsAlias }}string({{ end }}*{{ $payload }}.{{ .PasswordField }}{{ if .PasswordIsAlias }}){{ end }}
 				}
 				{{- end }}
-				ctx, err = auth{{ .Type }}Fn(ctx, {{ if .UsernamePointer }}user{{ else }}{{ $payload }}.{{ .UsernameField }}{{ end }},
-					{{- if .PasswordPointer }}pass{{ else }}{{ $payload }}.{{ .PasswordField }}{{ end }}, &sc)
+				ctx, err = auth{{ .Type }}Fn(ctx, {{ if .UsernamePointer }}user{{ else }}{{ if .UsernameIsAlias }}string({{ end }}{{ $payload }}.{{ .UsernameField }}{{ if .UsernameIsAlias }}){{ end }}{{ end }},
+					{{- if .PasswordPointer }}pass{{ else }}{{ if .PasswordIsAlias }}string({{ end }}{{ $payload }}.{{ .PasswordField }}{{ if .PasswordIsAlias }}){{ end }}{{ end }}, &sc)
 
 			{{- else if eq .Type "APIKey" }}
 				sc := security.APIKeyScheme{
@@ -53,10 +53,10 @@ func {{ .EndpointDeclaration.Name }}(s {{ .ServiceDeclaration.Name }}{{ range .S
 				{{- if $s.CredPointer }}
 				var key string
 				if {{ $payload }}.{{ $s.CredField }} != nil {
-					key = *{{ $payload }}.{{ $s.CredField }}
+					key = {{ if $s.CredIsAlias }}string({{ end }}*{{ $payload }}.{{ $s.CredField }}{{ if $s.CredIsAlias }}){{ end }}
 				}
 				{{- end }}
-				ctx, err = auth{{ .Type }}Fn(ctx, {{ if $s.CredPointer }}key{{ else }}{{ $payload }}.{{ $s.CredField }}{{ end }}, &sc)
+				ctx, err = auth{{ .Type }}Fn(ctx, {{ if $s.CredPointer }}key{{ else }}{{ if $s.CredIsAlias }}string({{ end }}{{ $payload }}.{{ $s.CredField }}{{ if $s.CredIsAlias }}){{ end }}{{ end }}, &sc)
 
 			{{- else if or (eq .Type "Bearer") (eq .Type "JWT") }}
 				sc := security.{{ .Type }}Scheme{
@@ -67,10 +67,10 @@ func {{ .EndpointDeclaration.Name }}(s {{ .ServiceDeclaration.Name }}{{ range .S
 				{{- if $s.CredPointer }}
 				var token string
 				if {{ $payload }}.{{ $s.CredField }} != nil {
-					token = *{{ $payload }}.{{ $s.CredField }}
+					token = {{ if $s.CredIsAlias }}string({{ end }}*{{ $payload }}.{{ $s.CredField }}{{ if $s.CredIsAlias }}){{ end }}
 				}
 				{{- end }}
-				ctx, err = auth{{ .Type }}Fn(ctx, {{ if $s.CredPointer }}token{{ else }}{{ $payload }}.{{ $s.CredField }}{{ end }}, &sc)
+				ctx, err = auth{{ .Type }}Fn(ctx, {{ if $s.CredPointer }}token{{ else }}{{ if $s.CredIsAlias }}string({{ end }}{{ $payload }}.{{ $s.CredField }}{{ if $s.CredIsAlias }}){{ end }}{{ end }}, &sc)
 
 			{{- else if eq .Type "OAuth2" }}
 				sc := security.OAuth2Scheme{
@@ -99,10 +99,10 @@ func {{ .EndpointDeclaration.Name }}(s {{ .ServiceDeclaration.Name }}{{ range .S
 				{{- if $s.CredPointer }}
 				var token string
 				if {{ $payload }}.{{ $s.CredField }} != nil {
-					token = *{{ $payload }}.{{ $s.CredField }}
+					token = {{ if $s.CredIsAlias }}string({{ end }}*{{ $payload }}.{{ $s.CredField }}{{ if $s.CredIsAlias }}){{ end }}
 				}
 				{{- end }}
-				ctx, err = auth{{ .Type }}Fn(ctx, {{ if $s.CredPointer }}token{{ else }}{{ $payload }}.{{ $s.CredField }}{{ end }}, &sc)
+				ctx, err = auth{{ .Type }}Fn(ctx, {{ if $s.CredPointer }}token{{ else }}{{ if $s.CredIsAlias }}string({{ end }}{{ $payload }}.{{ $s.CredField }}{{ if $s.CredIsAlias }}){{ end }}{{ end }}, &sc)
 
 			{{- end }}
 			{{- if ne $sidx 0 }}

@@ -987,6 +987,7 @@ var MessageWithValidateDSL = func() {
 }
 
 var MessageWithSecurityAttrsDSL = func() {
+	var Token = Type("Token", String)
 	var JWTAuth = JWTSecurity("jwt", func() {
 		Scope("api:read", "Read-only access")
 	})
@@ -997,7 +998,7 @@ var MessageWithSecurityAttrsDSL = func() {
 	})
 	var RequestUT = Type("RequestUT", func() {
 		Field(1, "BooleanField", Boolean)
-		TokenField(2, "token", String)
+		TokenField(2, "token", Token)
 		AccessTokenField(3, "oauth_token", String)
 		APIKey("api_key", "key", String)
 		Username("username", String)

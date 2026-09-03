@@ -74,6 +74,38 @@ func TestBuildAttributeSchemaKeepsDefinitionsSeparate(t *testing.T) {
 	}
 }
 
+func TestBuildAttributeSchemaKeepsValuesForNamedStringMapKeys(t *testing.T) {
+	key := &expr.UserTypeExpr{
+		AttributeExpr: &expr.AttributeExpr{Type: expr.String},
+		TypeName:      "ConnectionKind",
+	}
+	value := &expr.UserTypeExpr{
+		AttributeExpr: &expr.AttributeExpr{Type: &expr.Object{
+			&expr.NamedAttributeExpr{
+				Name:      "connected",
+				Attribute: &expr.AttributeExpr{Type: expr.Boolean},
+			},
+		}},
+		TypeName: "ConnectionStatus",
+	}
+	attribute := &expr.AttributeExpr{Type: &expr.Map{
+		KeyType:  &expr.AttributeExpr{Type: key},
+		ElemType: &expr.AttributeExpr{Type: value},
+	}}
+	root := &expr.UserTypeExpr{AttributeExpr: attribute, TypeName: "Connections"}
+	generator := expr.NewExampleGenerator(expr.NewFakerRandomizerFactory("named-string-map-key")).At(
+		expr.UserTypeExampleIdentity(root),
+	)
+
+	schema := BuildAttributeSchema(&expr.APIExpr{}, attribute, generator)
+
+	values, ok := schema.AdditionalProperties.(*openapi.Schema)
+	require.True(t, ok)
+	assert.Equal(t, "#/$defs/ConnectionStatus", values.Ref)
+	require.Contains(t, schema.Defs, "ConnectionStatus")
+	assert.Equal(t, openapi.Type(openapi.Boolean), schema.Defs["ConnectionStatus"].Properties["connected"].Type)
+}
+
 // assertUnionSchemaBranch checks one generated union branch's tag, required
 // fields, and value type.
 func assertUnionSchemaBranch(t *testing.T, branch *openapi.Schema, tag string, valueType openapi.Type) {

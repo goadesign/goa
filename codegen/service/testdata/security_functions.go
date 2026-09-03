@@ -166,7 +166,7 @@ func NewSecureWithOAuth2Endpoint(s Service, authOAuth2Fn security.AuthOAuth2Func
 		}
 		var token string
 		if p.Token != nil {
-			token = *p.Token
+			token = string(*p.Token)
 		}
 		ctx, err = authOAuth2Fn(ctx, token, &sc)
 		if err != nil {

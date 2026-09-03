@@ -173,11 +173,12 @@ var EndpointWithBearerDSL = func() {
 }
 
 var EndpointWithOAuth2DSL = func() {
+	var accessToken = Type("AccessToken", String)
 	Service("EndpointWithOAuth2", func() {
 		Method("SecureWithOAuth2", func() {
 			Security(OAuth2AuthorizationCode)
 			Payload(func() {
-				AccessToken("token", String)
+				AccessToken("token", accessToken)
 			})
 			HTTP(func() {
 				GET("/")
