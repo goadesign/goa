@@ -15,10 +15,13 @@ type (
 var GeneratedResultTypes = new(ResultTypesRoot)
 
 // GeneratedResultType returns the generated result type expression with the given
-// id, nil if there isn't one.
+// id, nil if there isn't one. Identifiers are compared canonically so that a
+// lookup by canonical identifier finds a type recorded with its authored
+// suffix, such as "+json".
 func GeneratedResultType(id string) *ResultTypeExpr {
+	canonical := CanonicalIdentifier(id)
 	for _, rt := range *GeneratedResultTypes {
-		if rt.Identifier == id {
+		if CanonicalIdentifier(rt.Identifier) == canonical {
 			return rt
 		}
 	}
