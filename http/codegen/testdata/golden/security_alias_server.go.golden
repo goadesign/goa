@@ -1,0 +1,202 @@
+// DecodeBasicRequest returns a decoder for requests sent to the
+// NamedSecurityTypes Basic endpoint.
+func DecodeBasicRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*namedsecuritytypes.BasicPayload, error) {
+	return func(r *http.Request) (*namedsecuritytypes.BasicPayload, error) {
+		var payload *namedsecuritytypes.BasicPayload
+		user, pass, ok := r.BasicAuth()
+		if !ok {
+			return payload, goa.MissingFieldError("Authorization", "header")
+		}
+		passPtr := &pass
+		payload = NewBasicPayload(user, passPtr)
+
+		return payload, nil
+	}
+}
+
+// DecodeBasicOptionalRequest returns a decoder for requests sent to the
+// NamedSecurityTypes BasicOptional endpoint.
+func DecodeBasicOptionalRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*namedsecuritytypes.BasicOptionalPayload, error) {
+	return func(r *http.Request) (*namedsecuritytypes.BasicOptionalPayload, error) {
+		var payload *namedsecuritytypes.BasicOptionalPayload
+		user, pass, ok := r.BasicAuth()
+		var userPtr, passPtr *string
+		if ok {
+			userPtr = &user
+			passPtr = &pass
+		}
+		payload = NewBasicOptionalPayload(userPtr, passPtr)
+
+		return payload, nil
+	}
+}
+
+// DecodeAPIKeyRequest returns a decoder for requests sent to the
+// NamedSecurityTypes APIKey endpoint.
+func DecodeAPIKeyRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*namedsecuritytypes.APIKeyPayload, error) {
+	return func(r *http.Request) (*namedsecuritytypes.APIKeyPayload, error) {
+		var payload *namedsecuritytypes.APIKeyPayload
+		var (
+			key string
+			err error
+		)
+		key = r.Header.Get("X-API-Key")
+		if key == "" {
+			err = goa.MergeErrors(err, goa.MissingFieldError("key", "header"))
+		}
+		if err != nil {
+			return payload, err
+		}
+		payload = NewAPIKeyPayload(key)
+		if index := strings.IndexByte(string(payload.Key), ' '); index >= 0 {
+			// Remove authorization scheme prefix (e.g. "Bearer")
+			payload.Key = payload.Key[index+1:]
+		}
+
+		return payload, nil
+	}
+}
+
+// DecodeBearerRequest returns a decoder for requests sent to the
+// NamedSecurityTypes Bearer endpoint.
+func DecodeBearerRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*namedsecuritytypes.BearerPayload, error) {
+	return func(r *http.Request) (*namedsecuritytypes.BearerPayload, error) {
+		var payload *namedsecuritytypes.BearerPayload
+		var (
+			token *string
+		)
+		tokenRaw := r.Header.Get("X-Bearer")
+		if tokenRaw != "" {
+			token = &tokenRaw
+		}
+		payload = NewBearerPayload(token)
+		if payload.Token != nil {
+			cred := *payload.Token
+			if index := strings.IndexByte(string(cred), ' '); index >= 0 {
+				// Remove authorization scheme prefix (e.g. "Bearer")
+				cred = cred[index+1:]
+				payload.Token = &cred
+			}
+		}
+
+		return payload, nil
+	}
+}
+
+// DecodeJWTRequest returns a decoder for requests sent to the
+// NamedSecurityTypes JWT endpoint.
+func DecodeJWTRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*namedsecuritytypes.JWTPayload, error) {
+	return func(r *http.Request) (*namedsecuritytypes.JWTPayload, error) {
+		var payload *namedsecuritytypes.JWTPayload
+		var (
+			token string
+			err   error
+		)
+		token = r.Header.Get("X-JWT")
+		if token == "" {
+			err = goa.MergeErrors(err, goa.MissingFieldError("token", "header"))
+		}
+		if err != nil {
+			return payload, err
+		}
+		payload = NewJWTPayload(token)
+		if index := strings.IndexByte(string(payload.Token), ' '); index >= 0 {
+			// Remove authorization scheme prefix (e.g. "Bearer")
+			payload.Token = payload.Token[index+1:]
+		}
+
+		return payload, nil
+	}
+}
+
+// DecodeOAuth2Request returns a decoder for requests sent to the
+// NamedSecurityTypes OAuth2 endpoint.
+func DecodeOAuth2Request(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*namedsecuritytypes.OAuth2Payload, error) {
+	return func(r *http.Request) (*namedsecuritytypes.OAuth2Payload, error) {
+		var payload *namedsecuritytypes.OAuth2Payload
+		var (
+			token *string
+		)
+		tokenRaw := r.Header.Get("X-OAuth")
+		if tokenRaw != "" {
+			token = &tokenRaw
+		}
+		payload = NewOAuth2Payload(token)
+		if payload.Token != nil {
+			cred := *payload.Token
+			if index := strings.IndexByte(string(cred), ' '); index >= 0 {
+				// Remove authorization scheme prefix (e.g. "Bearer")
+				cred = cred[index+1:]
+				payload.Token = &cred
+			}
+		}
+
+		return payload, nil
+	}
+}
+
+// NewBasicPayload builds a NamedSecurityTypes service Basic endpoint payload.
+func NewBasicPayload(username string, password *string) *namedsecuritytypes.BasicPayload {
+	v := &namedsecuritytypes.BasicPayload{}
+	v.Username = namedsecuritytypes.Credential(username)
+	if password != nil {
+		tmppassword := namedsecuritytypes.Credential(*password)
+		v.Password = &tmppassword
+	}
+
+	return v
+}
+
+// NewBasicOptionalPayload builds a NamedSecurityTypes service BasicOptional
+// endpoint payload.
+func NewBasicOptionalPayload(username *string, password *string) *namedsecuritytypes.BasicOptionalPayload {
+	v := &namedsecuritytypes.BasicOptionalPayload{}
+	if username != nil {
+		tmpusername := namedsecuritytypes.Credential(*username)
+		v.Username = &tmpusername
+	}
+	if password != nil {
+		tmppassword := namedsecuritytypes.Credential(*password)
+		v.Password = &tmppassword
+	}
+
+	return v
+}
+
+// NewAPIKeyPayload builds a NamedSecurityTypes service APIKey endpoint payload.
+func NewAPIKeyPayload(key string) *namedsecuritytypes.APIKeyPayload {
+	v := &namedsecuritytypes.APIKeyPayload{}
+	v.Key = namedsecuritytypes.Credential(key)
+
+	return v
+}
+
+// NewBearerPayload builds a NamedSecurityTypes service Bearer endpoint payload.
+func NewBearerPayload(token *string) *namedsecuritytypes.BearerPayload {
+	v := &namedsecuritytypes.BearerPayload{}
+	if token != nil {
+		tmptoken := namedsecuritytypes.Credential(*token)
+		v.Token = &tmptoken
+	}
+
+	return v
+}
+
+// NewJWTPayload builds a NamedSecurityTypes service JWT endpoint payload.
+func NewJWTPayload(token string) *namedsecuritytypes.JWTPayload {
+	v := &namedsecuritytypes.JWTPayload{}
+	v.Token = namedsecuritytypes.Credential(token)
+
+	return v
+}
+
+// NewOAuth2Payload builds a NamedSecurityTypes service OAuth2 endpoint payload.
+func NewOAuth2Payload(token *string) *namedsecuritytypes.OAuth2Payload {
+	v := &namedsecuritytypes.OAuth2Payload{}
+	if token != nil {
+		tmptoken := namedsecuritytypes.Credential(*token)
+		v.Token = &tmptoken
+	}
+
+	return v
+}

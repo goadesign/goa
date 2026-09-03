@@ -77,30 +77,18 @@ func {{ .Request.LegacyDecode.FuncDeclaration.Name }}(ctx context.Context, md me
 	{{- if ne .Type "Basic" }}
 		{{- if not .CredRequired }}
 			if payload.{{ .CredField }} != nil {
-		{{- end }}
-		{{- if .CredIsAlias }}
-		{{- if .CredPointer }}
 			cred := *payload.{{ .CredField }}
 			if index := strings.IndexByte(string(cred), ' '); index >= 0 {
 				// Remove authorization scheme prefix (e.g. "Bearer")
 				cred = cred[index+1:]
 				payload.{{ .CredField }} = &cred
 			}
-		{{- else }}
-			if index := strings.IndexByte(string(payload.{{ .CredField }}), ' '); index >= 0 {
-				// Remove authorization scheme prefix (e.g. "Bearer")
-				payload.{{ .CredField }} = payload.{{ .CredField }}[index+1:]
 			}
-		{{- end }}
 		{{- else }}
-		if strings.Contains({{ if .CredPointer }}*{{ end }}payload.{{ .CredField }}, " ") {
+		if index := strings.IndexByte(string(payload.{{ .CredField }}), ' '); index >= 0 {
 			// Remove authorization scheme prefix (e.g. "Bearer")
-			cred := strings.SplitN({{ if .CredPointer }}*{{ end }}payload.{{ .CredField }}, " ", 2)[1]
-			payload.{{ .CredField }} = {{ if .CredPointer }}&{{ end }}cred
+			payload.{{ .CredField }} = payload.{{ .CredField }}[index+1:]
 		}
-		{{- end }}
-		{{- if not .CredRequired }}
-			}
 		{{- end }}
 	{{- end }}
 {{- end }}

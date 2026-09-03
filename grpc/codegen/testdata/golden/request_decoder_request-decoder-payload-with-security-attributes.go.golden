@@ -46,9 +46,10 @@ func DecodeMethodMessageWithSecurityRequest(ctx context.Context, v any, md metad
 			}
 		}
 		if payload.Key != nil {
-			if strings.Contains(*payload.Key, " ") {
+			cred := *payload.Key
+			if index := strings.IndexByte(string(cred), ' '); index >= 0 {
 				// Remove authorization scheme prefix (e.g. "Bearer")
-				cred := strings.SplitN(*payload.Key, " ", 2)[1]
+				cred = cred[index+1:]
 				payload.Key = &cred
 			}
 		}

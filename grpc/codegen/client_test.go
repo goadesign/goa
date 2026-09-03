@@ -59,6 +59,7 @@ func TestRequestEncoder(t *testing.T) {
 		{"request-encoder-payload-with-metadata", testdata.MessageWithMetadataDSL},
 		{"request-encoder-payload-with-validate", testdata.MessageWithValidateDSL},
 		{"request-encoder-payload-with-security-attributes", testdata.MessageWithSecurityAttrsDSL},
+		{"request-encoder-named-security-metadata", testdata.NamedSecurityMetadataDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

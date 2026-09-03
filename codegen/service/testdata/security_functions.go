@@ -54,11 +54,7 @@ func NewSecureWithRequiredScopesEndpoint(s Service, authJWTFn security.AuthJWTFu
 			Scopes:         []string{"api:read", "api:write", "api:admin"},
 			RequiredScopes: []string{"api:read", "api:write"},
 		}
-		var token string
-		if p.Token != nil {
-			token = *p.Token
-		}
-		ctx, err = authJWTFn(ctx, token, &sc)
+		ctx, err = authJWTFn(ctx, string(p.Token), &sc)
 		if err != nil {
 			return nil, err
 		}
@@ -79,15 +75,11 @@ func NewSecureWithOptionalRequiredScopesEndpoint(s Service, authBasicFn security
 			Scopes:         []string{"api:read", "api:write", "api:admin"},
 			RequiredScopes: []string{"api:read", "api:write"},
 		}
-		var user string
-		if p.User != nil {
-			user = *p.User
-		}
 		var pass string
 		if p.Pass != nil {
-			pass = *p.Pass
+			pass = string(*p.Pass)
 		}
-		ctx, err = authBasicFn(ctx, user, pass, &sc)
+		ctx, err = authBasicFn(ctx, string(p.User), pass, &sc)
 		if err != nil {
 			return nil, err
 		}
@@ -108,11 +100,7 @@ func NewSecureWithAPIKeyOverrideEndpoint(s Service, authAPIKeyFn security.AuthAP
 			Scopes:         []string{"api:read", "api:write", "api:admin"},
 			RequiredScopes: []string{},
 		}
-		var key string
-		if p.Key != nil {
-			key = *p.Key
-		}
-		ctx, err = authAPIKeyFn(ctx, key, &sc)
+		ctx, err = authAPIKeyFn(ctx, string(p.Key), &sc)
 		if err != nil {
 			return nil, err
 		}
@@ -134,7 +122,7 @@ func NewSecureWithBearerEndpoint(s Service, authBearerFn security.AuthBearerFunc
 		}
 		var token string
 		if p.Token != nil {
-			token = *p.Token
+			token = string(*p.Token)
 		}
 		ctx, err = authBearerFn(ctx, token, &sc)
 		if err != nil {
@@ -191,11 +179,11 @@ func NewEndpointWithSkipRequestBodyEncodeDecodeEndpoint(s Service, authBasicFn s
 		}
 		var user string
 		if ep.Payload.User != nil {
-			user = *ep.Payload.User
+			user = string(*ep.Payload.User)
 		}
 		var pass string
 		if ep.Payload.Pass != nil {
-			pass = *ep.Payload.Pass
+			pass = string(*ep.Payload.Pass)
 		}
 		ctx, err = authBasicFn(ctx, user, pass, &sc)
 		if err != nil {

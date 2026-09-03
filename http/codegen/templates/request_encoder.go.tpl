@@ -209,17 +209,23 @@ func {{ .RequestEncoderDeclaration.Name }}(encoder func(*http.Request) goahttp.E
 		}
 	{{- end }}
 	{{- if .BasicScheme }}{{ with .BasicScheme }}
-		{{- if not .UsernameRequired }}
+		{{- if .UsernamePointer }}
+		var user string
 		if p.{{ .UsernameField }} != nil {
-		{{- end }}
-		{{- if not .PasswordRequired }}
-		if p.{{ .PasswordField }} != nil {
-		{{- end }}
-		req.SetBasicAuth({{ if .UsernamePointer }}*{{ end }}p.{{ .UsernameField }}, {{ if .PasswordPointer }}*{{ end }}p.{{ .PasswordField }})
-		{{- if not .UsernameRequired }}
+			user = string(*p.{{ .UsernameField }})
 		}
 		{{- end }}
-		{{- if not .PasswordRequired }}
+		{{- if .PasswordPointer }}
+		var pass string
+		if p.{{ .PasswordField }} != nil {
+			pass = string(*p.{{ .PasswordField }})
+		}
+		{{- end }}
+		{{- if and .UsernamePointer .PasswordPointer }}
+		if p.{{ .UsernameField }} != nil || p.{{ .PasswordField }} != nil {
+		{{- end }}
+		req.SetBasicAuth({{ if .UsernamePointer }}user{{ else }}string(p.{{ .UsernameField }}){{ end }}, {{ if .PasswordPointer }}pass{{ else }}string(p.{{ .PasswordField }}){{ end }})
+		{{- if and .UsernamePointer .PasswordPointer }}
 		}
 		{{- end }}
 	{{- end }}{{ end }}

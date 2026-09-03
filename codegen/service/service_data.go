@@ -620,8 +620,6 @@ type (
 		UsernameField string
 		// UsernamePointer is true if the username field is a pointer.
 		UsernamePointer bool
-		// UsernameIsAlias is true if the username field uses a named string type.
-		UsernameIsAlias bool
 		// UsernameAttr is the name of the attribute that contains the
 		// username.
 		UsernameAttr string
@@ -633,8 +631,6 @@ type (
 		PasswordField string
 		// PasswordPointer is true if the password field is a pointer.
 		PasswordPointer bool
-		// PasswordIsAlias is true if the password field uses a named string type.
-		PasswordIsAlias bool
 		// PasswordAttr is the name of the attribute that contains the
 		// password.
 		PasswordAttr string
@@ -647,8 +643,6 @@ type (
 		CredField string
 		// CredPointer is true if the credential field is a pointer.
 		CredPointer bool
-		// CredIsAlias is true if the credential field uses a named string type.
-		CredIsAlias bool
 		// CredRequired specifies if the key is a required attribute.
 		CredRequired bool
 		// KeyAttr is the name of the attribute that contains
@@ -996,17 +990,14 @@ func (s *SchemeData) Dup() *SchemeData {
 		Name:             s.Name,
 		UsernameField:    s.UsernameField,
 		UsernamePointer:  s.UsernamePointer,
-		UsernameIsAlias:  s.UsernameIsAlias,
 		UsernameAttr:     s.UsernameAttr,
 		UsernameRequired: s.UsernameRequired,
 		PasswordField:    s.PasswordField,
 		PasswordPointer:  s.PasswordPointer,
-		PasswordIsAlias:  s.PasswordIsAlias,
 		PasswordAttr:     s.PasswordAttr,
 		PasswordRequired: s.PasswordRequired,
 		CredField:        s.CredField,
 		CredPointer:      s.CredPointer,
-		CredIsAlias:      s.CredIsAlias,
 		CredRequired:     s.CredRequired,
 		KeyAttr:          s.KeyAttr,
 		Scopes:           s.Scopes,

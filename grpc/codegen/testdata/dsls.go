@@ -1017,6 +1017,32 @@ var MessageWithSecurityAttrsDSL = func() {
 	})
 }
 
+var NamedSecurityMetadataDSL = func() {
+	var Credential = Type("Credential", String)
+	var JWTAuth = JWTSecurity("jwt")
+	var APIKeyAuth = APIKeySecurity("api_key")
+	var BasicAuth = BasicAuthSecurity("basic")
+	var BearerAuth = BearerSecurity("bearer")
+	var OAuth2Auth = OAuth2Security("oauth2")
+	var Request = Type("NamedSecurityRequest", func() {
+		Field(1, "BooleanField", Boolean)
+		TokenField(2, "jwt_token", Credential)
+		AccessTokenField(3, "oauth_token", Credential)
+		APIKey("api_key", "key", Credential)
+		Username("username", Credential)
+		Password("password", Credential)
+		BearerTokenField(7, "bearer_token", Credential)
+		Required("jwt_token", "key", "username")
+	})
+	Service("NamedSecurityMetadata", func() {
+		Method("Authenticate", func() {
+			Security(JWTAuth, OAuth2Auth, APIKeyAuth, BasicAuth, BearerAuth)
+			Payload(Request)
+			GRPC(func() {})
+		})
+	})
+}
+
 var MessageWithServiceNameDSL = func() {
 	var UT = Type("MyNameConflicts", func() {
 		Field(1, "BooleanField", Boolean)
