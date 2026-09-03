@@ -47,7 +47,6 @@ paths:
                                     value:
                                         bar:
                                             - string: item
-                                        foo: ""
 components:
     schemas:
         Bar:

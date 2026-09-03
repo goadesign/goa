@@ -646,9 +646,11 @@ func (e *HTTPEndpointExpr) Validate() error {
 
 	// Validate responses
 
-	// All responses but one must have tags for the same status code
+	// Exactly one response must omit a tag so the generated server has a
+	// response to use when no tagged response matches the result.
 	hasTags := false
 	allTagged := true
+	untaggedResponse := false
 	successResp := false
 	for i, r := range e.Responses {
 		verr.Merge(r.Validate(e))
@@ -659,6 +661,10 @@ func (e *HTTPEndpointExpr) Validate() error {
 		}
 		if r.Tag[0] == "" {
 			allTagged = false
+			if untaggedResponse {
+				verr.Add(r, "Multiple response definitions without a Tag")
+			}
+			untaggedResponse = true
 		} else {
 			hasTags = true
 		}

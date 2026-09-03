@@ -1795,14 +1795,7 @@ func newPlan(generation *codegen.Generation, transport transportKind, input Plan
 						return nil, err
 					}
 				}
-				noTagSeen := false
 				for _, response := range endpoint.Responses {
-					if response.Tag[0] == "" {
-						if noTagSeen {
-							continue
-						}
-						noTagSeen = true
-					}
 					views := []string{""}
 					body := planned.bodies.response(response)
 					_, explicitBody := body.Meta["http:body"]

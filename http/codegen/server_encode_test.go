@@ -83,7 +83,7 @@ func TestEncode(t *testing.T) {
 
 		{"empty-server-response", testdata.EmptyServerResponseDSL},
 		{"empty-server-response-with-tags", testdata.EmptyServerResponseWithTagsDSL},
-		{"two-untagged-success-responses", testdata.ResultTwoUntaggedSuccessResponsesDSL},
+		{"default-response-before-tags", testdata.ResultDefaultResponseBeforeTagsDSL},
 
 		{"skip-response-body-encode-decode", testdata.ResponseEncoderSkipResponseBodyEncodeDecodeDSL},
 

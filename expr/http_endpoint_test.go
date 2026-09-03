@@ -181,6 +181,39 @@ service "Service" HTTP endpoint "Method": HTTP endpoint response body must be em
 			DSL:   testdata.EndpointMultipartWithoutBody,
 			Error: `service "Service" HTTP endpoint "Method": MultipartRequest requires a request body.`,
 		},
+		"two untagged success responses": {
+			DSL: func() {
+				dsl.Service("Service", func() {
+					dsl.Method("Method", func() {
+						dsl.Result(dsl.String)
+						dsl.HTTP(func() {
+							dsl.GET("/")
+							dsl.Response(dsl.StatusOK)
+							dsl.Response(dsl.StatusAccepted)
+						})
+					})
+				})
+			},
+			Error: `HTTP response of service "Service" HTTP endpoint "Method": Multiple response definitions without a Tag`,
+		},
+		"tagged response and default response": {
+			DSL: func() {
+				dsl.Service("Service", func() {
+					dsl.Method("Method", func() {
+						dsl.Result(func() {
+							dsl.Attribute("outcome", dsl.String)
+						})
+						dsl.HTTP(func() {
+							dsl.GET("/")
+							dsl.Response(dsl.StatusAccepted, func() {
+								dsl.Tag("outcome", "accepted")
+							})
+							dsl.Response(dsl.StatusOK)
+						})
+					})
+				})
+			},
+		},
 		"streaming-endpoint-has-request-body": {
 			DSL: testdata.StreamingEndpointRequestBody,
 			Error: `service "Service" HTTP endpoint "MethodA": HTTP endpoint request body must be empty when the endpoint uses streaming. Payload attributes must be mapped to headers and/or params.

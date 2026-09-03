@@ -850,24 +850,26 @@ var ResultTypeNestedUserTypeFieldsDSL = func() {
 	})
 }
 
-// ResultTwoUntaggedSuccessResponsesDSL defines a method with two success
-// responses that carry no Tag. Generation renders only the first one, so no
-// conversion must be retained for the second.
-var ResultTwoUntaggedSuccessResponsesDSL = func() {
-	var RT = ResultType("application/vnd.goa.two.untagged", func() {
-		Attributes(func() {
-			Attribute("name", String)
-			Required("name")
-		})
-	})
-
-	Service("ServiceTwoUntaggedResponses", func() {
-		Method("MethodTwoUntaggedResponses", func() {
-			Result(RT)
+// ResultDefaultResponseBeforeTagsDSL defines a default response before two
+// tagged responses. Generated encoders must test the tags in authored order
+// before using the default.
+var ResultDefaultResponseBeforeTagsDSL = func() {
+	Service("ServiceResponseOrder", func() {
+		Method("MethodResponseOrder", func() {
+			Result(func() {
+				Attribute("first", String)
+				Attribute("second", String)
+				Attribute("value", String)
+			})
 			HTTP(func() {
 				POST("/")
 				Response(StatusOK)
-				Response(StatusAccepted)
+				Response(StatusAccepted, func() {
+					Tag("first", "match")
+				})
+				Response(StatusCreated, func() {
+					Tag("second", "match")
+				})
 			})
 		})
 	})

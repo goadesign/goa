@@ -1607,16 +1607,7 @@ func collectPlannedTransforms(
 			panic(err)
 		}
 	}
-	// Generation renders only the first response without a tag, so collecting
-	// conversions for the rest would retain conversions that are never written.
-	noTagSeen := false
 	for _, response := range endpoint.Responses {
-		if response.Tag[0] == "" {
-			if noTagSeen {
-				continue
-			}
-			noTagSeen = true
-		}
 		body := bodies.response(response)
 		origin := ""
 		if value, ok := body.Meta["origin:attribute"]; ok {
@@ -2973,16 +2964,13 @@ func (sds *ServicesData) buildResponses(e *expr.HTTPEndpointExpr, result *expr.A
 			scope = svc.ViewScope
 			svcctx = sds.viewTypeContext(sd, "client").Enter(result)
 		}
-		notag := -1
-		for i, resp := range e.Responses {
+		defaultResponseIndex := -1
+		for _, resp := range e.Responses {
 			respBody := sd.bodies.response(resp)
 			resultOwner := expr.MethodResultExampleIdentity(e.MethodExpr)
 			bodyOwner := expr.ResponseBodyExampleIdentity(e, resp)
 			if resp.Tag[0] == "" {
-				if notag > -1 {
-					continue // we don't want more than one response with no tag
-				}
-				notag = i
+				defaultResponseIndex = len(responses)
 			}
 			var (
 				headersData    []*HeaderData
@@ -3193,9 +3181,12 @@ func (sds *ServicesData) buildResponses(e *expr.HTTPEndpointExpr, result *expr.A
 			}
 		}
 		count := len(responses)
-		if notag >= 0 && notag < count-1 {
-			// Make sure tagless response is last
-			responses[notag], responses[count-1] = responses[count-1], responses[notag]
+		if defaultResponseIndex < count-1 {
+			// Put the default response last so generated encoders test tagged
+			// responses in the order written in the design.
+			defaultResponse := responses[defaultResponseIndex]
+			copy(responses[defaultResponseIndex:], responses[defaultResponseIndex+1:])
+			responses[count-1] = defaultResponse
 		}
 	}
 	return responses
