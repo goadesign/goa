@@ -1,6 +1,6 @@
 # Testing the Planned Generation Preview
 
-Goa `v3.31.0-preview.4` is an opt-in preview of a broad correction to code
+Goa `v3.31.0-preview.5` is an opt-in preview of a broad correction to code
 generation. It is intended for application authors and plugin authors who can
 regenerate their code, review the result, and report problems before the work
 becomes a stable release.
@@ -35,6 +35,28 @@ values that the design rejected, described transport behavior the transport
 could not provide, or exposed generator details as public APIs. The preview
 fixes those contracts together instead of preserving contradictory behavior.
 
+## Changes since preview.4
+
+Preview.5 fixes three generation failures found while testing preview.4:
+
+- an explicit HTTP response body field can be used with a viewed result whose
+  method selects the default view;
+- repeated `CollectionOf` declarations reuse a generated collection type when
+  its identifier has a suffix such as `+json`; and
+- required arrays of user types generate the correct conversion when the
+  enclosing result uses views.
+
+These fixes restore established generated shapes; they do not introduce new
+generated APIs.
+
+Preview.5 also enforces the documented HTTP response-selection rule. A method
+must define exactly one response without `Tag`; this is the default response.
+Every other response must use `Tag` so the generated server can select it from
+the method result. Goa now rejects a second untagged response even when it uses
+a different status code, rather than advertising a response the server can
+never send. Generated encoders test tagged responses in the order written in
+the design and use the default last.
+
 ## Who should test it
 
 Please test the preview if your project has any of these characteristics:
@@ -58,8 +80,8 @@ Start from a branch with the current generated tree committed. Install both the
 Goa module and the `goa` command from the exact preview version:
 
 ```bash
-go get goa.design/goa/v3@v3.31.0-preview.4
-go install goa.design/goa/v3/cmd/goa@v3.31.0-preview.4
+go get goa.design/goa/v3@v3.31.0-preview.5
+go install goa.design/goa/v3/cmd/goa@v3.31.0-preview.5
 goa version
 ```
 
@@ -67,7 +89,7 @@ The Go command records the exact preview version in `go.mod`. The installed
 command reports the same version:
 
 ```text
-Goa version v3.31.0-preview.4
+Goa version v3.31.0-preview.5
 ```
 
 Do not use an older `goa` command with the preview module. Also install the
