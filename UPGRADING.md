@@ -1,6 +1,6 @@
 # Testing the Planned Generation Preview
 
-Goa `v3.31.0-preview.3` is an opt-in preview of a broad correction to code
+Goa `v3.31.0-preview.4` is an opt-in preview of a broad correction to code
 generation. It is intended for application authors and plugin authors who can
 regenerate their code, review the result, and report problems before the work
 becomes a stable release.
@@ -58,8 +58,8 @@ Start from a branch with the current generated tree committed. Install both the
 Goa module and the `goa` command from the exact preview version:
 
 ```bash
-go get goa.design/goa/v3@v3.31.0-preview.3
-go install goa.design/goa/v3/cmd/goa@v3.31.0-preview.3
+go get goa.design/goa/v3@v3.31.0-preview.4
+go install goa.design/goa/v3/cmd/goa@v3.31.0-preview.4
 goa version
 ```
 
@@ -67,7 +67,7 @@ The Go command records the exact preview version in `go.mod`. The installed
 command reports the same version:
 
 ```text
-Goa version v3.31.0-preview.3
+Goa version v3.31.0-preview.4
 ```
 
 Do not use an older `goa` command with the preview module. Also install the
@@ -241,6 +241,31 @@ the type and set the name on each error value. Otherwise, define a separate type
 for each static name. Regenerate the complete design after making the choice;
 generating services separately does not create separate names for a type placed
 in one shared Go package.
+
+### Named string credentials and map keys keep their declared types
+
+Security credentials may use the built-in `String` type or a named string type.
+Generated service, HTTP, and gRPC code now preserves that named type while
+converting its value to the plain string required by authorization functions.
+HTTP Basic authentication also preserves whether an optional username or
+password was absent. It sends the Authorization header whenever either value is
+required or present.
+
+Regenerating changes generated HTTP Basic payload constructor arguments.
+Handwritten code that calls those transport constructors directly must pass the
+username and password values expected by the regenerated signature. Code that
+uses Goa's generated decoders changes automatically.
+
+Goa now rejects security fields that use a non-string type, define a default, or
+use `struct:field:type`. Those designs could not preserve the security contract
+safely and previously produced invalid or misleading code. Replace the field
+with `String` or a named string type and perform any application-specific
+conversion after authorization.
+
+OpenAPI v2 output now also preserves the declared value schema for maps whose
+keys use a named string type. Custom clients generated from the old Swagger may
+have treated those values as unrestricted. Regenerate such clients so they use
+the designed value type.
 
 ## Transport changes
 
