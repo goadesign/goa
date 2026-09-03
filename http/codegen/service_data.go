@@ -2644,6 +2644,42 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 				break
 			}
 		}
+		if len(cliArgs) > 0 {
+			for index, arg := range cliArgs {
+				field := e.MethodExpr.Payload.Find(arg.Name)
+				ctx := svcsvrctx.Enter(field)
+				layout, layoutErr := ctx.Scope.(codegen.GoTypeLayoutResolver).GoTypeLayout(field, ctx.LayoutPolicy())
+				if layoutErr != nil {
+					sds.recordLinkError(layoutErr)
+					return nil
+				}
+				ref := "user"
+				if index == 1 {
+					ref = "pass"
+				}
+				if arg.FieldPointer {
+					ref += "Ptr"
+				}
+				typeRef := "string"
+				if arg.FieldPointer {
+					typeRef = "*string"
+				}
+				serverArgs = append(serverArgs, &InitArgData{
+					Ref: ref,
+					AttributeData: &AttributeData{
+						Name:           arg.Name,
+						VarName:        arg.VarName,
+						TypeRef:        typeRef,
+						Type:           expr.String,
+						Pointer:        arg.FieldPointer,
+						FieldName:      arg.FieldName,
+						FieldType:      arg.FieldType,
+						FieldPointer:   arg.FieldPointer,
+						ServiceTypeRef: layout.Ref(),
+					},
+				})
+			}
+		}
 
 		var (
 			serverCode string
@@ -3009,11 +3045,14 @@ func (sds *ServicesData) buildResponses(e *expr.HTTPEndpointExpr, result *expr.A
 						}
 					}
 					switch {
+					case origin != "":
+						clientBodyData = sds.buildResponseBodyType(respBody, result, e, false, &vname, sd, nil, resultOwner, bodyOwner)
+						clientBodyView = &vname
 					case clientView != "":
 						clientRespBody = effectiveClientResponseBodyForView(respBody, clientView, e)
 						clientBodyData = sds.buildResponseBodyType(clientRespBody, result, e, false, &clientView, sd, nil, resultOwner, bodyOwner)
 						clientBodyView = &clientView
-					case origin != "" || explicitBody:
+					case explicitBody:
 						clientBodyData = sds.buildResponseBodyType(respBody, result, e, false, &vname, sd, nil, resultOwner, bodyOwner)
 						clientBodyView = &vname
 					default:

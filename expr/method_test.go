@@ -19,6 +19,18 @@ func TestMethodExprValidate(t *testing.T) {
 		Error string
 	}{
 		{"valid-security-schemes-extend", testdata.ValidSecuritySchemesExtendDSL, ""},
+		{"valid-named-security-field-types", testdata.ValidNamedSecurityFieldTypesDSL, ""},
+		{"invalid-security-field-type", testdata.InvalidSecurityFieldTypeDSL,
+			`service "InvalidSecurityFieldType" method "Authenticate": security attribute "username" cannot use struct:field:type because authorization functions receive strings`},
+		{"invalid-security-field-data-types", testdata.InvalidSecurityFieldDataTypesDSL,
+			`service "InvalidSecurityFieldDataTypes" method "Authenticate": security attribute "username" must use String or a named String type
+service "InvalidSecurityFieldDataTypes" method "Authenticate": security attribute "password" must use String or a named String type
+service "InvalidSecurityFieldDataTypes" method "Authenticate": security attribute "api_key" must use String or a named String type
+service "InvalidSecurityFieldDataTypes" method "Authenticate": security attribute "bearer" must use String or a named String type
+service "InvalidSecurityFieldDataTypes" method "Authenticate": security attribute "jwt" must use String or a named String type
+service "InvalidSecurityFieldDataTypes" method "Authenticate": security attribute "oauth" must use String or a named String type`},
+		{"invalid-security-field-default", testdata.InvalidSecurityFieldDefaultDSL,
+			`service "InvalidSecurityFieldDefault" method "Authenticate": security attribute "token" cannot have a default value because missing credentials must remain missing`},
 		{"invalid-security-schemes", testdata.InvalidSecuritySchemesDSL,
 			`service "InvalidSecuritySchemesService" method "SecureMethod": payload of method "SecureMethod" of service "InvalidSecuritySchemesService" does not define a username attribute, use Username to define one
 service "InvalidSecuritySchemesService" method "SecureMethod": payload of method "SecureMethod" of service "InvalidSecuritySchemesService" does not define a password attribute, use Password to define one

@@ -873,6 +873,90 @@ var ResultTwoUntaggedSuccessResponsesDSL = func() {
 	})
 }
 
+// ResultTypeRequiredUserTypeArrayDSL defines a result type with a required
+// array of a user type. Generating the response body constructor must spell the
+// element type with the field context: the result type selects a view that does
+// not apply to its nested types.
+var ResultTypeRequiredUserTypeArrayDSL = func() {
+	var Elem = Type("Elem", func() {
+		Attribute("a", String)
+	})
+
+	var RT = ResultType("application/vnd.goa.required.array", func() {
+		Attributes(func() {
+			Attribute("items", ArrayOf(Elem))
+			Required("items")
+		})
+	})
+
+	Service("ServiceResultRequiredUserTypeArray", func() {
+		Method("MethodResultRequiredUserTypeArray", func() {
+			Result(RT)
+			HTTP(func() {
+				GET("/")
+			})
+		})
+	})
+}
+
+// ResultTypeRequiredNestedArrayDSL defines a result type with a required array
+// of arrays of a user type. The element of the outer array is itself an array,
+// so the element type is spelled through one more level of nesting.
+var ResultTypeRequiredNestedArrayDSL = func() {
+	var Elem = Type("NestedElem", func() {
+		Attribute("a", String)
+	})
+
+	var RT = ResultType("application/vnd.goa.required.nested.array", func() {
+		Attributes(func() {
+			Attribute("items", ArrayOf(ArrayOf(Elem)))
+			Required("items")
+		})
+	})
+
+	Service("ServiceResultRequiredNestedArray", func() {
+		Method("MethodResultRequiredNestedArray", func() {
+			Result(RT)
+			HTTP(func() {
+				GET("/")
+			})
+		})
+	})
+}
+
+// ResultTypeMultipleViewsRequiredArrayDSL defines a result type with explicit
+// views and a required array of a user type. The response body is built for a
+// named view, so the view must not leak into the element type.
+var ResultTypeMultipleViewsRequiredArrayDSL = func() {
+	var Elem = Type("ViewedElem", func() {
+		Attribute("a", String)
+	})
+
+	var RT = ResultType("application/vnd.goa.viewed.required.array", func() {
+		Attributes(func() {
+			Attribute("items", ArrayOf(Elem))
+			Attribute("name", String)
+			Required("items")
+		})
+		View("default", func() {
+			Attribute("items")
+			Attribute("name")
+		})
+		View("tiny", func() {
+			Attribute("items")
+		})
+	})
+
+	Service("ServiceResultViewedRequiredArray", func() {
+		Method("MethodResultViewedRequiredArray", func() {
+			Result(RT)
+			HTTP(func() {
+				GET("/")
+			})
+		})
+	})
+}
+
 var ResultWithCustomPkgTypeDSL = func() {
 	var Foo = Type("Foo", func() {
 		Meta("struct:pkg:path", "foo")
@@ -1093,6 +1177,30 @@ var EmptyBodyResultMultipleViewsDSL = func() {
 				Response(StatusOK, func() {
 					Header("c:Location")
 					Body(Empty)
+				})
+			})
+		})
+	})
+}
+
+// ExplicitBodyPrimitiveResultDefaultViewDSL sets the response body to one
+// attribute of a result type that declares no view. The body is an attribute of
+// the result, so no view projection applies to it.
+var ExplicitBodyPrimitiveResultDefaultViewDSL = func() {
+	var ResultType = ResultType("ResultTypeDefaultView", func() {
+		Attribute("a", String, func() {
+			MinLength(5)
+		})
+		Attribute("b", String)
+	})
+	Service("ServiceExplicitBodyPrimitiveResultDefaultView", func() {
+		Method("MethodExplicitBodyPrimitiveResultDefaultView", func() {
+			Result(ResultType)
+			HTTP(func() {
+				POST("/")
+				Response(StatusOK, func() {
+					Header("b:Location")
+					Body("a")
 				})
 			})
 		})

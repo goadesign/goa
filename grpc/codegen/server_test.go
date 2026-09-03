@@ -89,6 +89,7 @@ func TestRequestDecoder(t *testing.T) {
 		{"request-decoder-payload-with-metadata", testdata.MessageWithMetadataDSL},
 		{"request-decoder-payload-with-validate", testdata.MessageWithValidateDSL},
 		{"request-decoder-payload-with-security-attributes", testdata.MessageWithSecurityAttrsDSL},
+		{"request-decoder-named-security-metadata", testdata.NamedSecurityMetadataDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

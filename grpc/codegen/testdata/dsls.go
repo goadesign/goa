@@ -987,6 +987,7 @@ var MessageWithValidateDSL = func() {
 }
 
 var MessageWithSecurityAttrsDSL = func() {
+	var Token = Type("Token", String)
 	var JWTAuth = JWTSecurity("jwt", func() {
 		Scope("api:read", "Read-only access")
 	})
@@ -997,7 +998,7 @@ var MessageWithSecurityAttrsDSL = func() {
 	})
 	var RequestUT = Type("RequestUT", func() {
 		Field(1, "BooleanField", Boolean)
-		TokenField(2, "token", String)
+		TokenField(2, "token", Token)
 		AccessTokenField(3, "oauth_token", String)
 		APIKey("api_key", "key", String)
 		Username("username", String)
@@ -1012,6 +1013,32 @@ var MessageWithSecurityAttrsDSL = func() {
 					Attribute("oauth_token")
 				})
 			})
+		})
+	})
+}
+
+var NamedSecurityMetadataDSL = func() {
+	var Credential = Type("Credential", String)
+	var JWTAuth = JWTSecurity("jwt")
+	var APIKeyAuth = APIKeySecurity("api_key")
+	var BasicAuth = BasicAuthSecurity("basic")
+	var BearerAuth = BearerSecurity("bearer")
+	var OAuth2Auth = OAuth2Security("oauth2")
+	var Request = Type("NamedSecurityRequest", func() {
+		Field(1, "BooleanField", Boolean)
+		TokenField(2, "jwt_token", Credential)
+		AccessTokenField(3, "oauth_token", Credential)
+		APIKey("api_key", "key", Credential)
+		Username("username", Credential)
+		Password("password", Credential)
+		BearerTokenField(7, "bearer_token", Credential)
+		Required("jwt_token", "key", "username")
+	})
+	Service("NamedSecurityMetadata", func() {
+		Method("Authenticate", func() {
+			Security(JWTAuth, OAuth2Auth, APIKeyAuth, BasicAuth, BearerAuth)
+			Payload(Request)
+			GRPC(func() {})
 		})
 	})
 }
