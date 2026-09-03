@@ -850,6 +850,29 @@ var ResultTypeNestedUserTypeFieldsDSL = func() {
 	})
 }
 
+// ResultTwoUntaggedSuccessResponsesDSL defines a method with two success
+// responses that carry no Tag. Generation renders only the first one, so no
+// conversion must be retained for the second.
+var ResultTwoUntaggedSuccessResponsesDSL = func() {
+	var RT = ResultType("application/vnd.goa.two.untagged", func() {
+		Attributes(func() {
+			Attribute("name", String)
+			Required("name")
+		})
+	})
+
+	Service("ServiceTwoUntaggedResponses", func() {
+		Method("MethodTwoUntaggedResponses", func() {
+			Result(RT)
+			HTTP(func() {
+				POST("/")
+				Response(StatusOK)
+				Response(StatusAccepted)
+			})
+		})
+	})
+}
+
 // ResultTypeRequiredUserTypeArrayDSL defines a result type with a required
 // array of a user type. Generating the response body constructor must spell the
 // element type with the field context: the result type selects a view that does
