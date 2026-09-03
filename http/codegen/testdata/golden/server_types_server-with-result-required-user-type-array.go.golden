@@ -1,0 +1,31 @@
+// MethodResultRequiredUserTypeArrayResponseBody is the type of the
+// "ServiceResultRequiredUserTypeArray" service
+// "MethodResultRequiredUserTypeArray" endpoint HTTP response body.
+type MethodResultRequiredUserTypeArrayResponseBody struct {
+	Items []*ElemResponseBody `form:"items" json:"items" xml:"items"`
+}
+
+// ElemResponseBody is used to define fields on response body types.
+type ElemResponseBody struct {
+	A *string `form:"a,omitempty" json:"a,omitempty" xml:"a,omitempty"`
+}
+
+// NewMethodResultRequiredUserTypeArrayResponseBody builds the HTTP response
+// body from the result of the "MethodResultRequiredUserTypeArray" endpoint of
+// the "ServiceResultRequiredUserTypeArray" service.
+func NewMethodResultRequiredUserTypeArrayResponseBody(res *serviceresultrequiredusertypearrayviews.GoaRequiredArrayView) *MethodResultRequiredUserTypeArrayResponseBody {
+	body := &MethodResultRequiredUserTypeArrayResponseBody{}
+	if res.Items != nil {
+		body.Items = make([]*ElemResponseBody, len(res.Items))
+		for i, val := range res.Items {
+			if val == nil {
+				body.Items[i] = nil
+				continue
+			}
+			body.Items[i] = marshalServiceresultrequiredusertypearrayviewsElemViewToElemResponseBody(val)
+		}
+	} else {
+		body.Items = []*ElemResponseBody{}
+	}
+	return body
+}

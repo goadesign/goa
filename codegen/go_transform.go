@@ -1150,7 +1150,8 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 				}
 				code = fmt.Sprintf("%s\t%s}", cond, code)
 				if expr.IsArray(srcc.Type) && srcMatt.IsRequired(n) {
-					code += fmt.Sprintf("else {\n\t%s = []%s{}\n}\n", tgtVar, ta.TargetCtx.Scope.Ref(expr.AsArray(tgtc.Type).ElemType, ta.TargetCtx.Pkg(expr.AsArray(tgtc.Type).ElemType)))
+					elem := expr.AsArray(tgtc.Type).ElemType
+					code += fmt.Sprintf("else {\n\t%s = []%s{}\n}\n", tgtVar, fieldAttrs.TargetCtx.Scope.Ref(elem, fieldAttrs.TargetCtx.Pkg(elem)))
 				} else {
 					code += "\n"
 				}
