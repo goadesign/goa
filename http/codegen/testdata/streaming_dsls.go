@@ -34,6 +34,22 @@ var SkipRequestBodyEncodeDecodeDSL = func() {
 	})
 }
 
+var SkipRequestBodyEncodeDecodeHeaderDSL = func() {
+	Service("SkipRequestBodyEncodeDecodeHeader", func() {
+		Method("Upload", func() {
+			Payload(func() {
+				Attribute("contentType", String)
+			})
+			HTTP(func() {
+				POST("/")
+				Header("contentType:Content-Type")
+				SkipRequestBodyEncodeDecode()
+				Response(StatusNoContent)
+			})
+		})
+	})
+}
+
 var StreamingMultipleServicesDSL = func() {
 	Service("StreamingServiceA", func() {
 		Method("Method", func() {
@@ -57,10 +73,14 @@ var StreamingMultipleServicesDSL = func() {
 
 var StreamingResultDSL = func() {
 	var Request = Type("Request", func() {
-		Attribute("x", String)
+		Attribute("x", String, func() {
+			Example("request")
+		})
 	})
 	var Result = Type("UserType", func() {
-		Attribute("a", String)
+		Attribute("a", String, func() {
+			Example("event")
+		})
 	})
 	Service("StreamingResultService", func() {
 		Method("StreamingResultMethod", func() {
@@ -76,15 +96,21 @@ var StreamingResultDSL = func() {
 
 var MixedResultsDSL = func() {
 	var PayloadType = Type("Payload", func() {
-		Attribute("x", String)
+		Attribute("x", String, func() {
+			Example("request")
+		})
 		Required("x")
 	})
 	var ResultType = Type("Result", func() {
-		Attribute("id", String)
+		Attribute("id", String, func() {
+			Example("result")
+		})
 		Required("id")
 	})
 	var EventType = Type("Event", func() {
-		Attribute("message", String)
+		Attribute("message", String, func() {
+			Example("event")
+		})
 		Required("message")
 	})
 	Service("MixedResultsService", func() {
@@ -472,34 +498,6 @@ var StreamingPayloadNoResultDSL = func() {
 	})
 }
 
-var StreamingPayloadResultWithViewsDSL = func() {
-	var ResultT = ResultType("UserType", func() {
-		Attributes(func() {
-			Attribute("a", String)
-			Attribute("b", Int)
-			Attribute("c", String)
-		})
-		View("tiny", func() {
-			Attribute("a", String)
-		})
-		View("extended", func() {
-			Attribute("a")
-			Attribute("b")
-			Attribute("c")
-		})
-	})
-	Service("StreamingPayloadResultWithViewsService", func() {
-		Method("StreamingPayloadResultWithViewsMethod", func() {
-			StreamingPayload(Float32)
-			Result(ResultT)
-			HTTP(func() {
-				GET("/")
-				Response(StatusOK)
-			})
-		})
-	})
-}
-
 var StreamingPayloadResultWithExplicitViewDSL = func() {
 	var ResultT = ResultType("UserType", func() {
 		Attributes(func() {
@@ -522,34 +520,6 @@ var StreamingPayloadResultWithExplicitViewDSL = func() {
 			Result(ResultT, func() {
 				View("extended")
 			})
-			HTTP(func() {
-				GET("/")
-				Response(StatusOK)
-			})
-		})
-	})
-}
-
-var StreamingPayloadResultCollectionWithViewsDSL = func() {
-	var ResultT = ResultType("UserType", func() {
-		Attributes(func() {
-			Attribute("a", String)
-			Attribute("b", Int)
-			Attribute("c", String)
-		})
-		View("tiny", func() {
-			Attribute("a", String)
-		})
-		View("extended", func() {
-			Attribute("a")
-			Attribute("b")
-			Attribute("c")
-		})
-	})
-	Service("StreamingPayloadResultCollectionWithViewsService", func() {
-		Method("StreamingPayloadResultCollectionWithViewsMethod", func() {
-			StreamingPayload(Any)
-			Result(CollectionOf(ResultT))
 			HTTP(func() {
 				GET("/")
 				Response(StatusOK)
@@ -711,34 +681,6 @@ var BidirectionalStreamingUserTypeMapDSL = func() {
 	})
 }
 
-var BidirectionalStreamingResultWithViewsDSL = func() {
-	var ResultT = ResultType("UserType", func() {
-		Attributes(func() {
-			Attribute("a", String)
-			Attribute("b", Int)
-			Attribute("c", String)
-		})
-		View("tiny", func() {
-			Attribute("a", String)
-		})
-		View("extended", func() {
-			Attribute("a")
-			Attribute("b")
-			Attribute("c")
-		})
-	})
-	Service("BidirectionalStreamingResultWithViewsService", func() {
-		Method("BidirectionalStreamingResultWithViewsMethod", func() {
-			StreamingPayload(Float32)
-			StreamingResult(ResultT)
-			HTTP(func() {
-				GET("/")
-				Response(StatusOK)
-			})
-		})
-	})
-}
-
 var BidirectionalStreamingResultWithExplicitViewDSL = func() {
 	var ResultT = ResultType("UserType", func() {
 		Attributes(func() {
@@ -761,34 +703,6 @@ var BidirectionalStreamingResultWithExplicitViewDSL = func() {
 			StreamingResult(ResultT, func() {
 				View("extended")
 			})
-			HTTP(func() {
-				GET("/")
-				Response(StatusOK)
-			})
-		})
-	})
-}
-
-var BidirectionalStreamingResultCollectionWithViewsDSL = func() {
-	var ResultT = ResultType("UserType", func() {
-		Attributes(func() {
-			Attribute("a", String)
-			Attribute("b", Int)
-			Attribute("c", String)
-		})
-		View("tiny", func() {
-			Attribute("a", String)
-		})
-		View("extended", func() {
-			Attribute("a")
-			Attribute("b")
-			Attribute("c")
-		})
-	})
-	Service("BidirectionalStreamingResultCollectionWithViewsService", func() {
-		Method("BidirectionalStreamingResultCollectionWithViewsMethod", func() {
-			StreamingPayload(Any)
-			StreamingResult(CollectionOf(ResultT))
 			HTTP(func() {
 				GET("/")
 				Response(StatusOK)

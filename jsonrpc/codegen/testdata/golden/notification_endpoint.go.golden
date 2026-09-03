@@ -1,0 +1,187 @@
+package client
+
+// WithPayload returns an endpoint that sends JSON-RPC notifications to the
+// notifications service with_payload method.
+func (c *Client) WithPayload() goa.Endpoint {
+	var (
+		encodeRequest = EncodeWithPayloadRequest(c.encoder)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildWithPayloadRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		if err := encodeRequest(req, v); err != nil {
+			return nil, err
+		}
+		resp, err := c.Doer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("notifications", "with_payload", err)
+		}
+		if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+			body, readErr := io.ReadAll(resp.Body)
+			closeErr := resp.Body.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("notifications", "with_payload", err)
+			}
+			return nil, goahttp.ErrInvalidResponse("notifications", "with_payload", resp.StatusCode, string(body))
+		}
+		if err := resp.Body.Close(); err != nil {
+			return nil, goahttp.ErrDecodingError("notifications", "with_payload", err)
+		}
+		return nil, nil
+	}
+}
+
+// WithoutPayload returns an endpoint that sends JSON-RPC notifications to the
+// notifications service without_payload method.
+func (c *Client) WithoutPayload() goa.Endpoint {
+	var (
+		encodeRequest = EncodeWithoutPayloadRequest(c.encoder)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildWithoutPayloadRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		if err := encodeRequest(req, v); err != nil {
+			return nil, err
+		}
+		resp, err := c.Doer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("notifications", "without_payload", err)
+		}
+		if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+			body, readErr := io.ReadAll(resp.Body)
+			closeErr := resp.Body.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("notifications", "without_payload", err)
+			}
+			return nil, goahttp.ErrInvalidResponse("notifications", "without_payload", resp.StatusCode, string(body))
+		}
+		if err := resp.Body.Close(); err != nil {
+			return nil, goahttp.ErrDecodingError("notifications", "without_payload", err)
+		}
+		return nil, nil
+	}
+}
+
+// OrdinaryVoid returns an endpoint that makes JSON-RPC requests to the
+// notifications service ordinary_void method.
+func (c *Client) OrdinaryVoid() goa.Endpoint {
+	var (
+		encodeRequest  = EncodeOrdinaryVoidRequest(c.encoder)
+		decodeResponse = DecodeOrdinaryVoidResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildOrdinaryVoidRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		requestID, err := encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.Doer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("notifications", "ordinary_void", err)
+		}
+		return decodeResponse(resp, requestID)
+	}
+}
+
+// RequiredID returns an endpoint that makes JSON-RPC requests to the
+// notifications service required_id method.
+func (c *Client) RequiredID() goa.Endpoint {
+	var (
+		encodeRequest  = EncodeRequiredIDRequest(c.encoder)
+		decodeResponse = DecodeRequiredIDResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildRequiredIDRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		requestID, err := encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.Doer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("notifications", "required_id", err)
+		}
+		return decodeResponse(resp, requestID)
+	}
+}
+
+// OptionalID returns an endpoint that makes JSON-RPC requests to the
+// notifications service optional_id method.
+func (c *Client) OptionalID() goa.Endpoint {
+	var (
+		encodeRequest  = EncodeOptionalIDRequest(c.encoder)
+		decodeResponse = DecodeOptionalIDResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildOptionalIDRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		requestID, err := encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.Doer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("notifications", "optional_id", err)
+		}
+		return decodeResponse(resp, requestID)
+	}
+}
+
+// DefaultedID returns an endpoint that makes JSON-RPC requests to the
+// notifications service defaulted_id method.
+func (c *Client) DefaultedID() goa.Endpoint {
+	var (
+		encodeRequest  = EncodeDefaultedIDRequest(c.encoder)
+		decodeResponse = DecodeDefaultedIDResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildDefaultedIDRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		requestID, err := encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.Doer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("notifications", "defaulted_id", err)
+		}
+		return decodeResponse(resp, requestID)
+	}
+}
+
+// ValidatedID returns an endpoint that makes JSON-RPC requests to the
+// notifications service validated_id method.
+func (c *Client) ValidatedID() goa.Endpoint {
+	var (
+		encodeRequest  = EncodeValidatedIDRequest(c.encoder)
+		decodeResponse = DecodeValidatedIDResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildValidatedIDRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		requestID, err := encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.Doer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("notifications", "validated_id", err)
+		}
+		return decodeResponse(resp, requestID)
+	}
+}

@@ -1,0 +1,144 @@
+{
+  "consumes": [
+    "application/json",
+    "application/xml",
+    "application/gob"
+  ],
+  "definitions": {
+    "StorageStoredBottleResponseCollection": {
+      "description": "list_default_response_body is the result type for an array of StoredBottle (default view)",
+      "example": [
+        {
+          "name": "Blue's Cuvee",
+          "vintage": 2003
+        },
+        {
+          "name": "Blue's Cuvee",
+          "vintage": 2003
+        },
+        {
+          "name": "Blue's Cuvee",
+          "vintage": 2003
+        }
+      ],
+      "items": {
+        "$ref": "#/definitions/StoredBottleResponse"
+      },
+      "title": "Mediatype identifier: application/vnd.stored-bottle; type=collection; view=default",
+      "type": "array"
+    },
+    "StorageStoredBottleResponseTinyCollection": {
+      "description": "StorageStoredBottleResponseTinyCollection is the result type for an array of StoredBottleResponseTiny (default view)",
+      "example": [
+        {
+          "name": "Blue's Cuvee"
+        },
+        {
+          "name": "Blue's Cuvee"
+        },
+        {
+          "name": "Blue's Cuvee"
+        }
+      ],
+      "items": {
+        "$ref": "#/definitions/StoredBottleResponseTiny"
+      },
+      "title": "Mediatype identifier: application/vnd.stored-bottle; type=collection; view=tiny",
+      "type": "array"
+    },
+    "StoredBottleResponse": {
+      "description": "StoredBottle result type (default view)",
+      "example": {
+        "name": "Blue's Cuvee",
+        "vintage": 2003
+      },
+      "properties": {
+        "name": {
+          "example": "Blue's Cuvee",
+          "type": "string"
+        },
+        "vintage": {
+          "example": 2003,
+          "format": "int32",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "name",
+        "vintage"
+      ],
+      "title": "Mediatype identifier: application/vnd.stored-bottle; view=default",
+      "type": "object"
+    },
+    "StoredBottleResponseTiny": {
+      "description": "StoredBottle result type (tiny view) (default view)",
+      "example": {
+        "name": "Blue's Cuvee"
+      },
+      "properties": {
+        "name": {
+          "example": "Blue's Cuvee",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "Mediatype identifier: application/vnd.stored-bottle; view=default",
+      "type": "object"
+    }
+  },
+  "host": "localhost:80",
+  "info": {
+    "title": "",
+    "version": "0.0.1"
+  },
+  "paths": {
+    "/default": {
+      "get": {
+        "operationId": "storage#list_default",
+        "responses": {
+          "200": {
+            "description": "OK response.",
+            "schema": {
+              "$ref": "#/definitions/StorageStoredBottleResponseCollection"
+            }
+          }
+        },
+        "schemes": [
+          "http"
+        ],
+        "summary": "list_default storage",
+        "tags": [
+          "storage"
+        ]
+      }
+    },
+    "/tiny": {
+      "get": {
+        "operationId": "storage#list_tiny",
+        "responses": {
+          "200": {
+            "description": "OK response.",
+            "schema": {
+              "$ref": "#/definitions/StorageStoredBottleResponseTinyCollection"
+            }
+          }
+        },
+        "schemes": [
+          "http"
+        ],
+        "summary": "list_tiny storage",
+        "tags": [
+          "storage"
+        ]
+      }
+    }
+  },
+  "produces": [
+    "application/json",
+    "application/xml",
+    "application/gob"
+  ],
+  "swagger": "2.0"
+}

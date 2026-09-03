@@ -1,8 +1,8 @@
+// This file verifies protobuf wire shaping, naming, JSON options, wrappers,
+// and recursion follow generated-package declaration ownership.
 package codegen
 
 import (
-	"os"
-	"regexp"
 	"strings"
 	"testing"
 
@@ -10,55 +10,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
-	. "goa.design/goa/v3/dsl"
+	"goa.design/goa/v3/dsl"
 	"goa.design/goa/v3/expr"
 )
-
-func TestProtobufify(t *testing.T) {
-	cases := []struct {
-		Name       string
-		String     string
-		FirstUpper bool
-		Acronym    bool
-		Expected   string
-	}{{
-		"AllLower", "lower", false, false, "lower",
-	}, {
-		"AllLowerFirstUpper", "lower", true, false, "Lower",
-	}, {
-		"AllUpper", "UPPER", false, false, "uPPER",
-	}, {
-		"AllUpperFirstUpper", "UPPER", true, false, "UPPER",
-	}, {
-		"StartUpperThenLower", "Upper", false, false, "upper",
-	}, {
-		"StartUpperThenLowerFirstUpper", "Upper", true, false, "Upper",
-	}, {
-		"StartsWithUnderscore", "_foo", false, false, "foo",
-	}, {
-		"EndsWithUnderscore", "foo_", false, false, "foo",
-	}, {
-		"ContainsUnderscore", "foo_bar", false, false, "fooBar",
-	}, {
-		"StartsWithDigits", "123foo", false, false, "123Foo",
-	}, {
-		"EndsWithDigits", "foo123", false, false, "foo123",
-	}, {
-		"ContainsDigits", "foo123bar", false, false, "foo123Bar",
-	}, {
-		"ContainsIgnoredAcronym", "foo_jwt", false, false, "fooJwt",
-	}, {
-		"ContainsAcronym", "foo_jwt", false, true, "fooJWT",
-	}}
-	for _, c := range cases {
-		t.Run(c.Name, func(t *testing.T) {
-			got := protoBufify(c.String, c.FirstUpper, c.Acronym)
-			if got != c.Expected {
-				t.Errorf("got %q, expected %q", got, c.Expected)
-			}
-		})
-	}
-}
 
 func TestProtoNativeType(t *testing.T) {
 	cases := []struct {
@@ -140,6 +94,16 @@ func TestProtoBufNativeGoTypeName(t *testing.T) {
 	}
 }
 
+// TestProtoBufTypeContextPreservesPrimitivePresence checks that protobuf Go
+// values always retain scalar presence and never apply service defaults.
+func TestProtoBufTypeContextPreservesPrimitivePresence(t *testing.T) {
+	sd := &ServiceData{Scope: codegen.NewNameScope()}
+	ctx := protoBufTypeContext("proto", sd)
+	require.True(t, ctx.Pointer)
+	require.False(t, ctx.IgnoreRequired)
+	require.False(t, ctx.UseDefault)
+}
+
 func TestHasAnyType(t *testing.T) {
 	cases := []struct {
 		Name     string
@@ -185,6 +149,27 @@ func TestHasAnyType(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestHasAnyTypeStopsAtRecursiveTypes checks that a cycle does not hide an Any
+// field elsewhere in the same type.
+func TestHasAnyTypeStopsAtRecursiveTypes(t *testing.T) {
+	recursive := &expr.UserTypeExpr{TypeName: "Recursive", UID: "recursive"}
+	recursive.AttributeExpr = &expr.AttributeExpr{Type: &expr.Object{
+		&expr.NamedAttributeExpr{
+			Name:      "next",
+			Attribute: &expr.AttributeExpr{Type: recursive},
+		},
+		&expr.NamedAttributeExpr{
+			Name:      "data",
+			Attribute: &expr.AttributeExpr{Type: expr.Any},
+		},
+	}}
+	require.True(t, hasAnyType(recursive.Attribute()))
+
+	object := expr.AsObject(recursive.Attribute().Type)
+	*object = (*object)[:1]
+	require.False(t, hasAnyType(recursive.Attribute()))
 }
 
 func TestProtoBufMessageDefJSONNameOption(t *testing.T) {
@@ -234,120 +219,12 @@ func TestProtoBufMessageDefJSONNameOptionOneOf(t *testing.T) {
 	}
 }
 
-func TestProtoBufMessageDefOneOfUsesAttributeName(t *testing.T) {
-	tests := []struct {
-		name          string
-		unionName     string
-		members       []string
-		wantOneof     string
-		wantGoField   string
-		unwantedOneof string
-	}{
-		{
-			name:          "custom service name",
-			unionName:     "subject",
-			members:       []string{"equipment", "facility"},
-			wantOneof:     "subject",
-			wantGoField:   "Subject",
-			unwantedOneof: "alarm_info_subject",
-		},
-		{
-			name:        "member name collision",
-			unionName:   "subject",
-			members:     []string{"subject", "facility"},
-			wantOneof:   "subject_oneof",
-			wantGoField: "SubjectOneof",
-		},
-		{
-			name:        "repeated member name collision",
-			unionName:   "subject",
-			members:     []string{"subject", "subject_oneof", "facility"},
-			wantOneof:   "subject_oneof_oneof",
-			wantGoField: "SubjectOneofOneof",
-		},
-		{
-			name:        "generated method collision",
-			unionName:   "reset",
-			members:     []string{"value"},
-			wantOneof:   "reset",
-			wantGoField: "Reset_",
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			root := codegen.RunDSL(t, func() {
-				Type("Alarm", func() {
-					OneOf(test.unionName, func() {
-						TypeName("AlarmInfoSubject")
-						for i, member := range test.members {
-							Field(i+1, member, String)
-						}
-					})
-				})
-			})
-			alarm := root.UserType("Alarm")
-			subject := alarm.Attribute().Find(test.unionName)
-			require.Equal(t, "AlarmInfoSubject", subject.Type.Name())
-
-			sd := &ServiceData{Scope: codegen.NewNameScope()}
-			def := protoBufMessageDef(alarm.Attribute(), sd)
-
-			require.Contains(t, def, "oneof "+test.wantOneof+" {")
-			if test.unwantedOneof != "" {
-				require.NotContains(t, def, "oneof "+test.unwantedOneof+" {")
-			}
-
-			proto := "syntax = \"proto3\";\npackage test;\noption go_package = \"example.com/test;test\";\nmessage Alarm" + def
-			fpath := codegen.CreateTempFile(t, proto)
-			require.NoError(t, protoc(defaultProtocCmd, fpath, nil))
-			generated, err := os.ReadFile(fpath + ".pb.go")
-			require.NoError(t, err)
-			require.Regexp(
-				t,
-				regexp.MustCompile(`\n\t`+regexp.QuoteMeta(test.wantGoField)+`\s+isAlarm_`),
-				string(generated),
-			)
-
-			source := makeProtoBufMessage(expr.DupAtt(alarm.Attribute()), alarm.Name(), sd)
-			transform, _, err := protoBufTransform(
-				source,
-				alarm.Attribute(),
-				"source",
-				"target",
-				protoBufTypeContext("test", sd.Scope, true),
-				serviceTypeContext("test", sd.Scope),
-				false,
-				true,
-			)
-			require.NoError(t, err)
-			code := codegen.FormatTestCode(t, "package test\nfunc transform() {\n"+transform+"}")
-			require.Contains(t, code, "source."+test.wantGoField)
-			require.NotContains(t, code, "source.AlarmInfoSubject")
-
-			transform, _, err = protoBufTransform(
-				alarm.Attribute(),
-				source,
-				"source",
-				"target",
-				serviceTypeContext("test", sd.Scope),
-				protoBufTypeContext("test", sd.Scope, true),
-				true,
-				true,
-			)
-			require.NoError(t, err)
-			code = codegen.FormatTestCode(t, "package test\nfunc transform() {\n"+transform+"}")
-			require.Contains(t, code, "target."+test.wantGoField)
-			require.NotContains(t, code, "target.AlarmInfoSubject")
-		})
-	}
-}
-
 func TestProtoBufMessageDefReservations(t *testing.T) {
 	root := codegen.RunDSL(t, func() {
-		Type("Activation", func() {
-			Meta("rpc:reserved:number", "20", "3", "15")
-			Meta("rpc:reserved:name", "linked_control_point_id", "deployment_id")
-			Field(1, "id", String)
+		dsl.Type("Activation", func() {
+			dsl.Meta("rpc:reserved:number", "20", "3", "15")
+			dsl.Meta("rpc:reserved:name", "linked_control_point_id", "deployment_id")
+			dsl.Field(1, "id", dsl.String)
 		})
 	})
 	activation := root.UserType("Activation")
@@ -358,7 +235,7 @@ func TestProtoBufMessageDefReservations(t *testing.T) {
 
 	proto := "syntax = \"proto3\";\npackage test;\noption go_package = \"example.com/test;test\";\nmessage Activation" + def
 	fpath := codegen.CreateTempFile(t, proto)
-	require.NoError(t, protoc(defaultProtocCmd, fpath, nil))
+	require.NoError(t, protoc(defaultProtocCmd, fpath))
 }
 
 func TestMakeProtoBufMessageMarksWrappers(t *testing.T) {
@@ -402,8 +279,11 @@ func TestMakeProtoBufMessageMarksWrappers(t *testing.T) {
 	}}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			sd := &ServiceData{Name: "Service", Scope: codegen.NewNameScope()}
-			att := makeProtoBufMessage(&expr.AttributeExpr{Type: c.Type()}, "Message", sd)
+			att := makeProtoBufMessage(
+				&expr.AttributeExpr{Type: c.Type()},
+				"Message",
+				testGRPCMessageExampleIdentity(c.Name),
+			)
 			require.True(t, isWrappedAttr(att), "expected message to be marked as a wrapper")
 			field := unwrapAttr(att)
 			assert.Equal(t, c.FieldKind, field.Type.Kind(), "unexpected wrapped field kind")
@@ -414,6 +294,147 @@ func TestMakeProtoBufMessageMarksWrappers(t *testing.T) {
 				assert.Equal(t, expr.ArrayKind, inner.Type.Kind(), "unexpected nested wrapped field kind")
 			}
 		})
+	}
+}
+
+func TestMakeProtoBufMessageDistinguishesEqualUIDOrigins(t *testing.T) {
+	first := protobufArrayTraversalType("First", "shared")
+	second := protobufArrayTraversalType("Second", "shared")
+	body := &expr.AttributeExpr{Type: &expr.Object{
+		{Name: "first", Attribute: &expr.AttributeExpr{Type: first}},
+		{Name: "second", Attribute: &expr.AttributeExpr{Type: second}},
+	}}
+
+	message := makeProtoBufMessage(body, "Request", testGRPCMessageExampleIdentity("equal-UID-origins"))
+	object := expr.AsObject(message.Type.(expr.UserType).Attribute().Type)
+	wireFirst := object.Attribute("first").Type.(expr.UserType)
+	wireSecond := object.Attribute("second").Type.(expr.UserType)
+	require.True(t, isWrappedAttr(&expr.AttributeExpr{Type: wireFirst}))
+	require.True(t, isWrappedAttr(&expr.AttributeExpr{Type: wireSecond}))
+}
+
+func TestMakeProtoBufMessageDistinguishesNormalizedMethodNames(t *testing.T) {
+	service := &expr.ServiceExpr{Name: "Values"}
+	dashedMethod := &expr.MethodExpr{Name: "foo-bar", Service: service}
+	underscoreMethod := &expr.MethodExpr{Name: "foo_bar", Service: service}
+	dashedOwner := expr.GRPCRequestMessageExampleIdentity(dashedMethod)
+	underscoreOwner := expr.GRPCRequestMessageExampleIdentity(underscoreMethod)
+	dashed := makeProtoBufMessage(
+		&expr.AttributeExpr{Type: &expr.Object{
+			{Name: "dashed", Attribute: &expr.AttributeExpr{Type: expr.String}},
+		}},
+		"FooBarRequest",
+		dashedOwner,
+	)
+	underscore := makeProtoBufMessage(
+		&expr.AttributeExpr{Type: &expr.Object{
+			{Name: "underscore", Attribute: &expr.AttributeExpr{Type: expr.String}},
+		}},
+		"FooBarRequest",
+		underscoreOwner,
+	)
+	require.NotEqual(t, dashed.Type.(expr.UserType).ID(), underscore.Type.(expr.UserType).ID())
+
+	cases := []struct {
+		name        string
+		first       *expr.AttributeExpr
+		firstOwner  expr.ExampleIdentity
+		firstField  string
+		second      *expr.AttributeExpr
+		secondOwner expr.ExampleIdentity
+		secondField string
+	}{
+		{
+			name:        "dashed then underscore",
+			first:       dashed,
+			firstOwner:  dashedOwner,
+			firstField:  "dashed",
+			second:      underscore,
+			secondOwner: underscoreOwner,
+			secondField: "underscore",
+		},
+		{
+			name:        "underscore then dashed",
+			first:       underscore,
+			firstOwner:  underscoreOwner,
+			firstField:  "underscore",
+			second:      dashed,
+			secondOwner: dashedOwner,
+			secondField: "dashed",
+		},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			generator := expr.NewExampleGenerator(expr.NewFakerRandomizerFactory("test"))
+			first := test.first.Example(generator.At(test.firstOwner)).(map[string]any)
+			second := test.second.Example(generator.At(test.secondOwner)).(map[string]any)
+
+			require.Contains(t, first, test.firstField)
+			require.NotContains(t, first, test.secondField)
+			require.Contains(t, second, test.secondField)
+			require.NotContains(t, second, test.firstField)
+		})
+	}
+}
+
+func TestMakeProtoBufMessageSharesAuthoredCollectionWrapperIdentity(t *testing.T) {
+	arrayAlias := &expr.UserTypeExpr{
+		TypeName: "Strings",
+		UID:      "strings",
+		AttributeExpr: &expr.AttributeExpr{Type: &expr.Array{
+			ElemType: &expr.AttributeExpr{Type: expr.String},
+		}},
+	}
+	mapAlias := &expr.UserTypeExpr{
+		TypeName: "Labels",
+		UID:      "labels",
+		AttributeExpr: &expr.AttributeExpr{Type: &expr.Map{
+			KeyType:  &expr.AttributeExpr{Type: expr.String},
+			ElemType: &expr.AttributeExpr{Type: expr.Int},
+		}},
+	}
+	owner := testGRPCMessageExampleIdentity("shared-collection-aliases")
+	build := func(fields []string) *expr.AttributeExpr {
+		attributes := make(expr.Object, len(fields))
+		for index, name := range fields {
+			typ := expr.UserType(arrayAlias)
+			if name == "map_a" || name == "map_b" {
+				typ = mapAlias
+			}
+			attributes[index] = &expr.NamedAttributeExpr{
+				Name:      name,
+				Attribute: &expr.AttributeExpr{Type: typ},
+			}
+		}
+		return makeProtoBufMessage(
+			&expr.AttributeExpr{Type: &attributes},
+			"SharedCollectionsRequest",
+			owner,
+		)
+	}
+	forward := build([]string{"array_a", "map_a", "array_b", "map_b"})
+	reverse := build([]string{"map_b", "array_b", "map_a", "array_a"})
+	example := func(message *expr.AttributeExpr) map[string]any {
+		generator := expr.NewExampleGenerator(expr.NewFakerRandomizerFactory("test"))
+		return message.Example(generator.At(owner)).(map[string]any)
+	}
+
+	forwardExample := example(forward)
+	reverseExample := example(reverse)
+	require.Equal(t, forwardExample, reverseExample)
+	require.Equal(t, forwardExample["array_a"], forwardExample["array_b"])
+	require.Equal(t, forwardExample["map_a"], forwardExample["map_b"])
+}
+
+// protobufArrayTraversalType builds an authored array declaration that protobuf
+// conversion must wrap in a message.
+func protobufArrayTraversalType(name, uid string) *expr.UserTypeExpr {
+	return &expr.UserTypeExpr{
+		AttributeExpr: &expr.AttributeExpr{Type: &expr.Array{
+			ElemType: &expr.AttributeExpr{Type: expr.String},
+		}},
+		TypeName: name,
+		UID:      uid,
 	}
 }
 

@@ -15,13 +15,13 @@ func {{ .HandlerInit }}(
 	var (
 	{{- end }}
 		{{- if mustDecodeRequest . }}
-		decodeRequest  = {{ .RequestDecoder }}(mux, decoder)
+		decodeRequest  = {{ .RequestDecoderDeclaration.Name }}(mux, decoder)
 		{{- end }}
 		{{- if not (or .Redirect (isWebSocketEndpoint .) (and (isSSEEndpoint .) (not .HasMixedResults))) }}
-		encodeResponse = {{ .ResponseEncoder }}(encoder)
+		encodeResponse = {{ .ResponseEncoderDeclaration.Name }}(encoder)
 		{{- end }}
 		{{- if (or (mustDecodeRequest .) (not .Redirect) .Method.SkipResponseBodyEncodeDecode) }}
-		encodeError    = {{ if .Errors }}{{ .ErrorEncoder }}{{ else }}goahttp.ErrorEncoder{{ end }}(encoder, formatter)
+		encodeError    = {{ if .Errors }}{{ .ErrorEncoderDeclaration.Name }}{{ else }}goahttp.ErrorEncoder{{ end }}(encoder, formatter)
 		{{- end }}
 	{{- if (or (mustDecodeRequest .) (not (or .Redirect (isWebSocketEndpoint .) (and (isSSEEndpoint .) (not .HasMixedResults)))) (not .Redirect) .Method.SkipResponseBodyEncodeDecode) }}
 	)
@@ -63,7 +63,7 @@ func {{ .HandlerInit }}(
 			}
 		{{- end }}
 			v := &{{ .ServicePkgName }}.{{ .Method.ServerStream.EndpointStruct }}{
-				Stream: &{{ .SSE.StructName }}{
+				Stream: &{{ .SSE.StructDeclaration.Name }}{
 					w: w,
 					r: r,
 				},
@@ -72,7 +72,17 @@ func {{ .HandlerInit }}(
 			{{- end }}
 			}
 			_, err = endpoint(ctx, v)
+			stream := v.Stream.(*{{ .SSE.StructDeclaration.Name }})
+			if err == nil {
+				err = stream.finish()
+			}
 			if err != nil {
+				if stream.attempted {
+					if errhandler != nil {
+						errhandler(ctx, w, err)
+					}
+					return
+				}
 				if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
 					errhandler(ctx, w, err)
 				}
@@ -98,7 +108,7 @@ func {{ .HandlerInit }}(
 			// In the standard (non-SSE) mode, Stream discards events and the service
 			// must return the synchronous result.
 			v := &{{ .ServicePkgName }}.{{ .Method.ServerStream.EndpointStruct }}{
-				Stream: &discard{{ .Method.VarName }}ServerStream{},
+				Stream: &{{ .DiscardStreamDeclaration.Name }}{},
 			{{- if .Payload.Ref }}
 				Payload: payload,
 			{{- end }}
@@ -176,7 +186,7 @@ func {{ .HandlerInit }}(
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithCancel(ctx)
 		v := &{{ .ServicePkgName }}.{{ .Method.ServerStream.EndpointStruct }}{
-			Stream: &{{ .ServerWebSocket.VarName }}{
+			Stream: &{{ .ServerWebSocket.VarDeclaration.Name }}{
 				upgrader: upgrader,
 				configurer: configurer,
 				cancel: cancel,
@@ -205,7 +215,7 @@ func {{ .HandlerInit }}(
 		}
 		{{- end }}
 		v := &{{ .ServicePkgName }}.{{ .Method.ServerStream.EndpointStruct }}{
-			Stream: &{{ .SSE.StructName }}{
+			Stream: &{{ .SSE.StructDeclaration.Name }}{
 				w: w,
 				r: r,
 			},
@@ -214,6 +224,10 @@ func {{ .HandlerInit }}(
 		{{- end }}
 		}
 		_, err = endpoint(ctx, v)
+		if err == nil {
+			stream := v.Stream.(*{{ .SSE.StructDeclaration.Name }})
+			err = stream.finish()
+		}
 	{{- else if .Method.SkipRequestBodyEncodeDecode }}
 		data := &{{ .ServicePkgName }}.{{ .Method.RequestStruct }}{ {{ if .Payload.Ref }}Payload: payload, {{ end }}Body: r.Body }
 		res, err := endpoint(ctx, data)
@@ -225,14 +239,23 @@ func {{ .HandlerInit }}(
 	{{- if not .Redirect }}
 		if err != nil {
 			{{- if isWebSocketEndpoint . }}
-			var stream *{{ .ServerWebSocket.VarName }}
+			var stream *{{ .ServerWebSocket.VarDeclaration.Name }}
 			if wrapper, ok := v.Stream.(interface{ Unwrap() any }); ok {
-				stream = wrapper.Unwrap().(*{{ .ServerWebSocket.VarName }})
+				stream = wrapper.Unwrap().(*{{ .ServerWebSocket.VarDeclaration.Name }})
 			} else {
-				stream = v.Stream.(*{{ .ServerWebSocket.VarName }})
+				stream = v.Stream.(*{{ .ServerWebSocket.VarDeclaration.Name }})
 			}
 			if stream != nil && stream.conn != nil {
 				// Response writer has been hijacked, do not encode the error
+				if errhandler != nil {
+					errhandler(ctx, w, err)
+				}
+				return
+			}
+			{{- end }}
+			{{- if isSSEEndpoint . }}
+			stream := v.Stream.(*{{ .SSE.StructDeclaration.Name }})
+			if stream.attempted {
 				if errhandler != nil {
 					errhandler(ctx, w, err)
 				}
@@ -301,24 +324,24 @@ func {{ .HandlerInit }}(
 
 {{- if .HasMixedResults }}
 
-// discard{{ .Method.VarName }}ServerStream implements the {{ .SSE.Interface }}
+// {{ .DiscardStreamDeclaration.Name }} implements the {{ .SSE.Interface }}
 // interface and drops all events. It is used for mixed results endpoints in
-// unary (non-SSE) mode so service implementations can use the stream parameter
-// without nil checks.
-type discard{{ .Method.VarName }}ServerStream struct{}
+// regular HTTP requests so service implementations can use the stream
+// parameter without nil checks.
+type {{ .DiscardStreamDeclaration.Name }} struct{}
 
 // {{ .SSE.SendName }} discards the event.
-func (s *discard{{ .Method.VarName }}ServerStream) {{ .SSE.SendName }}(v {{ .SSE.EventTypeRef }}) error {
+func (s *{{ .DiscardStreamDeclaration.Name }}) {{ .SSE.SendName }}(v {{ .SSE.EventTypeRef }}) error {
 	return nil
 }
 
 // {{ .SSE.SendWithContextName }} discards the event.
-func (s *discard{{ .Method.VarName }}ServerStream) {{ .SSE.SendWithContextName }}(ctx context.Context, v {{ .SSE.EventTypeRef }}) error {
+func (s *{{ .DiscardStreamDeclaration.Name }}) {{ .SSE.SendWithContextName }}(ctx context.Context, v {{ .SSE.EventTypeRef }}) error {
 	return nil
 }
 
 // Close is a no-op.
-func (s *discard{{ .Method.VarName }}ServerStream) Close() error {
+func (s *{{ .DiscardStreamDeclaration.Name }}) Close() error {
 	return nil
 }
 {{- end }}

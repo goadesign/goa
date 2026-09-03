@@ -1,3 +1,5 @@
+// This file verifies OpenAPI v3 schema construction and stable example
+// generation for primitive, collection, object, and transport body types.
 package openapiv3
 
 import (
@@ -216,7 +218,7 @@ func TestBuildBodyTypes(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			root := codegen.RunDSL(t, c.DSL)
 
-			bodies, types := buildBodyTypes(root.API, root.Types, root.ResultTypes, openapi.Version30)
+			bodies, types := buildBodyTypes(root.API, root.Types, root.ResultTypes, openapi.Version30, expr.NewExampleGenerator(root.API.RandomizerFactory), openapi.Values{})
 
 			svc, ok := bodies[svcName]
 			if !ok {
@@ -411,7 +413,7 @@ func TestMapTypes(t *testing.T) {
 		t.Run(tc.Name, func(t *testing.T) {
 			// Build the OpenAPI spec
 			root := codegen.RunDSL(t, tc.DSL)
-			bodies, types := buildBodyTypes(root.API, root.Types, root.ResultTypes, openapi.Version30)
+			bodies, types := buildBodyTypes(root.API, root.Types, root.ResultTypes, openapi.Version30, expr.NewExampleGenerator(root.API.RandomizerFactory), openapi.Values{})
 
 			// Find the service and method
 			svcBodies, ok := bodies[svcName]
@@ -500,7 +502,7 @@ func validateAdditionalPropsSchema(t *testing.T, ctx string, schema *openapi.Sch
 func TestTypesOnlyDifferByEnum(t *testing.T) {
 	root := codegen.RunDSL(t, dsls.StringEnumBodyDSL())
 
-	bodies, types := buildBodyTypes(root.API, root.Types, root.ResultTypes, openapi.Version30)
+	bodies, types := buildBodyTypes(root.API, root.Types, root.ResultTypes, openapi.Version30, expr.NewExampleGenerator(root.API.RandomizerFactory), openapi.Values{})
 
 	svc1, ok := bodies["svc_enum_1"]
 	if !ok {
@@ -549,7 +551,7 @@ func TestBuildBodyTypesPreservesPrimitiveAliasComponents(t *testing.T) {
 		})
 	})
 
-	bodies, types := buildBodyTypes(root.API, root.Types, root.ResultTypes, openapi.Version32)
+	bodies, types := buildBodyTypes(root.API, root.Types, root.ResultTypes, openapi.Version32, expr.NewExampleGenerator(root.API.RandomizerFactory), openapi.Values{})
 	tests := []struct {
 		name        string
 		status      int
@@ -700,7 +702,7 @@ func TestHashAttribute(t *testing.T) {
 	}
 
 	h := fnv.New64()
-	sf := newSchemafier(expr.NewRandom("test"))
+	sf := newSchemafier(expr.NewExampleGenerator(expr.NewFakerRandomizerFactory("test")), openapi.Values{})
 
 	for _, group := range cases {
 		t.Run(group.name, func(t *testing.T) {

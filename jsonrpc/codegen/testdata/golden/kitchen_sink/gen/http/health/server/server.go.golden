@@ -9,9 +9,9 @@ package server
 
 import (
 	"context"
-	health "kitchensink/health"
 	"net/http"
 
+	health "generated.local/gen/health"
 	goahttp "goa.design/goa/v3/http"
 	goa "goa.design/goa/v3/pkg"
 )

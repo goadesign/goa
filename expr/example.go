@@ -1,3 +1,6 @@
+// This file generates JSON-compatible examples from evaluated attributes. Each
+// service, method, type, and field uses its own repeatable sequence so changes
+// elsewhere do not change its example values.
 package expr
 
 import (
@@ -18,15 +21,18 @@ const (
 // isn't such a value then Example computes a random value for the attribute
 // using the given random value producer.
 func (a *AttributeExpr) Example(r *ExampleGenerator) any {
+	if r.factory == nil {
+		return nil
+	}
+	if r.exampleRandomizer == nil {
+		panic("example generator must be anchored before drawing a value")
+	}
+
 	if ex := a.ExtractUserExamples(); len(ex) > 0 {
 		// Return the last item in the slice so that examples can be overridden
 		// in the DSL. Overridden examples are always appended to the UserExamples
 		// slice.
 		return ex[len(ex)-1].Value
-	}
-
-	if r.Randomizer == nil {
-		return nil
 	}
 
 	value, ok := a.Meta.Last("openapi:example")
@@ -157,15 +163,15 @@ func byLength(a *AttributeExpr, r *ExampleGenerator) any {
 	case MapKind:
 		raw := make(map[any]any)
 		m := dt.(*Map)
-		for range count {
-			raw[m.KeyType.Example(r)] = m.ElemType.Example(r)
+		for i := range count {
+			raw[m.KeyType.Example(r.MapKey(i))] = m.ElemType.Example(r.MapValue(i))
 		}
 		return m.MakeMap(raw)
 	case ArrayKind:
 		raw := make([]any, count)
 		ar := dt.(*Array)
 		for i := range count {
-			raw[i] = ar.ElemType.Example(r)
+			raw[i] = ar.ElemType.Example(r.ArrayElement(i))
 		}
 		return ar.MakeSlice(raw)
 	default:

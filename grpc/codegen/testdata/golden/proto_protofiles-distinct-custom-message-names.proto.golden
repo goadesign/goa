@@ -1,0 +1,22 @@
+
+syntax = "proto3";
+
+package distinct_custom_message_names;
+
+option go_package = "/distinct_custom_message_namespb";
+
+// Service is the DistinctCustomMessageNames service interface.
+service DistinctCustomMessageNames {
+	// UseFirst implements UseFirst.
+	rpc UseFirst (Shared) returns (Shared);
+	// UseSecond implements UseSecond.
+	rpc UseSecond (Shared2) returns (Shared2);
+}
+
+message Shared {
+	optional string value = 1;
+}
+
+message Shared2 {
+	optional string value = 1;
+}

@@ -1,15 +1,14 @@
-// appendFS is a custom implementation of fs.FS that appends a specified prefix
-// to the file paths before delegating the Open call to the underlying fs.FS.
-type appendFS struct {
+{{ printf "%s adds a fixed directory to file paths before opening them." .AppendFSDeclaration.Name | comment }}
+type {{ .AppendFSDeclaration.Name }} struct {
 	prefix string
 	fs     http.FileSystem
 }
 
 // Open opens the named file, appending the prefix to the file path before
-// passing it to the underlying fs.FS.
-func (s appendFS) Open(name string) (http.File, error) {
+// passing it to the underlying file system.
+func (s {{ .AppendFSDeclaration.Name }}) Open(name string) (http.File, error) {
 	switch name {
-	{{- range $requested, $embedded := . }}
+	{{- range $requested, $embedded := .Mappings }}
 	case {{ printf "%q" $requested }}:
 		name = {{ printf "%q" $embedded }}
 	{{- end }}
@@ -17,8 +16,7 @@ func (s appendFS) Open(name string) (http.File, error) {
 	return s.fs.Open(path.Join(s.prefix, name))
 }
 
-// appendPrefix returns a new fs.FS that appends the specified prefix to file paths
-// before delegating to the provided embed.FS.
-func appendPrefix(fsys http.FileSystem, prefix string) http.FileSystem {
-	return appendFS{prefix: prefix, fs: fsys}
+{{ printf "%s returns a file system that adds prefix before opening each path." .AppendPrefixDeclaration.Name | comment }}
+func {{ .AppendPrefixDeclaration.Name }}(fsys http.FileSystem, prefix string) http.FileSystem {
+	return {{ .AppendFSDeclaration.Name }}{prefix: prefix, fs: fsys}
 }

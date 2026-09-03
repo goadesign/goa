@@ -1,5 +1,5 @@
-{{ printf "%s lists the service endpoint gRPC clients." .ClientStruct | comment }}
-type {{ .ClientStruct }} struct {
-	grpccli {{ .PkgName }}.{{ .ClientInterface }}
+{{ printf "%s lists the service endpoint gRPC clients." .ClientStructDeclaration.Name | comment }}
+type {{ .ClientStructDeclaration.Name }} struct {
+	grpccli {{ .ClientProtobufPkgName }}.{{ .ClientInterface }}
 	opts []grpc.CallOption
 }

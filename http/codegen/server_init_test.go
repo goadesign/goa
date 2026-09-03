@@ -13,7 +13,6 @@ import (
 )
 
 func TestServerInit(t *testing.T) {
-	const genpkg = "gen"
 	cases := []struct {
 		Name       string
 		DSL        func()
@@ -32,8 +31,8 @@ func TestServerInit(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := expr.RunDSL(t, c.DSL)
-			services := CreateHTTPServices(root)
-			fs := ServerFiles(genpkg, services)
+			plan := linkedHTTPPlanForRoot(t, root)
+			fs := plan.ServerFiles()
 			require.Len(t, fs, c.FileCount)
 			sections := fs[0].SectionTemplates
 			require.Greater(t, len(sections), c.SectionNum)

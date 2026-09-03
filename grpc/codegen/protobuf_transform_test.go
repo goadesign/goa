@@ -1,3 +1,5 @@
+// This file verifies generated transformations between service values and
+// protobuf messages.
 package codegen
 
 import (
@@ -9,6 +11,7 @@ import (
 
 	"goa.design/goa/v3/codegen"
 	ctestdata "goa.design/goa/v3/codegen/testdata"
+	d "goa.design/goa/v3/dsl"
 	"goa.design/goa/v3/expr"
 )
 
@@ -52,9 +55,8 @@ func TestProtoBufTransform(t *testing.T) {
 		pkgOverride = root.UserType("CompositePkgOverride")
 
 		// attribute contexts used in test cases
-		svcCtx = serviceTypeContext("proto", sd.Scope)
+		svcCtx = codegen.NewAttributeContext(false, false, true, "proto", sd.Scope)
 		ptrCtx = pointerContext("proto", sd.Scope)
-		pbCtx  = protoBufTypeContext("proto", sd.Scope, true)
 	)
 
 	// gRPC does not support any
@@ -67,7 +69,6 @@ func TestProtoBufTransform(t *testing.T) {
 			nat.Attribute.Type = expr.String
 		}
 	}
-
 	tc := map[string][]struct {
 		Name    string
 		Source  expr.DataType
@@ -169,13 +170,23 @@ func TestProtoBufTransform(t *testing.T) {
 					srcCtx := c.Ctx
 					tgtCtx := c.Ctx
 					if c.ToProto {
-						target = makeProtoBufMessage(expr.DupAtt(target), target.Type.Name(), sd)
-						tgtCtx = pbCtx
+						target = makeProtoBufMessage(
+							expr.DupAtt(target),
+							target.Type.Name(),
+							testGRPCMessageExampleIdentity(name+"/"+c.Name+"/target"),
+						)
+						freezeProtoBufTransformMessages(t, sd, target)
+						tgtCtx = protoBufTypeContext("proto", sd)
 					} else {
-						source = makeProtoBufMessage(expr.DupAtt(source), source.Type.Name(), sd)
-						srcCtx = pbCtx
+						source = makeProtoBufMessage(
+							expr.DupAtt(source),
+							source.Type.Name(),
+							testGRPCMessageExampleIdentity(name+"/"+c.Name+"/source"),
+						)
+						freezeProtoBufTransformMessages(t, sd, source)
+						srcCtx = protoBufTypeContext("proto", sd)
 					}
-					code, _, err := protoBufTransform(source, target, "source", "target", srcCtx, tgtCtx, c.ToProto, true)
+					code, _, err := protoBufTransform(source, target, srcCtx, tgtCtx, c.ToProto, true)
 					require.NoError(t, err)
 					code = codegen.FormatTestCode(t, "package foo\nfunc transform(){\n"+code+"}")
 					testutil.AssertGo(t, "testdata/golden/protobuf_type_encode_"+name+"_"+c.Name+".go.golden", code)
@@ -189,8 +200,15 @@ func TestProtoBufTransformAnyType(t *testing.T) {
 	var (
 		sd     = &ServiceData{Name: "Service", Scope: codegen.NewNameScope()}
 		svcCtx = codegen.NewAttributeContext(false, false, true, "", sd.Scope)
-		pbCtx  = protoBufTypeContext("", sd.Scope, false)
 	)
+	sd.protobuf = newProtobufPackageCatalog("")
+	sd.protobuf.plan = &protobufServicePlan{
+		catalog:  sd.protobuf,
+		fields:   make(map[*expr.AttributeExpr]protocNameKey),
+		wrappers: make(map[*expr.AttributeExpr]protocNameKey),
+		oneofs:   make(map[*expr.AttributeExpr]protocNameKey),
+	}
+	pbCtx := protoBufTypeContext("", sd)
 
 	cases := []struct {
 		Name    string
@@ -215,7 +233,7 @@ func TestProtoBufTransformAnyType(t *testing.T) {
 			} else {
 				srcCtx = pbCtx
 			}
-			code, _, err := protoBufTransform(source, target, "source", "target", srcCtx, tgtCtx, c.ToProto, c.NewVar)
+			code, _, err := protoBufTransform(source, target, srcCtx, tgtCtx, c.ToProto, c.NewVar)
 			require.NoError(t, err)
 			t.Logf("Generated code: %s", code)
 
@@ -235,6 +253,84 @@ func TestProtoBufTransformAnyType(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestConvertPrimitiveFromProtoUsesFinalCustomTypeImportAlias verifies that a
+// protobuf conversion casts to the package name written by the import header.
+func TestConvertPrimitiveFromProtoUsesFinalCustomTypeImportAlias(t *testing.T) {
+	const (
+		packagePath = "generated.local/gen/grpc/values"
+		customPath  = "example.com/custom/wire"
+	)
+	generation, err := codegen.NewGeneration("generated.local/gen", nil)
+	require.NoError(t, err)
+	pkg, err := generation.ClaimPackage(packagePath)
+	require.NoError(t, err)
+	require.NoError(t, pkg.DeclareImport(codegen.NewImport("wire", customPath)))
+	require.NoError(t, pkg.RequireImport(codegen.NewImport("wire", "example.com/fixed/wire")))
+	require.NoError(t, generation.Freeze())
+	require.Equal(t, "wire2", pkg.ImportName(customPath))
+
+	target := &expr.AttributeExpr{
+		Type: expr.Int,
+		Meta: expr.MetaExpr{
+			"struct:field:type": {"wire.Value", customPath, "wire"},
+		},
+	}
+	targetContext := codegen.NewAttributeContext(false, false, true, "", pkg.Scope())
+	attrs := &codegen.TransformAttrs{TargetCtx: targetContext}
+
+	converted := convertPrimitiveFromProto(
+		&expr.AttributeExpr{Type: expr.Int},
+		target,
+		false,
+		false,
+		"source",
+		attrs,
+	)
+	require.Equal(t, "wire2.Value(source)", converted)
+}
+
+// TestProtoBufTransformNilableDefaults checks that absent protobuf bytes and
+// Any fields use their service defaults without treating present empty or null
+// values as absent.
+func TestProtoBufTransformNilableDefaults(t *testing.T) {
+	root := codegen.RunDSL(t, func() {
+		d.API("nilable-defaults", func() {})
+		d.Type("NilableDefaults", func() {
+			d.Field(1, "bytes", d.Bytes, func() {
+				d.Default([]byte("fallback"))
+			})
+			d.Field(2, "value", d.Any, func() {
+				d.Default("fallback")
+			})
+		})
+	})
+	defaults := root.UserType("NilableDefaults")
+	source := makeProtoBufMessage(
+		&expr.AttributeExpr{Type: defaults},
+		"NilableDefaults",
+		testGRPCMessageExampleIdentity("nilable-defaults/source"),
+	)
+	target := &expr.AttributeExpr{Type: defaults}
+	sd := &ServiceData{Name: "Service", Scope: codegen.NewNameScope()}
+	freezeProtoBufTransformMessages(t, sd, source)
+	sourceCtx := protoBufTypeContext("proto", sd)
+	targetCtx := codegen.NewAttributeContext(false, false, true, "service", sd.Scope)
+
+	generated, _, err := protoBufTransform(source, target, sourceCtx, targetCtx, false, true)
+	require.NoError(t, err)
+	generated = codegen.FormatTestCode(t, "package foo\nfunc transform(){\n"+generated+"}")
+	testutil.AssertGo(t, "testdata/golden/protobuf_type_encode_to-service-type_nilable-defaults.go.golden", generated)
+}
+
+// freezeProtoBufTransformMessages prepares the message names consumed by one
+// standalone transformation test outside full service analysis.
+func freezeProtoBufTransformMessages(t *testing.T, sd *ServiceData, attribute *expr.AttributeExpr) {
+	sd.protobuf = newProtobufPackageCatalog("proto")
+	require.NoError(t, sd.protobuf.collectMessage(attribute, protobufMessageSource{}))
+	planTestProtobufCatalog(t, sd)
+	sd.protobuf.freezeMessageNames()
 }
 
 func pointerContext(pkg string, scope *codegen.NameScope) *codegen.AttributeContext {

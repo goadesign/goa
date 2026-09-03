@@ -11,9 +11,9 @@ import (
 	"bytes"
 	"errors"
 	"io"
-	calc "kitchensink/calc"
 	"net/http"
 
+	calc "generated.local/gen/calc"
 	goahttp "goa.design/goa/v3/http"
 	"goa.design/goa/v3/jsonrpc"
 	goa "goa.design/goa/v3/pkg"
@@ -25,6 +25,15 @@ func DecodeAddRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Dec
 	return func(r *http.Request, req *jsonrpc.RawRequest) (*calc.AddPayload, error) {
 		r.Body = io.NopCloser(bytes.NewReader(req.Params))
 		var payload *calc.AddPayload
+		if !req.HasID || req.ID == nil {
+			return payload, goa.MissingFieldError("id", "JSON-RPC request")
+		}
+		var requestID string
+		decodedID, decodeErr := jsonrpc.IDToString(req.ID)
+		if decodeErr != nil {
+			return payload, goa.DecodePayloadError(decodeErr.Error())
+		}
+		requestID = decodedID
 		var (
 			body AddRequestBody
 			err  error
@@ -44,7 +53,7 @@ func DecodeAddRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Dec
 		if err != nil {
 			return payload, err
 		}
-		payload = NewAddPayload(&body)
+		payload = NewAddPayload(&body, requestID)
 
 		return payload, nil
 	}
@@ -56,6 +65,15 @@ func DecodeLogRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Dec
 	return func(r *http.Request, req *jsonrpc.RawRequest) (*calc.LogPayload, error) {
 		r.Body = io.NopCloser(bytes.NewReader(req.Params))
 		var payload *calc.LogPayload
+		var requestID *string
+		if req.ID != nil {
+			decodedID, decodeErr := jsonrpc.IDToString(req.ID)
+			if decodeErr != nil {
+				return payload, goa.DecodePayloadError(decodeErr.Error())
+			}
+			value := decodedID
+			requestID = &value
+		}
 		var (
 			body LogRequestBody
 			err  error
@@ -75,7 +93,7 @@ func DecodeLogRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Dec
 		if err != nil {
 			return payload, err
 		}
-		payload = NewLogPayload(&body)
+		payload = NewLogPayload(&body, requestID)
 
 		return payload, nil
 	}

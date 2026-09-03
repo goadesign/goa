@@ -1,0 +1,48 @@
+// ArchiveResponseBody is the type of the "archiver" service "archive" endpoint
+// HTTP response body.
+type ArchiveResponseBody struct {
+	Status *int `form:"status,omitempty" json:"status,omitempty" xml:"status,omitempty"`
+}
+
+// ReadResponseBody is the type of the "archiver" service "read" endpoint HTTP
+// response body.
+type ReadResponseBody struct {
+	Status *int `form:"status,omitempty" json:"status,omitempty" xml:"status,omitempty"`
+}
+
+// NewArchiveMediaViewOK builds a "archiver" service "archive" endpoint result
+// from a HTTP "OK" response.
+func NewArchiveMediaViewOK(body *ArchiveResponseBody) *archiverviews.ArchiveMediaView {
+	v := &archiverviews.ArchiveMediaView{
+		Status: body.Status,
+	}
+
+	return v
+}
+
+// NewReadArchiveMediaOK builds a "archiver" service "read" endpoint result
+// from a HTTP "OK" response.
+func NewReadArchiveMediaOK(body *ReadResponseBody) *archiverviews.ArchiveMediaView {
+	v := &archiverviews.ArchiveMediaView{
+		Status: body.Status,
+	}
+
+	return v
+}
+
+// ValidateArchiveResponseBody runs the validations defined on
+// ArchiveResponseBody
+func ValidateArchiveResponseBody(body *ArchiveResponseBody) (err error) {
+	if body.Status == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("status", "body"))
+	}
+	return
+}
+
+// ValidateReadResponseBody runs the validations defined on ReadResponseBody
+func ValidateReadResponseBody(body *ReadResponseBody) (err error) {
+	if body.Status == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("status", "body"))
+	}
+	return
+}

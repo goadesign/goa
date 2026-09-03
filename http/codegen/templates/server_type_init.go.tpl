@@ -1,5 +1,19 @@
 {{ comment .Description }}
-func {{ .Name }}({{- range .ServerArgs }}{{ .VarName }} {{ .TypeRef }}, {{ end }}) {{ .ReturnTypeRef }} {
+func {{ .Declaration.Name }}({{- range .ServerArgs }}{{ .VarName }} {{ .TypeRef }}, {{ end }}) {{ .ReturnTypeRef }} {
+{{- if .OptionalBody }}
+	res := &{{ .ReturnTypeName }}{}
+	if body != nil {
+		{{ .ServerCode }}
+		res.{{ .ReturnTypeAttribute }} = {{ if .ReturnIsPrimitivePointer }}&{{ else if .ReturnIsUnion }}*{{ end }}v
+	}
+	{{- if .BodyDefault }} else {
+		{{- range .BodyDefault.Declarations }}
+		{{ . }}
+		{{- end }}
+		res.{{ .ReturnTypeAttribute }} = {{ .BodyDefault.Expression }}
+	}
+	{{- end }}
+{{- else }}
 {{- if .ServerCode }}
 	{{ .ServerCode }}
 	{{- if .ReturnTypeAttribute }}
@@ -14,5 +28,9 @@ func {{ .Name }}({{- range .ServerArgs }}{{ .VarName }} {{ .TypeRef }}, {{ end }
 	{{- end }}
 	{{ fieldCode . "server" }}
 {{- end }}
+	{{- end }}
+	{{- if and .OptionalBody .ReturnIsStruct }}
+	{{ fieldCode . "server" }}
+	{{- end }}
 	return {{ if .ReturnTypeAttribute }}res{{ else }}v{{ end }}
 }

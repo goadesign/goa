@@ -8,13 +8,13 @@
 package client
 
 import (
-	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
-	"strings"
 	"sync"
 
 	goahttp "goa.design/goa/v3/http"
@@ -37,12 +37,12 @@ type Client struct {
 	decoder func(*http.Response) goahttp.Decoder
 }
 
-// bufferPool is a pool of bytes.Buffers for encoding requests.
+// bufferPool reuses byte buffers while requests are encoded.
 var bufferPool = sync.Pool{
 	New: func() any { return new(bytes.Buffer) },
 }
 
-// NewClient instantiates HTTP clients for all the Feed service servers.
+// NewClient creates HTTP clients for all the Feed service servers.
 func NewClient(
 	scheme string,
 	host string,
@@ -51,7 +51,6 @@ func NewClient(
 	dec func(*http.Response) goahttp.Decoder,
 	restoreBody bool,
 ) *Client {
-
 	return &Client{
 		Doer:                doer,
 		WatchDoer:           doer,
@@ -74,7 +73,8 @@ func (c *Client) Watch() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		if err := encodeRequest(req, v); err != nil {
+		requestID, err := encodeRequest(req, v)
+		if err != nil {
 			return nil, err
 		}
 		// For SSE endpoints, send JSON-RPC request and establish stream
@@ -84,24 +84,49 @@ func (c *Client) Watch() goa.Endpoint {
 		}
 
 		if resp.StatusCode != http.StatusOK {
-			body, _ := io.ReadAll(resp.Body)
-			resp.Body.Close()
+			body, readErr := io.ReadAll(resp.Body)
+			closeErr := resp.Body.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("Feed", "watch", err)
+			}
 			return nil, goahttp.ErrInvalidResponse("Feed", "watch", resp.StatusCode, string(body))
 		}
 
 		contentType := resp.Header.Get("Content-Type")
-		if contentType != "" && !strings.HasPrefix(contentType, "text/event-stream") {
-			resp.Body.Close()
-			return nil, fmt.Errorf("unexpected content type: %s (expected text/event-stream)", contentType)
+		mediaType, _, parseErr := mime.ParseMediaType(contentType)
+		if parseErr != nil || mediaType != "text/event-stream" {
+			contentTypeErr := fmt.Errorf("unexpected content type: %s (expected text/event-stream)", contentType)
+			if err := resp.Body.Close(); err != nil {
+				return nil, errors.Join(contentTypeErr, goahttp.ErrDecodingError("Feed", "watch", err))
+			}
+			return nil, contentTypeErr
 		}
 
 		// Create the SSE client stream
-		stream := &WatchClientStream{
-			resp:    resp,
-			reader:  bufio.NewReader(resp.Body),
-			decoder: c.decoder,
-		}
+		return NewWatchStream(resp, c.decoder, requestID), nil
+	}
+}
 
-		return stream, nil
+// Snapshot returns an endpoint that makes JSON-RPC requests to the Feed
+// service snapshot method.
+func (c *Client) Snapshot() goa.Endpoint {
+	var (
+		encodeRequest  = EncodeSnapshotRequest(c.encoder)
+		decodeResponse = DecodeSnapshotResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildSnapshotRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		requestID, err := encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.Doer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("Feed", "snapshot", err)
+		}
+		return decodeResponse(resp, requestID)
 	}
 }

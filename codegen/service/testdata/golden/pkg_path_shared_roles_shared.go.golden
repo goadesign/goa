@@ -1,0 +1,23 @@
+// Shared is the payload, streaming payload, result, and streaming result type
+// of the PkgPathSharedRoles service Exchange method.
+type Shared struct {
+	IntField *int
+	Detail   *Detail
+}
+
+// Error returns an error description.
+func (e *Shared) Error() string {
+	return ""
+}
+
+// ErrorName returns the error name.
+//
+// Deprecated: Use GoaErrorName - https://github.com/goadesign/goa/issues/3105
+func (e *Shared) ErrorName() string {
+	return e.GoaErrorName()
+}
+
+// GoaErrorName returns the error name.
+func (e *Shared) GoaErrorName() string {
+	return "shared_error"
+}

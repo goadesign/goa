@@ -44,21 +44,17 @@ definitions:
                     example: ""
                 example:
                     - ""
-                    - ""
-                    - ""
             any_map:
                 type: object
                 example:
-                    "": ""
+                    key: ""
                 additionalProperties: true
         example:
             any: ""
             any_array:
                 - ""
-                - ""
-                - ""
             any_map:
-                "": ""
+                key: ""
     TestServiceTestEndpointResponseBody:
         title: TestServiceTestEndpointResponseBody
         type: object
@@ -71,20 +67,14 @@ definitions:
                     example: ""
                 example:
                     - ""
-                    - ""
-                    - ""
-                    - ""
             any_map:
                 type: object
                 example:
-                    "": ""
+                    key: ""
                 additionalProperties: true
         example:
             any: ""
             any_array:
                 - ""
-                - ""
-                - ""
-                - ""
             any_map:
-                "": ""
+                key: ""

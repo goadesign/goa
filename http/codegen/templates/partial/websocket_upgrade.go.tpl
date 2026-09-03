@@ -1,13 +1,13 @@
 {{ printf "Upgrade the HTTP connection to a websocket connection only once. Connection upgrade is done here so that authorization logic in the endpoint is executed before calling the actual service method which may call %s()." .Function | comment }}
 	s.once.Do(func() {
-	{{- if and .ViewedResult (eq .Function "Send") }}
+	{{- if and .ViewedResult (or (eq .Function "Send") (eq .Function "Close")) }}
 		{{- if not .ViewedResult.ViewName }}
 			respHdr := make(http.Header)
-			respHdr.Add("goa-view", s.view)
+			respHdr.Add("goa-view", view)
 		{{- end }}
 	{{- end }}
 		var conn *websocket.Conn
-		{{- if eq .Function "Send" }}
+		{{- if or (eq .Function "Send") (eq .Function "Close") }}
 			{{- if .ViewedResult }}
 				{{- if not .ViewedResult.ViewName }}
 					conn, err = s.upgrader.Upgrade(s.w, s.r, respHdr)

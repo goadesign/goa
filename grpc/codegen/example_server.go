@@ -1,20 +1,20 @@
+// This file writes runnable gRPC servers with the package names already chosen
+// for this generation.
 package codegen
 
 import (
-	"os"
 	"path"
 	"path/filepath"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/example"
-	"goa.design/goa/v3/expr"
 )
 
-// ExampleServerFiles returns an example gRPC server implementation.
-func ExampleServerFiles(genpkg string, services *ServicesData) []*codegen.File {
+// exampleServerFiles returns an example gRPC server implementation.
+func exampleServerFiles(root *example.Root, services *ServicesData) []*codegen.File {
 	var fw []*codegen.File
-	for _, svr := range services.Root.API.Servers {
-		if m := exampleServer(genpkg, services, svr); m != nil {
+	for _, server := range root.Servers {
+		if m := exampleServer(services, server); m != nil {
 			fw = append(fw, m)
 		}
 	}
@@ -22,64 +22,25 @@ func ExampleServerFiles(genpkg string, services *ServicesData) []*codegen.File {
 }
 
 // exampleServer returns an example gRPC server implementation.
-func exampleServer(genpkg string, services *ServicesData, svr *expr.ServerExpr) *codegen.File {
+func exampleServer(services *ServicesData, server *example.Data) *codegen.File {
 	var (
 		mainPath string
-
-		svrdata = example.Servers.Get(svr, services.Root)
+		genpkg   = services.GenPkg()
 	)
-	mainPath = filepath.Join("cmd", svrdata.Dir, "grpc.go")
-	if _, err := os.Stat(mainPath); !os.IsNotExist(err) {
-		return nil // file already exists, skip it.
-	}
-
-	var scope = codegen.NewNameScope()
-
-	specs := []*codegen.ImportSpec{
-		{Path: "context"},
-		{Path: "fmt"},
-		{Path: "net"},
-		{Path: "net/url"},
-		{Path: "sync"},
-		codegen.GoaNamedImport("grpc", "goagrpc"),
-		{Path: "goa.design/clue/debug"},
-		{Path: "goa.design/clue/log"},
-		{Path: "google.golang.org/grpc"},
-		{Path: "google.golang.org/grpc/reflection"},
-	}
-	for _, svc := range services.Root.API.GRPC.Services {
-		sd := services.Get(svc.Name())
-		svcName := sd.Service.PathName
-		specs = append(specs,
-			&codegen.ImportSpec{
-				Path: path.Join(genpkg, "grpc", svcName, "server"),
-				Name: scope.Unique(sd.Service.PkgName + "svr"),
-			},
-			&codegen.ImportSpec{
-				Path: path.Join(genpkg, svcName),
-				Name: scope.Unique(sd.Service.PkgName),
-			},
-			&codegen.ImportSpec{
-				Path: path.Join(genpkg, "grpc", svcName, pbPkgName),
-				Name: scope.Unique(svcName + pbPkgName),
-			})
-	}
-
-	rootPath := example.RootPath(genpkg)
-	apiPkg := example.APIPkg(services.Root, scope)
-	specs = append(specs, &codegen.ImportSpec{Path: rootPath, Name: apiPkg})
+	mainPath = filepath.Join("cmd", server.Dir, "grpc.go")
+	outputPackage := path.Join(path.Dir(genpkg), "cmd", server.Dir)
 
 	var (
 		sections []*codegen.SectionTemplate
 	)
 	var svcdata []*ServiceData
-	for _, svc := range svr.Services {
+	for _, svc := range server.Services {
 		if data := services.Get(svc); data != nil {
-			svcdata = append(svcdata, data)
+			svcdata = append(svcdata, services.exampleServiceData(data, outputPackage, true))
 		}
 	}
 	sections = []*codegen.SectionTemplate{
-		codegen.Header("", "main", specs),
+		codegen.Header("", "main", nil),
 		{
 			Name:   "server-grpc-start",
 			Source: grpcTemplates.Read(grpcServerGRPCStartT),
@@ -110,7 +71,7 @@ func exampleServer(genpkg string, services *ServicesData, svr *expr.ServerExpr) 
 			},
 		},
 	}
-	return &codegen.File{Path: mainPath, SectionTemplates: sections, SkipExist: true}
+	return addEndpointImports(&codegen.File{Path: mainPath, SectionTemplates: sections, SkipExist: true}, services)
 }
 
 // needStream returns true if at least one method in the defined services

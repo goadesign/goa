@@ -2,23 +2,20 @@ package main
 
 import (
 	"context"
-	calc "kitchensink/calc"
-	chat "kitchensink/chat"
-	feed "kitchensink/feed"
-	health "kitchensink/health"
-	healthsvr "kitchensink/http/health/server"
-	mixedsvr "kitchensink/http/mixed/server"
-	calcjssvr "kitchensink/jsonrpc/calc/server"
-	chatjssvr "kitchensink/jsonrpc/chat/server"
-	feedjssvr "kitchensink/jsonrpc/feed/server"
-	mixedjssvr "kitchensink/jsonrpc/mixed/server"
-	mixed "kitchensink/mixed"
 	"net/http"
 	"net/url"
 	"sync"
 	"time"
 
-	"github.com/gorilla/websocket"
+	calc "generated.local/gen/calc"
+	feed "generated.local/gen/feed"
+	health "generated.local/gen/health"
+	healthsvr "generated.local/gen/http/health/server"
+	mixedsvr "generated.local/gen/http/mixed/server"
+	calcjssvr "generated.local/gen/jsonrpc/calc/server"
+	feedjssvr "generated.local/gen/jsonrpc/feed/server"
+	mixedjssvr "generated.local/gen/jsonrpc/mixed/server"
+	mixed "generated.local/gen/mixed"
 	"goa.design/clue/debug"
 	"goa.design/clue/log"
 	goahttp "goa.design/goa/v3/http"
@@ -26,7 +23,7 @@ import (
 
 // handleHTTPServer starts configures and starts a HTTP server on the given
 // URL. It shuts down the server if any error is received in the error channel.
-func handleHTTPServer(ctx context.Context, u *url.URL, mixedEndpoints *mixed.Endpoints, healthEndpoints *health.Endpoints, calcSvc calc.Service, calcEndpoints *calc.Endpoints, chatSvc chat.Service, chatEndpoints *chat.Endpoints, feedSvc feed.Service, feedEndpoints *feed.Endpoints, mixedSvc mixed.Service, wg *sync.WaitGroup, errc chan error, dbg bool) {
+func handleHTTPServer(ctx context.Context, u *url.URL, mixedEndpoints *mixed.Endpoints, healthEndpoints *health.Endpoints, calcSvc calc.Service, calcEndpoints *calc.Endpoints, feedSvc feed.Service, feedEndpoints *feed.Endpoints, mixedSvc mixed.Service, wg *sync.WaitGroup, errc chan error, dbg bool) {
 	// Provide the transport specific request decoder and response encoder.
 	// The goa http package has built-in support for JSON, XML and gob.
 	// Other encodings can be used by providing the corresponding functions,
@@ -57,17 +54,14 @@ func handleHTTPServer(ctx context.Context, u *url.URL, mixedEndpoints *mixed.End
 		mixedServer        *mixedsvr.Server
 		healthServer       *healthsvr.Server
 		calcJSONRPCServer  *calcjssvr.Server
-		chatJSONRPCServer  *chatjssvr.Server
 		feedJSONRPCServer  *feedjssvr.Server
 		mixedJSONRPCServer *mixedjssvr.Server
 	)
 	{
 		eh := errorHandler(ctx)
-		upgrader := &websocket.Upgrader{}
 		mixedServer = mixedsvr.New(mixedEndpoints, mux, dec, enc, eh, nil)
 		healthServer = healthsvr.New(healthEndpoints, mux, dec, enc, eh, nil)
 		calcJSONRPCServer = calcjssvr.New(calcEndpoints, mux, dec, enc, eh)
-		chatJSONRPCServer = chatjssvr.New(chatSvc.HandleStream, chatEndpoints, mux, dec, enc, eh, upgrader, nil)
 		feedJSONRPCServer = feedjssvr.New(feedEndpoints, mux, dec, enc, eh)
 		mixedJSONRPCServer = mixedjssvr.New(mixedEndpoints, mux, dec, enc, eh)
 	}
@@ -76,7 +70,6 @@ func handleHTTPServer(ctx context.Context, u *url.URL, mixedEndpoints *mixed.End
 	mixedsvr.Mount(mux, mixedServer)
 	healthsvr.Mount(mux, healthServer)
 	calcjssvr.Mount(mux, calcJSONRPCServer)
-	chatjssvr.Mount(mux, chatJSONRPCServer)
 	feedjssvr.Mount(mux, feedJSONRPCServer)
 	mixedjssvr.Mount(mux, mixedJSONRPCServer)
 
@@ -98,9 +91,6 @@ func handleHTTPServer(ctx context.Context, u *url.URL, mixedEndpoints *mixed.End
 	}
 	for _, m := range calcJSONRPCServer.Methods {
 		log.Printf(ctx, "JSON-RPC method %q mounted on POST /rpc", m)
-	}
-	for _, m := range chatJSONRPCServer.Methods {
-		log.Printf(ctx, "JSON-RPC method %q mounted on GET /ws/ws", m)
 	}
 	for _, m := range feedJSONRPCServer.Methods {
 		log.Printf(ctx, "JSON-RPC method %q mounted on POST /feed", m)

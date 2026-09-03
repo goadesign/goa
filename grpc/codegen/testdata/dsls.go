@@ -1,3 +1,5 @@
+// This file defines gRPC DSL fixtures used to exercise message, metadata,
+// streaming, validation, and generated package ownership behavior.
 package testdata
 
 import (
@@ -201,10 +203,7 @@ var ServerStreamingResultWithViewsDSL = func() {
 		Attributes(func() {
 			Field(1, "IntField", Int)
 			Field(2, "DoubleField", Float64)
-		})
-		View("default", func() {
-			Attribute("IntField")
-			Attribute("DoubleField")
+			Required("IntField", "DoubleField")
 		})
 		View("tiny", func() {
 			Attribute("IntField")
@@ -243,6 +242,32 @@ var ServerStreamingResultCollectionWithExplicitViewDSL = func() {
 	})
 }
 
+var ClientStreamingResultCollectionWithExplicitViewDSL = func() {
+	var RT = ResultType("application/vnd.client-streaming-result", func() {
+		TypeName("ResultType")
+		Attributes(func() {
+			Field(1, "IntField", Int)
+			Field(2, "DoubleField", Float64)
+		})
+		View("default", func() {
+			Attribute("IntField")
+			Attribute("DoubleField")
+		})
+		View("tiny", func() {
+			Attribute("IntField")
+		})
+	})
+	Service("ServiceClientStreamingResultTypeCollectionWithExplicitView", func() {
+		Method("MethodClientStreamingResultTypeCollectionWithExplicitView", func() {
+			StreamingPayload(String)
+			Result(CollectionOf(RT), func() {
+				View("tiny")
+			})
+			GRPC(func() {})
+		})
+	})
+}
+
 var ClientStreamingRPCDSL = func() {
 	Service("ServiceClientStreamingRPC", func() {
 		Method("MethodClientStreamingRPC", func() {
@@ -260,6 +285,24 @@ var ClientStreamingRPCWithPayloadDSL = func() {
 			StreamingPayload(Int)
 			Result(String)
 			GRPC(func() {})
+		})
+	})
+}
+
+var ClientStreamingRPCWithMetadataOnlyPayloadDSL = func() {
+	Service("ServiceClientStreamingRPCWithMetadataOnlyPayload", func() {
+		Method("MethodClientStreamingRPCWithMetadataOnlyPayload", func() {
+			Payload(func() {
+				Field(1, "token", String)
+				Required("token")
+			})
+			StreamingPayload(String)
+			Result(String)
+			GRPC(func() {
+				Metadata(func() {
+					Attribute("token")
+				})
+			})
 		})
 	})
 }
@@ -506,6 +549,44 @@ var MessageUserTypeWithAliasMessageDSL = func() {
 	})
 }
 
+// RequiredPrimitivePresenceDSL defines required request and response fields
+// whose zero values must remain distinguishable from omitted protobuf fields.
+var RequiredPrimitivePresenceDSL = func() {
+	var StringAlias = Type("StringAlias", String)
+	var BytesAlias = Type("BytesAlias", Bytes)
+	var AnyAlias = Type("AnyAlias", Any)
+	var Message = Type("PresenceMessage", func() {
+		Field(1, "BooleanField", Boolean)
+		Field(2, "IntegerField", Int)
+		Field(3, "StringField", String)
+		Field(4, "BytesField", Bytes)
+		Field(5, "StringAliasField", StringAlias)
+		Field(6, "BytesAliasField", BytesAlias)
+		Field(7, "AnyAliasField", AnyAlias)
+		Required(
+			"BooleanField",
+			"IntegerField",
+			"StringField",
+			"BytesField",
+			"StringAliasField",
+			"BytesAliasField",
+			"AnyAliasField",
+		)
+	})
+	Service("RequiredPrimitivePresence", func() {
+		Method("Exchange", func() {
+			Payload(Message)
+			Result(Message)
+			GRPC(func() {})
+		})
+		Method("Echo", func() {
+			Payload(StringAlias)
+			Result(StringAlias)
+			GRPC(func() {})
+		})
+	})
+}
+
 var MessageUserTypeWithNestedUserTypesDSL = func() {
 	var UTLevel2 = Type("UTLevel2", func() {
 		Field(2, "Int64Field", Int64)
@@ -541,10 +622,7 @@ var MessageResultTypeWithViewsDSL = func() {
 		Attributes(func() {
 			Field(1, "IntField", Int)
 			Field(2, "StringField", String)
-		})
-		View("default", func() {
-			Attribute("IntField")
-			Attribute("StringField")
+			Required("IntField", "StringField")
 		})
 		View("tiny", func() {
 			Attribute("IntField")
@@ -564,6 +642,7 @@ var MessageResultTypeWithExplicitViewDSL = func() {
 		Attributes(func() {
 			Field(1, "IntField", Int)
 			Field(2, "StringField", String)
+			Required("IntField", "StringField")
 		})
 		View("default", func() {
 			Attribute("IntField")
@@ -666,6 +745,23 @@ var ResultWithAliasValidation = func() {
 	Service("ServiceResultWithAliasValidation", func() {
 		Method("MethodResultWithAliasValidation", func() {
 			Result(UUID)
+			GRPC(func() {})
+		})
+	})
+}
+
+// ResultFieldNameCollisionDSL defines a required alias field whose Go name can
+// match the source parameter of the generated response conversion function.
+var ResultFieldNameCollisionDSL = func() {
+	var JSON = Type("JSON", String)
+	var ToolResult = Type("ToolResult", func() {
+		Field(1, "result", JSON)
+		Required("result")
+	})
+
+	Service("ResultFieldNameCollision", func() {
+		Method("show", func() {
+			Result(ToolResult)
 			GRPC(func() {})
 		})
 	})
@@ -891,6 +987,7 @@ var MessageWithValidateDSL = func() {
 }
 
 var MessageWithSecurityAttrsDSL = func() {
+	var Token = Type("Token", String)
 	var JWTAuth = JWTSecurity("jwt", func() {
 		Scope("api:read", "Read-only access")
 	})
@@ -901,7 +998,7 @@ var MessageWithSecurityAttrsDSL = func() {
 	})
 	var RequestUT = Type("RequestUT", func() {
 		Field(1, "BooleanField", Boolean)
-		TokenField(2, "token", String)
+		TokenField(2, "token", Token)
 		AccessTokenField(3, "oauth_token", String)
 		APIKey("api_key", "key", String)
 		Username("username", String)
@@ -916,6 +1013,32 @@ var MessageWithSecurityAttrsDSL = func() {
 					Attribute("oauth_token")
 				})
 			})
+		})
+	})
+}
+
+var NamedSecurityMetadataDSL = func() {
+	var Credential = Type("Credential", String)
+	var JWTAuth = JWTSecurity("jwt")
+	var APIKeyAuth = APIKeySecurity("api_key")
+	var BasicAuth = BasicAuthSecurity("basic")
+	var BearerAuth = BearerSecurity("bearer")
+	var OAuth2Auth = OAuth2Security("oauth2")
+	var Request = Type("NamedSecurityRequest", func() {
+		Field(1, "BooleanField", Boolean)
+		TokenField(2, "jwt_token", Credential)
+		AccessTokenField(3, "oauth_token", Credential)
+		APIKey("api_key", "key", Credential)
+		Username("username", Credential)
+		Password("password", Credential)
+		BearerTokenField(7, "bearer_token", Credential)
+		Required("jwt_token", "key", "username")
+	})
+	Service("NamedSecurityMetadata", func() {
+		Method("Authenticate", func() {
+			Security(JWTAuth, OAuth2Auth, APIKeyAuth, BasicAuth, BearerAuth)
+			Payload(Request)
+			GRPC(func() {})
 		})
 	})
 }
@@ -1017,6 +1140,23 @@ var PayloadWithValidationsDSL = func() {
 					Attribute("MetadataString")
 				})
 			})
+		})
+	})
+}
+
+var PayloadWithMessageDSL = func() {
+	Service("PayloadWithMessage", func() {
+		Method("show", func() {
+			Payload(func() {
+				Field(1, "tenantID", String, func() {
+					Example("tenant")
+				})
+				Field(2, "recordID", String, func() {
+					Example("record")
+				})
+				Required("tenantID", "recordID")
+			})
+			GRPC(func() {})
 		})
 	})
 }
@@ -1137,6 +1277,29 @@ var CustomMessageNameDSL = func() {
 	})
 }
 
+var DistinctCustomMessageNamesDSL = func() {
+	var First = Type("First", func() {
+		Meta("struct:name:proto", "Shared")
+		Field(1, "value", String)
+	})
+	var Second = Type("Second", func() {
+		Meta("struct:name:proto", "Shared")
+		Field(1, "value", String)
+	})
+	Service("DistinctCustomMessageNames", func() {
+		Method("UseFirst", func() {
+			Payload(First)
+			Result(First)
+			GRPC(func() {})
+		})
+		Method("UseSecond", func() {
+			Payload(Second)
+			Result(Second)
+			GRPC(func() {})
+		})
+	})
+}
+
 var InterceptorsDSL = func() {
 	var LogInterceptor = Interceptor("Log", func() {
 		Description("Logs request and response details")
@@ -1156,12 +1319,16 @@ var InterceptorsDSL = func() {
 		ClientInterceptor(LogInterceptor)
 		Method("MethodA", func() {
 			ClientInterceptor(MetricsInterceptor)
-			Payload(String)
+			Payload(String, func() {
+				Example("hello")
+			})
 			Result(String)
 			GRPC(func() {})
 		})
 		Method("MethodB", func() {
-			Payload(Int)
+			Payload(Int, func() {
+				Example(42)
+			})
 			Result(Int)
 			GRPC(func() {})
 		})

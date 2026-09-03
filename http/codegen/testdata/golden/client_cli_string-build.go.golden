@@ -1,10 +1,10 @@
 // BuildMethodQueryStringPayload builds the payload for the ServiceQueryString
 // MethodQueryString endpoint from CLI flags.
-func BuildMethodQueryStringPayload(serviceQueryStringMethodQueryStringQ string) (*servicequerystring.MethodQueryStringPayload, error) {
+func BuildMethodQueryStringPayload(serviceQueryStringMethodQueryStringQ *string) (*servicequerystring.MethodQueryStringPayload, error) {
 	var q *string
 	{
-		if serviceQueryStringMethodQueryStringQ != "" {
-			q = &serviceQueryStringMethodQueryStringQ
+		if serviceQueryStringMethodQueryStringQ != nil {
+			q = serviceQueryStringMethodQueryStringQ
 		}
 	}
 	v := &servicequerystring.MethodQueryStringPayload{}

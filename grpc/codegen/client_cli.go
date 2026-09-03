@@ -1,139 +1,159 @@
+// This file renders gRPC command parsers and per-service payload builders,
+// including relocated payload imports in the builder that references them.
 package codegen
 
 import (
+	"fmt"
 	"path"
 	"path/filepath"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/cli"
-	"goa.design/goa/v3/expr"
 )
 
-// ClientCLIFiles returns the CLI files to generate a command-line client that
-// makes gRPC requests.
-func ClientCLIFiles(genpkg string, services *ServicesData) []*codegen.File {
-	if len(services.Root.API.GRPC.Services) == 0 {
+type (
+	// commandData adds the exact gRPC client constructor to the shared command
+	// data used by transport command-line generators.
+	commandData struct {
+		*cli.CommandData
+		// ClientInit is the client constructor called by ParseEndpoint.
+		ClientInit *codegen.NameDeclaration
+	}
+)
+
+// clientCLIFiles returns the planned command-line client files.
+func clientCLIFiles(services *ServicesData) []*codegen.File {
+	if len(services.servicePlans) == 0 {
 		return nil
 	}
 	var (
-		data = make([]*cli.CommandData, 0, len(services.Root.API.GRPC.Services))
-		svcs = make([]*expr.GRPCServiceExpr, 0, len(services.Root.API.GRPC.Services))
+		data = make([]*commandData, 0, len(services.servicePlans))
+		svcs = make([]*grpcServicePlan, 0, len(services.servicePlans))
 	)
-	for _, svc := range services.Root.API.GRPC.Services {
+	for _, servicePlan := range services.servicePlans {
+		svc := servicePlan.expression
 		if len(svc.GRPCEndpoints) == 0 {
 			continue
 		}
 		sd := services.Get(svc.Name())
-		command := cli.BuildCommandData(sd.Service)
-		for _, e := range sd.Endpoints {
-			flags, buildFunction := buildFlags(e)
+		command := &commandData{
+			CommandData: cli.BuildCommandData(sd.Service),
+			ClientInit:  sd.ClientInitDeclaration,
+		}
+		for index, e := range sd.Endpoints {
+			flags, buildFunction := buildFlags(e, services.cliPlan.builders[svc.GRPCEndpoints[index]])
 			subcmd := cli.BuildSubcommandData(sd.Service, e.Method, buildFunction, flags)
-			command.Subcommands = append(command.Subcommands, subcmd)
+			command.CommandData.Subcommands = append(command.CommandData.Subcommands, subcmd)
 		}
 		command.Example = command.Subcommands[0].Example
 		data = append(data, command)
-		svcs = append(svcs, svc)
+		svcs = append(svcs, servicePlan)
 	}
-	files := make([]*codegen.File, 0, len(services.Root.API.Servers)+len(svcs))
-	for _, svr := range services.Root.API.Servers {
-		files = append(files, endpointParser(genpkg, services, svr, data))
+	files := make([]*codegen.File, 0, len(services.cliPlan.servers)+len(svcs))
+	for _, serverPlan := range services.cliPlan.servers {
+		serverData := make([]*commandData, 0, len(serverPlan.expression.Services))
+		for _, serviceName := range serverPlan.expression.Services {
+			for _, command := range data {
+				if command.ServiceName == serviceName {
+					serverData = append(serverData, command)
+					break
+				}
+			}
+		}
+		files = append(files, endpointParser(services, serverPlan, serverData))
 	}
 	for i, svc := range svcs {
-		files = append(files, payloadBuilders(genpkg, svc, data[i], services))
+		files = append(files, payloadBuilders(svc, data[i].CommandData, services))
 	}
 	return files
 }
 
 // endpointParser returns the file that implements the command line parser that
 // builds the client endpoint and payload necessary to perform a request.
-func endpointParser(genpkg string, services *ServicesData, svr *expr.ServerExpr, data []*cli.CommandData) *codegen.File {
-	pkg := codegen.SnakeCase(codegen.Goify(svr.Name, true))
+func endpointParser(services *ServicesData, serverPlan *grpcCLIServerPlan, data []*commandData) *codegen.File {
+	genpkg := services.GenPkg()
+	pkg := codegen.SnakeCase(codegen.Goify(serverPlan.name, true))
+	outputPackage := path.Join(genpkg, "grpc", "cli", pkg)
 	fpath := filepath.Join(codegen.Gendir, "grpc", "cli", pkg, "cli.go")
-	title := svr.Name + " gRPC client CLI support package"
-	specs := []*codegen.ImportSpec{
-		{Path: "context"},
-		{Path: "flag"},
-		{Path: "fmt"},
-		{Path: "os"},
-		{Path: "strconv"},
-		{Path: "unicode/utf8"},
-		codegen.GoaImport(""),
-		codegen.GoaNamedImport("grpc", "goagrpc"),
-		{Path: "google.golang.org/grpc", Name: "grpc"},
-	}
-	// Add structpb import if Any type is used
-	needsAnyPb := false
-	for _, svc := range services.Root.API.GRPC.Services {
-		if usesAnyType(svc.GRPCEndpoints, false) {
-			needsAnyPb = true
-			break
-		}
-	}
-	if needsAnyPb {
-		specs = append(specs,
-			&codegen.ImportSpec{Path: "google.golang.org/protobuf/types/known/structpb", Name: "structpb"},
-		)
-	}
-	for _, svc := range services.Root.API.GRPC.Services {
-		sd := services.Get(svc.Name())
-		if sd == nil {
-			continue
-		}
-		svcName := sd.Service.PathName
-		specs = append(specs,
-			&codegen.ImportSpec{Path: path.Join(genpkg, "grpc", svcName, "client"), Name: sd.Service.PkgName + "c"},
-			&codegen.ImportSpec{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: svcName + pbPkgName})
-		// Add interceptors import if service has client interceptors
-		if len(sd.Service.ClientInterceptors) > 0 {
-			specs = append(specs, &codegen.ImportSpec{
-				Path: genpkg + "/" + sd.Service.PathName,
-				Name: sd.Service.PkgName,
-			})
-		}
-	}
+	title := serverPlan.name + " gRPC client CLI support package"
 
+	parser := serverPlan.parser
+	if parser == nil {
+		panic(fmt.Sprintf("gRPC command parser names are missing for server %q", serverPlan.name))
+	}
+	plannedData := make([]*commandData, len(data))
+	plannedCommands := make([]*cli.CommandData, len(data))
+	for index, command := range data {
+		commandNames := parser.Commands[command.ServiceName]
+		if commandNames == nil {
+			panic(fmt.Sprintf("gRPC command names are missing for service %q", command.ServiceName))
+		}
+		commandCopy := *command.CommandData
+		sd := services.Get(command.ServiceName)
+		clientPath := path.Join(genpkg, "grpc", sd.Service.PathName, "client")
+		commandCopy.PkgName = services.PackageImport(outputPackage, clientPath).Name
+		if command.Interceptors != nil {
+			interceptors := *command.Interceptors
+			interceptors.PkgName = services.ServiceImport(outputPackage, command.ServiceName).Name
+			commandCopy.Interceptors = &interceptors
+		}
+		commandCopy.UsageDeclaration = commandNames.Usage
+		commandCopy.Subcommands = make([]*cli.SubcommandData, len(command.Subcommands))
+		for methodIndex, subcommand := range command.Subcommands {
+			usage := commandNames.Methods[subcommand.MethodName]
+			if usage == nil {
+				panic(fmt.Sprintf("gRPC method help name is missing for %q.%q", command.ServiceName, subcommand.Name))
+			}
+			subcommandCopy := *subcommand
+			subcommandCopy.UsageDeclaration = usage
+			commandCopy.Subcommands[methodIndex] = &subcommandCopy
+		}
+		plannedData[index] = &commandData{
+			CommandData: &commandCopy,
+			ClientInit:  command.ClientInit,
+		}
+		plannedCommands[index] = &commandCopy
+	}
+	parser.PlanVariables(plannedCommands, nil)
 	parseSection := &codegen.SectionTemplate{
 		Name:   "parse-endpoint-grpc",
 		Source: grpcTemplates.Read(grpcParseEndpointT),
 		Data: struct {
-			FlagsCode string
-			Commands  []*cli.CommandData
+			Declaration *codegen.NameDeclaration
+			FlagsCode   string
+			Commands    []*commandData
+			Variables   *cli.ParserVariablesData
 		}{
-			cli.FlagsCode(data),
-			data,
+			parser.Declarations.ParseEndpoint,
+			parser.FlagsCode(plannedCommands),
+			plannedData,
+			parser.Variables,
 		},
 	}
-	return cli.EndpointParserFile(fpath, title, specs, data, parseSection)
+	return addEndpointImports(parser.EndpointParserFile(fpath, title, nil, plannedCommands, parseSection), services)
 }
 
 // payloadBuilders returns the file that contains the payload constructors that
 // use flag values as arguments.
-func payloadBuilders(genpkg string, svc *expr.GRPCServiceExpr, data *cli.CommandData, services *ServicesData) *codegen.File {
+func payloadBuilders(servicePlan *grpcServicePlan, data *cli.CommandData, services *ServicesData) *codegen.File {
+	svc := servicePlan.expression
 	sd := services.Get(svc.Name())
 	svcName := sd.Service.PathName
 	fpath := filepath.Join(codegen.Gendir, "grpc", svcName, "client", "cli.go")
 	title := svc.Name() + " gRPC client CLI support package"
-	specs := []*codegen.ImportSpec{
-		{Path: "encoding/json"},
-		{Path: "fmt"},
-		{Path: "strconv"},
-		{Path: "unicode/utf8"},
-		codegen.GoaImport(""),
-		{Path: path.Join(genpkg, svcName), Name: sd.Service.PkgName},
-		{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: sd.PkgName},
-	}
-	// Add structpb import if Any type is used
-	if usesAnyType(svc.GRPCEndpoints, false) {
-		specs = append(specs,
-			&codegen.ImportSpec{Path: "google.golang.org/protobuf/types/known/structpb", Name: "structpb"},
-		)
-	}
-	return cli.PayloadBuildersFile(fpath, title, specs, data)
+	return addEndpointImports(cli.PayloadBuildersFile(fpath, title, nil, data), services)
 }
 
-func buildFlags(e *EndpointData) ([]*cli.FlagData, *cli.BuildFunctionData) {
+func buildFlags(e *EndpointData, declaration *codegen.NameDeclaration) ([]*cli.FlagData, *cli.BuildFunctionData) {
 	if e.Request != nil {
-		return makeFlags(e, e.Request.CLIArgs)
+		flags, buildFunction := makeFlags(e, e.Request.CLIArgs)
+		if buildFunction != nil {
+			if declaration == nil {
+				panic(fmt.Sprintf("gRPC payload builder name is missing for %q.%q", e.ServiceName, e.Method.Name))
+			}
+			buildFunction.Name = declaration.Name()
+		}
+		return flags, buildFunction
 	}
 	return nil, nil
 }
@@ -143,28 +163,31 @@ func makeFlags(e *EndpointData, args []*InitArgData) ([]*cli.FlagData, *cli.Buil
 	pInitArgs := make([]*codegen.InitArgData, len(args))
 	for i, arg := range args {
 		pInitArgs[i] = &codegen.InitArgData{
-			Name:      arg.Name,
-			FieldName: arg.FieldName,
-			FieldType: arg.FieldType,
-			Type:      arg.Type,
+			Name:         arg.Name,
+			FieldName:    arg.FieldName,
+			FieldType:    arg.FieldType,
+			FieldTypeRef: arg.FieldTypeRef,
+			Type:         arg.Type,
+			Pointer:      arg.Pointer,
+			FieldPointer: arg.Pointer,
 		}
 		fargs[i] = &cli.FlagArgData{
 			Name:         arg.Name,
 			TypeName:     arg.TypeName,
+			Plan:         arg.CLIPlan,
 			TypeRef:      arg.TypeRef,
 			FieldName:    arg.FieldName,
 			Description:  arg.Description,
 			Required:     arg.Required,
 			Example:      arg.Example,
 			DefaultValue: arg.DefaultValue,
-			Validate:     arg.Validate,
 		}
 	}
 
 	var pinit *cli.PayloadInitData
 	if e.Method.PayloadRef != "" && e.Request.ServerConvert != nil {
 		pinit = &cli.PayloadInitData{
-			Code:           e.Request.ServerConvert.Init.Code,
+			Code:           e.Request.CLIInitCode,
 			ReturnIsStruct: e.Request.ServerConvert.Init.ReturnIsStruct,
 			ReturnTypePkg:  e.Request.ServerConvert.Init.ReturnTypePkg,
 			Args:           pInitArgs,

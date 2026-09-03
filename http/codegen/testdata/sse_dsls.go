@@ -7,7 +7,9 @@ import (
 var SSEStringDSL = func() {
 	Service("SSEStringService", func() {
 		Method("SSEStringMethod", func() {
-			StreamingResult(String)
+			StreamingResult(String, func() {
+				Example("event")
+			})
 			HTTP(func() {
 				GET("/string")
 				ServerSentEvents()
@@ -44,9 +46,15 @@ var SSEObjectDSL = func() {
 	Service("SSEObjectService", func() {
 		Method("SSEObjectMethod", func() {
 			StreamingResult(func() {
-				Attribute("id", String)
-				Attribute("value", Int)
-				Attribute("flag", Boolean)
+				Attribute("id", String, func() {
+					Example("event")
+				})
+				Attribute("value", Int, func() {
+					Example(1)
+				})
+				Attribute("flag", Boolean, func() {
+					Example(true)
+				})
 			})
 			HTTP(func() {
 				GET("/object")
@@ -60,8 +68,12 @@ var SSEDataFieldDSL = func() {
 	Service("SSEDataFieldService", func() {
 		Method("SSEDataFieldMethod", func() {
 			StreamingResult(func() {
-				Attribute("data", String)
-				Attribute("flag", Boolean)
+				Attribute("data", String, func() {
+					Example("event")
+				})
+				Attribute("flag", Boolean, func() {
+					Example(true)
+				})
 			})
 			HTTP(func() {
 				GET("/data-field")
@@ -92,9 +104,13 @@ var SSERequestIDDSL = func() {
 	Service("SSERequestIDService", func() {
 		Method("SSERequestIDMethod", func() {
 			Payload(func() {
-				Attribute("id", String)
+				Attribute("id", String, func() {
+					Example("request")
+				})
 			})
-			StreamingResult(String)
+			StreamingResult(String, func() {
+				Example("event")
+			})
 			HTTP(func() {
 				GET("/request-id")
 				ServerSentEvents(func() {
@@ -109,7 +125,9 @@ var SSEAllFieldsDSL = func() {
 	Service("SSEAllFieldsService", func() {
 		Method("SSEAllFieldsMethod", func() {
 			Payload(func() {
-				Attribute("id", String)
+				Attribute("id", String, func() {
+					Example("request")
+				})
 			})
 			StreamingResult(func() {
 				Attribute("id", String, func() {

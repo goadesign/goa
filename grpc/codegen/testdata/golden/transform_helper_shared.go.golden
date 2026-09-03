@@ -1,0 +1,70 @@
+// NewProtoStoreRequest builds *shared_helperspb.StoreRequest from
+// *sharedhelpers.StorePayload.
+func NewProtoStoreRequest(payload *sharedhelpers.StorePayload) *shared_helperspb.StoreRequest {
+	message := &shared_helperspb.StoreRequest{}
+	if payload.Left != nil {
+		message.Left = transformSharedChildToProtoSharedChild(payload.Left)
+	}
+	if payload.Right != nil {
+		message.Right = transformSharedChildToProtoSharedChild(payload.Right)
+	}
+	return message
+}
+
+// ValidateStoreRequest runs the validations defined on StoreRequest.
+func ValidateStoreRequest(message *shared_helperspb.StoreRequest) (err error) {
+	if message.Left == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("left", "message"))
+	}
+	if message.Left != nil {
+		if err2 := validatetest_20_api_SharedHelpers_SharedChild_At_left(message.Left); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	if message.Right != nil {
+		if err2 := validatetest_20_api_SharedHelpers_SharedChild_At_right(message.Right); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	return
+}
+
+// validatetest_20_api_SharedHelpers_SharedChild_At_left runs the validations
+// defined on SharedChild.
+func validatetest_20_api_SharedHelpers_SharedChild_At_left(left *shared_helperspb.SharedChild) (err error) {
+	if left.Value == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("value", "left"))
+	}
+	return
+}
+
+// validatetest_20_api_SharedHelpers_SharedChild_At_right runs the validations
+// defined on SharedChild.
+func validatetest_20_api_SharedHelpers_SharedChild_At_right(right *shared_helperspb.SharedChild) (err error) {
+	if right.Value == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("value", "right"))
+	}
+	return
+}
+
+// transformSharedChildToProtoSharedChild builds a value of type
+// *shared_helperspb.SharedChild from a value of type
+// *sharedhelpers.SharedChild.
+func transformSharedChildToProtoSharedChild(v *sharedhelpers.SharedChild) *shared_helperspb.SharedChild {
+	res := &shared_helperspb.SharedChild{
+		Value: &v.Value,
+	}
+
+	return res
+}
+
+// transformProtoSharedChildToSharedChild builds a value of type
+// *sharedhelpers.SharedChild from a value of type
+// *shared_helperspb.SharedChild.
+func transformProtoSharedChildToSharedChild(v *shared_helperspb.SharedChild) *sharedhelpers.SharedChild {
+	res := &sharedhelpers.SharedChild{
+		Value: *v.Value,
+	}
+
+	return res
+}

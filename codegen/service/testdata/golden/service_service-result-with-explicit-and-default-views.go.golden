@@ -6,8 +6,8 @@ type Service interface {
 	//	- "default"
 	//	- "tiny"
 	A(context.Context) (res *MultipleViews, view string, err error)
-	// A implements A.
-	AEndpoint(context.Context) (res *MultipleViews, err error)
+	// B implements B.
+	B(context.Context) (res *MultipleViews, err error)
 }
 
 // APIName is the name of the API as defined in the design.
@@ -24,7 +24,7 @@ const ServiceName = "WithExplicitAndDefaultViews"
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
-var MethodNames = [2]string{"A", "A"}
+var MethodNames = [2]string{"A", "B"}
 
 // MultipleViews is the result type of the WithExplicitAndDefaultViews service
 // A method.
@@ -49,7 +49,7 @@ func NewMultipleViews(vres *withexplicitanddefaultviewsviews.MultipleViews) *Mul
 // NewViewedMultipleViews initializes viewed result type MultipleViews from
 // result type MultipleViews using the given view.
 func NewViewedMultipleViews(res *MultipleViews, view string) *withexplicitanddefaultviewsviews.MultipleViews {
-	var vres *withexplicitanddefaultviewsviews.MultipleViews
+	vres := &withexplicitanddefaultviewsviews.MultipleViews{View: view}
 	switch view {
 	case "default", "":
 		p := newMultipleViewsView(res)

@@ -1,3 +1,5 @@
+// This file verifies generated protobuf services and message declarations,
+// including package-owned naming collisions, by compiling each schema.
 package codegen
 
 import (
@@ -34,13 +36,15 @@ func TestProtoFiles(t *testing.T) {
 		{"protofiles-custom-package-name", testdata.ServiceWithPackageDSL},
 		{"protofiles-struct-meta-type", testdata.StructMetaTypeDSL},
 		{"protofiles-default-fields", testdata.DefaultFieldsDSL},
+		{"protofiles-required-primitive-presence", testdata.RequiredPrimitivePresenceDSL},
 		{"protofiles-custom-message-name", testdata.CustomMessageNameDSL},
+		{"protofiles-distinct-custom-message-names", testdata.DistinctCustomMessageNamesDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := RunGRPCDSL(t, c.DSL)
 			services := CreateGRPCServices(root)
-			fs := ProtoFiles("", services)
+			fs := protoFiles(services)
 			if len(fs) != 1 {
 				t.Fatalf("got %d files, expected one", len(fs))
 			}
@@ -50,7 +54,7 @@ func TestProtoFiles(t *testing.T) {
 			// testutil.AssertString handles line ending normalization internally
 			testutil.AssertString(t, "testdata/golden/proto_"+c.Name+".proto.golden", code)
 			fpath := codegen.CreateTempFile(t, code)
-			assert.NoError(t, protoc(defaultProtocCmd, fpath, nil), "error occurred when compiling proto file %q", fpath)
+			assert.NoError(t, protoc(defaultProtocCmd, fpath), "error occurred when compiling proto file %q", fpath)
 		})
 	}
 }
@@ -75,7 +79,7 @@ func TestMessageDefSection(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			root := RunGRPCDSL(t, c.DSL)
 			services := CreateGRPCServices(root)
-			fs := ProtoFiles("", services)
+			fs := protoFiles(services)
 			require.Len(t, fs, 1)
 			sections := fs[0].SectionTemplates
 			require.GreaterOrEqual(t, len(sections), 3)
@@ -84,7 +88,7 @@ func TestMessageDefSection(t *testing.T) {
 			// testutil.AssertString handles line ending normalization internally
 			testutil.AssertString(t, "testdata/golden/proto_"+c.Name+".proto.golden", code+msgCode)
 			fpath := codegen.CreateTempFile(t, code+msgCode)
-			assert.NoError(t, protoc(defaultProtocCmd, fpath, nil), "error occurred when compiling proto file %q", fpath)
+			assert.NoError(t, protoc(defaultProtocCmd, fpath), "error occurred when compiling proto file %q", fpath)
 		})
 	}
 }
@@ -118,7 +122,7 @@ func TestProtoc(t *testing.T) {
 			t.Cleanup(func() { assert.NoError(t, os.RemoveAll(dir)) })
 			fpath := filepath.Join(dir, "schema")
 			require.NoError(t, os.WriteFile(fpath, []byte(code), 0o600), "error occurred writing proto schema")
-			require.NoError(t, protoc(c.Cmd, fpath, nil), "error occurred when compiling proto file with the standard protoc %q", fpath)
+			require.NoError(t, protoc(c.Cmd, fpath), "error occurred when compiling proto file with the standard protoc %q", fpath)
 
 			fcontents, err := os.ReadFile(fpath + ".pb.go")
 			require.NoError(t, err)

@@ -1,201 +1,163 @@
 # Goa JSON-RPC Architecture
 
-This document explains the architecture of Goa's JSON-RPC support, covering both basic HTTP and advanced WebSocket-based streaming communication. It details the code generation process, runtime behavior, and recommended usage patterns.
+Goa implements JSON-RPC 2.0 over one HTTP POST route per service. A method
+either returns one result in the HTTP response or streams results as JSON-RPC
+messages carried by Server-Sent Events (SSE).
 
-## Core Principle: Composition Over Modification
+JSON-RPC does not support Goa client streams or bidirectional streams. A method
+with `StreamingResult` must select `ServerSentEvents`. Ordinary HTTP methods may
+still use WebSockets; that transport has its own generated code and does not
+change the JSON-RPC service contract.
 
-The fundamental principle behind Goa's JSON-RPC implementation is **composition over modification**. Instead of altering shared HTTP templates to accommodate JSON-RPC, the JSON-RPC code generation layer builds upon the existing HTTP transport infrastructure. This approach ensures a clean separation of concerns, preventing the HTTP layer from becoming coupled to JSON-RPC specifics and allowing both to evolve independently.
+## Generation layers
 
-## Code Generation
-
-The generation of JSON-RPC enabled services follows a layered process that starts with the standard HTTP transport code.
-
-### HTTP Codegen Foundation
-
-The process begins by generating the transport-agnostic service code, which includes:
-
-*   Service interfaces and endpoints
-*   Basic HTTP handlers and middleware
-*   Encoding and decoding utilities
-*   Error handling infrastructure
-
-### JSON-RPC Composition Layer
-
-The JSON-RPC `codegen` package then composes on top of the generated HTTP code by programmatically manipulating the `codegen.File` data structure before it is rendered. This involves a three-step process:
-
-1.  **Generate Base HTTP Code**: The standard `httpcodegen.ServerEncodeDecodeFile` function is called to produce the initial set of files.
-2.  **Modify Sections**: The generated sections are iterated upon to introduce JSON-RPC specific behavior. This includes adding necessary imports and replacing HTTP handler signatures with their JSON-RPC counterparts.
-3.  **Add JSON-RPC Sections**: Finally, new sections containing JSON-RPC specific logic, such as server handler initializers, are appended.
-
-This process is exemplified by the following snippet:
+The generated service package owns transport-neutral method and stream
+interfaces. JSON-RPC uses the same exact typed per-method server stream as HTTP
+SSE and gRPC:
 
 ```go
-// Step 1: Generate base HTTP code
-f := httpcodegen.ServerEncodeDecodeFile(genpkg, svc, data)
-
-// Step 2: Modify sections before final code generation
-for _, s := range f.SectionTemplates {
-    // Add JSON-RPC imports
-    if s.Name == "source-header" {
-        codegen.AddImport(s, codegen.GoaImport("jsonrpc"))
-    }
-    
-    // Modify signatures for JSON-RPC context
-    if s.Name == "request-decoder" {
-        s.Source = strings.Replace(s.Source, 
-            httpRequestDecoderTemplate, 
-            jsonrpcRequestDecoderTemplate, 1)
-    }
-    
-    // Namespace sections to avoid conflicts
-    s.Name = "jsonrpc-" + s.Name
+type WatchServerStream interface {
+	Send(Event) error
+	SendWithContext(context.Context, Event) error
+	Close() error
 }
-
-// Step 3: Add JSON-RPC specific sections
-sections = append(sections,
-    &codegen.SectionTemplate{
-        Name: "jsonrpc-server-handler-init", 
-        Source: jsonrpcTemplates.Read(serverHandlerInitT), 
-        Data: e
-    })
 ```
 
-### Key Codegen Patterns
+The HTTP generation plan owns JSON request and response body types,
+conversions, validation, and file imports. The JSON-RPC generator copies the
+finished HTTP plan and adds JSON-RPC request dispatch and message framing. It
+does not change the service interface or inspect generated types at runtime.
 
-Three key patterns enable this compositional approach:
+Generation follows this order:
 
-1.  **Template Namespacing**: JSON-RPC sections are prefixed with `jsonrpc-` to prevent name collisions with HTTP sections.
-2.  **In-Memory Modification**: Instead of altering the source templates on disk, modifications are made to the `Source` field of the `codegen.SectionTemplate` struct in memory.
-3.  **Conditional Template Selection**: The code generation logic dynamically selects the appropriate templates based on the endpoint configuration, for example, adding WebSocket-specific templates only when a WebSocket transport is defined for the service.
+1. The design is evaluated and rejects stream shapes JSON-RPC cannot carry.
+2. The service plan assigns exact method and stream types.
+3. The HTTP JSON-RPC plan assigns request and response body types and
+   conversions.
+4. The JSON-RPC plan writes only the unary or SSE code selected by the design.
 
-### Template Responsibilities
+## Unary requests
 
-This layered approach results in a clean separation of responsibilities between HTTP and JSON-RPC templates:
+The server reads one JSON-RPC request, decodes its `params` into the designed
+payload, calls the service endpoint once, and writes one JSON-RPC response when
+the request contains an `id`. A request without an `id` is a notification and
+receives no response.
 
-*   **HTTP Templates (Shared)**: These are responsible for transport-agnostic service logic. They must not contain any JSON-RPC or WebSocket specific logic.
-*   **JSON-RPC Templates (Specialized)**: These handle JSON-RPC protocol specifics and WebSocket streaming. They can specialize HTTP behavior but should do so through composition, not modification of the HTTP templates.
+An optional field selected by `Body` keeps absence through the generated
+transport constructor. For an object, map, array, or union, an absent service
+field omits `params`; an authored empty value still writes its direct JSON
+object or array. Optional primitive fields remain positional, so `[null]`
+decodes as absent and an explicit zero value remains present. The server rejects
+direct `params: null` instead of treating it as an absent value.
+When the selected field has a default, omitted or null input applies that
+default. A defaulted scalar is a service value with no absent state, so a
+direct generated client always sends its value. A nil defaulted collection
+omits `params`; a nonnil empty collection writes an empty array or object.
 
-## Runtime Architecture and Usage
+The generated request encoder returns the exact string ID written into the
+request. The endpoint passes that ID to the unary response decoder or SSE
+stream so the client can reject a response for another call. Notification
+encoders return only an error because notifications do not create an ID.
 
-The generated code provides two primary mechanisms for JSON-RPC communication: a simple HTTP transport for traditional request-response interactions, and a WebSocket transport for real-time, bidirectional streaming.
+The shared service route dispatches requests by their JSON-RPC `method`. Batch
+requests use the same per-method handlers and collect only responses for calls
+that contain an `id`.
 
-### Standard JSON-RPC over HTTP
+Result and error fields stay inside each JSON-RPC message. Design validation
+rejects `Header` and `Cookie` inside a JSON-RPC `Response` because one HTTP
+response may contain several batch messages or carry a server-sent-event
+stream. Request headers and cookies remain available because they describe the
+one incoming HTTP request.
 
-For services that do not require streaming, JSON-RPC messages are exchanged over standard HTTP. The generated server code includes an HTTP handler that decodes the JSON-RPC request from the HTTP body, invokes the corresponding service method, and writes the JSON-RPC response back to the HTTP response writer.
+## Server-sent-event streams
 
-The handler signatures clearly illustrate the differences between the transport layers:
+The client sends one JSON-RPC request over HTTP. When that request has an ID,
+each service call to `Send` writes an SSE event whose `data:` value is a
+complete JSON-RPC notification:
 
-*   **Regular HTTP**: `func(context.Context, *http.Request, http.ResponseWriter)`
-*   **JSON-RPC HTTP**: `func(context.Context, *http.Request, *jsonrpc.RawRequest, http.ResponseWriter)`
-
-### JSON-RPC over WebSocket
-
-Goa provides a powerful abstraction for building streaming services with WebSockets. This allows for full-duplex communication channels that can support a variety of interaction patterns.
-
-#### Architectural Principles
-
-The WebSocket architecture is guided by three principles:
-
-1.  **Single WebSocket Connection**: A single WebSocket connection is used to handle all JSON-RPC communication for a given service, including multiplexing different method calls and streaming patterns.
-2.  **User Code Owns Streaming Logic**: The core streaming logic is implemented by the developer in the `HandleStream` method. Goa provides the infrastructure and the `Stream` interface, but the implementation of the streaming strategy is left to the user.
-3.  **Clean Separation of Concerns**: The architecture separates the business logic (in service methods), the transport layer (JSON-RPC protocol and WebSocket management), and the streaming logic (in `HandleStream`).
-
-#### Core Components
-
-The WebSocket support is built around three core components:
-
-*   **`HandleStream` Method**: This method is the entry point for all WebSocket communication. It is where the developer implements the application-specific streaming logic.
-
-    ```go
-    func (s *serviceImpl) HandleStream(ctx context.Context, stream ServiceName.Stream) error {
-        // User implements their streaming strategy here.
-        // Can listen to channels, timers, events, etc.
-        // Can call stream.Recv() to process incoming JSON-RPC requests.
-        // Can call stream.SendMethodName() to send responses or notifications.
-    }
-    ```
-
-*   **`Stream` Interface**: This generated interface provides the methods for interacting with the WebSocket connection, including receiving requests (`Recv`), sending responses (`SendMethodName`), sending errors (`SendError`), and closing the connection (`Close`).
-
-*   **Service Methods**: These are the regular service methods with standard Go signatures. They are called automatically when `Recv()` processes a matching JSON-RPC request and can also be called directly from `HandleStream` for server-initiated communication.
-
-The handler signature for WebSocket streaming endpoints reflects the asynchronous nature of the communication:
-
-```go
-func(context.Context, *http.Request, *jsonrpc.RawRequest) (any, error)
+```json
+{"jsonrpc":"2.0","method":"watch","params":{"value":"ready"}}
 ```
 
-The handler returns a result and an error because responses are sent asynchronously via the `Stream` interface rather than being written directly to an `http.ResponseWriter`.
+The service method return completes the stream. For a request with an `id`, the
+transport writes exactly one terminal JSON-RPC message in an SSE `data:` line:
 
-#### Streaming Patterns
+- `result: null` when the method succeeds; or
+- the mapped JSON-RPC error when the method returns an error.
 
-The flexibility of the `HandleStream` method allows for a variety of streaming patterns:
+Goa does not add private outer event names for notifications, success, or
+failure. `SSEEventType` may map a streaming-result field to the outer `event:`
+line. `SSEEventID` and `SSEEventRetry` do the same for `id:` and `retry:`. If a
+mapping is absent, the generated server omits that line. The client inspects
+the complete JSON-RPC message in `data:` to distinguish a streamed value from
+terminal success or failure.
 
-*   **Request-Response**: The traditional JSON-RPC pattern can be implemented by simply calling `stream.Recv()` in a loop. When `Recv()` is called, it reads a JSON-RPC request from the WebSocket, dispatches it to the appropriate service method, and automatically sends the response back.
+`SSEEventData` may select one streaming-result field for notification params.
+Primitive values use one positional parameter; structured values keep their
+JSON shape. An optional primitive writes `[null]` when its service pointer is
+nil and keeps an explicit zero value. The client maps omitted params and
+`[null]` to absence, then applies an authored default when one exists. This
+mapping is rejected for viewed results because one selected field would omit
+the view name required to rebuild the result. The other outer SSE mappings
+remain available for viewed results.
 
-    ```go
-    func (s *serviceImpl) HandleStream(ctx context.Context, stream ServiceName.Stream) error {
-        defer stream.Close()
-        
-        for {
-            select {
-            case <-ctx.Done():
-                return ctx.Err()
-            default:
-                if err := stream.Recv(ctx); err != nil {
-                    return err
-                }
-            }
-        }
-    }
-    ```
+`SSERequestID` maps one initial payload field to the HTTP `Last-Event-ID`
+request header. The client writes the header and the server reads it before
+payload validation. It is not part of JSON-RPC params.
 
-*   **Server Streaming**: To push data from the server to the client, the `HandleStream` method can initiate a goroutine that sends data at regular intervals or in response to events.
+Generated clients accept only the `text/event-stream` media type, with optional
+standard parameters. They join multiple `data:` lines with a newline, accept
+CR, LF, and CRLF line endings, remove one byte-order marker at the start of the
+stream, and discard a final event that has no blank-line terminator. The last
+valid `id:` value applies to later events until another `id:` changes it. An
+empty `id:` resets that value, and an `id:` containing NUL is ignored.
 
-*   **Client Streaming**: To receive a stream of data from a client, the `HandleStream` method can repeatedly call `stream.Recv()` and accumulate the results.
+Generated servers accept encoded JSON that uses CR, LF, or CRLF and prefix
+every resulting physical line with `data:`. They reject event IDs containing
+CR, LF, or NUL, event names containing a line break, and negative retry values.
 
-*   **Bidirectional Streaming**: For interactive communication, `HandleStream` can combine both server and client streaming patterns, for example by launching a goroutine to handle outgoing messages while the main loop processes incoming messages.
+JSON-RPC rejects a method that defines both `Result` and `StreamingResult`,
+even when both declarations use the same Goa type. Its client stream has no
+separate operation that could return the final `Result`. Use one method for the
+stream and another method for the final resource. gRPC has the same
+restriction. Ordinary HTTP keeps mixed-result support.
 
-#### Advanced Patterns
+A request without an `id` receives no HTTP output. The generated server still
+runs the service and lets every `Send` perform its normal encoding work, but a
+private response writer discards headers and bytes. Decode, encode, and service
+failures still reach the configured error handler for logging. Request IDs and
+JSON-RPC messages remain transport details and never appear in the generated
+service stream.
 
-The `HandleStream` method can also be used to implement more advanced patterns, such as:
+The generated client returns each notification value from `Recv`. A successful
+terminal response makes the next `Recv` return `io.EOF`. A terminal JSON-RPC
+error is returned as an error. A designed error is rebuilt as its generated
+service error. An unknown error code returns `*jsonrpc.RawErrorResponse`, which
+preserves the received code, message, and data.
 
-*   **Mixed Request-Response and Streaming**: A service can handle both traditional request-response interactions and asynchronous, server-initiated notifications within the same WebSocket connection.
-*   **Conditional Streaming**: The streaming strategy can be determined dynamically based on the properties of the connection or the initial messages exchanged.
+## Result conversion and views
 
-#### Method Dispatch and Results
+All JSON names, required fields, transport pointers, result conversions, and
+view branches are decided while generating code. A variable-view result uses
+this JSON-RPC value:
 
-When `stream.Recv()` is called, it automatically handles the parsing of the incoming JSON-RPC request, validation, routing to the appropriate service method, and marshalling of the response. Service methods can also be invoked manually from within `HandleStream` for server-initiated communication.
+```json
+{"view":"summary","body":{"value":"ready"}}
+```
 
-#### Error Handling
+The same representation is used for unary results and streamed notification
+parameters. A fixed-view or non-viewed result uses only its designed body.
+Malformed JSON is returned as a generated client `decoding_error`. A decoded
+body with a missing field, an unknown view, or another failed design rule is
+returned as a generated client `validation_error`.
 
-The architecture provides mechanisms for handling various types of errors:
+## Errors
 
-*   **Connection Errors**: Errors at the WebSocket connection level will cause `HandleStream` to terminate.
-*   **JSON-RPC Protocol Errors**: Invalid requests will result in the automatic sending of a JSON-RPC error response.
-*   **Streaming Errors**: Errors that occur while sending or receiving data can be handled within the `HandleStream` implementation.
+Protocol parsing, request validation, method dispatch, designed service errors,
+and unexpected service errors are mapped by the JSON-RPC transport. Service
+implementations return ordinary errors; they do not write protocol error
+messages themselves.
 
-#### Testing Strategies
-
-The separation of concerns in the architecture simplifies testing:
-
-*   **Integration Tests**: The `HandleStream` implementation can be overridden in tests to simulate specific streaming behaviors.
-*   **Unit Tests**: Service methods can be tested independently as standard Go functions.
-
-## Maintenance Guidelines
-
-To maintain the clean separation of concerns and the long-term health of the codebase, it is important to adhere to the following guidelines:
-
-### DO:
-
-*   ✅ Modify JSON-RPC templates for JSON-RPC specific behavior.
-*   ✅ Use `codegen.File` section manipulation for signature changes.
-*   ✅ Add JSON-RPC specific sections for specialized functionality.
-*   ✅ Compose on top of HTTP-generated code.
-
-### DON'T:
-
-*   ❌ Modify HTTP templates with JSON-RPC specific logic.
-*   ❌ Add WebSocket conditionals to shared HTTP templates.
-*   ❌ Break the transport independence of the HTTP layer.
-*   ❌ Couple the HTTP codegen to JSON-RPC requirements.
+If the request has an `id`, an SSE decode or service error becomes one terminal
+JSON-RPC error event. If the request has no `id`, the server writes no response
+and passes the error to the configured server error handler.

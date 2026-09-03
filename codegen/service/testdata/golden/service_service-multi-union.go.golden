@@ -34,24 +34,24 @@ type Union struct {
 	Values Values
 }
 
-// Values is a sum-type union.
+// Values holds exactly one of its branch values.
 type Values struct {
 	kind ValuesKind
-	A    *TypeA
-	B    *TypeB
+	a    *TypeA
+	b    *TypeB
 }
 
-// ValuesKind enumerates the union variants for Values.
+// ValuesKind records which Values branch is selected.
 type ValuesKind string
 
 const (
-	// ValuesKindA identifies the a branch of the union.
+	// ValuesKindA identifies the a branch.
 	ValuesKindA ValuesKind = "a"
-	// ValuesKindB identifies the b branch of the union.
+	// ValuesKindB identifies the b branch.
 	ValuesKindB ValuesKind = "b"
 )
 
-// Kind returns the discriminator value of the union.
+// Kind returns the selected branch.
 func (u Values) Kind() ValuesKind {
 	return u.kind
 }
@@ -60,47 +60,51 @@ func (u Values) Kind() ValuesKind {
 func NewValuesA(v *TypeA) Values {
 	return Values{
 		kind: ValuesKindA,
-		A:    v,
+		a:    v,
 	}
 }
 
-// AsA returns the value of the a branch if set.
+// AsA returns the value when the a branch is selected.
 func (u Values) AsA() (_ *TypeA, ok bool) {
 	if u.kind != ValuesKindA {
 		return
 	}
-	return u.A, true
+	return u.a, true
 }
 
-// SetA sets the a branch of the union.
+// SetA selects the a branch and stores v.
 func (u *Values) SetA(v *TypeA) {
-	u.kind = ValuesKindA
-	u.A = v
+	*u = Values{
+		kind: ValuesKindA,
+		a:    v,
+	}
 }
 
 // NewValuesB constructs Values with the b branch set.
 func NewValuesB(v *TypeB) Values {
 	return Values{
 		kind: ValuesKindB,
-		B:    v,
+		b:    v,
 	}
 }
 
-// AsB returns the value of the b branch if set.
+// AsB returns the value when the b branch is selected.
 func (u Values) AsB() (_ *TypeB, ok bool) {
 	if u.kind != ValuesKindB {
 		return
 	}
-	return u.B, true
+	return u.b, true
 }
 
-// SetB sets the b branch of the union.
+// SetB selects the b branch and stores v.
 func (u *Values) SetB(v *TypeB) {
-	u.kind = ValuesKindB
-	u.B = v
+	*u = Values{
+		kind: ValuesKindB,
+		b:    v,
+	}
 }
 
-// Validate ensures the union discriminant is valid.
+// Validate ensures exactly one valid branch is selected.
 func (u Values) Validate() error {
 	switch u.kind {
 	case "":
@@ -109,12 +113,12 @@ func (u Values) Validate() error {
 			string(ValuesKindB),
 		})
 	case ValuesKindA:
-		if u.A == nil {
+		if u.a == nil {
 			return goa.MissingFieldError("value", "Values")
 		}
 		return nil
 	case ValuesKindB:
-		if u.B == nil {
+		if u.b == nil {
 			return goa.MissingFieldError("value", "Values")
 		}
 		return nil
@@ -136,11 +140,11 @@ func (u Values) MarshalJSON() ([]byte, error) {
 	)
 	switch u.kind {
 	case ValuesKindA:
-		value = u.A
+		value = u.a
 	case ValuesKindB:
-		value = u.B
+		value = u.b
 	default:
-		return nil, fmt.Errorf("unexpected Values discriminant %q", u.kind)
+		return nil, fmt.Errorf("unexpected Values kind %q", u.kind)
 	}
 	return json.Marshal(struct {
 		Type  string `json:"type"`
@@ -172,15 +176,13 @@ func (u *Values) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(raw.Value, &v); err != nil {
 			return err
 		}
-		u.kind = ValuesKindA
-		u.A = v
+		u.SetA(v)
 	case string(ValuesKindB):
 		var v *TypeB
 		if err := json.Unmarshal(raw.Value, &v); err != nil {
 			return err
 		}
-		u.kind = ValuesKindB
-		u.B = v
+		u.SetB(v)
 	default:
 		if raw.Type == "" {
 			return goa.MissingFieldError("type", "Values")

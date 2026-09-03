@@ -1,0 +1,67 @@
+// NewProtoListRequest builds *wrapped_collectionpb.ListRequest from metadata
+// values.
+func NewProtoListRequest() *wrapped_collectionpb.ListRequest {
+	message := &wrapped_collectionpb.ListRequest{}
+	return message
+}
+
+// NewListResult builds
+// wrappedcollectionviews.WrappedCollectionItemCollectionView from
+// *wrapped_collectionpb.WrappedCollectionItemCollection.
+func NewListResult(message *wrapped_collectionpb.WrappedCollectionItemCollection) wrappedcollectionviews.WrappedCollectionItemCollectionView {
+	result := make([]*wrappedcollectionviews.WrappedCollectionItemView, len(message.Field))
+	for i, val := range message.Field {
+		result[i] = &wrappedcollectionviews.WrappedCollectionItemView{}
+		if val.Child != nil {
+			result[i].Child = transformProtoWrappedCollectionChildToWrappedCollectionChildView(val.Child)
+		}
+	}
+	return result
+}
+
+// ValidateWrappedCollectionItemCollection runs the validations defined on
+// WrappedCollectionItemCollection.
+func ValidateWrappedCollectionItemCollection(message *wrapped_collectionpb.WrappedCollectionItemCollection) (err error) {
+	for _, e := range message.Field {
+		if e != nil {
+			if err2 := validatetest_20_api_WrappedCollection_WrappedCollectionItem_At_elem(e); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	return
+}
+
+// validatetest_20_api_WrappedCollection_WrappedCollectionItem_At_elem runs the
+// validations defined on WrappedCollectionItem.
+func validatetest_20_api_WrappedCollection_WrappedCollectionItem_At_elem(elem *wrapped_collectionpb.WrappedCollectionItem) (err error) {
+	if elem.Child == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("child", "elem"))
+	}
+	if elem.Child != nil {
+		if err2 := validatetest_20_api_WrappedCollection_WrappedCollectionChild_At_child(elem.Child); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	return
+}
+
+// validatetest_20_api_WrappedCollection_WrappedCollectionChild_At_child runs
+// the validations defined on WrappedCollectionChild.
+func validatetest_20_api_WrappedCollection_WrappedCollectionChild_At_child(child *wrapped_collectionpb.WrappedCollectionChild) (err error) {
+	if child.Value == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("value", "child"))
+	}
+	return
+}
+
+// transformProtoWrappedCollectionChildToWrappedCollectionChildView builds a
+// value of type *wrappedcollectionviews.WrappedCollectionChildView from a
+// value of type *wrapped_collectionpb.WrappedCollectionChild.
+func transformProtoWrappedCollectionChildToWrappedCollectionChildView(v *wrapped_collectionpb.WrappedCollectionChild) *wrappedcollectionviews.WrappedCollectionChildView {
+	res := &wrappedcollectionviews.WrappedCollectionChildView{
+		Value: v.Value,
+	}
+
+	return res
+}

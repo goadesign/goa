@@ -1,0 +1,35 @@
+// DecodeOptionalTextRequest returns a decoder for requests sent to the params
+// optional_text endpoint.
+func DecodeOptionalTextRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request, *jsonrpc.RawRequest) (*params.OptionalTextPayload, error) {
+	return func(r *http.Request, req *jsonrpc.RawRequest) (*params.OptionalTextPayload, error) {
+		var payload *params.OptionalTextPayload
+		if len(req.Params) > 0 {
+			param, paramErr := jsonrpc.SinglePositionalParam(req.Params)
+			if paramErr != nil {
+				return payload, goa.DecodePayloadError(paramErr.Error())
+			}
+			r.Body = io.NopCloser(bytes.NewReader(param))
+		} else {
+			r.Body = http.NoBody
+		}
+		var (
+			body *string
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				err = nil
+			} else {
+				var gerr *goa.ServiceError
+				if errors.As(err, &gerr) {
+					return payload, gerr
+				}
+				return payload, goa.DecodePayloadError(err.Error())
+			}
+		}
+		payload = NewOptionalTextPayload(body)
+
+		return payload, nil
+	}
+}

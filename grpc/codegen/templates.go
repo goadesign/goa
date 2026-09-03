@@ -63,8 +63,8 @@ const (
 
 // Partial template constants
 const (
-	grpcConvertTypeToStringP = "convert_type_to_string"
-	grpcConvertStringToTypeP = "convert_string_to_type"
+	grpcConvertStringToTypeP    = "convert_string_to_type"
+	grpcTypeToStringExpressionP = "type_to_string_expression"
 )
 
 // Common template constants

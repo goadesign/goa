@@ -16,7 +16,7 @@ func NewMethodWithErrorCustomPkgErrorName(body *MethodWithErrorCustomPkgErrorNam
 }
 
 // ValidateMethodWithErrorCustomPkgErrorNameResponseBody runs the validations
-// defined on MethodWithErrorCustomPkg_error_name_Response_Body
+// defined on MethodWithErrorCustomPkgErrorNameResponseBody
 func ValidateMethodWithErrorCustomPkgErrorNameResponseBody(body *MethodWithErrorCustomPkgErrorNameResponseBody) (err error) {
 	if body.Name == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))

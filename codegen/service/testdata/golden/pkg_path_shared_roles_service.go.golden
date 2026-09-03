@@ -1,0 +1,54 @@
+
+// Service is the PkgPathSharedRoles service interface.
+type Service interface {
+	// Exchange implements Exchange.
+	Exchange(context.Context, *shared.Shared, ExchangeServerStream) (res *shared.Shared, err error)
+}
+
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "PkgPathSharedRoles"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = [1]string{"Exchange"}
+
+// ExchangeServerStream allows streaming instances of *shared.Shared to the
+// client.
+type ExchangeServerStream interface {
+	// Send streams instances of "shared.Shared".
+	Send(*shared.Shared) error
+	// SendWithContext streams instances of "shared.Shared" with context.
+	SendWithContext(context.Context, *shared.Shared) error
+	// Recv reads instances of "shared.Shared" from the stream.
+	Recv() (*shared.Shared, error)
+	// RecvWithContext reads instances of "shared.Shared" from the stream with
+	// context.
+	RecvWithContext(context.Context) (*shared.Shared, error)
+	// Close closes the stream.
+	Close() error
+}
+
+// ExchangeClientStream allows streaming instances of *shared.Shared to the
+// client.
+type ExchangeClientStream interface {
+	// Send streams instances of "shared.Shared".
+	Send(*shared.Shared) error
+	// SendWithContext streams instances of "shared.Shared" with context.
+	SendWithContext(context.Context, *shared.Shared) error
+	// Recv reads instances of "shared.Shared" from the stream.
+	Recv() (*shared.Shared, error)
+	// RecvWithContext reads instances of "shared.Shared" from the stream with
+	// context.
+	RecvWithContext(context.Context) (*shared.Shared, error)
+	// Close closes the stream.
+	Close() error
+}

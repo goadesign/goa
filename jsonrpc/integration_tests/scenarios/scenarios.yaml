@@ -181,7 +181,7 @@ scenarios:
         message: "Invalid params"
 
 
-  # SSE streaming without final response
+  # SSE streams with event notifications and a terminal null result
   - name: "stream_object_sse"
     method: "stream_object_sse"
     transport: "sse"
@@ -217,38 +217,11 @@ scenarios:
             field2: 3
             field3: true  # Last item is true
 
-  # SSE streaming with final response
-  - name: "stream_string_final_sse"
-    method: "stream_string_final_sse"
-    transport: "sse"
-    request:
-      params: "abc"  # Length 3 = 3 notifications
-      id: "sse-1"
-    sequence:
       - type: "receive"
         expect:
           jsonrpc: "2.0"
-          method: "stream_string_final_sse"
-          params:
-            value: "Stream 1 of 3"
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          method: "stream_string_final_sse"
-          params:
-            value: "Stream 2 of 3"
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          method: "stream_string_final_sse"
-          params:
-            value: "Stream 3 of 3"
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          id: "sse-1"
-          result:
-            value: "Final response"
+          id: "sse-2"
+          result: null
 
   # SSE additional streaming tests
   - name: "stream_array_sse"
@@ -271,6 +244,11 @@ scenarios:
           method: "stream_array_sse"
           params:
             items: ["Processing: second"]
+      - type: "receive"
+        expect:
+          jsonrpc: "2.0"
+          id: "sse-array-1"
+          result: null
 
   - name: "stream_map_sse"
     method: "stream_map_sse"
@@ -298,6 +276,11 @@ scenarios:
             data:
               key: "key2"
               value: "value2"
+      - type: "receive"
+        expect:
+          jsonrpc: "2.0"
+          id: "sse-map-1"
+          result: null
 
   - name: "stream_string_sse"
     method: "stream_string_sse"
@@ -319,111 +302,11 @@ scenarios:
           params:
             value: "Stream 2 of 2"
 
-  # SSE with final modifier - stream then send final response
-  - name: "stream_array_final_sse"
-    method: "stream_array_final_sse"
-    transport: "sse"
-    request:
-      params:
-        items: ["item1", "item2"]
-      id: "sse-array-final-1"
-    sequence:
       - type: "receive"
         expect:
           jsonrpc: "2.0"
-          method: "stream_array_final_sse"
-          params:
-            items: ["Processing: item1"]
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          method: "stream_array_final_sse"
-          params:
-            items: ["Processing: item2"]
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          id: "sse-array-final-1"
-          result:
-            items: ["completed"]
-
-  - name: "stream_object_final_sse"
-    method: "stream_object_final_sse"
-    transport: "sse"
-    request:
-      params:
-        field1: "start"
-        field2: 3  # Count of notifications before final
-        field3: false
-      id: "sse-obj-final-1"
-    sequence:
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          method: "stream_object_final_sse"
-          params:
-            field1: "start-1"
-            field2: 1
-            field3: false
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          method: "stream_object_final_sse"
-          params:
-            field1: "start-2"
-            field2: 2
-            field3: false
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          method: "stream_object_final_sse"
-          params:
-            field1: "start-3"
-            field2: 3
-            field3: true  # Last is true
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          id: "sse-obj-final-1"
-          result:
-            field1: "completed"
-            field2: 100
-            field3: true
-
-  - name: "stream_map_final_sse"
-    method: "stream_map_final_sse"
-    transport: "sse"
-    request:
-      params:
-        data:
-          first: "value1"
-          second: "value2"
-      id: "sse-map-final-1"
-    sequence:
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          method: "stream_map_final_sse"
-          params:
-            data:
-              key: "first"
-              value: "value1"
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          method: "stream_map_final_sse"
-          params:
-            data:
-              key: "second"
-              value: "value2"
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          id: "sse-map-final-1"
-          result:
-            data:
-              status: "completed"
-              final: true
+          id: "sse-string-1"
+          result: null
 
   # SSE error scenario - stream then error
   - name: "stream_string_error_sse"
@@ -450,35 +333,17 @@ scenarios:
           jsonrpc: "2.0"
           id: "sse-err-1"
           error:
-            code: -32602
+            code: -32603
             message: "Streaming error occurred"
 
-  # SSE with no ID (pure notifications)
-  - name: "stream_string_notify_sse"
-    method: "stream_string_notify_sse"
+  # A missing ID makes the message a notification. Request-only methods reject
+  # it without sending an event.
+  - name: "stream_string_missing_id_sse"
+    method: "stream_string_sse"
     transport: "sse"
     request:
-      params: "abc"  # 3 chars = 3 notifications
-      # No ID - pure notification stream
-    sequence:
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          method: "stream_string_notify_sse"
-          params:
-            value: "Stream 1 of 3"
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          method: "stream_string_notify_sse"
-          params:
-            value: "Stream 2 of 3"
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          method: "stream_string_notify_sse"
-          params:
-            value: "Stream 3 of 3"
+      params: "abc"
+    sequence: []
 
   # SSE edge cases and additional tests
   # Empty array test - streams single "empty" notification
@@ -497,6 +362,12 @@ scenarios:
           params:
             items: ["empty"]
 
+      - type: "receive"
+        expect:
+          jsonrpc: "2.0"
+          id: "sse-empty-1"
+          result: null
+
   # Single string stream - one character = one notification
   - name: "stream_string_single_sse"
     method: "stream_string_sse"
@@ -511,6 +382,12 @@ scenarios:
           method: "stream_string_sse"
           params:
             value: "Stream 1 of 1"
+
+      - type: "receive"
+        expect:
+          jsonrpc: "2.0"
+          id: "sse-single-1"
+          result: null
 
   # Multiple items streamed rapidly
   - name: "stream_string_multiple_sse"
@@ -551,43 +428,11 @@ scenarios:
           params:
             value: "Stream 5 of 5"
 
-  # Stream with count control then final response
-  - name: "stream_object_count_final_sse"
-    method: "stream_object_final_sse"
-    transport: "sse"
-    request:
-      params:
-        field1: "test"
-        field2: 2  # This controls the count of notifications
-        field3: true
-      id: "sse-mixed-1"
-    sequence:
-      # Notifications based on field2 count
       - type: "receive"
         expect:
           jsonrpc: "2.0"
-          method: "stream_object_final_sse"
-          params:
-            field1: "test-1"
-            field2: 1
-            field3: false
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          method: "stream_object_final_sse"
-          params:
-            field1: "test-2"
-            field2: 2
-            field3: true  # Last item is true
-      # Then the final response with ID
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          id: "sse-mixed-1"
-          result:
-            field1: "completed"
-            field2: 100
-            field3: true
+          id: "sse-rapid-1"
+          result: null
 
   # Echo test for SSE
   - name: "echo_string_sse"
@@ -604,6 +449,12 @@ scenarios:
           params:
             value: "echo this"
 
+      - type: "receive"
+        expect:
+          jsonrpc: "2.0"
+          id: "sse-echo-1"
+          result: null
+
   # Transform test for SSE
   - name: "transform_string_sse"
     method: "transform_string_sse"
@@ -618,6 +469,12 @@ scenarios:
           method: "transform_string_sse"
           params:
             value: "HELLO WORLD"
+
+      - type: "receive"
+        expect:
+          jsonrpc: "2.0"
+          id: "sse-transform-1"
+          result: null
 
   # Generate test for SSE
   - name: "generate_string_sse"
@@ -646,520 +503,11 @@ scenarios:
           params:
             value: "generated-3"
 
-  # WebSocket tests - TODO: Fix ID field mapping for bidirectional streaming
-  - name: "echo_string_websocket"
-    method: "echo_string_ws"
-    transport: "websocket"
-    sequence:
-      - type: "connect"
-      - type: "send"
-        data:
-          jsonrpc: "2.0"
-          method: "echo_string_ws"
-          params:
-            id: "ws-1"
-            value: "hello websocket"
-          id: "ws-1"
       - type: "receive"
         expect:
           jsonrpc: "2.0"
-          id: "ws-1"
-          result:
-            value: "hello websocket"
-      - type: "close"
-
-  # WebSocket with server broadcasts
-  - name: "broadcast_string_websocket"
-    method: "broadcast_string_ws"
-    transport: "websocket"
-    sequence:
-      - type: "connect"
-      - type: "send"
-        data:
-          jsonrpc: "2.0"
-          method: "broadcast_string_ws"
-          params:
-            id: "subscribe"
-            value: "start"
-          id: "broadcast-1"
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          method: "broadcast_string_ws"
-          params:
-            value: "Server announcement 1"
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          method: "broadcast_string_ws"
-          params:
-            value: "Server announcement 2"
-      - type: "close"
-
-  # WebSocket transform tests
-  - name: "transform_string_websocket"
-    method: "transform_string_ws"
-    transport: "websocket"
-    sequence:
-      - type: "send"
-        data:
-          jsonrpc: "2.0"
-          method: "transform_string_ws"
-          params:
-            id: "ws-transform-1"
-            value: "hello"
-          id: "ws-transform-1"
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          id: "ws-transform-1"
-          result:
-            value: "HELLO"
-      - type: "close"
-
-  - name: "transform_object_websocket"
-    method: "transform_object_ws"
-    transport: "websocket"
-    sequence:
-      - type: "send"
-        data:
-          jsonrpc: "2.0"
-          method: "transform_object_ws"
-          params:
-            id: "ws-obj-1"
-            field1: "lower"
-            field2: 10
-            field3: false
-          id: "ws-obj-1"
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          id: "ws-obj-1"
-          result:
-            field1: "LOWER"
-            field2: 20
-            field3: true
-      - type: "close"
-
-  - name: "transform_map_websocket"
-    method: "transform_map_ws"
-    transport: "websocket"
-    sequence:
-      - type: "send"
-        data:
-          jsonrpc: "2.0"
-          method: "transform_map_ws"
-          params:
-            id: "ws-map-1"
-            data:
-              key1: "value1"
-              key2: "value2"
-          id: "ws-map-1"
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          id: "ws-map-1"
-          result:
-            data:
-              transformed_key1: "value1"
-              transformed_key2: "value2"
-      - type: "close"
-
-  # WebSocket generate tests
-  - name: "generate_string_websocket"
-    method: "generate_string_ws"
-    transport: "websocket"
-    sequence:
-      - type: "send"
-        data:
-          jsonrpc: "2.0"
-          method: "generate_string_ws"
-          params:
-            id: "ws-gen-1"
-            value: "ignored"
-          id: "ws-gen-1"
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          id: "ws-gen-1"
-          result:
-            value: "generated-string"
-      - type: "close"
-
-  - name: "generate_array_websocket"
-    method: "generate_array_ws"
-    transport: "websocket"
-    sequence:
-      - type: "send"
-        data:
-          jsonrpc: "2.0"
-          method: "generate_array_ws"
-          params:
-            id: "ws-gen-array-1"
-            items: []  # Ignored
-          id: "ws-gen-array-1"
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          id: "ws-gen-array-1"
-          result:
-            items: ["item1", "item2", "item3"]
-      - type: "close"
-
-  - name: "generate_object_websocket"
-    method: "generate_object_ws"
-    transport: "websocket"
-    sequence:
-      - type: "send"
-        data:
-          jsonrpc: "2.0"
-          method: "generate_object_ws"
-          params:
-            id: "ws-gen-obj-1"
-            field1: ""
-            field2: 0
-            field3: false
-          id: "ws-gen-obj-1"
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          id: "ws-gen-obj-1"
-          result:
-            field1: "generated-value1"
-            field2: 42
-            field3: true
-      - type: "close"
-
-  # WebSocket stream tests (server streaming)
-  - name: "stream_string_websocket"
-    method: "stream_string_ws"
-    transport: "websocket"
-    sequence:
-      - type: "send"
-        data:
-          jsonrpc: "2.0"
-          method: "stream_string_ws"
-          params:
-            id: "ws-stream-1"
-            value: "ab"  # 2 chars = 2 messages
-          id: "ws-stream-1"
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          method: "stream_string_ws"
-          params:
-            value: "Stream 1 of 2"
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          method: "stream_string_ws"
-          params:
-            value: "Stream 2 of 2"
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          id: "ws-stream-1"
-          result:
-            value: "completed"
-      - type: "close"
-
-  - name: "stream_array_websocket"
-    method: "stream_array_ws"
-    transport: "websocket"
-    sequence:
-      - type: "send"
-        data:
-          jsonrpc: "2.0"
-          method: "stream_array_ws"
-          params:
-            id: "ws-stream-array-1"
-            items: ["first", "second"]
-          id: "ws-stream-array-1"
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          method: "stream_array_ws"
-          params:
-            items: ["Processing: first"]
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          method: "stream_array_ws"
-          params:
-            items: ["Processing: second"]
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          id: "ws-stream-array-1"
-          result:
-            items: ["completed"]
-      - type: "close"
-
-  - name: "stream_object_websocket"
-    method: "stream_object_ws"
-    transport: "websocket"
-    sequence:
-      - type: "send"
-        data:
-          jsonrpc: "2.0"
-          method: "stream_object_ws"
-          params:
-            id: "ws-stream-obj-1"
-            field1: "test"
-            field2: 2  # Controls stream count
-            field3: false
-          id: "ws-stream-obj-1"
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          method: "stream_object_ws"
-          params:
-            field1: "test-1"
-            field2: 1
-            field3: false
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          method: "stream_object_ws"
-          params:
-            field1: "test-2"
-            field2: 2
-            field3: true
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          id: "ws-stream-obj-1"
-          result:
-            field1: "completed"
-            field2: 100
-            field3: true
-      - type: "close"
-
-  # WebSocket error handling tests
-  - name: "echo_string_error_websocket"
-    method: "echo_string_error_ws"
-    transport: "websocket"
-    sequence:
-      - type: "send"
-        data:
-          jsonrpc: "2.0"
-          method: "echo_string_error_ws"
-          params:
-            id: "ws-error-1"
-            value: "will fail"
-          id: "ws-error-1"
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          id: "ws-error-1"
-          error:
-            code: -32602
-            message: "Invalid params"
-      - type: "close"
-
-  - name: "stream_string_error_websocket"
-    method: "stream_string_error_ws"
-    transport: "websocket"
-    sequence:
-      - type: "send"
-        data:
-          jsonrpc: "2.0"
-          method: "stream_string_error_ws"
-          params:
-            id: "ws-stream-error-1"
-            value: "fail"
-          id: "ws-stream-error-1"
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          method: "stream_string_error_ws"
-          params:
-            value: "Stream 1 of 4"
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          method: "stream_string_error_ws"
-          params:
-            value: "Stream 2 of 4"
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          id: "ws-stream-error-1"
-          error:
-            code: -32602
-            message: "Streaming error occurred"
-      - type: "close"
-
-  # WebSocket protocol compliance: request vs notification (JSON-RPC version and method presence)
-  - name: "websocket_invalid_version_request"
-    method: "echo_string_ws"
-    transport: "websocket"
-    sequence:
-      - type: "send"
-        data:
-          jsonrpc: "-"  # Omit version field
-          method: "echo_string_ws"
-          params:
-            id: "ws-invalid-1"
-            value: "ignore"
-          id: "ws-invalid-1"
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          id: "ws-invalid-1"
-          error:
-            code: -32600
-            message: "Invalid request"
-
-  - name: "websocket_invalid_version_notification"
-    method: "echo_string_ws"
-    transport: "websocket"
-    sequence:
-      - type: "send"
-        data:
-          jsonrpc: "-"  # Omit version field
-          method: "echo_string_ws"
-          params:
-            value: "notification without version"
-      # No receive expected for notifications with invalid request
-
-  - name: "websocket_missing_method_with_id"
-    transport: "websocket"
-    sequence:
-      - type: "send"
-        data:
-          jsonrpc: "2.0"
-          method: "-"  # Omit method field
-          params:
-            value: "test"
-          id: "ws-missing-method-1"
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          id: "ws-missing-method-1"
-          error:
-            code: -32600
-            message: "Invalid request"
-
-  - name: "websocket_missing_method_notification"
-    transport: "websocket"
-    sequence:
-      - type: "send"
-        data:
-          jsonrpc: "2.0"
-          method: "-"  # Omit method field
-          params:
-            value: "notification with missing method"
-      # No receive expected
-
-  - name: "websocket_method_not_found"
-    transport: "websocket"
-    sequence:
-      - type: "send"
-        data:
-          jsonrpc: "2.0"
-          method: "non_existent_method_ws"
-          params:
-            value: "test"
-          id: "ws-not-found-1"
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          id: "ws-not-found-1"
-          error:
-            code: -32601
-            message: "Method not found"
-
-  # WebSocket notification tests (no response expected)
-  - name: "echo_string_notify_websocket"
-    method: "echo_string_notify_ws"
-    transport: "websocket"
-    sequence:
-      - type: "send"
-        data:
-          jsonrpc: "2.0"
-          method: "echo_string_notify_ws"
-          params:
-            value: "notification"
-          # No id field - this is a notification
-      - type: "send"
-        data:
-          jsonrpc: "2.0"
-          method: "echo_string_notify_ws"
-          params:
-            value: "another notification"
-          # No id field
-      # No receive expected for notifications
-      - type: "close"
-
-  # WebSocket validation test
-  - name: "echo_object_validate_websocket"
-    method: "echo_object_validate_ws"
-    transport: "websocket"
-    sequence:
-      - type: "send"
-        data:
-          jsonrpc: "2.0"
-          method: "echo_object_validate_ws"
-          params:
-            id: "ws-validate-1"
-            field1: ""  # Empty string might fail validation
-            field2: -1  # Negative number might fail validation
-            field3: true
-          id: "ws-validate-1"
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          id: "ws-validate-1"
-          error:
-            code: -32602
-            message: "validation error"
-      - type: "close"
-
-  # WebSocket bidirectional streaming
-  - name: "collect_array_websocket"
-    method: "collect_array_ws"
-    transport: "websocket"
-    sequence:
-      - type: "send"
-        data:
-          method: "collect_array_ws"
-          params:
-            id: "collect-1"
-            items: ["first"]
-          id: "collect-1"
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          id: "collect-1"
-          result:
-            items: ["first"]
-      - type: "send"
-        data:
-          method: "collect_array_ws"
-          params:
-            id: "collect-2"
-            items: ["second"]
-          id: "collect-2"
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          id: "collect-2"
-          result:
-            items: ["first", "second"]
-      - type: "send"
-        data:
-          method: "collect_array_ws"
-          params:
-            id: "collect-3"
-            items: ["third"]
-          id: "collect-3"
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          id: "collect-3"
-          result:
-            items: ["first", "second", "third"]
+          id: "sse-generate-1"
+          result: null
 
   # Batch request tests
   - name: "batch_mixed_requests"
@@ -1170,9 +518,9 @@ scenarios:
         id: "batch-1"
       - method: "generate_array"
         id: "batch-2"
-      - method: "echo_string"
+      - method: "echo_string_notify"
         params: "notification in batch"
-        # No ID for notifications
+        # Declared notifications omit the ID.
     expect_batch:
       - id: "batch-1"
         result: "hello"
@@ -1219,13 +567,12 @@ scenarios:
   # Edge case tests
   - name: "null_id"
     transport: "http"
-    request:
-      method: "echo_string"
-      params: "test with null id"
-      id: null
+    raw_request: '{"jsonrpc":"2.0","method":"echo_string","params":["test with null id"],"id":null}'
     expect:
       id: null
-      result: "test with null id"
+      error:
+        code: -32600
+        message: "Invalid request"
 
   - name: "numeric_string_id"
     transport: "http"
@@ -1292,6 +639,12 @@ scenarios:
           params:
             value: "Stream 4 of 4"
 
+      - type: "receive"
+        expect:
+          jsonrpc: "2.0"
+          id: "mixed-sse-1"
+          result: null
+
   # Mixed HTTP (CLI) and JSON-RPC (direct) for the same method
   - name: "mixed_http_cli_echo"
     method: "echo_string"
@@ -1332,24 +685,25 @@ scenarios:
   # (to be added in harness/runner extensions if we choose to assert both paths here).
 
   # Additional HTTP protocol edge cases
-  - name: "http_invalid_version_notification"
+  - name: "http_invalid_version_request"
     transport: "http"
     request:
       jsonrpc: "-"  # Omit version field
       method: "echo_string"
       params: "notify"
-      # No id -> notification
+      # No ID. The malformed object is still an invalid request, not a notification.
     expect:
-      no_response: true
+      error:
+        code: -32600
+        message: "Invalid request"
 
-  - name: "http_missing_method_notification"
+  - name: "http_missing_method_request"
     transport: "http"
-    request:
-      jsonrpc: "2.0"
-      # No method field (invalid request) but notification (no id)
-      params: "notify"
+    raw_request: '{"jsonrpc":"2.0","params":["notify"]}'
     expect:
-      no_response: true
+      error:
+        code: -32600
+        message: "Missing method field"
 
   - name: "http_missing_method_with_id_raw"
     transport: "http"
@@ -1359,49 +713,6 @@ scenarios:
       error:
         code: -32600
         message: "Invalid request"
-
-  # Additional WebSocket ID-type coverage
-  - name: "websocket_null_id"
-    method: "echo_string_ws"
-    transport: "websocket"
-    sequence:
-      - type: "connect"
-      - type: "send"
-        data:
-          jsonrpc: "2.0"
-          method: "echo_string_ws"
-          params:
-            id: null
-            value: "null id"
-          id: null
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          id: null
-          result:
-            value: "null id"
-      - type: "close"
-
-  - name: "websocket_numeric_id"
-    method: "echo_string_ws"
-    transport: "websocket"
-    sequence:
-      - type: "connect"
-      - type: "send"
-        data:
-          jsonrpc: "2.0"
-          method: "echo_string_ws"
-          params:
-            id: 42
-            value: "number id"
-          id: 42
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          id: 42
-          result:
-            value: "number id"
-      - type: "close"
 
   # Additional SSE protocol edge cases
   - name: "sse_invalid_version_with_id"
@@ -1450,13 +761,11 @@ scenarios:
     request:
       jsonrpc: "2.0"
       params:
-        id: "12345"
-        request_id: "ignored-by-client" # mapping should come from envelope, not this field
         value: "hello"
       id: "env-1"
     expect:
       id: "env-1"
-      result: "hello"
+      result: "env-1"
 
   - name: "http_params_id_with_request_id_mapping_numeric_env_id"
     method: "echo_string_idmap"
@@ -1464,13 +773,11 @@ scenarios:
     request:
       jsonrpc: "2.0"
       params:
-        id: "biz-123"
-        request_id: "ignored"
         value: "hello-num"
       id: 101
     expect:
       id: 101
-      result: "hello-num"
+      result: "101"
 
   - name: "sse_params_id_with_request_id_mapping"
     method: "stream_string_sse"
@@ -1492,47 +799,8 @@ scenarios:
           method: "stream_string_sse"
           params:
             value: "Stream 2 of 2"
-
-  - name: "websocket_params_id_with_request_id_mapping"
-    method: "echo_string_idmap_ws"
-    transport: "websocket"
-    sequence:
-      - type: "connect"
-      - type: "send"
-        data:
-          jsonrpc: "2.0"
-          method: "echo_string_idmap_ws"
-          params:
-            id: "biz-42"        # business-level id as string
-            request_id: "foo"   # separate app field; mapping uses envelope id
-            value: "ws-hello"
-          id: "env-ws-1"
       - type: "receive"
         expect:
           jsonrpc: "2.0"
-          id: "env-ws-1"
-          result:
-            value: "ws-hello"
-      - type: "close"
-
-  - name: "websocket_params_id_with_request_id_mapping_numeric_env_id"
-    method: "echo_string_idmap_ws"
-    transport: "websocket"
-    sequence:
-      - type: "connect"
-      - type: "send"
-        data:
-          jsonrpc: "2.0"
-          method: "echo_string_idmap_ws"
-          params:
-            id: "biz-456"
-            request_id: "foo"
-            value: "ws-hello-num"
-          id: 202
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          id: 202
-          result:
-            value: "ws-hello-num"
-      - type: "close"
+          id: "env-sse-1"
+          result: null

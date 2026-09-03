@@ -1,3 +1,5 @@
+// This file verifies result-type projections preserve view shape, field
+// metadata, recursion, and synthesized example ownership.
 package expr
 
 import (
@@ -10,7 +12,12 @@ import (
 )
 
 var (
-	testrand = NewRandom("test")
+	testrand = NewExampleGenerator(NewFakerRandomizerFactory("test")).At(
+		MethodPayloadExampleIdentity(&MethodExpr{
+			Name:    "project",
+			Service: &ServiceExpr{Name: "test"},
+		}),
+	)
 
 	simpleResult        = resultType("a", String, "b", Int, view("default", "a", String, "b", Int), view("link", "a", String))
 	simpleResultDefault = resultType("a", String, "b", Int)
@@ -80,6 +87,21 @@ func TestProject(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestProjectPreservesGeneratedExampleIdentity(t *testing.T) {
+	source := resultType("value", String, view("default", "value", String))
+	owner := MethodResultExampleIdentity(&MethodExpr{
+		Name:    "read",
+		Service: &ServiceExpr{Name: "values"},
+	})
+	source.UserTypeExpr = NewGeneratedUserType(source.TypeName, source.AttributeExpr, owner)
+
+	projected, err := Project(source, DefaultView)
+	require.NoError(t, err)
+	projectedOwner, ok := GeneratedUserTypeExampleIdentity(projected)
+	require.True(t, ok)
+	require.Equal(t, owner, projectedOwner)
 }
 
 // TestProjectDoesNotAliasFieldAttributes verifies that fields sharing a type

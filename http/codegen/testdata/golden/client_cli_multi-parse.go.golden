@@ -1,3 +1,22 @@
+// cliStringFlag keeps an omitted command-line flag distinct from an explicitly empty flag.
+type cliStringFlag struct {
+	value *string
+}
+
+// String returns the flag text shown by the standard flag package.
+func (f *cliStringFlag) String() string {
+	if f.value == nil {
+		return ""
+	}
+	return *f.value
+}
+
+// Set records that the user supplied the flag, even when value is empty.
+func (f *cliStringFlag) Set(value string) error {
+	f.value = &value
+	return nil
+}
+
 // ParseEndpoint returns the endpoint and payload as specified on the command
 // line.
 func ParseEndpoint(
@@ -13,10 +32,14 @@ func ParseEndpoint(
 		serviceMultiMethodMultiNoPayloadFlags = flag.NewFlagSet("method-multi-no-payload", flag.ExitOnError)
 
 		serviceMultiMethodMultiPayloadFlags    = flag.NewFlagSet("method-multi-payload", flag.ExitOnError)
-		serviceMultiMethodMultiPayloadBodyFlag = serviceMultiMethodMultiPayloadFlags.String("body", "REQUIRED", "")
-		serviceMultiMethodMultiPayloadBFlag    = serviceMultiMethodMultiPayloadFlags.String("b", "", "")
-		serviceMultiMethodMultiPayloadAFlag    = serviceMultiMethodMultiPayloadFlags.String("a", "", "")
+		serviceMultiMethodMultiPayloadBodyFlag = new(cliStringFlag)
+		serviceMultiMethodMultiPayloadBFlag    = new(cliStringFlag)
+		serviceMultiMethodMultiPayloadAFlag    = new(cliStringFlag)
 	)
+	serviceMultiMethodMultiPayloadFlags.Var(serviceMultiMethodMultiPayloadBodyFlag, "body", "")
+	serviceMultiMethodMultiPayloadFlags.Var(serviceMultiMethodMultiPayloadBFlag, "b", "")
+	serviceMultiMethodMultiPayloadFlags.Var(serviceMultiMethodMultiPayloadAFlag, "a", "")
+
 	serviceMultiFlags.Usage = serviceMultiUsage
 	serviceMultiMethodMultiNoPayloadFlags.Usage = serviceMultiMethodMultiNoPayloadUsage
 	serviceMultiMethodMultiPayloadFlags.Usage = serviceMultiMethodMultiPayloadUsage
@@ -90,7 +113,7 @@ func ParseEndpoint(
 				endpoint = c.MethodMultiNoPayload()
 			case "method-multi-payload":
 				endpoint = c.MethodMultiPayload()
-				data, err = servicemultic.BuildMethodMultiPayloadPayload(*serviceMultiMethodMultiPayloadBodyFlag, *serviceMultiMethodMultiPayloadBFlag, *serviceMultiMethodMultiPayloadAFlag)
+				data, err = servicemultic.BuildMethodMultiPayloadPayload(serviceMultiMethodMultiPayloadBodyFlag.value, serviceMultiMethodMultiPayloadBFlag.value, serviceMultiMethodMultiPayloadAFlag.value)
 			}
 		}
 	}

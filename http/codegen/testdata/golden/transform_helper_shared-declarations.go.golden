@@ -1,0 +1,9 @@
+// unmarshalSharedChildRequestBodyToSharedhelpersSharedChild builds a value of
+// type *sharedhelpers.SharedChild from a value of type *SharedChildRequestBody.
+func unmarshalSharedChildRequestBodyToSharedhelpersSharedChild(v *SharedChildRequestBody) *sharedhelpers.SharedChild {
+	res := &sharedhelpers.SharedChild{
+		Value: *v.Value,
+	}
+
+	return res
+}

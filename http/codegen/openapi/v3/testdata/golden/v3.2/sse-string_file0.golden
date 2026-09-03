@@ -16,7 +16,7 @@
                 "itemSchema": {
                   "properties": {
                     "data": {
-                      "example": "Quia molestias.",
+                      "example": "event",
                       "type": "string"
                     }
                   },

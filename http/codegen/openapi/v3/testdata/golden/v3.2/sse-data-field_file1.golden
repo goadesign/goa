@@ -23,9 +23,7 @@ paths:
                                 properties:
                                     data:
                                         type: string
-                                        example: Quos qui dolore voluptas.
-                                required:
-                                    - data
+                                        example: event
 components:
     schemas:
         SSEDataFieldMethodResponseBody:
@@ -33,12 +31,12 @@ components:
             properties:
                 data:
                     type: string
-                    example: Ipsum voluptatem quaerat quo et non sed.
+                    example: event
                 flag:
                     type: boolean
                     example: true
             example:
-                data: Ipsum voluptatem quaerat quo et non sed.
+                data: event
                 flag: true
 tags:
     - name: SSEDataFieldService

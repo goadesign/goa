@@ -16,10 +16,8 @@ func Validate() (err error) {
 		if *target.ExclusiveInteger <= 1 {
 			err = goa.MergeErrors(err, goa.InvalidRangeError("target.exclusive_integer", *target.ExclusiveInteger, 1, true))
 		}
-	}
-	if target.ExclusiveInteger != nil {
-		if *target.ExclusiveInteger <= 1 {
-			err = goa.MergeErrors(err, goa.InvalidRangeError("target.exclusive_integer", *target.ExclusiveInteger, 1, true))
+		if *target.ExclusiveInteger >= 100 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("target.exclusive_integer", *target.ExclusiveInteger, 100, false))
 		}
 	}
 }

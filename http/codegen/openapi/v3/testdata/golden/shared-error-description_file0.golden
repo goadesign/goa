@@ -1,0 +1,104 @@
+{
+  "components": {
+    "schemas": {
+      "SharedError": {
+        "description": "Shared error value",
+        "example": {
+          "message": "shared failure",
+          "name": "Assumenda temporibus in exercitationem alias et."
+        },
+        "properties": {
+          "message": {
+            "description": "Error message",
+            "example": "shared failure",
+            "type": "string"
+          },
+          "name": {
+            "description": "Selected error name",
+            "example": "Assumenda temporibus in exercitationem alias et.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "message"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "Goa API",
+    "version": "0.0.1"
+  },
+  "openapi": "3.0.3",
+  "paths": {
+    "/first": {
+      "get": {
+        "operationId": "errors#first",
+        "responses": {
+          "204": {
+            "description": "No Content response."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "message": "shared failure",
+                  "name": "Assumenda temporibus in exercitationem alias et."
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/SharedError"
+                }
+              }
+            },
+            "description": "first_error: First failure"
+          }
+        },
+        "summary": "first errors",
+        "tags": [
+          "errors"
+        ]
+      }
+    },
+    "/second": {
+      "get": {
+        "operationId": "errors#second",
+        "responses": {
+          "204": {
+            "description": "No Content response."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "message": "shared failure",
+                  "name": "Reprehenderit eaque non ipsam rerum temporibus."
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/SharedError"
+                }
+              }
+            },
+            "description": "second_error: Second failure"
+          }
+        },
+        "summary": "second errors",
+        "tags": [
+          "errors"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "description": "Default server for test api",
+      "url": "http://localhost:80"
+    }
+  ],
+  "tags": [
+    {
+      "name": "errors"
+    }
+  ]
+}

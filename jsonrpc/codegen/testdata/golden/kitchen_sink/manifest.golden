@@ -1,5 +1,4 @@
 calc.go
-chat.go
 cmd/kitchen_sink-cli/http.go
 cmd/kitchen_sink-cli/jsonrpc.go
 cmd/kitchen_sink-cli/main.go
@@ -34,17 +33,6 @@ gen/jsonrpc/calc/server/encode_decode.go
 gen/jsonrpc/calc/server/paths.go
 gen/jsonrpc/calc/server/server.go
 gen/jsonrpc/calc/server/types.go
-gen/jsonrpc/chat/client/cli.go
-gen/jsonrpc/chat/client/client.go
-gen/jsonrpc/chat/client/encode_decode.go
-gen/jsonrpc/chat/client/paths.go
-gen/jsonrpc/chat/client/types.go
-gen/jsonrpc/chat/client/websocket.go
-gen/jsonrpc/chat/server/encode_decode.go
-gen/jsonrpc/chat/server/paths.go
-gen/jsonrpc/chat/server/server.go
-gen/jsonrpc/chat/server/types.go
-gen/jsonrpc/chat/server/websocket.go
 gen/jsonrpc/cli/kitchen_sink/cli.go
 gen/jsonrpc/feed/client/cli.go
 gen/jsonrpc/feed/client/client.go

@@ -19,7 +19,7 @@
       "type": "object"
     },
     "GoaFoobar": {
-      "description": "Foo BarResponseBody result type (default view)",
+      "description": "Foo Bar result type (default view)",
       "example": {
         "bar": [
           {
@@ -116,6 +116,9 @@
               },
               {
                 "string": ""
+              },
+              {
+                "string": ""
               }
             ],
             "foo": ""
@@ -136,6 +139,9 @@
           "example": {
             "": {
               "bar": [
+                {
+                  "string": ""
+                },
                 {
                   "string": ""
                 },

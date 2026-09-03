@@ -1,26 +1,20 @@
 
 
-// wrapCachingMethod applies the caching server interceptor to endpoints.
+// wrapMethodCaching applies the caching server interceptor to endpoints.
 func wrapMethodCaching(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
-		info := &CachingInfo{
-			service:    "InterceptorWithWriteResult",
-			method:     "Method",
-			callType:   goa.InterceptorUnary,
-			rawPayload: req,
+		info := &cachingMethodServerUnaryInfo{
+			cachingMethodInfo: cachingMethodInfo{rawPayload: req},
 		}
 		return i.Caching(ctx, info, endpoint)
 	}
 }
 
-// wrapClientCachingMethod applies the caching client interceptor to endpoints.
+// wrapClientMethodCaching applies the caching client interceptor to endpoints.
 func wrapClientMethodCaching(endpoint goa.Endpoint, i ClientInterceptors) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
-		info := &CachingInfo{
-			service:    "InterceptorWithWriteResult",
-			method:     "Method",
-			callType:   goa.InterceptorUnary,
-			rawPayload: req,
+		info := &cachingMethodClientUnaryInfo{
+			cachingMethodInfo: cachingMethodInfo{rawPayload: req},
 		}
 		return i.Caching(ctx, info, endpoint)
 	}

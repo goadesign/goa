@@ -39,11 +39,19 @@ func NewMethodBRequestBody(p *servicemultiplemethods.PayloadType) *MethodBReques
 	return body
 }
 
-// ValidateAPayloadRequestBody runs the validations defined on
-// APayloadRequestBody
+// ValidateAPayloadRequestBody runs the validations defined on APayload
 func ValidateAPayloadRequestBody(body *APayloadRequestBody) (err error) {
 	if body.A != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.a", *body.A, "patterna"))
+	}
+	return
+}
+
+// validateAPayloadRequestBody checks APayload and reports errors using the
+// path supplied by its caller
+func validateAPayloadRequestBody(body *APayloadRequestBody, path string) (err error) {
+	if body.A != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern(path+".a", *body.A, "patterna"))
 	}
 	return
 }

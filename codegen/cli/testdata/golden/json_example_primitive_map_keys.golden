@@ -1,0 +1,37 @@
+boolean alias:
+'{
+      "false": "disabled",
+      "true": "enabled"
+   }'
+signed alias:
+'{
+      "-2": "negative",
+      "10": "positive"
+   }'
+unsigned:
+'{
+      "42": "forty-two",
+      "7": "seven"
+   }'
+unsigned alias:
+'{
+      "11": "eleven",
+      "9": "nine"
+   }'
+floating-point alias:
+'{
+      "1.25": "one",
+      "2.5": "two"
+   }'
+string:
+'{
+      "first": "one",
+      "second": "two"
+   }'
+string alias:
+'{
+      "left": "one",
+      "right": "two"
+   }'
+empty object:
+{}

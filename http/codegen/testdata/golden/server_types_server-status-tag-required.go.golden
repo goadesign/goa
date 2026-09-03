@@ -1,0 +1,35 @@
+// MethodStatusTagRequiredCreatedResponseBody is the type of the
+// "ServiceStatusTagRequired" service "MethodStatusTagRequired" endpoint HTTP
+// response body.
+type MethodStatusTagRequiredCreatedResponseBody struct {
+	Message string `form:"message" json:"message" xml:"message"`
+}
+
+// MethodStatusTagRequiredOKResponseBody is the type of the
+// "ServiceStatusTagRequired" service "MethodStatusTagRequired" endpoint HTTP
+// response body.
+type MethodStatusTagRequiredOKResponseBody struct {
+	Message string `form:"message" json:"message" xml:"message"`
+	Outcome string `form:"outcome" json:"outcome" xml:"outcome"`
+}
+
+// NewMethodStatusTagRequiredCreatedResponseBody builds the HTTP response body
+// from the result of the "MethodStatusTagRequired" endpoint of the
+// "ServiceStatusTagRequired" service.
+func NewMethodStatusTagRequiredCreatedResponseBody(res *servicestatustagrequiredviews.StatusTagResultView) *MethodStatusTagRequiredCreatedResponseBody {
+	body := &MethodStatusTagRequiredCreatedResponseBody{
+		Message: *res.Message,
+	}
+	return body
+}
+
+// NewMethodStatusTagRequiredOKResponseBody builds the HTTP response body from
+// the result of the "MethodStatusTagRequired" endpoint of the
+// "ServiceStatusTagRequired" service.
+func NewMethodStatusTagRequiredOKResponseBody(res *servicestatustagrequiredviews.StatusTagResultView) *MethodStatusTagRequiredOKResponseBody {
+	body := &MethodStatusTagRequiredOKResponseBody{
+		Message: *res.Message,
+		Outcome: *res.Outcome,
+	}
+	return body
+}

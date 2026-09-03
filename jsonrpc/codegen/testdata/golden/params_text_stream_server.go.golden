@@ -1,0 +1,29 @@
+// StreamTextServerStream implements the params.StreamTextServerStream
+// interface using Server-Sent Events.
+type StreamTextServerStream struct {
+	// sseServerStream writes JSON-RPC messages as server-sent events.
+	sseServerStream
+}
+
+// Send streams instances of "string".
+func (s *StreamTextServerStream) Send(event string) error {
+	return s.SendWithContext(context.Background(), event)
+}
+
+// SendWithContext streams instances of "string" with context.
+func (s *StreamTextServerStream) SendWithContext(ctx context.Context, event string) error {
+	result := event
+	body := result
+
+	message := jsonrpc.MakeNotification(
+		"stream_text",
+		[]string{body},
+	)
+	return s.sendSSEEvent(ctx, message, nil, nil, nil)
+}
+
+// Close does nothing because the HTTP response closes when the service method
+// returns.
+func (s *StreamTextServerStream) Close() error {
+	return nil
+}

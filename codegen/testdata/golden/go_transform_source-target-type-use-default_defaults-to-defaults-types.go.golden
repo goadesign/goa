@@ -17,8 +17,7 @@ func transform() {
 		}
 	}
 	{
-		var zero json.RawMessage
-		if target.RawJSON == zero {
+		if target.RawJSON == nil {
 			target.RawJSON = json.RawMessage{0x66, 0x6f, 0x6f}
 		}
 	}
@@ -29,14 +28,12 @@ func transform() {
 		}
 	}
 	{
-		var zero []byte
-		if target.Bytes == zero {
+		if target.Bytes == nil {
 			target.Bytes = []byte{0x66, 0x6f, 0x6f, 0x62, 0x61, 0x72}
 		}
 	}
 	{
-		var zero any
-		if target.Any == zero {
+		if target.Any == nil {
 			target.Any = "something"
 		}
 	}

@@ -1,52 +1,40 @@
 
 
-// wrapTestMethod applies the test server interceptor to endpoints.
+// wrapMethodTest applies the test server interceptor to endpoints.
 func wrapMethodTest(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
-		info := &TestInfo{
-			service:    "MultipleInterceptorsService",
-			method:     "Method",
-			callType:   goa.InterceptorUnary,
-			rawPayload: req,
+		info := &testMethodServerUnaryInfo{
+			testMethodInfo: testMethodInfo{rawPayload: req},
 		}
 		return i.Test(ctx, info, endpoint)
 	}
 }
 
-// wrapTest3Method applies the test3 server interceptor to endpoints.
+// wrapMethodTest3 applies the test3 server interceptor to endpoints.
 func wrapMethodTest3(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
-		info := &Test3Info{
-			service:    "MultipleInterceptorsService",
-			method:     "Method",
-			callType:   goa.InterceptorUnary,
-			rawPayload: req,
+		info := &test3MethodServerUnaryInfo{
+			test3MethodInfo: test3MethodInfo{rawPayload: req},
 		}
 		return i.Test3(ctx, info, endpoint)
 	}
 }
 
-// wrapClientTest2Method applies the test2 client interceptor to endpoints.
+// wrapClientMethodTest2 applies the test2 client interceptor to endpoints.
 func wrapClientMethodTest2(endpoint goa.Endpoint, i ClientInterceptors) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
-		info := &Test2Info{
-			service:    "MultipleInterceptorsService",
-			method:     "Method",
-			callType:   goa.InterceptorUnary,
-			rawPayload: req,
+		info := &test2MethodClientUnaryInfo{
+			test2MethodInfo: test2MethodInfo{rawPayload: req},
 		}
 		return i.Test2(ctx, info, endpoint)
 	}
 }
 
-// wrapClientTest4Method applies the test4 client interceptor to endpoints.
+// wrapClientMethodTest4 applies the test4 client interceptor to endpoints.
 func wrapClientMethodTest4(endpoint goa.Endpoint, i ClientInterceptors) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
-		info := &Test4Info{
-			service:    "MultipleInterceptorsService",
-			method:     "Method",
-			callType:   goa.InterceptorUnary,
-			rawPayload: req,
+		info := &test4MethodClientUnaryInfo{
+			test4MethodInfo: test4MethodInfo{rawPayload: req},
 		}
 		return i.Test4(ctx, info, endpoint)
 	}

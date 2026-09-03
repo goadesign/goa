@@ -1,0 +1,32 @@
+// StreamUnionDataServerStream implements the
+// params.StreamUnionDataServerStream interface using Server-Sent Events.
+type StreamUnionDataServerStream struct {
+	// sseServerStream writes JSON-RPC messages as server-sent events.
+	sseServerStream
+}
+
+// Send streams instances of "UnionEvent".
+func (s *StreamUnionDataServerStream) Send(event *params.UnionEvent) error {
+	return s.SendWithContext(context.Background(), event)
+}
+
+// SendWithContext streams instances of "UnionEvent" with context.
+func (s *StreamUnionDataServerStream) SendWithContext(ctx context.Context, event *params.UnionEvent) error {
+	result := event
+
+	message := &jsonrpc.Request{
+		JSONRPC: "2.0",
+		Method:  "stream_union_data",
+	}
+	if result.Data.Kind() != "" {
+		body := NewStreamUnionDataResponseBody2(result)
+		message.Params = body.Data
+	}
+	return s.sendSSEEvent(ctx, message, nil, nil, nil)
+}
+
+// Close does nothing because the HTTP response closes when the service method
+// returns.
+func (s *StreamUnionDataServerStream) Close() error {
+	return nil
+}

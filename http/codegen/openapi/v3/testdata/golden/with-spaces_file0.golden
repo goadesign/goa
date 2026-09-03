@@ -4,7 +4,7 @@
       "Bar": {
         "description": "Request body for test endpoint.",
         "example": {
-          "string": ""
+          "string": "item"
         },
         "properties": {
           "string": {
@@ -18,10 +18,7 @@
         "example": {
           "bar": [
             {
-              "string": ""
-            },
-            {
-              "string": ""
+              "string": "item"
             }
           ],
           "foo": ""
@@ -30,10 +27,7 @@
           "bar": {
             "example": [
               {
-                "string": ""
-              },
-              {
-                "string": ""
+                "string": "item"
               }
             ],
             "items": {
@@ -63,7 +57,7 @@
           "content": {
             "application/json": {
               "example": {
-                "string": ""
+                "string": "item"
               },
               "schema": {
                 "$ref": "#/components/schemas/Bar"
@@ -77,19 +71,18 @@
           "200": {
             "content": {
               "application/json": {
-                "example": {
-                  "bar": [
-                    {
-                      "string": ""
-                    },
-                    {
-                      "string": ""
-                    },
-                    {
-                      "string": ""
+                "examples": {
+                  "default": {
+                    "summary": "default",
+                    "value": {
+                      "bar": [
+                        {
+                          "string": "item"
+                        }
+                      ],
+                      "foo": ""
                     }
-                  ],
-                  "foo": ""
+                  }
                 },
                 "schema": {
                   "$ref": "#/components/schemas/GoaFoobar"
@@ -101,19 +94,17 @@
           "404": {
             "content": {
               "application/json": {
-                "example": {
-                  "bar": [
-                    {
-                      "string": ""
-                    },
-                    {
-                      "string": ""
-                    },
-                    {
-                      "string": ""
+                "examples": {
+                  "default": {
+                    "summary": "default",
+                    "value": {
+                      "bar": [
+                        {
+                          "string": "item"
+                        }
+                      ]
                     }
-                  ],
-                  "foo": ""
+                  }
                 },
                 "schema": {
                   "$ref": "#/components/schemas/GoaFoobar"

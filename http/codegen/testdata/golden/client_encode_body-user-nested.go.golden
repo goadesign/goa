@@ -1,0 +1,17 @@
+// EncodeMethodBodyUserRequest returns an encoder for requests sent to the
+// ServiceBodyUser MethodBodyUser server.
+func EncodeMethodBodyUserRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*servicebodyuser.PayloadType)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceBodyUser", "MethodBodyUser", "*servicebodyuser.PayloadType", v)
+		}
+		if p.Data != nil {
+			body := NewMethodBodyUserRequestBody(p)
+			if err := encoder(req).Encode(&body); err != nil {
+				return goahttp.ErrEncodingError("ServiceBodyUser", "MethodBodyUser", err)
+			}
+		}
+		return nil
+	}
+}

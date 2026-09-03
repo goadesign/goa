@@ -1,0 +1,64 @@
+// ServerInterceptors defines the interface for all server-side interceptors.
+// Server interceptors execute after the request is decoded and before the
+// payload is sent to the service. The implementation is responsible for calling
+// next to complete the request.
+type ServerInterceptors interface {
+	JWTAuth(ctx context.Context, info JWTAuthInfo, next goa.Endpoint) (any, error)
+}
+
+// Access interfaces for interceptor payloads and results
+type (
+	// JWTAuthInfo describes the service call currently passed to the interceptor.
+	JWTAuthInfo interface {
+		goa.InterceptorInfo
+	}
+)
+
+// Types used to provide information about each service call
+type (
+	jwtAuthGetInfoInfo struct {
+		rawPayload any
+	}
+	jwtAuthGetInfoServerUnaryInfo struct {
+		jwtAuthGetInfoInfo
+	}
+	jwtAuthGetInfoClientUnaryInfo struct {
+		jwtAuthGetInfoInfo
+	}
+)
+
+// WrapGetInfoEndpoint wraps the GetInfo endpoint with the server-side
+// interceptors defined in the design.
+func WrapGetInfoEndpoint(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoint {
+	if i != nil {
+		endpoint = wrapGetInfoJWTAuth(endpoint, i)
+	}
+	return endpoint
+}
+
+// Methods that provide information about each service call
+
+// Service returns the service selected for this interceptor call.
+func (info *jwtAuthGetInfoInfo) Service() string {
+	return "LeadingInitialismInterceptor"
+}
+
+// Method returns the method selected for this interceptor call.
+func (info *jwtAuthGetInfoInfo) Method() string {
+	return "GetInfo"
+}
+
+// RawPayload returns the payload supplied for this interceptor call.
+func (info *jwtAuthGetInfoInfo) RawPayload() any {
+	return info.rawPayload
+}
+
+// CallType reports that this is a server endpoint call.
+func (info *jwtAuthGetInfoServerUnaryInfo) CallType() goa.InterceptorCallType {
+	return goa.InterceptorUnary
+}
+
+// CallType reports that this is a client endpoint call.
+func (info *jwtAuthGetInfoClientUnaryInfo) CallType() goa.InterceptorCallType {
+	return goa.InterceptorUnary
+}

@@ -8,8 +8,8 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
-// PathFiles returns the service path files.
-func PathFiles(data *ServicesData) []*codegen.File {
+// pathFiles builds the service path files read by Plan.Link.
+func pathFiles(data *ServicesData) []*codegen.File {
 	fw := make([]*codegen.File, 2*len(data.Expressions.Services))
 	for i := 0; i < len(data.Expressions.Services); i++ {
 		fw[i*2] = serverPath(data.Expressions.Services[i], data)
@@ -38,21 +38,22 @@ func clientPath(svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File
 // contains the request path constructors for the given service.
 func pathSections(svc *expr.HTTPServiceExpr, pkg string, services *ServicesData) []*codegen.SectionTemplate {
 	title := fmt.Sprintf("%s request path constructors for the %s service.", services.label(), svc.Name())
+	sd := services.Get(svc.Name())
+	filePath := filepath.Join(codegen.Gendir, services.dir(), sd.Service.PathName, pkg, "paths.go")
 	sections := make([]*codegen.SectionTemplate, 0, 1+len(svc.HTTPEndpoints))
-	sections = append(sections,
-		codegen.Header(title, pkg, []*codegen.ImportSpec{
-			{Path: "fmt"},
-			{Path: "net/url"},
-			{Path: "strconv"},
-			{Path: "strings"},
-		}),
-	)
-	sdata := services.Get(svc.Name())
+	sections = append(sections, plannedFileHeader(title, pkg, filePath, services))
 	for _, e := range svc.HTTPEndpoints {
+		data := struct {
+			*EndpointData
+			Client bool
+		}{
+			EndpointData: sd.Endpoint(e.Name()),
+			Client:       pkg == "client",
+		}
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "path",
 			Source: httpTemplates.Read(pathT),
-			Data:   sdata.Endpoint(e.Name()),
+			Data:   data,
 		})
 	}
 

@@ -1,7 +1,7 @@
 func transform() {
 	target := &proto.Required{
-		RequiredString: &source.RequiredString,
-		DefaultBool:    &source.DefaultBool,
+		RequiredString: source.RequiredString,
+		DefaultBool:    source.DefaultBool,
 	}
 	if source.Integer != nil {
 		integer := int(*source.Integer)

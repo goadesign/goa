@@ -9,7 +9,7 @@
 	result := &{{ $.ServicePackage }}.{{ .GoName }}Result{
 		Value: p,
 	}
-	if err := stream.Send(ctx, result); err != nil {
+	if err := stream.Send(result); err != nil {
 		return err
 	}
 	{{- else if eq .Info.Type "array" -}}
@@ -18,7 +18,7 @@
 		result := &{{ $.ServicePackage }}.{{ .GoName }}Result{
 			Items: []string{item},
 		}
-		if err := stream.Send(ctx, result); err != nil {
+		if err := stream.Send(result); err != nil {
 			return err
 		}
 	}
@@ -29,7 +29,7 @@
 		Field2: p.Field2,
 		Field3: p.Field3,
 	}
-	if err := stream.Send(ctx, result); err != nil {
+	if err := stream.Send(result); err != nil {
 		return err
 	}
 	{{- else if eq .Info.Type "map" -}}
@@ -37,7 +37,7 @@
 	result := &{{ $.ServicePackage }}.{{ .GoName }}Result{
 		Data: p.Data,
 	}
-	if err := stream.Send(ctx, result); err != nil {
+	if err := stream.Send(result); err != nil {
 		return err
 	}
 	{{- end -}}
@@ -54,7 +54,7 @@
 	result := &{{ $.ServicePackage }}.{{ .GoName }}Result{
 		Value: strings.ToUpper(p),
 	}
-	if err := stream.Send(ctx, result); err != nil {
+	if err := stream.Send(result); err != nil {
 		return err
 	}
 	{{- else if eq .Info.Type "array" -}}
@@ -66,7 +66,7 @@
 	result := &{{ $.ServicePackage }}.{{ .GoName }}Result{
 		Items: reversed,
 	}
-	if err := stream.Send(ctx, result); err != nil {
+	if err := stream.Send(result); err != nil {
 		return err
 	}
 	{{- else if eq .Info.Type "object" -}}
@@ -76,7 +76,7 @@
 		Field2: p.Field2 * 2,
 		Field3: !p.Field3,
 	}
-	if err := stream.Send(ctx, result); err != nil {
+	if err := stream.Send(result); err != nil {
 		return err
 	}
 	{{- else if eq .Info.Type "map" -}}
@@ -88,7 +88,7 @@
 	result := &{{ $.ServicePackage }}.{{ .GoName }}Result{
 		Data: transformed,
 	}
-	if err := stream.Send(ctx, result); err != nil {
+	if err := stream.Send(result); err != nil {
 		return err
 	}
 	{{- end -}}
@@ -105,7 +105,7 @@
 		result := &{{ $.ServicePackage }}.{{ .GoName }}Result{
 			Value: fmt.Sprintf("generated-%d", i),
 		}
-		if err := stream.Send(ctx, result); err != nil {
+		if err := stream.Send(result); err != nil {
 			return err
 		}
 	}
@@ -115,7 +115,7 @@
 		result := &{{ $.ServicePackage }}.{{ .GoName }}Result{
 			Items: []string{fmt.Sprintf("item-%d", i)},
 		}
-		if err := stream.Send(ctx, result); err != nil {
+		if err := stream.Send(result); err != nil {
 			return err
 		}
 	}
@@ -127,7 +127,7 @@
 			Field2: i * 10,
 			Field3: i%2 == 0,
 		}
-		if err := stream.Send(ctx, result); err != nil {
+		if err := stream.Send(result); err != nil {
 			return err
 		}
 	}
@@ -140,7 +140,7 @@
 				"status": fmt.Sprintf("step-%d", i),
 			},
 		}
-		if err := stream.Send(ctx, result); err != nil {
+		if err := stream.Send(result); err != nil {
 			return err
 		}
 	}
@@ -165,7 +165,7 @@
 		result := &{{ $.ServicePackage }}.{{ .GoName }}Result{
 			Value: fmt.Sprintf("Stream %d of %d", i, count),
 		}
-		if err := stream.Send(ctx, result); err != nil {
+		if err := stream.Send(result); err != nil {
 			return err
 		}
 		// Small delay to simulate streaming
@@ -179,7 +179,7 @@
 		result := &{{ $.ServicePackage }}.{{ .GoName }}Result{
 			Items: []string{"empty"},
 		}
-		if err := stream.Send(ctx, result); err != nil {
+		if err := stream.Send(result); err != nil {
 			return err
 		}
 	} else {
@@ -188,7 +188,7 @@
 			result := &{{ $.ServicePackage }}.{{ .GoName }}Result{
 				Items: []string{fmt.Sprintf("Processing: %s", item)},
 			}
-			if err := stream.Send(ctx, result); err != nil {
+			if err := stream.Send(result); err != nil {
 				return err
 			}
 			// Small delay between items
@@ -202,7 +202,7 @@
 	result := &{{ $.ServicePackage }}.{{ .GoName }}Result{
 		Items: []string{"stream-1", "stream-2", "stream-3"},
 	}
-	if err := stream.Send(ctx, result); err != nil {
+	if err := stream.Send(result); err != nil {
 		return err
 	}
 	{{- end }}
@@ -229,7 +229,7 @@
 			Field2: i,
 			Field3: i == count, // true for last item
 		}
-		if err := stream.Send(ctx, result); err != nil {
+		if err := stream.Send(result); err != nil {
 			return err
 		}
 		time.Sleep(10 * time.Millisecond)
@@ -242,7 +242,7 @@
 		result := &{{ $.ServicePackage }}.{{ .GoName }}Result{
 			Data: map[string]any{"status": "empty"},
 		}
-		if err := stream.Send(ctx, result); err != nil {
+		if err := stream.Send(result); err != nil {
 			return err
 		}
 	} else {
@@ -262,7 +262,7 @@
 					"value": v,
 				},
 			}
-			if err := stream.Send(ctx, result); err != nil {
+			if err := stream.Send(result); err != nil {
 				return err
 			}
 			time.Sleep(10 * time.Millisecond)
@@ -277,7 +277,7 @@
 				"status": fmt.Sprintf("step-%d", i),
 			},
 		}
-		if err := stream.Send(ctx, result); err != nil {
+		if err := stream.Send(result); err != nil {
 			return err
 		}
 		time.Sleep(10 * time.Millisecond)
@@ -293,14 +293,14 @@
 	result := &{{ $.ServicePackage }}.{{ .GoName }}Result{
 		Value: p,
 	}
-	if err := stream.Send(ctx, result); err != nil {
+	if err := stream.Send(result); err != nil {
 		return err
 	}
 	{{- else if eq .Info.Type "array" -}}
 	result := &{{ $.ServicePackage }}.{{ .GoName }}Result{
 		Items: p.Items,
 	}
-	if err := stream.Send(ctx, result); err != nil {
+	if err := stream.Send(result); err != nil {
 		return err
 	}
 	{{- else if eq .Info.Type "object" -}}
@@ -309,14 +309,14 @@
 		Field2: p.Field2,
 		Field3: p.Field3,
 	}
-	if err := stream.Send(ctx, result); err != nil {
+	if err := stream.Send(result); err != nil {
 		return err
 	}
 	{{- else if eq .Info.Type "map" -}}
 	result := &{{ $.ServicePackage }}.{{ .GoName }}Result{
 		Data: p.Data,
 	}
-	if err := stream.Send(ctx, result); err != nil {
+	if err := stream.Send(result); err != nil {
 		return err
 	}
 	{{- end -}}
@@ -326,14 +326,14 @@
 	result := &{{ $.ServicePackage }}.{{ .GoName }}Result{
 		Value: "default",
 	}
-	if err := stream.Send(ctx, result); err != nil {
+	if err := stream.Send(result); err != nil {
 		return err
 	}
 	{{- else if eq .Info.Type "array" -}}
 	result := &{{ $.ServicePackage }}.{{ .GoName }}Result{
 		Items: []string{"default"},
 	}
-	if err := stream.Send(ctx, result); err != nil {
+	if err := stream.Send(result); err != nil {
 		return err
 	}
 	{{- else if eq .Info.Type "object" -}}
@@ -342,41 +342,23 @@
 		Field2: 0,
 		Field3: false,
 	}
-	if err := stream.Send(ctx, result); err != nil {
+	if err := stream.Send(result); err != nil {
 		return err
 	}
 	{{- else if eq .Info.Type "map" -}}
 	result := &{{ $.ServicePackage }}.{{ .GoName }}Result{
 		Data: map[string]any{"status": "default"},
 	}
-	if err := stream.Send(ctx, result); err != nil {
+	if err := stream.Send(result); err != nil {
 		return err
 	}
 	{{- end -}}
 	{{- end -}}
-{{- end -}}
+{{- end }}
 
-{{- /* Handle modifiers for protocol-level behavior */ -}}
-{{- if eq .Info.Modifier "final" -}}
-	// Send final response with ID using SendAndClose
-	finalResult := &{{ $.ServicePackage }}.{{ .GoName }}Result{
-		{{- if eq .Info.Type "string" -}}
-		Value: "Final response",
-		{{- else if eq .Info.Type "array" -}}
-		Items: []string{"completed"},
-		{{- else if eq .Info.Type "object" -}}
-		Field1: "completed",
-		Field2: 100,
-		Field3: true,
-		{{- else if eq .Info.Type "map" -}}
-		Data: map[string]any{"status": "completed", "final": true},
-		{{- end -}}
-	}
-	return stream.SendAndClose(ctx, finalResult)
-{{- else if eq .Info.Modifier "error" -}}
-	// Return an error after streaming
+{{ if eq .Info.Modifier "error" -}}
+	// Return an error after streaming.
 	return &goa.ServiceError{Message: "Streaming error occurred"}
-{{- else -}}
-	// No final response for pure notifications
+{{ else -}}
 	return nil
 {{- end -}}

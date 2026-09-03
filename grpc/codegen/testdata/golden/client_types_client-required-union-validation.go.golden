@@ -1,0 +1,70 @@
+// ValidateExchangeResponse runs the validations defined on ExchangeResponse.
+func ValidateExchangeResponse(message *union_validationpb.ExchangeResponse) (err error) {
+	if message.Choice == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("choice", "message"))
+	}
+	switch v := message.Choice.(type) {
+	case *union_validationpb.ExchangeResponse_Number:
+		if v == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("number", "message.choice"))
+			break
+		}
+		if int(v.Number) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("message.choice.value", int(v.Number), 1, true))
+		}
+
+	case *union_validationpb.ExchangeResponse_Detail:
+		if v == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("detail", "message.choice"))
+			break
+		}
+		if v.Detail == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("detail", "message.choice"))
+			break
+		}
+		if v.Detail != nil {
+			if err2 := validatetest_20_api_UnionValidation_Detail_At_detail(v.Detail); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+
+	case *union_validationpb.ExchangeResponse_Inactive:
+		if v == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("inactive", "message.choice"))
+			break
+		}
+		if v.Inactive == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("inactive", "message.choice"))
+			break
+		}
+
+	case *union_validationpb.ExchangeResponse_Blob:
+		if v == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("blob", "message.choice"))
+			break
+		}
+		if v.Blob == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("blob", "message.choice"))
+			break
+		}
+
+	case *union_validationpb.ExchangeResponse_Token:
+		if v == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("token", "message.choice"))
+			break
+		}
+
+	case *union_validationpb.ExchangeResponse_Metadata:
+		if v == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("metadata", "message.choice"))
+			break
+		}
+		if v.Metadata == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("metadata", "message.choice"))
+			break
+		}
+
+	}
+
+	return
+}

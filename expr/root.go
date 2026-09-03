@@ -1,10 +1,16 @@
+// This file defines the evaluated design root and validates relationships
+// between its API, services, generated types, and explicitly relocated user
+// types before code generation begins.
 package expr
 
 import (
+	"cmp"
 	"fmt"
 	"maps"
+	"reflect"
 	"slices"
 	"sort"
+	"strings"
 
 	"goa.design/goa/v3/eval"
 	goa "goa.design/goa/v3/pkg"
@@ -25,8 +31,8 @@ type (
 		Services []*ServiceExpr
 		// Interceptors contains the list of interceptors.
 		Interceptors []*InterceptorExpr
-		// Errors contains the list of errors returned by all the API
-		// methods.
+		// Errors contains reusable error definitions. Services and methods
+		// select these errors by naming them in their own Error DSL.
 		Errors []*ErrorExpr
 		// Types contains the user types described in the DSL.
 		Types []UserType
@@ -51,6 +57,13 @@ type (
 
 		// External is an instance of the type being converted from or to.
 		External any
+	}
+
+	// mountedHTTPRoute identifies one final route and the service that owns it.
+	mountedHTTPRoute struct {
+		service string
+		route   *RouteExpr
+		path    string
 	}
 )
 
@@ -87,6 +100,9 @@ func (r *RootExpr) WalkSets(walk eval.SetWalker) {
 	walk(rtypes)
 
 	// Services
+	for _, service := range r.Services {
+		service.design = r
+	}
 	walk(eval.ToExpressionSet(r.Services))
 
 	// Methods (must be done after services)
@@ -99,10 +115,10 @@ func (r *RootExpr) WalkSets(walk eval.SetWalker) {
 	walk(methods)
 
 	// HTTP services and endpoints
-	r.walkHTTPServices(r.API.HTTP.Services, walk)
+	r.walkHTTPServices(r.API.HTTP, r.API.HTTP.Services, walk)
 
 	// JSON-RPC services and endpoints
-	r.walkHTTPServices(r.API.JSONRPC.Services, walk)
+	r.walkHTTPServices(r.API.JSONRPC, r.API.JSONRPC.Services, walk)
 
 	// GRPC services and endpoints
 	grpcsvcs := make(eval.ExpressionSet, len(r.API.GRPC.Services))
@@ -212,9 +228,253 @@ func (r *RootExpr) Validate() error {
 			seen[name] = struct{}{}
 		}
 	}
+	for _, userType := range r.Types {
+		verr.Merge(userType.Attribute().validateDefaultValues(fmt.Sprintf("type %q", userType.Name()), userType))
+	}
+	for _, resultType := range r.ResultTypes {
+		verr.Merge(resultType.Attribute().validateDefaultValues(fmt.Sprintf("result type %q", resultType.Name()), resultType))
+	}
+	verr.Merge(r.validateErrorDefaults())
+	verr.Merge(ValidateSharedErrorNames(r))
 
 	verr.Merge(r.validateRelocatedUserTypes())
+	verr.Merge(validateTypeMappings("conversion", r.Conversions))
+	verr.Merge(validateTypeMappings("creation", r.Creations))
+	if r.API != nil {
+		verr.Merge(r.validateSharedHTTPRoutes())
+	}
 
+	return &verr
+}
+
+// ValidateSharedErrorNames rejects an authored type with several static error
+// names unless each value carries its selected name in an ErrorName field. The
+// roots must include every design linked by one generation command.
+func ValidateSharedErrorNames(roots ...*RootExpr) *eval.ValidationErrors {
+	type errorUse struct {
+		expression  *ErrorExpr
+		userType    UserType
+		names       map[string]struct{}
+		carriesName bool
+	}
+	verr := new(eval.ValidationErrors)
+	uses := make(map[UserType]*errorUse)
+	collect := func(designError *ErrorExpr) {
+		userType, ok := designError.Type.(UserType)
+		if !ok {
+			return
+		}
+		use := uses[userType.Origin()]
+		if use == nil {
+			use = &errorUse{
+				expression: designError,
+				userType:   userType,
+				names:      make(map[string]struct{}),
+			}
+			uses[userType.Origin()] = use
+		}
+		use.names[designError.Name] = struct{}{}
+		use.carriesName = use.carriesName || hasErrorNameAttribute(userType.Attribute())
+	}
+	for _, root := range roots {
+		for _, designError := range root.Errors {
+			collect(designError)
+		}
+		for _, service := range root.Services {
+			for _, designError := range service.Errors {
+				collect(designError)
+			}
+			for _, method := range service.Methods {
+				for _, designError := range method.Errors {
+					collect(designError)
+				}
+			}
+		}
+	}
+	ordered := slices.Collect(maps.Values(uses))
+	slices.SortFunc(ordered, func(left, right *errorUse) int {
+		if compared := cmp.Compare(left.userType.Name(), right.userType.Name()); compared != 0 {
+			return compared
+		}
+		leftNames := strings.Join(slices.Sorted(maps.Keys(left.names)), "\x00")
+		rightNames := strings.Join(slices.Sorted(maps.Keys(right.names)), "\x00")
+		return cmp.Compare(leftNames, rightNames)
+	})
+	for _, use := range ordered {
+		if len(use.names) < 2 || use.carriesName {
+			continue
+		}
+		names := slices.Sorted(maps.Keys(use.names))
+		verr.Add(
+			use.expression,
+			"type %q defines errors %s and must identify the attribute containing the error name with ErrorName",
+			use.userType.Name(),
+			strings.Join(names, ", "),
+		)
+	}
+	return verr
+}
+
+// hasErrorNameAttribute reports whether the type stores its error name in one
+// generated field.
+func hasErrorNameAttribute(attribute *AttributeExpr) bool {
+	found := false
+	walkAttribute(attribute, func(_ string, nested *AttributeExpr) error { // nolint: errcheck
+		if _, ok := nested.Meta["struct:error:name"]; ok {
+			found = true
+		}
+		return nil
+	})
+	return found
+}
+
+// validateErrorDefaults checks each declared error once. Services and methods
+// may reuse the same error expression, so pointer identity prevents repeated
+// diagnostics for one declaration.
+func (r *RootExpr) validateErrorDefaults() *eval.ValidationErrors {
+	errors := new(eval.ValidationErrors)
+	seen := make(map[*ErrorExpr]struct{})
+	validate := func(designError *ErrorExpr) {
+		if _, ok := seen[designError]; ok {
+			return
+		}
+		seen[designError] = struct{}{}
+		errors.Merge(designError.AttributeExpr.validateDefaultValues(
+			fmt.Sprintf("error %q", designError.Name), designError,
+		))
+	}
+	for _, designError := range r.Errors {
+		validate(designError)
+	}
+	for _, service := range r.Services {
+		for _, designError := range service.Errors {
+			validate(designError)
+		}
+		for _, method := range service.Methods {
+			for _, designError := range method.Errors {
+				validate(designError)
+			}
+		}
+	}
+	return errors
+}
+
+// validateSharedHTTPRoutes rejects ordinary HTTP and JSON-RPC routes that
+// would replace one another when mounted on the same server.
+func (r *RootExpr) validateSharedHTTPRoutes() *eval.ValidationErrors {
+	var verr eval.ValidationErrors
+	if r.API.HTTP == nil || r.API.JSONRPC == nil {
+		return &verr
+	}
+
+	servers := r.API.Servers
+	if len(servers) == 0 {
+		// Goa creates this server after validation when the design does not
+		// declare one. It hosts every service.
+		servers = []*ServerExpr{{Name: r.API.Name}}
+	}
+
+	for _, server := range servers {
+		httpRoutes := routesMountedOnServer(server, r.API.HTTP.Services)
+		jsonrpcRoutes := routesMountedOnServer(server, r.API.JSONRPC.Services)
+		for _, httpRoute := range httpRoutes {
+			for _, jsonrpcRoute := range jsonrpcRoutes {
+				if httpRoute.route.Method != jsonrpcRoute.route.Method ||
+					routePatternWithoutParameterNames(httpRoute.path) !=
+						routePatternWithoutParameterNames(jsonrpcRoute.path) {
+					continue
+				}
+				verr.Add(
+					jsonrpcRoute.route,
+					"server %q mounts ordinary HTTP route %s %q from service %q "+
+						"and JSON-RPC route %s %q from service %q; both routes match the same requests",
+					server.Name,
+					httpRoute.route.Method,
+					httpRoute.path,
+					httpRoute.service,
+					jsonrpcRoute.route.Method,
+					jsonrpcRoute.path,
+					jsonrpcRoute.service,
+				)
+			}
+		}
+	}
+	return &verr
+}
+
+// routesMountedOnServer returns every final route owned by services mounted on
+// server.
+func routesMountedOnServer(server *ServerExpr, services []*HTTPServiceExpr) []mountedHTTPRoute {
+	var routes []mountedHTTPRoute
+	for _, service := range services {
+		if !serverHostsService(server, service.Name()) {
+			continue
+		}
+		for _, endpoint := range service.HTTPEndpoints {
+			for _, route := range endpoint.Routes {
+				for _, routePath := range route.FullPaths() {
+					routes = append(routes, mountedHTTPRoute{
+						service: service.Name(),
+						route:   route,
+						path:    routePath,
+					})
+				}
+			}
+		}
+	}
+	return routes
+}
+
+// serverHostsService reports whether server mounts service. An empty service
+// list means that the server mounts every service in the design.
+func serverHostsService(server *ServerExpr, service string) bool {
+	return len(server.Services) == 0 || slices.Contains(server.Services, service)
+}
+
+// routePatternWithoutParameterNames returns the path form used to detect
+// router replacement. Parameter names do not change which requests match.
+func routePatternWithoutParameterNames(routePath string) string {
+	return HTTPWildcardRegex.ReplaceAllStringFunc(routePath, func(wildcard string) string {
+		if strings.HasPrefix(wildcard, "/{*") {
+			return "/{*wildcard}"
+		}
+		return "/{parameter}"
+	})
+}
+
+// validateTypeMappings rejects repeated declarations that would generate the
+// same method on one user type. A reflected type includes its package path, so
+// equally named external types from different packages remain distinct.
+func validateTypeMappings(direction string, mappings []*TypeMap) *eval.ValidationErrors {
+	type mappingIdentity struct {
+		user     UserType
+		external reflect.Type
+	}
+	var verr eval.ValidationErrors
+	seen := make(map[mappingIdentity]struct{}, len(mappings))
+	for _, mapping := range mappings {
+		identity := mappingIdentity{
+			user:     mapping.User.Origin(),
+			external: reflect.TypeOf(mapping.External),
+		}
+		if _, ok := seen[identity]; ok {
+			if direction == "conversion" {
+				verr.Add(
+					mapping.User,
+					"conversion from user type %q to external type %q defined twice",
+					mapping.User.Name(), identity.external,
+				)
+			} else {
+				verr.Add(
+					mapping.User,
+					"creation from external type %q to user type %q defined twice",
+					identity.external, mapping.User.Name(),
+				)
+			}
+			continue
+		}
+		seen[identity] = struct{}{}
+	}
 	return &verr
 }
 
@@ -229,21 +489,21 @@ func (r *RootExpr) Validate() error {
 // types.
 func (r *RootExpr) validateRelocatedUserTypes() *eval.ValidationErrors {
 	var verr eval.ValidationErrors
-	declared := make(map[string]struct{}, len(r.Types))
+	declared := make(map[UserType]struct{}, len(r.Types))
 	for _, ut := range r.Types {
-		declared[ut.ID()] = struct{}{}
+		declared[ut.Origin()] = struct{}{}
 	}
 	for _, ut := range r.Types {
 		pkgPath, ok := ut.Attribute().Meta.Last("struct:pkg:path")
 		if !ok || pkgPath == "" {
 			continue
 		}
-		seen := make(map[string]struct{})
+		seen := make(map[UserType]struct{})
 		r.walkUserTypeDependencies(ut, seen, "", func(dep UserType, path string) {
-			if dep.ID() == ut.ID() {
+			if dep.Origin() == ut.Origin() {
 				return
 			}
-			if _, ok := declared[dep.ID()]; !ok {
+			if _, ok := declared[dep.Origin()]; !ok {
 				// Generated/derived user types (e.g. union branch wrappers) are
 				// materialized alongside their owning types and do not require an
 				// explicit struct:pkg:path.
@@ -275,7 +535,7 @@ func (r *RootExpr) validateRelocatedUserTypes() *eval.ValidationErrors {
 
 // walkUserTypeDependencies traverses the attribute graph reachable from root and
 // invokes visit for each encountered user type.
-func (r *RootExpr) walkUserTypeDependencies(root UserType, seen map[string]struct{}, path string, visit func(UserType, string)) {
+func (r *RootExpr) walkUserTypeDependencies(root UserType, seen map[UserType]struct{}, path string, visit func(UserType, string)) {
 	if root == nil || root.Attribute() == nil {
 		return
 	}
@@ -287,16 +547,17 @@ func (r *RootExpr) walkUserTypeDependencies(root UserType, seen map[string]struc
 //
 // The path argument records the traversal path through objects, arrays, maps,
 // and unions and is intended for diagnostics.
-func (r *RootExpr) walkAttributeUserTypes(att *AttributeExpr, seen map[string]struct{}, path string, visit func(UserType, string)) {
+func (r *RootExpr) walkAttributeUserTypes(att *AttributeExpr, seen map[UserType]struct{}, path string, visit func(UserType, string)) {
 	if att == nil || att.Type == Empty {
 		return
 	}
 	switch t := att.Type.(type) {
 	case UserType:
-		if _, ok := seen[t.ID()]; ok {
+		origin := t.Origin()
+		if _, ok := seen[origin]; ok {
 			return
 		}
-		seen[t.ID()] = struct{}{}
+		seen[origin] = struct{}{}
 		visit(t, path)
 		r.walkAttributeUserTypes(t.Attribute(), seen, path, visit)
 	case *Object:
@@ -341,7 +602,7 @@ func (r *RootExpr) Finalize() {
 }
 
 // walkHTTPServices walks the HTTP services and endpoints.
-func (r *RootExpr) walkHTTPServices(svcs []*HTTPServiceExpr, walk eval.SetWalker) {
+func (r *RootExpr) walkHTTPServices(root eval.Expression, svcs []*HTTPServiceExpr, walk eval.SetWalker) {
 	sort.SliceStable(svcs, func(i, j int) bool {
 		return svcs[j].ParentName == svcs[i].Name()
 	})
@@ -357,7 +618,7 @@ func (r *RootExpr) walkHTTPServices(svcs []*HTTPServiceExpr, walk eval.SetWalker
 			httpsvrs = append(httpsvrs, s)
 		}
 	}
-	walk(eval.ExpressionSet{r.API.HTTP})
+	walk(eval.ExpressionSet{root})
 	walk(httpsvcs)
 	walk(httpepts)
 	walk(httpsvrs)

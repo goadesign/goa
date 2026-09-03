@@ -2851,11 +2851,11 @@ var PayloadBodyUserInnerDSL = func() {
 var PayloadBodyUserInnerDefaultDSL = func() {
 	var InnerType = Type("InnerType", func() {
 		Attribute("a", String, func() {
-			Default("defaulta")
+			Default("patterna")
 			Pattern("patterna")
 		})
 		Attribute("b", String, func() {
-			Default("defaultb")
+			Default("patternb")
 			Pattern("patternb")
 		})
 		Required("a")
@@ -3075,6 +3075,28 @@ var PayloadMultipartUserTypeDSL = func() {
 	})
 }
 
+var PayloadMultipartValidationDSL = func() {
+	var Part = Type("MultipartPart", func() {
+		Attribute("code", String, func() {
+			Pattern("^[a-z]+$")
+		})
+		Required("code")
+	})
+	Service("ServiceMultipartValidation", func() {
+		Method("MethodMultipartValidation", func() {
+			Payload(func() {
+				Attribute("name", String)
+				Attribute("part", Part)
+				Required("name", "part")
+			})
+			HTTP(func() {
+				POST("/")
+				MultipartRequest()
+			})
+		})
+	})
+}
+
 var PayloadMultipartArrayTypeDSL = func() {
 	var PayloadType = Type("PayloadType", func() {
 		Attribute("a", String, func() {
@@ -3142,7 +3164,8 @@ var PayloadMultipartWithParamsAndHeadersDSL = func() {
 			Pattern("patternb")
 		})
 		Attribute("c", MapOf(Int, ArrayOf(String)))
-		Required("a", "c")
+		Attribute("d", String)
+		Required("a", "c", "d")
 	})
 	Service("ServiceMultipartWithParamsAndHeaders", func() {
 		Method("MethodMultipartWithParamsAndHeaders", func() {

@@ -1,7 +1,10 @@
+// This file defines the naming and pointer contracts shared by Go
+// transformation and validation generators.
 package codegen
 
 import (
 	"fmt"
+	"strings"
 
 	"goa.design/goa/v3/expr"
 )
@@ -20,6 +23,17 @@ type (
 		// attribute and field name. If firstUpper is true then the field name
 		// first letter is capitalized.
 		Field(att *expr.AttributeExpr, name string, firstUpper bool) string
+		// Package returns the qualifier used to reference att from the current
+		// generated file, or the empty string for a same-package declaration.
+		Package(att *expr.AttributeExpr) string
+		// Enter returns the resolver for the package containing att and declarations
+		// nested in it.
+		Enter(att *expr.AttributeExpr) Attributor
+		// IsSumType reports whether unions use Goa's generated sum-type layout.
+		IsSumType() bool
+		// ValidatorCall returns the complete call that validates target as att.
+		// path is the generated expression used as the start of nested error paths.
+		ValidatorCall(att *expr.AttributeExpr, view, target, path string) string
 	}
 
 	// AttributeContext contains properties which impacts the code generating
@@ -40,17 +54,14 @@ type (
 		UseDefault bool
 		// Scope is the attribute scope.
 		Scope Attributor
-		// DefaultPkg is the default package name where the attribute
-		// type is found. it can be overridden via struct:pkg:path meta.
-		DefaultPkg string
-		// SamePackageConversion if true indicates that this context is being used
-		// for conversion code generation within the same package as the types.
-		SamePackageConversion bool
 		// UnionPointer if true indicates that optional sum-type union fields use
 		// pointers to preserve transport-level presence. Required union fields also
 		// use pointers when Pointer is true. Service types leave this false because
 		// the empty union discriminator represents omission after decoding.
 		UnionPointer bool
+		// ArrayElementPointer keeps primitive array elements as pointers when
+		// generated validation must distinguish null from the primitive zero value.
+		ArrayElementPointer bool
 	}
 
 	// AttributeScope contains the scope of an attribute. It implements the
@@ -58,6 +69,15 @@ type (
 	AttributeScope struct {
 		// scope is the name scope for the attribute.
 		scope *NameScope
+		// pkg is the default generated Go package qualifier.
+		pkg string
+	}
+
+	// goTypeLayoutAttributor uses names retained in one linked Go type. The
+	// wrapped resolver supplies operations that the type plan does not record.
+	goTypeLayoutAttributor struct {
+		Attributor
+		layout LinkedGoType
 	}
 
 	// TransformAttrs are the attributes that help in the transformation.
@@ -69,7 +89,80 @@ type (
 		// Hooks are optional generator specific extension points
 		// consulted by the transform engine. Nil selects the engine
 		// defaults.
-		Hooks *TransformHooks
+		Hooks           *TransformHooks
+		helpers         map[TransformHelperID]TransformHelper
+		calls           *transformCallCursor
+		locals          *NameScope
+		collectionDepth int
+		unionDepth      int
+	}
+
+	// TransformHelperID selects one recursive function in a TransformPlan. Its
+	// fields are private so callers cannot rebuild it from a generated name.
+	TransformHelperID struct {
+		plan  *TransformPlan
+		index int
+	}
+
+	// TransformHelperDefinitionID selects one function body in a TransformPlan.
+	// Its fields are private so callers cannot rebuild it from type names.
+	TransformHelperDefinitionID struct {
+		plan  *TransformPlan
+		index int
+	}
+
+	// TransformHelperDefinitionLocation orders function bodies by the authored
+	// field or collection position where they are used. Its representation is
+	// private and is never used as a generated Go name.
+	TransformHelperDefinitionLocation struct {
+		encoded string
+	}
+
+	// TransformHelperDefinition describes one function body shared by equivalent
+	// helper calls in a TransformPlan. Requiredness belongs to each call and does
+	// not create a different definition.
+	TransformHelperDefinition struct {
+		// ID selects this function body in its TransformPlan.
+		ID TransformHelperDefinitionID
+		// Source describes the source attribute converted by the function.
+		// HelperDefinitions returns a detached copy, so changing it does not affect
+		// Render.
+		Source *expr.AttributeExpr
+		// Target describes the target attribute produced by the function.
+		// HelperDefinitions returns a detached copy, so changing it does not affect
+		// Render.
+		Target *expr.AttributeExpr
+		// Location provides a stable order for this function body.
+		Location TransformHelperDefinitionLocation
+		// Declaration is populated when BindHelperDefinition assigns the
+		// package-level function name. It remains nil when callers bind only the
+		// individual helper occurrences.
+		Declaration *NameDeclaration
+		helpers     []int
+	}
+
+	// TransformHelper describes one generated function that converts a nested or
+	// recursive value. The same chosen function name is used at every call and at
+	// its definition.
+	TransformHelper struct {
+		// ID selects this function in its TransformPlan.
+		ID TransformHelperID
+		// Source describes the source attribute selected for this function.
+		// Helpers returns a detached copy, so changing it does not affect Render.
+		Source *expr.AttributeExpr
+		// Target describes the target attribute selected for this function.
+		// Helpers returns a detached copy, so changing it does not affect Render.
+		Target *expr.AttributeExpr
+		// Required reports whether the caller reaches this function through a
+		// required value. Optional callers check for nil before calling it.
+		Required bool
+		// Occurrence is the one-based position of this helper operation in the
+		// transform plan's stable traversal.
+		Occurrence int
+		// Declaration holds the package-level function name chosen before source
+		// is written. Render returns an error when it is missing.
+		Declaration *NameDeclaration
+		location    TransformHelperDefinitionLocation
 	}
 
 	// TransformFunctionData describes a helper function used to transform
@@ -90,11 +183,106 @@ type (
 	//    }
 	//
 	TransformFunctionData struct {
-		Name          string
-		ParamTypeRef  string
+		// ID selects the recursive function rendered by this value.
+		ID TransformHelperID
+		// Declaration is the package-level function chosen before writing code.
+		// It is nil when GoTransformWithAttrs created this value while writing
+		// code.
+		Declaration *NameDeclaration
+		// Name is the final helper name kept for existing plugins.
+		//
+		// Deprecated: Use Declaration.Name() after planning.
+		Name string
+		// ParamTypeRef is the generated Go reference to the helper parameter type.
+		ParamTypeRef string
+		// ResultTypeRef is the generated Go reference to the helper result type.
 		ResultTypeRef string
-		Code          string
+		// Code is the helper body.
+		Code string
 	}
+
+	// TransformProgram owns one immutable, non-nil set of conversion hooks.
+	// Plans made by the same program may share a generated helper when their
+	// complete Go types, conversion rules, and child calls match. Built-in
+	// conversion plans do not need a TransformProgram.
+	TransformProgram struct {
+		hooks *TransformHooks
+	}
+
+	// TransformPlan owns copied source and target expressions plus every
+	// recursive function needed to convert between them. Create a plan, inspect
+	// the detached helper descriptions from Helpers and declare their names, bind
+	// those declarations and the completed type resolvers, then call Render.
+	// A helper ID remains bound to this plan, but changing a description returned
+	// by Helpers cannot change the private expressions Render uses. Render caches
+	// each exact argument set, so repeated calls return the first generated code.
+	TransformPlan struct {
+		source         *expr.AttributeExpr
+		target         *expr.AttributeExpr
+		rootSource     *expr.AttributeExpr
+		rootTarget     *expr.AttributeExpr
+		rootWrap       *WrapDirective
+		sourceBaseline *expr.AttributeExpr
+		targetBaseline *expr.AttributeExpr
+		sourceCopier   *expr.AttributeGraphCopier
+		targetCopier   *expr.AttributeGraphCopier
+		prefix         string
+		program        *TransformProgram
+		hooks          *TransformHooks
+		sourceCtx      *AttributeContext
+		targetCtx      *AttributeContext
+		helpers        []TransformHelper
+		definitions    []TransformHelperDefinition
+		operations     []*transformOperation
+		renders        map[transformRenderRequest]transformRenderResult
+	}
+
+	// transformRenderRequest identifies one Render invocation. Repeating the
+	// same invocation returns its first result instead of invoking hooks again.
+	transformRenderRequest struct {
+		sourceVar string
+		targetVar string
+		newVar    bool
+	}
+
+	// transformRenderResult is the private immutable cache for one Render call.
+	transformRenderResult struct {
+		code    string
+		helpers []*TransformFunctionData
+		err     error
+	}
+
+	// transformPair holds the exact copied source and target types whose fields
+	// are currently being visited.
+	transformPair struct {
+		source expr.DataType
+		target expr.DataType
+	}
+
+	// transformOperation stores the recursive calls made by the top-level
+	// conversion or one function body, in call order.
+	transformOperation struct {
+		calls []transformCall
+	}
+
+	// transformCall selects the recursive function used by one call.
+	transformCall struct {
+		helper TransformHelperID
+	}
+
+	// transformCallCursor counts the planned calls used by one render.
+	transformCallCursor struct {
+		calls []transformCall
+		next  int
+	}
+)
+
+const (
+	transformObjectFieldLocation byte = iota + 1
+	transformArrayElementLocation
+	transformMapKeyLocation
+	transformMapValueLocation
+	transformUnionBranchLocation
 )
 
 // NewAttributeContext initializes an attribute context.
@@ -103,21 +291,54 @@ func NewAttributeContext(pointer, reqIgnore, useDefault bool, pkg string, scope 
 		Pointer:        pointer,
 		IgnoreRequired: reqIgnore,
 		UseDefault:     useDefault,
-		Scope:          NewAttributeScope(scope),
-		DefaultPkg:     pkg,
+		Scope:          newAttributeScope(scope, pkg),
 	}
-}
-
-// NewAttributeContextForConversion initializes an attribute context for same-package conversion.
-func NewAttributeContextForConversion(pointer, reqIgnore, useDefault bool, pkg string, scope *NameScope) *AttributeContext {
-	ctx := NewAttributeContext(pointer, reqIgnore, useDefault, pkg, scope)
-	ctx.SamePackageConversion = true
-	return ctx
 }
 
 // NewAttributeScope initializes an attribute scope.
 func NewAttributeScope(scope *NameScope) *AttributeScope {
-	return &AttributeScope{scope: scope}
+	return newAttributeScope(scope, "")
+}
+
+// Compare returns -1, 0, or 1 when this authored location sorts before, at,
+// or after other.
+func (l TransformHelperDefinitionLocation) Compare(other TransformHelperDefinitionLocation) int {
+	return strings.Compare(l.encoded, other.encoded)
+}
+
+// EnterCollection returns the loop variable for the current array and a copy
+// used to render values nested inside that array.
+func (a *TransformAttrs) EnterCollection() (string, *TransformAttrs) {
+	child := *a
+	child.collectionDepth++
+	return string(rune('i' + a.collectionDepth)), &child
+}
+
+// EnterLocalBlock returns a copy whose temporary names are limited to one
+// generated Go block. expressions and names are the values that code in that
+// block must continue to reference after declaring a temporary.
+func (a *TransformAttrs) EnterLocalBlock(expressionsAndNames ...string) (*TransformAttrs, error) {
+	child := *a
+	var err error
+	child.locals, err = newTransformLocalScope(expressionsAndNames...)
+	if err != nil {
+		return nil, err
+	}
+	return &child, nil
+}
+
+// enterLocalBlock returns a copy that can declare names visible only inside a
+// generated Go block. Names already visible outside the block remain reserved.
+func (a *TransformAttrs) enterLocalBlock() *TransformAttrs {
+	child := *a
+	child.locals = a.locals.Fork()
+	return &child
+}
+
+// uniqueLocal reserves the preferred local name in the current generated Go
+// block and returns the spelling that does not conflict with visible names.
+func (a *TransformAttrs) uniqueLocal(preferred string) string {
+	return a.locals.Unique(preferred)
 }
 
 // IsCompatible returns an error if a and b are not both objects, both arrays,
@@ -158,13 +379,19 @@ func IsCompatible(a, b expr.DataType, actx, bctx string) error {
 	return nil
 }
 
-// AppendHelpers takes care of only appending helper functions from newH that
-// are not already in oldH.
+// AppendHelpers appends functions from newH that oldH does not already contain.
+// Planned functions are the same when they use the same package declaration.
+// Older functions without a declaration are the same when their names match.
+// It panics when one declaration or released name has different parameter,
+// result, or body text because one Go function cannot implement both values.
 func AppendHelpers(oldH, newH []*TransformFunctionData) []*TransformFunctionData {
 	for _, h := range newH {
 		found := false
 		for _, h2 := range oldH {
-			if h.Name == h2.Name {
+			if sameTransformHelper(h, h2) {
+				if !transformFunctionDefinitionsEqual(h, h2) {
+					panic(fmt.Sprintf("transform helper %q has different definitions", h.Name))
+				}
 				found = true
 				break
 			}
@@ -176,28 +403,41 @@ func AppendHelpers(oldH, newH []*TransformFunctionData) []*TransformFunctionData
 	return oldH
 }
 
+// sameTransformHelper compares the chosen package declarations when both
+// helpers have one. Values created while writing code have no declaration and
+// keep using their generated names.
+func sameTransformHelper(left, right *TransformFunctionData) bool {
+	if left.Declaration != nil && right.Declaration != nil {
+		return left.Declaration == right.Declaration
+	}
+	if left.Declaration != nil || right.Declaration != nil {
+		return false
+	}
+	return left.Name == right.Name
+}
+
 // MapDepth returns the level of nested maps. For unnested maps, it returns 0.
 func MapDepth(m *expr.Map) int {
 	return mapDepth(m.ElemType.Type, 0)
 }
 
-func mapDepth(dt expr.DataType, depth int, seen ...map[string]struct{}) int {
+func mapDepth(dt expr.DataType, depth int, seen ...map[expr.DataType]struct{}) int {
 	if mp := expr.AsMap(dt); mp != nil {
 		depth++
 		depth = mapDepth(mp.ElemType.Type, depth, seen...)
 	} else if ar := expr.AsArray(dt); ar != nil {
 		depth = mapDepth(ar.ElemType.Type, depth, seen...)
 	} else if mo := expr.AsObject(dt); mo != nil {
-		var s map[string]struct{}
+		var s map[expr.DataType]struct{}
 		if len(seen) > 0 {
 			s = seen[0]
 		} else {
-			s = make(map[string]struct{})
+			s = make(map[expr.DataType]struct{})
 			seen = append(seen, s)
 		}
-		key := dt.Name()
+		key := dt
 		if u, ok := dt.(expr.UserType); ok {
-			key = u.ID()
+			key = u.Origin()
 		}
 		if _, ok := s[key]; ok {
 			return depth
@@ -221,8 +461,11 @@ func mapDepth(dt expr.DataType, depth int, seen ...map[string]struct{}) int {
 // IsPrimitivePointer returns true if the attribute with the given name is a
 // primitive pointer in the given parent attribute.
 func (a *AttributeContext) IsPrimitivePointer(name string, att *expr.AttributeExpr) bool {
-	if at := att.Find(name); at != nil && (at.Type == expr.Any || at.Type == expr.Bytes) {
-		return false
+	if at := att.Find(name); at != nil && expr.IsPrimitive(at.Type) {
+		kind := unalias(at.Type).Kind()
+		if kind == expr.AnyKind || kind == expr.BytesKind {
+			return false
+		}
 	}
 	if a.Pointer {
 		return true
@@ -237,7 +480,7 @@ func (a *AttributeContext) IsFieldPointer(name string, att *expr.AttributeExpr) 
 	if expr.IsUnion(field.Type) {
 		return a.IsUnionPointer(att.IsRequired(name))
 	}
-	if _, ok := a.Scope.(*AttributeScope); !ok {
+	if !a.Scope.IsSumType() {
 		return expr.IsPrimitive(field.Type) && a.IsPrimitivePointer(name, att)
 	}
 	return goFieldIsPointer(att, name, a.Pointer, a.UseDefault)
@@ -249,39 +492,70 @@ func (a *AttributeContext) IsUnionPointer(required bool) bool {
 	return a.UnionPointer && (!required || a.Pointer)
 }
 
+// IsArrayElementPointer reports whether primitive elements in array use
+// pointers so generated validation can reject null before conversion.
+func (a *AttributeContext) IsArrayElementPointer(array *expr.Array) bool {
+	return arrayElementIsPointer(array, a.ArrayElementPointer)
+}
+
+// LayoutPolicy returns the exact pointer and default rules used by this
+// generated value.
+func (a *AttributeContext) LayoutPolicy() GoLayoutPolicy {
+	return GoLayoutPolicy{
+		Pointer:             a.Pointer,
+		IgnoreRequired:      a.IgnoreRequired,
+		UseDefault:          a.UseDefault,
+		UnionPointer:        a.UnionPointer,
+		ArrayElementPointer: a.ArrayElementPointer,
+		SumType:             a.Scope.IsSumType(),
+	}
+}
+
 // Pkg returns the package name of the given type.
 func (a *AttributeContext) Pkg(att *expr.AttributeExpr) string {
-	if att == nil {
-		return a.DefaultPkg
+	return a.Scope.Package(att)
+}
+
+// Enter returns a copy whose attributor owns att and unlocated declarations
+// nested inside it.
+func (a *AttributeContext) Enter(att *expr.AttributeExpr) *AttributeContext {
+	entered := a.Dup()
+	entered.Scope = a.Scope.Enter(att)
+	return entered
+}
+
+// WithGoTypeLayout returns a copy that uses the final generated type, field,
+// and package names retained in layout.
+func (a *AttributeContext) WithGoTypeLayout(layout LinkedGoType) (*AttributeContext, error) {
+	if a == nil {
+		return nil, fmt.Errorf("attach Go type layout: attribute context must not be nil")
 	}
-	if loc := UserTypeLocation(att.Type); loc != nil {
-		pkg := loc.PackageName()
-		// If this is same-package conversion and the type's package matches
-		// the context's default package, return empty string to avoid qualification
-		if a.SamePackageConversion && pkg == a.DefaultPkg {
-			return ""
-		}
-		return pkg
+	if a.Scope == nil {
+		return nil, fmt.Errorf("attach Go type layout: attribute resolver must not be nil")
 	}
-	if expr.AsUnion(att.Type) != nil {
-		if a.SamePackageConversion {
-			return ""
-		}
-		return a.DefaultPkg
+	if layout.plan == nil {
+		return nil, fmt.Errorf("attach Go type layout: linked Go type must not be empty")
 	}
-	return a.DefaultPkg
+	if layout.plan.policy != a.LayoutPolicy() {
+		return nil, fmt.Errorf("attach Go type layout: pointer and default rules do not match the attribute context")
+	}
+	linked := a.Dup()
+	linked.Scope = &goTypeLayoutAttributor{
+		Attributor: a.Scope,
+		layout:     layout,
+	}
+	return linked, nil
 }
 
 // Dup creates a shallow copy of the AttributeContext.
 func (a *AttributeContext) Dup() *AttributeContext {
 	return &AttributeContext{
-		Pointer:               a.Pointer,
-		IgnoreRequired:        a.IgnoreRequired,
-		UseDefault:            a.UseDefault,
-		Scope:                 a.Scope,
-		DefaultPkg:            a.DefaultPkg,
-		SamePackageConversion: a.SamePackageConversion,
-		UnionPointer:          a.UnionPointer,
+		Pointer:             a.Pointer,
+		IgnoreRequired:      a.IgnoreRequired,
+		UseDefault:          a.UseDefault,
+		Scope:               a.Scope,
+		UnionPointer:        a.UnionPointer,
+		ArrayElementPointer: a.ArrayElementPointer,
 	}
 }
 
@@ -314,6 +588,49 @@ func (a *AttributeScope) Ref(att *expr.AttributeExpr, pkg string) string {
 	return a.scope.GoFullTypeRef(att, pkg)
 }
 
+// GoTypeLayout records the exact names from this scope with the pointer policy
+// selected by the caller.
+func (a *AttributeScope) GoTypeLayout(attribute *expr.AttributeExpr, policy GoLayoutPolicy) (LinkedGoType, error) {
+	return planGoTypeWithAttributor(attribute, policy, a)
+}
+
+// Package returns the qualifier selected by att's explicit type location or
+// the scope's default package.
+func (a *AttributeScope) Package(att *expr.AttributeExpr) string {
+	if att == nil {
+		return a.pkg
+	}
+	if loc := UserTypeLocation(att.Type); loc != nil {
+		return a.scope.generatedImportName(loc.RelImportPath, loc.PackageName())
+	}
+	return a.pkg
+}
+
+// ValidatorCall returns a call to the validation function selected from the
+// generated type and view names.
+func (a *AttributeScope) ValidatorCall(att *expr.AttributeExpr, view, target, _ string) string {
+	name := "Validate" + a.Name(att, "", false, true) + Goify(view, true)
+	return fmt.Sprintf("%s(%s)", name, target)
+}
+
+// Enter returns a scope whose default qualifier follows att's explicit type
+// location. The underlying name scope remains unchanged.
+func (a *AttributeScope) Enter(att *expr.AttributeExpr) Attributor {
+	if loc := UserTypeLocation(att.Type); loc != nil {
+		pkg := a.scope.generatedImportName(loc.RelImportPath, loc.PackageName())
+		if pkg != a.pkg {
+			return newAttributeScope(a.scope, pkg)
+		}
+	}
+	return a
+}
+
+// IsSumType reports that AttributeScope renders unions using Goa's generated
+// sum-type structs.
+func (*AttributeScope) IsSumType() bool {
+	return true
+}
+
 // Field returns a valid Go struct field name.
 func (*AttributeScope) Field(att *expr.AttributeExpr, name string, firstUpper bool) string {
 	return GoifyAtt(att, name, firstUpper)
@@ -322,4 +639,116 @@ func (*AttributeScope) Field(att *expr.AttributeExpr, name string, firstUpper bo
 // Scope returns the name scope.
 func (a *AttributeScope) Scope() *NameScope {
 	return a.scope
+}
+
+// Name returns the final planned type name when layout contains attribute.
+func (a *goTypeLayoutAttributor) Name(attribute *expr.AttributeExpr, pkg string, pointer, useDefault bool) string {
+	return a.mustFind(attribute).Name()
+}
+
+// Ref returns the final planned type reference when layout contains attribute.
+func (a *goTypeLayoutAttributor) Ref(attribute *expr.AttributeExpr, pkg string) string {
+	return a.mustFind(attribute).Ref()
+}
+
+// Field returns the final planned field name when layout contains attribute.
+func (a *goTypeLayoutAttributor) Field(attribute *expr.AttributeExpr, name string, firstUpper bool) string {
+	expected := a.Attributor.Field(attribute, name, firstUpper)
+	for _, layout := range a.findAll(attribute) {
+		if layout.Field(firstUpper) == expected {
+			return expected
+		}
+	}
+	panic(fmt.Sprintf("Go type layout does not contain field %q", name)) // bug
+}
+
+// Package returns the final package qualifier when layout contains attribute.
+func (a *goTypeLayoutAttributor) Package(attribute *expr.AttributeExpr) string {
+	if attribute == nil {
+		return a.Attributor.Package(nil)
+	}
+	return a.mustFind(attribute).Package()
+}
+
+// Enter narrows the retained type when attribute identifies one planned child.
+func (a *goTypeLayoutAttributor) Enter(attribute *expr.AttributeExpr) Attributor {
+	return &goTypeLayoutAttributor{
+		Attributor: a.Attributor.Enter(attribute),
+		layout:     a.mustFind(attribute),
+	}
+}
+
+// GoTypeLayout returns the retained type when it contains attribute.
+func (a *goTypeLayoutAttributor) GoTypeLayout(attribute *expr.AttributeExpr, policy GoLayoutPolicy) (LinkedGoType, error) {
+	if layout, ok := a.find(attribute); ok {
+		if layout.plan.policy != policy {
+			return LinkedGoType{}, fmt.Errorf("resolve Go type layout: pointer and default rules do not match the retained type")
+		}
+		return layout, nil
+	}
+	return LinkedGoType{}, fmt.Errorf("resolve Go type layout: retained type does not contain %q", attribute.Type.Name())
+}
+
+// OneofWrapper asks the wrapped transport resolver for its protobuf wrapper.
+func (a *goTypeLayoutAttributor) OneofWrapper(attribute *expr.AttributeExpr) string {
+	resolver, ok := a.Attributor.(interface {
+		OneofWrapper(*expr.AttributeExpr) string
+	})
+	if !ok {
+		panic("Go type layout resolver cannot resolve a protobuf oneof wrapper") // bug
+	}
+	return resolver.OneofWrapper(attribute)
+}
+
+// UnionConstructor asks the wrapped resolver for the generated branch constructor.
+func (a *goTypeLayoutAttributor) UnionConstructor(attribute *expr.AttributeExpr, branch string) (string, error) {
+	resolver, ok := a.Attributor.(interface {
+		UnionConstructor(*expr.AttributeExpr, string) (string, error)
+	})
+	if !ok {
+		return "", fmt.Errorf("Go type layout resolver cannot resolve a OneOf constructor")
+	}
+	return resolver.UnionConstructor(attribute, branch)
+}
+
+// find returns one retained type for attribute and rejects different planned
+// references for the same expression.
+func (a *goTypeLayoutAttributor) find(attribute *expr.AttributeExpr) (LinkedGoType, bool) {
+	layouts := a.findAll(attribute)
+	if len(layouts) == 0 {
+		return LinkedGoType{}, false
+	}
+	selected := layouts[0]
+	for _, layout := range layouts[1:] {
+		if layout.Name() != selected.Name() || layout.Ref() != selected.Ref() || layout.Package() != selected.Package() {
+			panic(fmt.Sprintf("Go type layout has different references for %q", attribute.Type.Name())) // bug
+		}
+	}
+	return selected, true
+}
+
+// mustFind returns the retained type for attribute or stops generation because
+// a linked context must contain every type requested from it.
+func (a *goTypeLayoutAttributor) mustFind(attribute *expr.AttributeExpr) LinkedGoType {
+	layout, ok := a.find(attribute)
+	if !ok {
+		panic(fmt.Sprintf("Go type layout does not contain %q", attribute.Type.Name())) // bug
+	}
+	return layout
+}
+
+// findAll returns every retained occurrence of attribute below the current type.
+func (a *goTypeLayoutAttributor) findAll(attribute *expr.AttributeExpr) []LinkedGoType {
+	plans := a.layout.plan.PlansForOccurrence(attribute)
+	layouts := make([]LinkedGoType, len(plans))
+	for index, plan := range plans {
+		layouts[index] = a.layout.Enter(plan)
+	}
+	return layouts
+}
+
+// newAttributeScope builds an attribute scope with explicit package
+// qualification behavior.
+func newAttributeScope(scope *NameScope, pkg string) *AttributeScope {
+	return &AttributeScope{scope: scope, pkg: pkg}
 }

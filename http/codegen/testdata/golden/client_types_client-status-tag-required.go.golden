@@ -1,0 +1,58 @@
+// MethodStatusTagRequiredCreatedResponseBody is the type of the
+// "ServiceStatusTagRequired" service "MethodStatusTagRequired" endpoint HTTP
+// response body.
+type MethodStatusTagRequiredCreatedResponseBody struct {
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+}
+
+// MethodStatusTagRequiredOKResponseBody is the type of the
+// "ServiceStatusTagRequired" service "MethodStatusTagRequired" endpoint HTTP
+// response body.
+type MethodStatusTagRequiredOKResponseBody struct {
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	Outcome *string `form:"outcome,omitempty" json:"outcome,omitempty" xml:"outcome,omitempty"`
+}
+
+// NewMethodStatusTagRequiredStatusTagResultCreated builds a
+// "ServiceStatusTagRequired" service "MethodStatusTagRequired" endpoint result
+// from a HTTP "Created" response.
+func NewMethodStatusTagRequiredStatusTagResultCreated(body *MethodStatusTagRequiredCreatedResponseBody) *servicestatustagrequiredviews.StatusTagResultView {
+	v := &servicestatustagrequiredviews.StatusTagResultView{
+		Message: body.Message,
+	}
+
+	return v
+}
+
+// NewMethodStatusTagRequiredStatusTagResultOK builds a
+// "ServiceStatusTagRequired" service "MethodStatusTagRequired" endpoint result
+// from a HTTP "OK" response.
+func NewMethodStatusTagRequiredStatusTagResultOK(body *MethodStatusTagRequiredOKResponseBody) *servicestatustagrequiredviews.StatusTagResultView {
+	v := &servicestatustagrequiredviews.StatusTagResultView{
+		Message: body.Message,
+		Outcome: body.Outcome,
+	}
+
+	return v
+}
+
+// ValidateMethodStatusTagRequiredCreatedResponseBody runs the validations
+// defined on MethodStatusTagRequiredCreatedResponseBody
+func ValidateMethodStatusTagRequiredCreatedResponseBody(body *MethodStatusTagRequiredCreatedResponseBody) (err error) {
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	return
+}
+
+// ValidateMethodStatusTagRequiredOKResponseBody runs the validations defined
+// on MethodStatusTagRequiredOKResponseBody
+func ValidateMethodStatusTagRequiredOKResponseBody(body *MethodStatusTagRequiredOKResponseBody) (err error) {
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Outcome == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("outcome", "body"))
+	}
+	return
+}

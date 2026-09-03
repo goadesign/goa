@@ -2,7 +2,7 @@
 //
 //    command (subcommand1|subcommand2|...)
 //
-func UsageCommands() []string {
+func {{ usageName }}() []string {
         return []string{
 {{- range . }}
                 "{{ . }}",

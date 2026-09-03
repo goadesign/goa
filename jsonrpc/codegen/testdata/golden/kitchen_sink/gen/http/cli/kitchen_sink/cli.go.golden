@@ -10,11 +10,11 @@ package cli
 import (
 	"flag"
 	"fmt"
-	healthc "kitchensink/http/health/client"
-	mixedc "kitchensink/http/mixed/client"
 	"net/http"
 	"os"
 
+	healthc "generated.local/gen/http/health/client"
+	mixedc "generated.local/gen/http/mixed/client"
 	goahttp "goa.design/goa/v3/http"
 	goa "goa.design/goa/v3/pkg"
 )
@@ -31,9 +31,28 @@ func UsageCommands() []string {
 
 // UsageExamples produces an example of a valid invocation of the CLI tool.
 func UsageExamples() string {
-	return os.Args[0] + " " + "mixed lookup --body '{\n      \"id\": \"Mollitia voluptatum expedita velit assumenda.\",\n      \"key\": \"Blanditiis sed voluptatum odit dolores impedit.\"\n   }'" + "\n" +
+	return os.Args[0] + " " + "mixed lookup --body '{\n      \"id\": \"Cupiditate cupiditate minus veniam sed officia qui.\",\n      \"key\": \"Numquam iusto molestias nulla quod nobis molestias.\"\n   }'" + "\n" +
 		os.Args[0] + " " + "health check" + "\n" +
 		""
+}
+
+// cliStringFlag keeps an omitted command-line flag distinct from an explicitly empty flag.
+type cliStringFlag struct {
+	value *string
+}
+
+// String returns the flag text shown by the standard flag package.
+func (f *cliStringFlag) String() string {
+	if f.value == nil {
+		return ""
+	}
+	return *f.value
+}
+
+// Set records that the user supplied the flag, even when value is empty.
+func (f *cliStringFlag) Set(value string) error {
+	f.value = &value
+	return nil
 }
 
 // ParseEndpoint returns the endpoint and payload as specified on the command
@@ -49,12 +68,14 @@ func ParseEndpoint(
 		mixedFlags = flag.NewFlagSet("mixed", flag.ContinueOnError)
 
 		mixedLookupFlags    = flag.NewFlagSet("lookup", flag.ExitOnError)
-		mixedLookupBodyFlag = mixedLookupFlags.String("body", "REQUIRED", "")
+		mixedLookupBodyFlag = new(cliStringFlag)
 
 		healthFlags = flag.NewFlagSet("health", flag.ContinueOnError)
 
 		healthCheckFlags = flag.NewFlagSet("check", flag.ExitOnError)
 	)
+	mixedLookupFlags.Var(mixedLookupBodyFlag, "body", "")
+
 	mixedFlags.Usage = mixedUsage
 	mixedLookupFlags.Usage = mixedLookupUsage
 
@@ -134,7 +155,7 @@ func ParseEndpoint(
 			switch epn {
 			case "lookup":
 				endpoint = c.Lookup()
-				data, err = mixedc.BuildLookupPayload(*mixedLookupBodyFlag)
+				data, err = mixedc.BuildLookupPayload(mixedLookupBodyFlag.value)
 			}
 		case "health":
 			c := healthc.NewClient(scheme, host, doer, enc, dec, restore)
@@ -176,7 +197,7 @@ func mixedLookupUsage() {
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "mixed lookup --body '{\n      \"id\": \"Mollitia voluptatum expedita velit assumenda.\",\n      \"key\": \"Blanditiis sed voluptatum odit dolores impedit.\"\n   }'")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "mixed lookup --body '{\n      \"id\": \"Cupiditate cupiditate minus veniam sed officia qui.\",\n      \"key\": \"Numquam iusto molestias nulla quod nobis molestias.\"\n   }'")
 }
 
 // healthUsage displays the usage of the health command and its subcommands.

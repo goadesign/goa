@@ -1,6 +1,7 @@
 package openapi
 
 import (
+	"bytes"
 	"encoding/json"
 	"maps"
 
@@ -17,13 +18,14 @@ func MarshalJSON(v any, extensions map[string]any) ([]byte, error) {
 	if len(extensions) == 0 {
 		return marshaled, nil
 	}
-	var unmarshaled any
-	if err := json.Unmarshal(marshaled, &unmarshaled); err != nil {
+	decoder := json.NewDecoder(bytes.NewReader(marshaled))
+	decoder.UseNumber()
+	var unmarshaled map[string]any
+	if err := decoder.Decode(&unmarshaled); err != nil {
 		return nil, err
 	}
-	asserted := unmarshaled.(map[string]any)
-	maps.Copy(asserted, extensions)
-	merged, err := json.Marshal(asserted)
+	maps.Copy(unmarshaled, extensions)
+	merged, err := json.Marshal(unmarshaled)
 	if err != nil {
 		return nil, err
 	}

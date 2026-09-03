@@ -79,6 +79,4 @@
 		err = goa.MergeErrors(err, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "boolean"))
 	}
 	{{ .VarName }} = {{ if .Pointer }}&{{ end }}v
-{{- else }}
-	// unsupported type {{ .Type.Name }} for var {{ .VarName }}
 {{- end }}

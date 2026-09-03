@@ -1,6 +1,9 @@
+// This file verifies generated validation code for nested attributes, user
+// types, unions, and declaration origins.
 package codegen
 
 import (
+	"bytes"
 	"strings"
 	"testing"
 
@@ -131,6 +134,138 @@ func TestRecursiveValidationWithCycleGuard(t *testing.T) {
 	}
 }
 
+// TestRecursiveValidationDistinguishesEqualUIDOrigins verifies that unrelated
+// user types with the same semantic UID retain their distinct validation
+// shapes when reached in one recursive validation pass.
+func TestRecursiveValidationDistinguishesEqualUIDOrigins(t *testing.T) {
+	minLength := 3
+	minimum := 5.0
+	first := &expr.UserTypeExpr{
+		AttributeExpr: &expr.AttributeExpr{Type: &expr.Object{
+			&expr.NamedAttributeExpr{
+				Name: "code",
+				Attribute: &expr.AttributeExpr{
+					Type:       expr.String,
+					Validation: &expr.ValidationExpr{MinLength: &minLength},
+				},
+			},
+		}},
+		TypeName: "First",
+		UID:      "shared",
+	}
+	second := &expr.UserTypeExpr{
+		AttributeExpr: &expr.AttributeExpr{Type: &expr.Object{
+			&expr.NamedAttributeExpr{
+				Name: "count",
+				Attribute: &expr.AttributeExpr{
+					Type:       expr.Int,
+					Validation: &expr.ValidationExpr{Minimum: &minimum},
+				},
+			},
+		}},
+		TypeName: "Second",
+		UID:      "shared",
+	}
+	ctx := NewAttributeContext(false, false, false, "", NewNameScope())
+	seen := make(map[expr.UserType]*bytes.Buffer)
+	firstCode := recurseValidationCode(&expr.AttributeExpr{Type: first}, nil, ctx, true, false, false, "first", literalValidationPath("first"), seen).String()
+	secondCode := recurseValidationCode(&expr.AttributeExpr{Type: second}, nil, ctx, true, false, false, "second", literalValidationPath("second"), seen).String()
+
+	require.Contains(t, firstCode, "first.Code")
+	require.Contains(t, firstCode, "InvalidLengthError")
+	require.Contains(t, secondCode, "second.Count")
+	require.Contains(t, secondCode, "InvalidRangeError")
+	require.Len(t, seen, 2)
+}
+
+// TestValidationPathsAreSpecializedBeforeRendering verifies that fixed roots
+// become string literals while reusable validators receive only their caller's
+// path as a runtime value.
+func TestValidationPathsAreSpecializedBeforeRendering(t *testing.T) {
+	minLength := 1
+	pattern := "^[a-z]+$"
+	attribute := &expr.AttributeExpr{Type: &expr.Object{
+		{
+			Name: "nested",
+			Attribute: &expr.AttributeExpr{Type: &expr.Object{
+				{
+					Name: "value",
+					Attribute: &expr.AttributeExpr{
+						Type:       expr.String,
+						Validation: &expr.ValidationExpr{MinLength: &minLength},
+					},
+				},
+			}},
+		},
+		{
+			Name: "items",
+			Attribute: &expr.AttributeExpr{Type: &expr.Array{
+				ElemType: &expr.AttributeExpr{
+					Type:       expr.String,
+					Validation: &expr.ValidationExpr{Pattern: pattern},
+				},
+			}},
+		},
+		{
+			Name: "values",
+			Attribute: &expr.AttributeExpr{Type: &expr.Map{
+				KeyType: &expr.AttributeExpr{Type: expr.String},
+				ElemType: &expr.AttributeExpr{
+					Type:       expr.String,
+					Validation: &expr.ValidationExpr{Pattern: pattern},
+				},
+			}},
+		},
+	}}
+	context := NewAttributeContext(true, false, false, "", NewNameScope())
+
+	direct := ValidationCode(attribute, nil, context, true, false, false, "body")
+	direct = FormatTestCode(t, "package foo\nfunc validate() (err error) {\n"+direct+"\nreturn\n}")
+	require.Contains(t, direct, `"body.nested.value"`)
+	require.Contains(t, direct, `"body.items[*]"`)
+	require.Contains(t, direct, `"body.values[key]"`)
+	require.NotContains(t, direct, "path+")
+
+	nested := ValidationCodeWithPathParameter(attribute, nil, context, true, false, false, "body", "path")
+	nested = FormatTestCode(t, "package foo\nfunc validate(path string) (err error) {\n"+nested+"\nreturn\n}")
+	require.Contains(t, nested, `path+".nested.value"`)
+	require.Contains(t, nested, `path+".items[*]"`)
+	require.Contains(t, nested, `path+".values[key]"`)
+	require.NotContains(t, nested, "fmt.Sprintf")
+}
+
+// TestValidationCodeSharesOptionalFieldGuard verifies that the direct
+// validation renderer checks one optional primitive once before all its rules.
+func TestValidationCodeSharesOptionalFieldGuard(t *testing.T) {
+	minLength := 2
+	attribute := &expr.AttributeExpr{Type: &expr.Object{
+		{Name: "name", Attribute: &expr.AttributeExpr{
+			Type: expr.String,
+			Validation: &expr.ValidationExpr{
+				Pattern:   "^[a-z]+$",
+				MinLength: &minLength,
+			},
+		}},
+	}}
+	context := NewAttributeContext(false, false, true, "", NewNameScope())
+
+	code := ValidationCode(attribute, nil, context, true, false, false, "target")
+	require.Equal(t, 1, strings.Count(code, "if target.Name != nil"))
+	require.Contains(t, code, "goa.ValidatePattern")
+	require.Contains(t, code, "goa.InvalidLengthError")
+
+	root := &expr.AttributeExpr{
+		Type: expr.String,
+		Validation: &expr.ValidationExpr{
+			Pattern:   "^[a-z]+$",
+			MinLength: &minLength,
+		},
+	}
+	rootCode := ValidationCode(root, nil, context, false, false, false, "target")
+	require.Equal(t, 2, strings.Count(rootCode, "if target != nil"))
+	require.Contains(t, rootCode, "*target")
+}
+
 // TestMultipleAliasTypesInSameStruct tests that multiple fields with the same
 // alias type can be validated independently. Previously, the recursion guard
 // would incorrectly block validation of the second field.
@@ -217,6 +352,39 @@ func TestValidationPredicatesPure(t *testing.T) {
 	second := ValidationCode(att, nil, ctx, true, false, false, "target")
 	require.Equal(t, first, second, "ValidationCode is not idempotent")
 	assertValidationsUnchanged(t, before)
+}
+
+// TestValidationCodeUsesBothExclusiveBounds verifies that generating a lower
+// exclusive bound cannot leave the upper bound on the lower-bound template
+// branch.
+func TestValidationCodeUsesBothExclusiveBounds(t *testing.T) {
+	exclusiveMinimum := 1.0
+	exclusiveMaximum := 10.0
+	attribute := &expr.AttributeExpr{
+		Type: expr.Float64,
+		Validation: &expr.ValidationExpr{
+			ExclusiveMinimum: &exclusiveMinimum,
+			ExclusiveMaximum: &exclusiveMaximum,
+		},
+	}
+	context := NewAttributeContext(false, false, true, "", NewNameScope())
+	legacy := ValidationCode(attribute, nil, context, true, false, true, "target")
+	require.Contains(t, legacy, "target <= 1")
+	require.Contains(t, legacy, "target >= 10")
+
+	layout, err := PlanGoType(attribute, GoTypePlanOptions{
+		Owner:  "generated.local/gen/service",
+		Policy: GoLayoutPolicy{UseDefault: true, SumType: true},
+	})
+	require.NoError(t, err)
+	plan, err := NewValidationPlan(attribute, layout, ValidationPlanOptions{Required: true})
+	require.NoError(t, err)
+	linked, err := plan.Link(layout.Link("generated.local/gen/service", func(importPath string) string {
+		require.Equal(t, "goa.design/goa/v3/pkg", importPath)
+		return "goa"
+	}))
+	require.NoError(t, err)
+	require.Equal(t, legacy, linked.Render("target", "target"))
 }
 
 // validationSnapshot captures the identity and deep value of an attribute

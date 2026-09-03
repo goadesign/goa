@@ -1,0 +1,27 @@
+// EncodeAuthenticateRequest encodes requests sent to NamedSecurityMetadata
+// Authenticate endpoint.
+func EncodeAuthenticateRequest(ctx context.Context, v any, md *metadata.MD) (any, error) {
+	payload, ok := v.(*namedsecuritymetadata.NamedSecurityRequest)
+	if !ok {
+		return nil, goagrpc.ErrInvalidType("NamedSecurityMetadata", "Authenticate", "*namedsecuritymetadata.NamedSecurityRequest", v)
+	}
+	jwtTokenWire := string(payload.JWTToken)
+	(*md).Append("authorization", jwtTokenWire)
+	if payload.OauthToken != nil {
+		oauthTokenWire := string(*payload.OauthToken)
+		(*md).Append("authorization", oauthTokenWire)
+	}
+	keyWire := string(payload.Key)
+	(*md).Append("authorization", keyWire)
+	usernameWire := string(payload.Username)
+	(*md).Append("username", usernameWire)
+	if payload.Password != nil {
+		passwordWire := string(*payload.Password)
+		(*md).Append("password", passwordWire)
+	}
+	if payload.BearerToken != nil {
+		bearerTokenWire := string(*payload.BearerToken)
+		(*md).Append("authorization", bearerTokenWire)
+	}
+	return NewProtoAuthenticateRequest(payload), nil
+}

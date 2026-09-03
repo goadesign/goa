@@ -1,5 +1,5 @@
 {{ comment .Description }}
-type {{ .VarName }} struct {
+type {{ .EndpointsDeclaration.Name }} struct {
 {{- range .Methods}}
 	{{ .VarName }} goa.Endpoint
 {{- end }}

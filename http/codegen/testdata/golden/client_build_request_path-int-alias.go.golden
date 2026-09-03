@@ -1,0 +1,34 @@
+// BuildMethodARequest instantiates a HTTP request object with method and path
+// set to call the "ServicePathIntAlias" service "MethodA" endpoint
+func (c *Client) BuildMethodARequest(ctx context.Context, v any) (*http.Request, error) {
+	var (
+		int_   int
+		int32_ int32
+		int64_ int64
+	)
+	{
+		p, ok := v.(*servicepathintalias.MethodAPayload)
+		if !ok {
+			return nil, goahttp.ErrInvalidType("ServicePathIntAlias", "MethodA", "*servicepathintalias.MethodAPayload", v)
+		}
+		if p.Int != nil {
+			int_ = int(*p.Int)
+		}
+		if p.Int32 != nil {
+			int32_ = int32(*p.Int32)
+		}
+		if p.Int64 != nil {
+			int64_ = int64(*p.Int64)
+		}
+	}
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: MethodAServicePathIntAliasPath(int_, int32_, int64_)}
+	req, err := http.NewRequest("POST", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("ServicePathIntAlias", "MethodA", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}

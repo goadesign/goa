@@ -1,8 +1,8 @@
-{{ printf "%s implements the %q method in %s.%s interface." .Method.VarName .Method.VarName .PkgName .ServerInterface | comment }}
-func (s *{{ .ServerStruct }}) {{ .Method.VarName }}(
+{{ printf "%s implements the %q method in %s.%s interface." .GRPCMethodName .GRPCMethodName .ServerProtobufPkgName .ServerInterface | comment }}
+func (s *{{ .ServerStructDeclaration.Name }}) {{ .GRPCMethodName }}(
 	{{- if not .ServerStream }}ctx context.Context, {{ end }}
-	{{- if not .Method.StreamingPayload }}message {{ .Request.Message.Ref }}{{ if .ServerStream }}, {{ end }}{{ end }}
-	{{- if .ServerStream }}stream {{ .ServerStream.Interface }}{{ end }}) {{ if .ServerStream }}error{{ else if .Response.Message }}({{ .Response.Message.Ref }},	error{{ if .Response.Message }}){{ end }}{{ end }} {
+	{{- if not .Method.StreamingPayload }}message {{ .Request.ServerMessageRef }}{{ if .ServerStream }}, {{ end }}{{ end }}
+	{{- if .ServerStream }}stream {{ .ServerStream.Interface }}{{ end }}) {{ if .ServerStream }}error{{ else if .Response.Message }}({{ .Response.ServerMessageRef }},	error{{ if .Response.Message }}){{ end }}{{ end }} {
 {{- if .ServerStream }}
 	ctx := stream.Context()
 {{- end }}
@@ -40,10 +40,10 @@ func (s *{{ .ServerStruct }}) {{ .Method.VarName }}(
 		{{if .PayloadRef }}p{{ else }}_{{ end }}, err := s.{{ .Method.VarName }}H.Decode(ctx, {{ if .Method.StreamingPayload }}nil{{ else }}message{{ end }})
 	{{- end }}
 	{{- template "handle_error" . }}
-	ep := &{{ .ServicePkgName }}.{{ .Method.VarName }}EndpointInput{
-		Stream: &{{ .ServerStream.VarName }}{stream: stream{{ if .Request.LegacyDecode }}, legacy: !envelope{{ end }}},
+	ep := &{{ .ServerServicePkgName }}.{{ .Method.EndpointInputDeclaration.Name }}{
+		Stream: &{{ .ServerStream.Declaration.Name }}{stream: stream{{ if .Request.LegacyDecode }}, legacy: !envelope{{ end }}},
 	{{- if .PayloadRef }}
-		Payload: p.({{ .PayloadRef }}),
+		Payload: p.({{ .ServerPayloadRef }}),
 	{{- end }}
 	}
 	err = s.{{ .Method.VarName }}H.Handle(ctx, ep)
@@ -66,7 +66,7 @@ func (s *{{ .ServerStruct }}) {{ .Method.VarName }}(
 					var er {{ .Response.ServerConvert.SrcRef }}
 					errors.As(err, &er)
 				{{- end }}
-				return {{ if not $.ServerStream }}nil, {{ end }}goagrpc.NewStatusError({{ .Response.StatusCode }}, err, {{ if .Response.ServerConvert }}{{ .Response.ServerConvert.Init.Name }}({{ range .Response.ServerConvert.Init.Args }}{{ .Name }}, {{ end }}){{ else }}goagrpc.NewErrorResponse(err){{ end }})
+				return {{ if not $.ServerStream }}nil, {{ end }}goagrpc.NewStatusError({{ .Response.StatusCode }}, err, {{ if .Response.ServerConvert }}{{ .Response.ServerConvert.Init.Declaration.Name }}({{ range .Response.ServerConvert.Init.Args }}{{ .Name }}, {{ end }}){{ else }}goagrpc.NewErrorResponse(err){{ end }})
 		{{- end }}
 			}
 		}

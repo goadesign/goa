@@ -1,8 +1,16 @@
-// NewProtoDupePayload builds the gRPC request type from the payload of the
-// "MethodPayloadDuplicateA" endpoint of the "ServicePayloadWithNestedTypes"
-// service.
+// NewProtoDupePayload builds *service_payload_with_nested_typespb.DupePayload
+// from servicepayloadwithnestedtypes.DupePayload.
 func NewProtoDupePayload(payload servicepayloadwithnestedtypes.DupePayload) *service_payload_with_nested_typespb.DupePayload {
 	message := &service_payload_with_nested_typespb.DupePayload{}
-	message.Field = string(payload)
+	message.Field = new(string)
+	*message.Field = string(payload)
 	return message
+}
+
+// ValidateDupePayload runs the validations defined on DupePayload.
+func ValidateDupePayload(message *service_payload_with_nested_typespb.DupePayload) (err error) {
+	if message.Field == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("field", "message"))
+	}
+	return
 }

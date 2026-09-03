@@ -1,3 +1,5 @@
+// This file verifies gRPC endpoint preparation and validation, including the
+// native primitive contract required by request and response metadata.
 package expr_test
 
 import (
@@ -20,6 +22,22 @@ func TestGRPCEndpointValidation(t *testing.T) {
 			DSL:    testdata.GRPCEndpointWithAnyType,
 			Errors: []string{}, // Any type is now supported in gRPC
 		},
+		"endpoint-with-mixed-results": {
+			DSL: testdata.GRPCEndpointWithMixedResults,
+			Errors: []string{
+				`service "Service" gRPC endpoint "Method": gRPC method "Method" cannot define both Result and StreamingResult because one gRPC call cannot return a separate result after its response stream`,
+			},
+		},
+		"endpoint-with-matching-mixed-results": {
+			DSL: testdata.GRPCEndpointWithMatchingMixedResults,
+			Errors: []string{
+				`service "Service" gRPC endpoint "Method": gRPC method "Method" cannot define both Result and StreamingResult because one gRPC call cannot return a separate result after its response stream`,
+			},
+		},
+		"endpoint-with-streaming-result": {
+			DSL:    testdata.GRPCEndpointWithStreamingResult,
+			Errors: []string{},
+		},
 		"endpoint-with-untagged-fields": {
 			DSL: testdata.GRPCEndpointWithUntaggedFields,
 			Errors: []string{`service "Service" gRPC endpoint "Method": attribute "req_not_field" does not have "rpc:tag" defined in the meta, use "Field" to define the attribute of a type used in a gRPC method
@@ -39,6 +57,15 @@ service "Service" gRPC endpoint "Method": field number 2 in attribute "key_dup_i
 		"endpoint-with-extended-types": {
 			DSL:    testdata.GRPCEndpointWithExtendedTypes,
 			Errors: []string{},
+		},
+		"endpoint-with-composite-metadata": {
+			DSL: testdata.GRPCEndpointWithCompositeMetadata,
+			Errors: []string{`service "Service" gRPC endpoint "Method": Request metadata attribute "object" must be a primitive or an array of primitives, got MetadataObject
+service "Service" gRPC endpoint "Method": Request metadata attribute "mapping" must be a primitive or an array of primitives, got map
+service "Service" gRPC endpoint "Method": Request metadata attribute "choice" must be a primitive or an array of primitives, got choice
+service "Service" gRPC endpoint "Method": Response metadata attribute "object" must be a primitive or an array of primitives, got MetadataObject
+service "Service" gRPC endpoint "Method": Response metadata attribute "mapping" must be a primitive or an array of primitives, got map
+service "Service" gRPC endpoint "Method": Response metadata attribute "choice" must be a primitive or an array of primitives, got choice`},
 		},
 		"endpoint-with-inherit-error": {
 			DSL:    testdata.GRPCEndpointWithInheritErrorDSL,

@@ -1,5 +1,5 @@
-{{ printf "%s returns an encoder to encode the multipart request for the %q service %q endpoint." .InitName .ServiceName .MethodName | comment }}
-func {{ .InitName }}(encoderFn {{ .FuncName }}) func(r *http.Request) goahttp.Encoder {
+{{ printf "%s returns an encoder to encode the multipart request for the %q service %q endpoint." .InitDeclaration.Name .ServiceName .MethodName | comment }}
+func {{ .InitDeclaration.Name }}(encoderFn {{ .FuncDeclaration.Name }}) func(r *http.Request) goahttp.Encoder {
 	return func(r *http.Request) goahttp.Encoder {
 		body := &bytes.Buffer{}
 		mw := multipart.NewWriter(body)

@@ -8,7 +8,7 @@ func EncodeMethodQueryUInt32Request(encoder func(*http.Request) goahttp.Encoder)
 		}
 		values := req.URL.Query()
 		if p.Q != nil {
-			values.Add("q", fmt.Sprintf("%v", *p.Q))
+			values.Add("q", strconv.FormatUint(uint64(*p.Q), 10))
 		}
 		req.URL.RawQuery = values.Encode()
 		return nil

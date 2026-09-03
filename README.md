@@ -182,6 +182,18 @@ curl -X POST http://localhost:8000/jsonrpc \
   -d '{"jsonrpc":"2.0","method":"hello.say_hello","params":{"name":"world"},"id":"1"}'
 ```
 
+## Test the Generation Preview
+
+`v3.31.0-preview.5` is an opt-in preview of Goa's planned generation changes.
+It fixes generated names and contracts across services, transports, examples,
+and plugins. It also includes intentional source changes that need community
+testing before a stable release.
+
+The preview does not replace the current stable version and is not selected by
+`@latest`. See [Testing the Planned Generation Preview](UPGRADING.md) for the
+exact installation command, affected APIs, migration steps, deployment notes,
+rollback instructions, and how to report a problem.
+
 ## Documentation
 
 Our documentation site at [goa.design](https://goa.design) provides comprehensive guides and references:

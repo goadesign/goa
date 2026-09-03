@@ -1,5 +1,5 @@
-{{ printf "%s lists the %s service endpoint HTTP clients." .ClientStruct .Service.Name | comment }}
-type {{ .ClientStruct }} struct {
+{{ printf "%s lists the %s service endpoint HTTP clients." .ClientStructDeclaration.Name .Service.Name | comment }}
+type {{ .ClientStructDeclaration.Name }} struct {
 	{{ printf "Doer is the HTTP client used to make requests to the %s service." .Service.Name | comment }}
 	Doer goahttp.Doer
 	{{- range .Endpoints }}
@@ -16,21 +16,8 @@ type {{ .ClientStruct }} struct {
 	host       string
 	encoder    func(*http.Request) goahttp.Encoder
 	decoder    func(*http.Response) goahttp.Decoder
-	{{- if hasWebSocket .  }}
-	dialer goahttp.Dialer
-	configfn goahttp.ConnConfigureFunc
-
-	connMu sync.RWMutex
-	conn   *websocket.Conn
-	closed atomic.Bool
-	
-	// Stream configuration (shared by all WebSocket streams)
-	streamConfig *jsonrpc.StreamConfig
-	{{- end }}
 }
-{{- if not (hasWebSocket .) }}
-// bufferPool is a pool of bytes.Buffers for encoding requests.
-var bufferPool = sync.Pool{
+{{ printf "%s reuses byte buffers while requests are encoded." .BufferPool.Name | comment }}
+var {{ .BufferPool.Name }} = sync.Pool{
 	New: func() any { return new(bytes.Buffer) },
 }
-{{- end }}

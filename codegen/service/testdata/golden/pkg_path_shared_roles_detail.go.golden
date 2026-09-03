@@ -1,0 +1,4 @@
+// Detail is a named type defined in the service design.
+type Detail struct {
+	Message *string
+}

@@ -254,11 +254,8 @@ func (r *Runner) runScenario(t *testing.T, scenario Scenario) {
 		t.Fatal("No server URL configured")
 	}
 
-	// Create executor with timeout from settings
+	// Create the executor for this generated service.
 	opts := []executorOption{}
-	if r.config.Settings.Timeout > 0 {
-		opts = append(opts, withWebSocketTimeout(r.config.Settings.Timeout))
-	}
 	opts = append(opts, withWorkDir(r.testDir))
 
 	// Enable debug if requested

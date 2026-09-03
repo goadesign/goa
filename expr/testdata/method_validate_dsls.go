@@ -76,3 +76,79 @@ var InvalidSecuritySchemesDSL = func() {
 		})
 	})
 }
+
+var InvalidSecurityFieldTypeDSL = func() {
+	Service("InvalidSecurityFieldType", func() {
+		Method("Authenticate", func() {
+			Security(BasicAuth)
+			Payload(func() {
+				Username("username", String, func() {
+					Meta("struct:field:type", "CustomUsername")
+				})
+				Password("password", String)
+			})
+		})
+	})
+}
+
+var InvalidSecurityFieldDataTypesDSL = func() {
+	basic := BasicAuthSecurity("basic")
+	apiKey := APIKeySecurity("api_key")
+	bearer := BearerSecurity("bearer")
+	jwt := JWTSecurity("jwt")
+	oauth := OAuth2Security("oauth")
+
+	Service("InvalidSecurityFieldDataTypes", func() {
+		Method("Authenticate", func() {
+			Security(basic, apiKey, bearer, jwt, oauth)
+			Payload(func() {
+				Username("username", Int)
+				Password("password", Boolean)
+				APIKey("api_key", "api_key", Bytes)
+				BearerToken("bearer", ArrayOf(String))
+				Token("jwt", MapOf(String, String))
+				AccessToken("oauth", func() {
+					Attribute("value", String)
+				})
+			})
+		})
+	})
+}
+
+var InvalidSecurityFieldDefaultDSL = func() {
+	jwt := JWTSecurity("jwt")
+
+	Service("InvalidSecurityFieldDefault", func() {
+		Method("Authenticate", func() {
+			Security(jwt)
+			Payload(func() {
+				Token("token", String, func() {
+					Default("generated credential")
+				})
+			})
+		})
+	})
+}
+
+var ValidNamedSecurityFieldTypesDSL = func() {
+	credential := Type("Credential", String)
+	basic := BasicAuthSecurity("basic")
+	apiKey := APIKeySecurity("api_key")
+	bearer := BearerSecurity("bearer")
+	jwt := JWTSecurity("jwt")
+	oauth := OAuth2Security("oauth")
+
+	Service("ValidNamedSecurityFieldTypes", func() {
+		Method("Authenticate", func() {
+			Security(basic, apiKey, bearer, jwt, oauth)
+			Payload(func() {
+				Username("username", credential)
+				Password("password", credential)
+				APIKey("api_key", "api_key", credential)
+				BearerToken("bearer", credential)
+				Token("jwt", credential)
+				AccessToken("oauth", credential)
+			})
+		})
+	})
+}

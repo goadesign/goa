@@ -42,11 +42,11 @@ definitions:
         properties:
             string:
                 type: string
-                example: ""
+                example: item
                 minLength: 0
                 maxLength: 42
         example:
-            string: ""
+            string: item
     Foobar:
         title: Foobar
         type: object
@@ -55,21 +55,21 @@ definitions:
                 type: array
                 items:
                     $ref: '#/definitions/Bar'
-                example: []
+                example:
+                    - string: item
                 minItems: 0
                 maxItems: 42
             foo:
                 type: array
                 items:
                     type: string
-                    example: Molestiae dolor eveniet omnis atque.
+                    example: item
                 example:
-                    - Totam doloremque exercitationem voluptate.
-                    - Repellat perspiciatis voluptas et quia deleniti.
+                    - item
                 minItems: 0
                 maxItems: 42
         example:
-            bar: []
+            bar:
+                - string: item
             foo:
-                - Totam doloremque exercitationem voluptate.
-                - Repellat perspiciatis voluptas et quia deleniti.
+                - item

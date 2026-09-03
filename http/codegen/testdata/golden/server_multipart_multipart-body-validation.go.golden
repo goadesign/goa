@@ -1,0 +1,4 @@
+// ServiceMultipartValidationMethodMultipartValidationDecoderFunc is the type
+// to decode multipart request for the "ServiceMultipartValidation" service
+// "MethodMultipartValidation" endpoint.
+type ServiceMultipartValidationMethodMultipartValidationDecoderFunc func(*multipart.Reader, *MethodMultipartValidationRequestBody) error

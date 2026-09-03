@@ -1,6 +1,6 @@
 // Error returns an error description.
 func (e {{ .Ref }}) Error() string {
-	return {{ printf "%q" .Description }}
+	return {{ printf "%q" .ErrorDescription }}
 }
 
 // ErrorName returns the error name.
@@ -12,5 +12,5 @@ func (e {{ .Ref }}) ErrorName() string {
 
 // GoaErrorName returns the error name.
 func (e {{ .Ref }}) GoaErrorName() string {
-	return {{ errorName . }}
+	return {{ .ErrorName }}
 }

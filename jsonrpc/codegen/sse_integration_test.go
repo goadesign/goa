@@ -20,11 +20,11 @@ func TestJSONRPCSSEIntegration(t *testing.T) {
 
 	// Run the DSL
 	root := expr.RunDSL(t, testdata.JSONRPCSSEObjectDSL)
-	services := CreateJSONRPCServices(root)
+	plan := CreateJSONRPCPlan(root)
 
 	// Generate all files
-	serverFiles := ServerFiles("", services)
-	clientFiles := ClientFiles("", services)
+	serverFiles := plan.ServerFiles()
+	clientFiles := plan.ClientFiles()
 
 	// Combine all files
 	allFiles := make([]*codegen.File, 0, len(serverFiles)+len(clientFiles))

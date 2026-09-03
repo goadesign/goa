@@ -7,10 +7,9 @@
 package interceptors
 
 import (
-	clientinterceptorservice "client_interceptor_service"
 	"context"
-	"fmt"
 	"goa.design/clue/log"
+	clientinterceptorservice "goa.design/goa/example/client_interceptor_service"
 	goa "goa.design/goa/v3/pkg"
 )
 
@@ -22,7 +21,7 @@ type ClientInterceptorServiceClientInterceptors struct {
 func NewClientInterceptorServiceClientInterceptors() *ClientInterceptorServiceClientInterceptors {
 	return &ClientInterceptorServiceClientInterceptors{}
 }
-func (i *ClientInterceptorServiceClientInterceptors) Test(ctx context.Context, info *interceptors.TestInfo, next goa.Endpoint) (any, error) {
+func (i *ClientInterceptorServiceClientInterceptors) Test(ctx context.Context, info clientinterceptorservice.TestInfo, next goa.Endpoint) (any, error) {
 	log.Printf(ctx, "[Test] Sending request: %v", info.RawPayload())
 	resp, err := next(ctx, info.RawPayload())
 	if err != nil {

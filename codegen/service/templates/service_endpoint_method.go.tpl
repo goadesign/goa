@@ -1,7 +1,7 @@
 
 
-{{ printf "New%sEndpoint returns an endpoint function that calls the method %q of service %q." .VarName .Name .ServiceName | comment }}
-func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes.DedupeByType }}, auth{{ .Type }}Fn security.Auth{{ .Type }}Func{{ end }}) goa.Endpoint {
+{{ printf "%s returns an endpoint function that calls the method %q of service %q." .EndpointDeclaration.Name .Name .ServiceName | comment }}
+func {{ .EndpointDeclaration.Name }}(s {{ .ServiceDeclaration.Name }}{{ range .Schemes.DedupeByType }}, auth{{ .Type }}Fn security.Auth{{ .Type }}Func{{ end }}) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 {{- if .ServerStream }}
 	{{- if .ServerStream.EndpointStruct }}
@@ -32,17 +32,17 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes.DedupeBy
 				{{- if .UsernamePointer }}
 				var user string
 				if {{ $payload }}.{{ .UsernameField }} != nil {
-					user = *{{ $payload }}.{{ .UsernameField }}
+					user = string(*{{ $payload }}.{{ .UsernameField }})
 				}
 				{{- end }}
 				{{- if .PasswordPointer }}
 				var pass string
 				if {{ $payload }}.{{ .PasswordField }} != nil {
-					pass = *{{ $payload }}.{{ .PasswordField }}
+					pass = string(*{{ $payload }}.{{ .PasswordField }})
 				}
 				{{- end }}
-				ctx, err = auth{{ .Type }}Fn(ctx, {{ if .UsernamePointer }}user{{ else }}{{ $payload }}.{{ .UsernameField }}{{ end }},
-					{{- if .PasswordPointer }}pass{{ else }}{{ $payload }}.{{ .PasswordField }}{{ end }}, &sc)
+				ctx, err = auth{{ .Type }}Fn(ctx, {{ if .UsernamePointer }}user{{ else }}string({{ $payload }}.{{ .UsernameField }}){{ end }},
+					{{- if .PasswordPointer }}pass{{ else }}string({{ $payload }}.{{ .PasswordField }}){{ end }}, &sc)
 
 			{{- else if eq .Type "APIKey" }}
 				sc := security.APIKeyScheme{
@@ -53,10 +53,10 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes.DedupeBy
 				{{- if $s.CredPointer }}
 				var key string
 				if {{ $payload }}.{{ $s.CredField }} != nil {
-					key = *{{ $payload }}.{{ $s.CredField }}
+					key = string(*{{ $payload }}.{{ $s.CredField }})
 				}
 				{{- end }}
-				ctx, err = auth{{ .Type }}Fn(ctx, {{ if $s.CredPointer }}key{{ else }}{{ $payload }}.{{ $s.CredField }}{{ end }}, &sc)
+				ctx, err = auth{{ .Type }}Fn(ctx, {{ if $s.CredPointer }}key{{ else }}string({{ $payload }}.{{ $s.CredField }}){{ end }}, &sc)
 
 			{{- else if or (eq .Type "Bearer") (eq .Type "JWT") }}
 				sc := security.{{ .Type }}Scheme{
@@ -67,10 +67,10 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes.DedupeBy
 				{{- if $s.CredPointer }}
 				var token string
 				if {{ $payload }}.{{ $s.CredField }} != nil {
-					token = *{{ $payload }}.{{ $s.CredField }}
+					token = string(*{{ $payload }}.{{ $s.CredField }})
 				}
 				{{- end }}
-				ctx, err = auth{{ .Type }}Fn(ctx, {{ if $s.CredPointer }}token{{ else }}{{ $payload }}.{{ $s.CredField }}{{ end }}, &sc)
+				ctx, err = auth{{ .Type }}Fn(ctx, {{ if $s.CredPointer }}token{{ else }}string({{ $payload }}.{{ $s.CredField }}){{ end }}, &sc)
 
 			{{- else if eq .Type "OAuth2" }}
 				sc := security.OAuth2Scheme{
@@ -99,10 +99,10 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes.DedupeBy
 				{{- if $s.CredPointer }}
 				var token string
 				if {{ $payload }}.{{ $s.CredField }} != nil {
-					token = *{{ $payload }}.{{ $s.CredField }}
+					token = string(*{{ $payload }}.{{ $s.CredField }})
 				}
 				{{- end }}
-				ctx, err = auth{{ .Type }}Fn(ctx, {{ if $s.CredPointer }}token{{ else }}{{ $payload }}.{{ $s.CredField }}{{ end }}, &sc)
+				ctx, err = auth{{ .Type }}Fn(ctx, {{ if $s.CredPointer }}token{{ else }}string({{ $payload }}.{{ $s.CredField }}){{ end }}, &sc)
 
 			{{- end }}
 			{{- if ne $sidx 0 }}
@@ -121,38 +121,29 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes.DedupeBy
 {{- if .ServerStream }}
 	{{- if .ServerStream.EndpointStruct }}
 		{{- if .HasMixedResults }}
+			{{- if .ResultRef }}
 		res, {{ if .ViewedResult }}{{ if not .ViewedResult.ViewName }}view, {{ end }}{{ end }}err := s.{{ .VarName }}(ctx, {{ if .PayloadRef }}{{ $payload }}, {{ end }}ep.Stream)
 		if err != nil {
 			return nil, err
 		}
 			{{- if .ViewedResult }}
 				{{- if .ViewedResult.ViewName }}
-		vres := {{ $.ViewedResult.Init.Name }}(res, {{ printf "%q" .ViewedResult.ViewName }})
+		vres := {{ $.ViewedResult.Init.Declaration.Name }}(res, {{ printf "%q" .ViewedResult.ViewName }})
 				{{- else }}
-		vres := {{ $.ViewedResult.Init.Name }}(res, view)
+		vres := {{ $.ViewedResult.Init.Declaration.Name }}(res, view)
 				{{- end }}
+		if err := {{ .ViewedResult.ViewsPkg }}.{{ .ViewedResult.Validate.Declaration.Name }}(vres); err != nil {
+			return nil, err
+		}
 		return vres, nil
 			{{- else }}
 		return res, nil
 			{{- end }}
+			{{- else }}
+		return nil, s.{{ .VarName }}(ctx, {{ if .PayloadRef }}{{ $payload }}, {{ end }}ep.Stream)
+			{{- end }}
 		{{- else }}
 		return nil, s.{{ .VarName }}(ctx, {{ if .PayloadRef }}{{ $payload }}, {{ end }}ep.Stream)
-		{{- end }}
-	{{- else }}
-		{{- /* JSON-RPC WebSocket client streaming: no stream parameter, just payload */ -}}
-		{{- if .PayloadRef }}
-			p := req.({{ .PayloadRef }})
-			{{- if .ResultRef }}
-				return s.{{ .VarName }}(ctx, p)
-			{{- else }}
-				return nil, s.{{ .VarName }}(ctx, p)
-			{{- end }}
-		{{- else }}
-			{{- if .ResultRef }}
-				return s.{{ .VarName }}(ctx)
-			{{- else }}
-				return nil, s.{{ .VarName }}(ctx)
-			{{- end }}
 		{{- end }}
 	{{- end }}
 {{- else if .SkipRequestBodyEncodeDecode }}
@@ -167,7 +158,10 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes.DedupeBy
 	if err != nil {
 		return nil, err
 	}
-	vres := {{ $.ViewedResult.Init.Name }}(res, {{ if .ViewedResult.ViewName }}{{ printf "%q" .ViewedResult.ViewName }}{{ else }}view{{ end }})
+	vres := {{ $.ViewedResult.Init.Declaration.Name }}(res, {{ if .ViewedResult.ViewName }}{{ printf "%q" .ViewedResult.ViewName }}{{ else }}view{{ end }})
+	if err := {{ .ViewedResult.ViewsPkg }}.{{ .ViewedResult.Validate.Declaration.Name }}(vres); err != nil {
+		return nil, err
+	}
 	return vres, nil
 	{{- else }}
 	return {{ if not .ResultRef }}nil, {{ end }}s.{{ .VarName }}(ctx, {{ if .PayloadRef }}ep.Payload, {{ end }}ep.Body)
@@ -177,7 +171,10 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes.DedupeBy
 	if err != nil {
 		return nil, err
 	}
-	vres := {{ $.ViewedResult.Init.Name }}(res, {{ if .ViewedResult.ViewName }}{{ printf "%q" .ViewedResult.ViewName }}{{ else }}view{{ end }})
+	vres := {{ $.ViewedResult.Init.Declaration.Name }}(res, {{ if .ViewedResult.ViewName }}{{ printf "%q" .ViewedResult.ViewName }}{{ else }}view{{ end }})
+	if err := {{ .ViewedResult.ViewsPkg }}.{{ .ViewedResult.Validate.Declaration.Name }}(vres); err != nil {
+		return nil, err
+	}
 	return vres, nil
 {{- else if .SkipResponseBodyEncodeDecode }}
 	{{ if .ResultRef }}res, {{ end }}body, err := s.{{ .VarName }}(ctx{{ if .PayloadRef }}, {{ $payload}}{{ end }})

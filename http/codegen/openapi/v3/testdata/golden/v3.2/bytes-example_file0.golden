@@ -1,0 +1,45 @@
+{
+  "components": {},
+  "info": {
+    "title": "Goa API",
+    "version": "0.0.1"
+  },
+  "openapi": "3.2.0",
+  "paths": {
+    "/download": {
+      "get": {
+        "operationId": "bytes#download",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": "aGVsbG8=",
+                "schema": {
+                  "example": "aGVsbG8=",
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "OK response."
+          }
+        },
+        "summary": "download bytes",
+        "tags": [
+          "bytes"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "name": "bytes",
+      "url": "https://goa.design"
+    }
+  ],
+  "tags": [
+    {
+      "name": "bytes"
+    }
+  ]
+}

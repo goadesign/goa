@@ -21,31 +21,15 @@ paths:
                             items:
                                 $ref: '#/components/schemas/Foobar'
                             example:
-                                - bar: []
+                                - bar:
+                                    - string: item
                                   foo:
-                                    - Totam doloremque exercitationem voluptate.
-                                    - Repellat perspiciatis voluptas et quia deleniti.
-                                - bar: []
-                                  foo:
-                                    - Totam doloremque exercitationem voluptate.
-                                    - Repellat perspiciatis voluptas et quia deleniti.
-                                - bar: []
-                                  foo:
-                                    - Totam doloremque exercitationem voluptate.
-                                    - Repellat perspiciatis voluptas et quia deleniti.
+                                    - item
                         example:
-                            - bar: []
+                            - bar:
+                                - string: item
                               foo:
-                                - Totam doloremque exercitationem voluptate.
-                                - Repellat perspiciatis voluptas et quia deleniti.
-                            - bar: []
-                              foo:
-                                - Totam doloremque exercitationem voluptate.
-                                - Repellat perspiciatis voluptas et quia deleniti.
-                            - bar: []
-                              foo:
-                                - Totam doloremque exercitationem voluptate.
-                                - Repellat perspiciatis voluptas et quia deleniti.
+                                - item
             responses:
                 "200":
                     description: OK response.
@@ -64,11 +48,11 @@ components:
             properties:
                 string:
                     type: string
-                    example: ""
+                    example: item
                     minLength: 0
                     maxLength: 42
             example:
-                string: ""
+                string: item
         Foobar:
             type: object
             properties:
@@ -76,23 +60,23 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/Bar'
-                    example: []
+                    example:
+                        - string: item
                     minItems: 0
                     maxItems: 42
                 foo:
                     type: array
                     items:
                         type: string
-                        example: Molestiae dolor eveniet omnis atque.
+                        example: item
                     example:
-                        - Totam doloremque exercitationem voluptate.
-                        - Repellat perspiciatis voluptas et quia deleniti.
+                        - item
                     minItems: 0
                     maxItems: 42
             example:
-                bar: []
+                bar:
+                    - string: item
                 foo:
-                    - Totam doloremque exercitationem voluptate.
-                    - Repellat perspiciatis voluptas et quia deleniti.
+                    - item
 tags:
     - name: testService

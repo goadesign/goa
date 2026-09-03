@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"goa.design/goa/v3/eval"
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/expr/testdata"
 )
@@ -18,6 +19,18 @@ func TestMethodExprValidate(t *testing.T) {
 		Error string
 	}{
 		{"valid-security-schemes-extend", testdata.ValidSecuritySchemesExtendDSL, ""},
+		{"valid-named-security-field-types", testdata.ValidNamedSecurityFieldTypesDSL, ""},
+		{"invalid-security-field-type", testdata.InvalidSecurityFieldTypeDSL,
+			`service "InvalidSecurityFieldType" method "Authenticate": security attribute "username" cannot use struct:field:type because authorization functions receive strings`},
+		{"invalid-security-field-data-types", testdata.InvalidSecurityFieldDataTypesDSL,
+			`service "InvalidSecurityFieldDataTypes" method "Authenticate": security attribute "username" must use String or a named String type
+service "InvalidSecurityFieldDataTypes" method "Authenticate": security attribute "password" must use String or a named String type
+service "InvalidSecurityFieldDataTypes" method "Authenticate": security attribute "api_key" must use String or a named String type
+service "InvalidSecurityFieldDataTypes" method "Authenticate": security attribute "bearer" must use String or a named String type
+service "InvalidSecurityFieldDataTypes" method "Authenticate": security attribute "jwt" must use String or a named String type
+service "InvalidSecurityFieldDataTypes" method "Authenticate": security attribute "oauth" must use String or a named String type`},
+		{"invalid-security-field-default", testdata.InvalidSecurityFieldDefaultDSL,
+			`service "InvalidSecurityFieldDefault" method "Authenticate": security attribute "token" cannot have a default value because missing credentials must remain missing`},
 		{"invalid-security-schemes", testdata.InvalidSecuritySchemesDSL,
 			`service "InvalidSecuritySchemesService" method "SecureMethod": payload of method "SecureMethod" of service "InvalidSecuritySchemesService" does not define a username attribute, use Username to define one
 service "InvalidSecuritySchemesService" method "SecureMethod": payload of method "SecureMethod" of service "InvalidSecuritySchemesService" does not define a password attribute, use Password to define one
@@ -80,11 +93,6 @@ func TestMethodExprFinalizeInheritsBearerFormat(t *testing.T) {
 		},
 	}
 
-	root := expr.Root
-	t.Cleanup(func() {
-		expr.Root = root
-	})
-
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			scheme := &expr.SchemeExpr{
@@ -96,7 +104,10 @@ func TestMethodExprFinalizeInheritsBearerFormat(t *testing.T) {
 			}
 			req := &expr.SecurityExpr{Schemes: []*expr.SchemeExpr{scheme}}
 			api, service := tc.setup(req)
-			expr.Root = &expr.RootExpr{API: api}
+			designAPI := expr.NewAPIExpr("test", func() {})
+			designAPI.Requirements = api.Requirements
+			design := &expr.RootExpr{API: designAPI, Services: []*expr.ServiceExpr{service}}
+			design.WalkSets(func(eval.ExpressionSet) {})
 
 			method := &expr.MethodExpr{
 				Name:    "Method",
@@ -114,27 +125,22 @@ func TestMethodExprFinalizeInheritsBearerFormat(t *testing.T) {
 }
 
 func TestMethodExprFinalizePreservesNoSecurityMarker(t *testing.T) {
-	root := expr.Root
-	t.Cleanup(func() {
-		expr.Root = root
-	})
-
-	expr.Root = &expr.RootExpr{
-		API: &expr.APIExpr{
-			Requirements: []*expr.SecurityExpr{{
-				Schemes: []*expr.SchemeExpr{{
-					Kind:       expr.JWTKind,
-					SchemeName: "jwt",
-				}},
-			}},
-		},
-	}
+	service := &expr.ServiceExpr{Name: "Service"}
+	api := expr.NewAPIExpr("test", func() {})
+	api.Requirements = []*expr.SecurityExpr{{
+		Schemes: []*expr.SchemeExpr{{
+			Kind:       expr.JWTKind,
+			SchemeName: "jwt",
+		}},
+	}}
+	design := &expr.RootExpr{API: api, Services: []*expr.ServiceExpr{service}}
+	design.WalkSets(func(eval.ExpressionSet) {})
 	method := &expr.MethodExpr{
 		Name: "Health",
 		Requirements: []*expr.SecurityExpr{{
 			Schemes: []*expr.SchemeExpr{{Kind: expr.NoKind}},
 		}},
-		Service: &expr.ServiceExpr{Name: "Service"},
+		Service: service,
 	}
 
 	method.Finalize()
@@ -154,9 +160,6 @@ func TestMethodExprError(t *testing.T) {
 		errorBar = &expr.ErrorExpr{
 			Name: "bar",
 		}
-		errorBaz = &expr.ErrorExpr{
-			Name: "baz",
-		}
 	)
 	cases := map[string]struct {
 		name     string
@@ -170,19 +173,12 @@ func TestMethodExprError(t *testing.T) {
 			name:     "bar",
 			expected: errorBar,
 		},
-		"exist in root": {
-			name:     "baz",
-			expected: errorBaz,
-		},
 		"not exist": {
 			name:     "qux",
 			expected: nil,
 		},
 	}
 
-	expr.Root.Errors = []*expr.ErrorExpr{
-		errorBaz,
-	}
 	s := expr.ServiceExpr{
 		Errors: []*expr.ErrorExpr{
 			errorBar,

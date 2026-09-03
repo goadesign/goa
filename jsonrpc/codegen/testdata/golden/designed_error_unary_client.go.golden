@@ -1,0 +1,179 @@
+// DecodeRunResponse returns a decoder for responses returned by the Error
+// Service service run JSON-RPC method. The decoder rejects responses that do
+// not repeat requestID. restoreBody controls whether the response body should
+// be restored after having been read.
+func DecodeRunResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response, string) (any, error) {
+	return func(resp *http.Response, requestID string) (result any, decodeErr error) {
+		responseBody := resp.Body
+		if restoreBody {
+			b, readErr := io.ReadAll(responseBody)
+			closeErr := responseBody.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("Error Service", "run", err)
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer func() {
+				if err := responseBody.Close(); err != nil {
+					decodeErr = errors.Join(decodeErr, goahttp.ErrDecodingError("Error Service", "run", err))
+				}
+			}()
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("Error Service", "run", err)
+			}
+			return nil, goahttp.ErrInvalidResponse("Error Service", "run", resp.StatusCode, string(body))
+		}
+
+		var jresp jsonrpc.RawResponse
+		if err := decoder(resp).Decode(&jresp); err != nil {
+			return nil, goahttp.ErrDecodingError("Error Service", "run", err)
+		}
+		if err := jresp.Validate(requestID); err != nil {
+			return nil, goahttp.ErrInvalidResponse("Error Service", "run", resp.StatusCode, err.Error())
+		}
+
+		if jresp.Error != nil {
+			serviceErrorName, serviceErrorBody, ok := jsonrpc.DecodeServiceErrorData(jresp.Error.Data)
+			if !ok {
+				return nil, jresp.Error
+			}
+			switch jresp.Error.Code {
+			case 7002:
+				switch serviceErrorName {
+				case "empty":
+					resp.Body = io.NopCloser(bytes.NewReader(serviceErrorBody))
+					if !bytes.Equal(bytes.TrimSpace(serviceErrorBody), []byte("null")) {
+						return nil, jresp.Error
+					}
+					return nil, NewRunEmpty()
+				default:
+					return nil, jresp.Error
+				}
+			case 7001:
+				switch serviceErrorName {
+				case "first":
+					resp.Body = io.NopCloser(bytes.NewReader(serviceErrorBody))
+					var (
+						body ErrorServicerunResponseBody
+						err  error
+					)
+					err = decoder(resp).Decode(&body)
+					if err != nil {
+						return nil, goahttp.ErrDecodingError("Error Service", "run", err)
+					}
+					return nil, NewRunFirst(&body)
+				case "second":
+					resp.Body = io.NopCloser(bytes.NewReader(serviceErrorBody))
+					var (
+						body RunSecondResponseBody
+						err  error
+					)
+					err = decoder(resp).Decode(&body)
+					if err != nil {
+						return nil, goahttp.ErrDecodingError("Error Service", "run", err)
+					}
+					err = ValidateRunSecondResponseBody(&body)
+					if err != nil {
+						return nil, goahttp.ErrValidationError("Error Service", "run", err)
+					}
+					return nil, NewRunSecond(&body)
+				default:
+					return nil, jresp.Error
+				}
+			case -32603:
+				switch serviceErrorName {
+				case "internal":
+					resp.Body = io.NopCloser(bytes.NewReader(serviceErrorBody))
+					var (
+						body RunInternalResponseBody
+						err  error
+					)
+					err = decoder(resp).Decode(&body)
+					if err != nil {
+						return nil, goahttp.ErrDecodingError("Error Service", "run", err)
+					}
+					err = ValidateRunInternalResponseBody(&body)
+					if err != nil {
+						return nil, goahttp.ErrValidationError("Error Service", "run", err)
+					}
+					return nil, NewRunInternal(&body)
+				default:
+					return nil, jresp.Error
+				}
+			case -32600:
+				switch serviceErrorName {
+				case "invalid":
+					if jresp.ID == nil {
+						return nil, goahttp.ErrInvalidResponse("Error Service", "run", resp.StatusCode, "response id is null")
+					}
+					resp.Body = io.NopCloser(bytes.NewReader(serviceErrorBody))
+					var (
+						body RunInvalidResponseBody
+						err  error
+					)
+					err = decoder(resp).Decode(&body)
+					if err != nil {
+						return nil, goahttp.ErrDecodingError("Error Service", "run", err)
+					}
+					err = ValidateRunInvalidResponseBody(&body)
+					if err != nil {
+						return nil, goahttp.ErrValidationError("Error Service", "run", err)
+					}
+					return nil, NewRunInvalid(&body)
+				default:
+					return nil, jresp.Error
+				}
+			case -32700:
+				switch serviceErrorName {
+				case "parse":
+					if jresp.ID == nil {
+						return nil, goahttp.ErrInvalidResponse("Error Service", "run", resp.StatusCode, "response id is null")
+					}
+					resp.Body = io.NopCloser(bytes.NewReader(serviceErrorBody))
+					var (
+						body RunParseResponseBody
+						err  error
+					)
+					err = decoder(resp).Decode(&body)
+					if err != nil {
+						return nil, goahttp.ErrDecodingError("Error Service", "run", err)
+					}
+					err = ValidateRunParseResponseBody(&body)
+					if err != nil {
+						return nil, goahttp.ErrValidationError("Error Service", "run", err)
+					}
+					return nil, NewRunParse(&body)
+				default:
+					return nil, jresp.Error
+				}
+			case 7003:
+				switch serviceErrorName {
+				case "selected":
+					resp.Body = io.NopCloser(bytes.NewReader(serviceErrorBody))
+					var (
+						body string
+						err  error
+					)
+					err = decoder(resp).Decode(&body)
+					if err != nil {
+						return nil, goahttp.ErrDecodingError("Error Service", "run", err)
+					}
+					return nil, NewRunSelected(body)
+				default:
+					return nil, jresp.Error
+				}
+			default:
+				return nil, jresp.Error
+			}
+		}
+		resp.Body = io.NopCloser(bytes.NewBuffer(jresp.Result))
+		return nil, nil
+	}
+}

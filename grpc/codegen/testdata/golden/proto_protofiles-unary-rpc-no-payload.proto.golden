@@ -15,5 +15,5 @@ message MethodUnaryRPCNoPayloadRequest {
 }
 
 message MethodUnaryRPCNoPayloadResponse {
-	string field = 1;
+	optional string field = 1;
 }

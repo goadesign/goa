@@ -1,8 +1,12 @@
+// This file writes OpenAPI documents as JSON and YAML code generation files.
 package openapi
 
 import (
 	"encoding/json"
 	"path/filepath"
+	"regexp"
+	"strconv"
+	"strings"
 	"text/template"
 
 	"gopkg.in/yaml.v3"
@@ -10,6 +14,8 @@ import (
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
 )
+
+var yamlDatePrefix = regexp.MustCompile(`^[0-9]{4}-[0-9]{2}-[0-9]{2}(?:$|[Tt ].*)`)
 
 // Files returns the codegen files rendering the given OpenAPI document in
 // JSON and YAML at gen/<path>.json and gen/<path>.yaml. section names the
@@ -66,5 +72,29 @@ func toYAML(d any) string {
 	if err != nil {
 		panic("openapi: " + err.Error()) // bug
 	}
-	return string(b)
+	return quoteDateShapedYAMLStrings(string(b))
+}
+
+// quoteDateShapedYAMLStrings keeps YAML readers from treating string examples
+// as timestamps. Some readers reject date-shaped strings with invalid months
+// or days before they can see that the OpenAPI schema declares a string.
+func quoteDateShapedYAMLStrings(source string) string {
+	lines := strings.Split(source, "\n")
+	for index, line := range lines {
+		valueStart := strings.LastIndex(line, ": ")
+		if valueStart >= 0 {
+			valueStart += 2
+		} else {
+			trimmed := strings.TrimLeft(line, " ")
+			if !strings.HasPrefix(trimmed, "- ") {
+				continue
+			}
+			valueStart = len(line) - len(trimmed) + 2
+		}
+		value := line[valueStart:]
+		if yamlDatePrefix.MatchString(value) {
+			lines[index] = line[:valueStart] + strconv.Quote(value)
+		}
+	}
+	return strings.Join(lines, "\n")
 }

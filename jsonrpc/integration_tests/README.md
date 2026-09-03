@@ -44,7 +44,7 @@ Adding a new test requires only a small addition to the scenarios file; no Go co
   transport: "http"
   request:
     params: "hello world"  # What to send
-    id: 123                # Request ID (omit for notifications)
+    id: 123                # Required unless the method name ends in _notify
   expect:
     result: "hello world"  # Echo returns the same value
     id: 123                # Response has same ID
@@ -134,12 +134,12 @@ SSE tests need both:
 - `request`: Initiates the SSE connection
 - `sequence`: Defines expected stream events
 
-### Notifications Have No ID
-For fire-and-forget messages:
+### Declared Notifications Have No ID
+For a fire-and-forget method whose name ends in `_notify`:
 ```yaml
 request:
   params: "notification"
-  # No id field = notification
+  # A declared notification must omit the id field.
 expect:
   no_response: true
 ```
@@ -202,32 +202,10 @@ Use `request` to initiate, `sequence` for the event stream:
     # ... more events
 ```
 
-#### WebSocket Tests (Bidirectional Messages)
-Use only `sequence` for back-and-forth communication:
-```yaml
-- name: "websocket_test"
-  method: "echo_string_ws"
-  transport: "websocket"
-  sequence:                 # Series of sends and receives
-    - type: "connect"      # Optional: explicit connection
-    - type: "send"
-      data:
-        method: "echo_string_ws"
-        params:
-          id: "ws-1"
-          value: "hello"
-        id: "ws-1"
-    - type: "receive"
-      expect:
-        id: "ws-1"
-        result:
-          value: "hello"
-    - type: "close"        # Close the connection
-```
-
 ## 📜 Method Naming Convention
 
-Server behavior is determined entirely by the method name, which follows the pattern: `[action]_[type]_[modifier]`.
+Server behavior is determined entirely by the method name. Unary methods use
+`[action]_[type]_[modifier]`; SSE methods add the `_sse` suffix.
 
 ### Quick Reference Table
 
@@ -251,9 +229,7 @@ Server behavior is determined entirely by the method name, which follows the pat
   * `echo`: Returns the `params` payload exactly as it was received.
   * `transform`: Returns a predictably modified version of the `params`.
   * `generate`: Ignores `params` and returns a fixed, predictable value.
-  * `stream`: (SSE/WebSocket) Sends a stream of messages to the client. Ideal for testing server-streaming RPC.
-  * `collect`: (WebSocket) Receives a stream of messages from a client and returns a single summary response after the stream is closed. Useful for testing client-streaming RPC.
-  * `broadcast`: (WebSocket) Tests the server's ability to send unsolicited messages to a client (server-initiated notifications).
+  * `stream`: Sends a stream of server-sent events to the client.
 
 ### Types and Their Structure
 
@@ -292,7 +268,6 @@ Server behavior is determined entirely by the method name, which follows the pat
   * `_notify`: Indicates a JSON-RPC notification (no response expected).
   * `_error`: The method is hardcoded to always return a predefined JSON-RPC error.
   * `_validate`: The method includes Goa validation logic on the payload, which will return an error if the payload is invalid.
-  * `_final`: (SSE) The method sends several notifications before sending a final, ID-tagged response.
 
 ## 📊 Data-Driven Behavior
 
@@ -347,7 +322,7 @@ sequence:
         value: "generated-3"
 ```
 
-#### `stream` Action (SSE/WebSocket)
+#### `stream` Action (SSE)
 The payload data controls the streaming behavior:
 
 **For `string` type:**
@@ -432,29 +407,6 @@ sequence:
 ```
 
 ### Modifier Effects
-
-**`_final` modifier (SSE):**
-Sends notifications followed by a final response with the request ID:
-
-```yaml
-# Example: stream_string_final_sse
-request:
-  params: "ab"  # 2 characters = 2 notifications
-  id: "req-1"
-sequence:
-  - expect:  # Notification (no ID)
-      method: "stream_string_final_sse"
-      params:
-        value: "Stream 1 of 2"
-  - expect:  # Notification (no ID)
-      method: "stream_string_final_sse"
-      params:
-        value: "Stream 2 of 2"
-  - expect:  # Final response (with ID)
-      id: "req-1"
-      result:
-        value: "Final response"
-```
 
 **`_error` modifier:**
 For streaming, sends notifications then returns an error:
@@ -563,11 +515,11 @@ Each item in the top-level `scenarios` list is a `Scenario` object. It defines a
 | Key | Type | Required? | Description |
 | :--- | :--- | :--- | :--- |
 | **`name`** | `string` | **Yes** | A unique, human-readable name for the test. Used in test runner output. |
-| **`method`** | `string` | **Yes** | The name of the server method to test. Must follow the `action_type_modifier` convention. |
-| **`transport`** | `string` | **Yes** | The transport protocol. Must be one of `"http"`, `"websocket"`, or `"sse"`. |
+| **`method`** | `string` | **Yes** | The server method. SSE method names end with `_sse`. |
+| **`transport`** | `string` | **Yes** | The transport protocol. Must be either `"http"` or `"sse"`. |
 | `request` | `object` | Conditional | An object describing the request to send. **Required** for non-streaming (`http`) tests. |
 | `expect` | `object` | Conditional | An object describing the expected response. **Required** for non-streaming (`http`) tests. |
-| `sequence` | `list` | Conditional | A list of steps for stateful interactions. **Required** for streaming (`websocket`, `sse`) tests. |
+| `sequence` | `list` | Conditional | The events expected from an `sse` stream. |
 
 > A `Scenario` object must contain **either** a `request`/`expect` pair **or** a `sequence`, but not both.
 
@@ -577,7 +529,7 @@ Describes a single JSON-RPC request.
 
 | Key | Type | Description |
 | :--- | :--- | :--- |
-| `id` | `any` | The JSON-RPC request ID. If omitted, the request is treated as a notification. |
+| `id` | `any` | The JSON-RPC request ID. It is required and non-null unless the generated method is declared as a notification with the `_notify` suffix. Declared notifications must omit it. |
 | `params` | `array` or `object` | The parameters for the method call. See **Parameter Structures** below. |
 | `method` | `string` | An optional override for the JSON-RPC `method` field in the payload. Defaults to the scenario's `method` value. |
 
@@ -598,8 +550,7 @@ Each item in a `sequence` list is a step object that defines a single action in 
 
 | Key | Type | Required? | Description |
 | :--- | :--- | :--- | :--- |
-| **`type`** | `string` | **Yes** | The type of action. Must be one of `"send"`, `"receive"`, or `"close"`. |
-| `data` | `object` | Conditional | The JSON-RPC payload to send. **Required** for `type: "send"`. |
+| **`type`** | `string` | **Yes** | The event action. SSE sequences use `"receive"`. |
 | `expect`| `object` | Conditional | The expected JSON-RPC payload to receive. **Required** for `type: "receive"`. |
 | `delay` | `string` | No | A duration to wait before executing this step (e.g., `"100ms"`, `"1s"`). |
 
@@ -632,7 +583,7 @@ In addition to the structure, the content of the YAML file must adhere to these 
   * **Exclusivity**: A scenario cannot have both `request`/`expect` and `sequence` defined.
   * **ID Matching**: If a `request.id` is present, the corresponding `expect.id` must be identical.
   * **Result vs. Error**: An `expect` object cannot define both a `result` and an `error`.
-  * **Method Convention**: The `method` field must follow the `[action]_[type]_[modifier]` pattern, which determines the generated server's behavior.
+  * **Method Convention**: Unary methods follow `[action]_[type]_[modifier]`; SSE methods end with `_sse`.
 
 ## 🌐 Complete Examples
 
@@ -652,39 +603,3 @@ scenarios:
         code: -32000
         message: "A simulated server error occurred"
 ```
-
-### WebSocket Bidirectional Streaming
-
-This example shows a client subscribing to a channel and then receiving a server-initiated broadcast.
-
-```yaml
-scenarios:
-  - name: "broadcast_websocket_interaction"
-    method: "broadcast_string"
-    transport: "websocket"
-    sequence:
-      # 1. Client sends a subscription request
-      - type: "send"
-        data:
-          jsonrpc: "2.0"
-          method: "broadcast_string" # Method to call on the server
-          params: { "channel": "news" }
-          id: "sub-1"
-
-      # 2. Client expects a confirmation response
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          id: "sub-1"
-          result: { "status": "subscribed", "channel": "news" }
-
-      # 3. Client waits to receive an unsolicited broadcast from the server
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          method: "broadcast" # Note: This is a server-initiated method, not a response
-          params: { "message": "Server update!" }
-```
-
-
-Review each file one by one and each function one by one and think of ways it can be streamlined, improved, simplify, made more tuitive and follow Go best practice. 

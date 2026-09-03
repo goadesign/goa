@@ -1,12 +1,15 @@
 // BuildMethodBodyCustomNamePayload builds the payload for the
 // ServiceBodyCustomName MethodBodyCustomName endpoint from CLI flags.
-func BuildMethodBodyCustomNamePayload(serviceBodyCustomNameMethodBodyCustomNameBody string) (*servicebodycustomname.MethodBodyCustomNamePayload, error) {
+func BuildMethodBodyCustomNamePayload(serviceBodyCustomNameMethodBodyCustomNameBody *string) (*servicebodycustomname.MethodBodyCustomNamePayload, error) {
 	var err error
 	var body MethodBodyCustomNameRequestBody
 	{
-		err = json.Unmarshal([]byte(serviceBodyCustomNameMethodBodyCustomNameBody), &body)
+		if serviceBodyCustomNameMethodBodyCustomNameBody == nil {
+			return nil, fmt.Errorf("missing required flag --body")
+		}
+		err = json.Unmarshal([]byte(*serviceBodyCustomNameMethodBodyCustomNameBody), &body)
 		if err != nil {
-			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"b\": \"Itaque ab itaque.\"\n   }'")
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"b\": \"Et consequatur molestiae.\"\n   }'")
 		}
 	}
 	v := &servicebodycustomname.MethodBodyCustomNamePayload{

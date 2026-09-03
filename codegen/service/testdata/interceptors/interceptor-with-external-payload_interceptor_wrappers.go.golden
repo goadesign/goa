@@ -1,0 +1,11 @@
+
+
+// wrapAppendIdentify applies the identify server interceptor to endpoints.
+func wrapAppendIdentify(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		info := &identifyAppendServerUnaryInfo{
+			identifyAppendInfo: identifyAppendInfo{rawPayload: req},
+		}
+		return i.Identify(ctx, info, endpoint)
+	}
+}

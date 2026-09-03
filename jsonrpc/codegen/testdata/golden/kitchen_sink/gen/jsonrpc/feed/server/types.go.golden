@@ -7,20 +7,7 @@
 
 package server
 
-import (
-	feed "kitchensink/feed"
-
-	goa "goa.design/goa/v3/pkg"
-)
-
-// WatchRequestBody is the type of the "Feed" service "watch" endpoint HTTP
-// request body.
-type WatchRequestBody struct {
-	// Request ID
-	RequestID *string `form:"request_id,omitempty" json:"request_id,omitempty" xml:"request_id,omitempty"`
-	// Last received event ID
-	LastEventID *string `form:"last_event_id,omitempty" json:"last_event_id,omitempty" xml:"last_event_id,omitempty"`
-}
+import feed "generated.local/gen/feed"
 
 // WatchResponseBody is the type of the "Feed" service "watch" endpoint HTTP
 // response body.
@@ -42,19 +29,18 @@ func NewWatchResponseBody(res *feed.WatchResult) *WatchResponseBody {
 }
 
 // NewWatchPayload builds a Feed service watch endpoint payload.
-func NewWatchPayload(body *WatchRequestBody) *feed.WatchPayload {
-	v := &feed.WatchPayload{
-		RequestID:   *body.RequestID,
-		LastEventID: body.LastEventID,
-	}
+func NewWatchPayload(lastEventID *string, requestID string) *feed.WatchPayload {
+	v := &feed.WatchPayload{}
+	v.LastEventID = lastEventID
+	v.RequestID = requestID
 
 	return v
 }
 
-// ValidateWatchRequestBody runs the validations defined on WatchRequestBody
-func ValidateWatchRequestBody(body *WatchRequestBody) (err error) {
-	if body.RequestID == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("request_id", "body"))
-	}
-	return
+// NewSnapshotPayload builds a Feed service snapshot endpoint payload.
+func NewSnapshotPayload(requestID string) *feed.SnapshotPayload {
+	v := &feed.SnapshotPayload{}
+	v.RequestID = requestID
+
+	return v
 }

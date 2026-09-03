@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"goa.design/goa/v3/dsl"
 	"goa.design/goa/v3/eval"
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/expr/testdata"
@@ -176,6 +177,43 @@ service "Service" HTTP endpoint "Method": HTTP endpoint response body must be em
 			DSL:   testdata.EndpointPayloadMissingRequired,
 			Error: `service "Service" HTTP endpoint "Method": The following HTTP request body attribute is required but the corresponding method payload attribute is not: nonreq. Use 'Required' to make the attribute required in the method payload as well.`,
 		},
+		"endpoint-multipart-without-body": {
+			DSL:   testdata.EndpointMultipartWithoutBody,
+			Error: `service "Service" HTTP endpoint "Method": MultipartRequest requires a request body.`,
+		},
+		"two untagged success responses": {
+			DSL: func() {
+				dsl.Service("Service", func() {
+					dsl.Method("Method", func() {
+						dsl.Result(dsl.String)
+						dsl.HTTP(func() {
+							dsl.GET("/")
+							dsl.Response(dsl.StatusOK)
+							dsl.Response(dsl.StatusAccepted)
+						})
+					})
+				})
+			},
+			Error: `HTTP response of service "Service" HTTP endpoint "Method": Multiple response definitions without a Tag`,
+		},
+		"tagged response and default response": {
+			DSL: func() {
+				dsl.Service("Service", func() {
+					dsl.Method("Method", func() {
+						dsl.Result(func() {
+							dsl.Attribute("outcome", dsl.String)
+						})
+						dsl.HTTP(func() {
+							dsl.GET("/")
+							dsl.Response(dsl.StatusAccepted, func() {
+								dsl.Tag("outcome", "accepted")
+							})
+							dsl.Response(dsl.StatusOK)
+						})
+					})
+				})
+			},
+		},
 		"streaming-endpoint-has-request-body": {
 			DSL: testdata.StreamingEndpointRequestBody,
 			Error: `service "Service" HTTP endpoint "MethodA": HTTP endpoint request body must be empty when the endpoint uses streaming. Payload attributes must be mapped to headers and/or params.
@@ -206,6 +244,143 @@ service "Service" HTTP endpoint "MethodC": HTTP endpoint request body must be em
 					t.Errorf("got `%s`, expected `%s`", got, c.Error)
 				}
 			}
+		})
+	}
+}
+
+func TestHTTPWebSocketViewedResultValidation(t *testing.T) {
+	tests := []struct {
+		name           string
+		collection     bool
+		collectionView string
+		method         func(*expr.ResultTypeExpr)
+		err            string
+	}{
+		{
+			name: "client stream with caller-selected view",
+			method: func(result *expr.ResultTypeExpr) {
+				dsl.StreamingPayload(dsl.String)
+				dsl.Result(result)
+			},
+			err: `service "Service" HTTP endpoint "Method": Endpoint cannot choose a result view at runtime when the method defines StreamingPayload because the WebSocket connection starts before the result view is known. Select a view in Result or StreamingResult.`,
+		},
+		{
+			name: "bidirectional stream with caller-selected view",
+			method: func(result *expr.ResultTypeExpr) {
+				dsl.StreamingPayload(dsl.String)
+				dsl.StreamingResult(result)
+			},
+			err: `service "Service" HTTP endpoint "Method": Endpoint cannot choose a result view at runtime when the method defines StreamingPayload because the WebSocket connection starts before the result view is known. Select a view in Result or StreamingResult.`,
+		},
+		{
+			name:       "client stream with caller-selected collection view",
+			collection: true,
+			method: func(result *expr.ResultTypeExpr) {
+				dsl.StreamingPayload(dsl.String)
+				dsl.Result(result)
+			},
+			err: `service "Service" HTTP endpoint "Method": Endpoint cannot choose a result view at runtime when the method defines StreamingPayload because the WebSocket connection starts before the result view is known. Select a view in Result or StreamingResult.`,
+		},
+		{
+			name: "client stream with fixed view",
+			method: func(result *expr.ResultTypeExpr) {
+				dsl.StreamingPayload(dsl.String)
+				dsl.Result(result, func() {
+					dsl.View("tiny")
+				})
+			},
+		},
+		{
+			name: "bidirectional stream with fixed view",
+			method: func(result *expr.ResultTypeExpr) {
+				dsl.StreamingPayload(dsl.String)
+				dsl.StreamingResult(result, func() {
+					dsl.View("tiny")
+				})
+			},
+		},
+		{
+			name:       "client stream with fixed collection view",
+			collection: true,
+			method: func(result *expr.ResultTypeExpr) {
+				dsl.StreamingPayload(dsl.String)
+				dsl.Result(result, func() {
+					dsl.View("tiny")
+				})
+			},
+		},
+		{
+			name:           "client stream with view fixed by collection type",
+			collection:     true,
+			collectionView: "tiny",
+			method: func(result *expr.ResultTypeExpr) {
+				dsl.StreamingPayload(dsl.String)
+				dsl.Result(result)
+			},
+		},
+		{
+			name: "server stream with caller-selected view",
+			method: func(result *expr.ResultTypeExpr) {
+				dsl.StreamingResult(result)
+			},
+		},
+		{
+			name: "client stream without views",
+			method: func(*expr.ResultTypeExpr) {
+				dsl.StreamingPayload(dsl.String)
+				dsl.Result(dsl.String)
+			},
+		},
+		{
+			name: "bidirectional stream without views",
+			method: func(*expr.ResultTypeExpr) {
+				dsl.StreamingPayload(dsl.String)
+				dsl.StreamingResult(dsl.String)
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			design := httpWebSocketViewedResultDSL(test.collection, test.collectionView, test.method)
+			if test.err == "" {
+				expr.RunDSL(t, design)
+				return
+			}
+			err := expr.RunInvalidDSL(t, design)
+			if got := stripValidationLocations(err.Error()); got != test.err {
+				t.Errorf("got %q, expected %q", got, test.err)
+			}
+		})
+	}
+}
+
+// httpWebSocketViewedResultDSL defines a result with two response shapes and
+// lets each test choose how the method streams it.
+func httpWebSocketViewedResultDSL(collection bool, collectionView string, method func(*expr.ResultTypeExpr)) func() {
+	return func() {
+		result := dsl.ResultType("application/vnd.websocket-view", func() {
+			dsl.Attribute("name", dsl.String)
+			dsl.View("tiny", func() {
+				dsl.Attribute("name")
+			})
+		})
+		if collection {
+			if collectionView == "" {
+				result = dsl.CollectionOf(result)
+			} else {
+				result = dsl.CollectionOf(result, func() {
+					dsl.View(collectionView)
+				})
+			}
+		}
+		dsl.Service("Service", func() {
+			dsl.Method("Method", func() {
+				method(result)
+				dsl.HTTP(func() {
+					dsl.GET("/")
+				})
+			})
 		})
 	}
 }

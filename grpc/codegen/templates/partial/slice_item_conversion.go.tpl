@@ -58,6 +58,4 @@
 	{{ .VarName }}[i] = v
 {{- else if eq .Type.ElemType.Type.Name "any" }}
 	{{ .VarName }}[i] = rv
-{{- else }}
-	// unsupported slice type {{ .Type.ElemType.Type.Name }} for var {{ .VarName }}
 {{- end }}

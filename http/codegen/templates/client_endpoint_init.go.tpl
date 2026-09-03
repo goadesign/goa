@@ -1,22 +1,22 @@
 {{- $retry := and .Method.Idempotent (eq .Method.StreamKind 1) (not .Method.SkipRequestBodyEncodeDecode) (not .MultipartRequestEncoder) (not (isWebSocketEndpoint .)) (not (isSSEEndpoint .)) }}
 {{ printf "%s returns an endpoint that makes HTTP requests to the %s service %s server." .EndpointInit .ServiceName .Method.Name | comment }}
-func (c *{{ .ClientStruct }}) {{ .EndpointInit }}({{ if .MultipartRequestEncoder }}{{ .MultipartRequestEncoder.VarName }} {{ .MultipartRequestEncoder.FuncName }}{{ end }}) goa.Endpoint {
+func (c *{{ .ClientStructDeclaration.Name }}) {{ .EndpointInit }}({{ if .MultipartRequestEncoder }}{{ .MultipartRequestEncoder.VarName }} {{ .MultipartRequestEncoder.FuncDeclaration.Name }}{{ end }}) goa.Endpoint {
 	var (
-		{{- if .RequestEncoder }}
-		encodeRequest  = {{ .RequestEncoder }}({{ if .MultipartRequestEncoder }}{{ .MultipartRequestEncoder.InitName }}({{ .MultipartRequestEncoder.VarName }}){{ else }}c.encoder{{ end }})
+		{{- if .RequestEncoderDeclaration }}
+		encodeRequest  = {{ .RequestEncoderDeclaration.Name }}({{ if .MultipartRequestEncoder }}{{ .MultipartRequestEncoder.InitDeclaration.Name }}({{ .MultipartRequestEncoder.VarName }}){{ else }}c.encoder{{ end }})
 		{{- end }}
-		decodeResponse = {{ .ResponseDecoder }}(c.decoder, c.RestoreResponseBody)
+		decodeResponse = {{ .ResponseDecoderDeclaration.Name }}(c.decoder, c.RestoreResponseBody)
 	)
 	{{- if $retry }}
 	endpoint := func(ctx context.Context, v any) (any, error) {
 	{{- else }}
 	return func(ctx context.Context, v any) (any, error) {
 	{{- end }}
-		req, err := c.{{ .RequestInit.Name }}(ctx, {{ range .RequestInit.ClientArgs }}{{ .Ref }}, {{ end }})
+		req, err := c.{{ .RequestInit.Declaration.Name }}(ctx, {{ range .RequestInit.ClientArgs }}{{ .Ref }}, {{ end }})
 		if err != nil {
 			return nil, err
 		}
-	{{- if .RequestEncoder }}
+	{{- if .RequestEncoderDeclaration }}
 		err = encodeRequest(req, v)
 		if err != nil {
 			return nil, err
@@ -32,7 +32,7 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}({{ if .MultipartRequestEncoder
 			return nil, goahttp.ErrRequestError("{{ .ServiceName }}", "{{ .Method.Name }}", err)
 		}
 		if c.configurer.{{ .Method.VarName }}Fn != nil {
-			{{- if eq .ClientWebSocket.SendName "" }}
+			{{- if isServerStreamKind .ClientWebSocket.Kind }}
 			var cancel context.CancelFunc
 			ctx, cancel = context.WithCancel(ctx)
 			conn = c.configurer.{{ .Method.VarName }}Fn(conn, cancel)
@@ -40,7 +40,7 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}({{ if .MultipartRequestEncoder
 			conn = c.configurer.{{ .Method.VarName }}Fn(conn, nil)
 			{{- end }}
 		}
-		{{- if eq .ClientWebSocket.SendName "" }}
+		{{- if isServerStreamKind .ClientWebSocket.Kind }}
 		go func() {
 			<-ctx.Done()
 			conn.WriteControl(
@@ -51,7 +51,7 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}({{ if .MultipartRequestEncoder
 			conn.Close()
 		}()
 		{{- end }}
-		stream := &{{ .ClientWebSocket.VarName }}{conn: conn}
+		stream := &{{ .ClientWebSocket.VarDeclaration.Name }}{conn: conn}
 		{{- if .Method.ViewedResult }}
 			{{- if not .Method.ViewedResult.ViewName }}
 		view := resp.Header.Get("goa-view")
@@ -76,12 +76,16 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}({{ if .MultipartRequestEncoder
 		}
 		
 		contentType := resp.Header.Get("Content-Type")
-		if contentType != "" && !strings.HasPrefix(contentType, "text/event-stream") {
-			resp.Body.Close()
-			return nil, fmt.Errorf("unexpected content type: %s (expected text/event-stream)", contentType)
+		mediaType, _, mediaTypeErr := mime.ParseMediaType(contentType)
+		if mediaTypeErr != nil || mediaType != "text/event-stream" {
+			contentTypeErr := fmt.Errorf("unexpected content type: %s (expected text/event-stream)", contentType)
+			if err := resp.Body.Close(); err != nil {
+				return nil, errors.Join(contentTypeErr, goahttp.ErrDecodingError("{{ .ServiceName }}", "{{ .Method.Name }}", err))
+			}
+			return nil, contentTypeErr
 		}
 		
-		return New{{ .Method.VarName }}Stream(resp, c.decoder), nil
+		return {{ .SSE.ClientInitDeclaration.Name }}(resp, c.decoder), nil
 	{{- else }}
 		resp, err := c.{{ .Method.VarName }}Doer.Do(req)
 		if err != nil {
@@ -90,10 +94,12 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}({{ if .MultipartRequestEncoder
 		{{- if .Method.SkipResponseBodyEncodeDecode }}
 		{{ if .Result.Ref }}res{{ else }}_{{ end }}, err {{ if .Result.Ref }}:{{ end }}= decodeResponse(resp)
 		if err != nil {
-			resp.Body.Close()
+			if closeErr := resp.Body.Close(); closeErr != nil {
+				return nil, errors.Join(err, goahttp.ErrDecodingError("{{ .ServiceName }}", "{{ .Method.Name }}", closeErr))
+			}
 			return nil, err
 		}
-		return &{{ responseStructPkg .Method .ServicePkgName }}.{{ .Method.ResponseStruct }}{ {{ if .Result.Ref }}Result: res.({{ .Result.Ref }}), {{ end }}Body: resp.Body}, nil
+		return &{{ .ServicePkgName }}.{{ .Method.ResponseStruct }}{ {{ if .Result.Ref }}Result: res.({{ .Result.Ref }}), {{ end }}Body: resp.Body}, nil
 		{{- else }}
 		return decodeResponse(resp)
 		{{- end }}

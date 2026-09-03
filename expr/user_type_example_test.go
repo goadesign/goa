@@ -1,7 +1,11 @@
+// This file verifies authored and generated user types retain independent
+// example ownership while recursive copies share one declaration origin.
 package expr_test
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/expr"
 )
@@ -34,7 +38,9 @@ func TestUserTypeWithUserExample(t *testing.T) {
 
 	// Test with both randomizers to ensure user examples always take precedence
 	t.Run("with faker randomizer", func(t *testing.T) {
-		exampleGen := expr.NewRandom("test")
+		exampleGen := expr.NewExampleGenerator(expr.NewFakerRandomizerFactory("test")).At(
+			expr.UserTypeExampleIdentity(urlType),
+		)
 		example := attr.Example(exampleGen)
 		if example != customURL {
 			t.Errorf("Attribute with user example should return %q, got %q", customURL, example)
@@ -42,10 +48,9 @@ func TestUserTypeWithUserExample(t *testing.T) {
 	})
 
 	t.Run("with deterministic randomizer", func(t *testing.T) {
-		gen := expr.NewDeterministicRandomizer()
-		exampleGen := &expr.ExampleGenerator{
-			Randomizer: gen,
-		}
+		exampleGen := expr.NewExampleGenerator(expr.NewDeterministicRandomizerFactory()).At(
+			expr.UserTypeExampleIdentity(urlType),
+		)
 		example := attr.Example(exampleGen)
 		if example != customURL {
 			t.Errorf("Attribute with user example should return %q, got %q", customURL, example)
@@ -81,10 +86,9 @@ func TestUserTypeFormatWithCustomExample(t *testing.T) {
 	}
 
 	// Test with deterministic randomizer (as reported in the issue)
-	gen := expr.NewDeterministicRandomizer()
-	exampleGen := &expr.ExampleGenerator{
-		Randomizer: gen,
-	}
+	exampleGen := expr.NewExampleGenerator(expr.NewDeterministicRandomizerFactory()).At(
+		expr.UserTypeExampleIdentity(urlType),
+	)
 
 	// The bug was that this would return "https://example.com/foo" instead of the custom example
 	example := attr.Example(exampleGen)
@@ -117,10 +121,9 @@ func TestIssue3716Regression(t *testing.T) {
 	}
 
 	// When generating an example for the object
-	gen := expr.NewDeterministicRandomizer()
-	exampleGen := &expr.ExampleGenerator{
-		Randomizer: gen,
-	}
+	exampleGen := expr.NewExampleGenerator(expr.NewDeterministicRandomizerFactory()).At(
+		expr.MethodPayloadExampleIdentity(exampleMethod("issue-3716", "object")),
+	)
 
 	example := obj.Example(exampleGen)
 	objExample, ok := example.(map[string]any)
@@ -162,15 +165,69 @@ func TestUserTypeWithOwnExample(t *testing.T) {
 	}
 
 	// Use deterministic randomizer
-	gen := expr.NewDeterministicRandomizer()
-	exampleGen := &expr.ExampleGenerator{
-		Randomizer: gen,
-	}
+	exampleGen := expr.NewExampleGenerator(expr.NewDeterministicRandomizerFactory()).At(
+		expr.UserTypeExampleIdentity(urlType),
+	)
 
 	// The UserType itself should return its custom example
 	example := urlType.Example(exampleGen)
 
 	if example != customExample {
 		t.Errorf("UserType with custom example should return %q, got %q", customExample, example)
+	}
+}
+
+func TestUserTypeExamplesIgnoreStringIDCollisions(t *testing.T) {
+	method := exampleMethod("service", "method")
+	owner := expr.MethodPayloadExampleIdentity(method)
+	generated := expr.NewGeneratedUserType("Generated", &expr.AttributeExpr{Type: &expr.Object{
+		{Name: "generated", Attribute: &expr.AttributeExpr{Type: expr.String}},
+	}}, owner)
+	generatedOwner, ok := expr.GeneratedUserTypeExampleIdentity(generated)
+	require.True(t, ok)
+	require.Equal(t, owner, generatedOwner)
+	authored := &expr.UserTypeExpr{
+		TypeName: "Authored",
+		UID:      generated.ID(),
+		AttributeExpr: &expr.AttributeExpr{Type: &expr.Object{
+			{Name: "authored", Attribute: &expr.AttributeExpr{Type: expr.String}},
+		}},
+	}
+	_, ok = expr.GeneratedUserTypeExampleIdentity(authored)
+	require.False(t, ok)
+
+	cases := []struct {
+		name        string
+		first       *expr.UserTypeExpr
+		firstField  string
+		second      *expr.UserTypeExpr
+		secondField string
+	}{
+		{
+			name:        "authored then generated",
+			first:       authored,
+			firstField:  "authored",
+			second:      generated,
+			secondField: "generated",
+		},
+		{
+			name:        "generated then authored",
+			first:       generated,
+			firstField:  "generated",
+			second:      authored,
+			secondField: "authored",
+		},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			generator := expr.NewExampleGenerator(expr.NewFakerRandomizerFactory("test"))
+			first := test.first.Example(generator.At(expr.UserTypeExampleIdentity(test.first))).(map[string]any)
+			second := test.second.Example(generator.At(expr.UserTypeExampleIdentity(test.second))).(map[string]any)
+
+			require.Contains(t, first, test.firstField)
+			require.NotContains(t, first, test.secondField)
+			require.Contains(t, second, test.secondField)
+			require.NotContains(t, second, test.firstField)
+		})
 	}
 }

@@ -1,0 +1,75 @@
+// StoreRequestBody is the type of the "RequiredArrays" service "Store"
+// endpoint HTTP request body.
+type StoreRequestBody struct {
+	Names   []*string `form:"names,omitempty" json:"names,omitempty" xml:"names,omitempty"`
+	Aliases []*string `form:"aliases,omitempty" json:"aliases,omitempty" xml:"aliases,omitempty"`
+}
+
+// StoreResponseBody is the type of the "RequiredArrays" service "Store"
+// endpoint HTTP response body.
+type StoreResponseBody struct {
+	Names   []string `form:"names" json:"names" xml:"names"`
+	Aliases []string `form:"aliases" json:"aliases" xml:"aliases"`
+}
+
+// NewStoreResponseBody builds the HTTP response body from the result of the
+// "Store" endpoint of the "RequiredArrays" service.
+func NewStoreResponseBody(res *requiredarrays.StoreResult) *StoreResponseBody {
+	body := &StoreResponseBody{}
+	if res.Names != nil {
+		body.Names = make([]string, len(res.Names))
+		for i, val := range res.Names {
+			body.Names[i] = val
+		}
+	} else {
+		body.Names = []string{}
+	}
+	if res.Aliases != nil {
+		body.Aliases = make([]string, len(res.Aliases))
+		for i, val := range res.Aliases {
+			body.Aliases[i] = string(val)
+		}
+	} else {
+		body.Aliases = []string{}
+	}
+	return body
+}
+
+// NewStorePayload builds a RequiredArrays service Store endpoint payload.
+func NewStorePayload(body *StoreRequestBody) *requiredarrays.StorePayload {
+	v := &requiredarrays.StorePayload{}
+	v.Names = make([]string, len(body.Names))
+	for i, val := range body.Names {
+		v.Names[i] = *val
+	}
+	v.Aliases = make([]requiredarrays.RequiredArrayAlias, len(body.Aliases))
+	for i, val := range body.Aliases {
+		v.Aliases[i] = requiredarrays.RequiredArrayAlias(*val)
+	}
+
+	return v
+}
+
+// ValidateStoreRequestBody runs the validations defined on StoreRequestBody
+func ValidateStoreRequestBody(body *StoreRequestBody) (err error) {
+	if body.Names == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("names", "body"))
+	}
+	if body.Aliases == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("aliases", "body"))
+	}
+	for _, e := range body.Names {
+		if e == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("body.names", "[*]"))
+		}
+	}
+	for _, e := range body.Aliases {
+		if e == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("body.aliases", "[*]"))
+		}
+		if e != nil {
+			err = goa.MergeErrors(err, goa.ValidatePattern("body.aliases[*]", *e, "^[a-z]+$"))
+		}
+	}
+	return
+}

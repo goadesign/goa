@@ -1,9 +1,9 @@
+// This file renders starter service implementations and imports only the
+// generated types referenced by each implementation's service methods.
 package service
 
 import (
-	"os"
 	"path"
-	"strings"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
@@ -30,79 +30,65 @@ type (
 		// StreamInterface is the stream interface in the service package used
 		// by the endpoint implementation.
 		StreamInterface string
+		// ExampleStructDeclaration is the starter implementation receiver.
+		ExampleStructDeclaration *codegen.NameDeclaration
+	}
+
+	// exampleServiceData separates the generated service package declaration
+	// name from the qualifier used by this example file.
+	exampleServiceData struct {
+		*Data
+		// ServicePkg is the import name used for the generated service package in
+		// this example file.
+		ServicePkg string
 	}
 )
 
-// ExampleServiceFiles returns a basic service implementation for every
-// service expression.
-func ExampleServiceFiles(genpkg string, root *expr.RootExpr, services *ServicesData) []*codegen.File {
-	// determine the unique API package name different from the service names
-	scope := codegen.NewNameScope()
-	for _, svc := range root.Services {
-		s := services.Get(svc.Name)
-		if s == nil {
-			panic("unknown service, " + svc.Name) // bug
-		}
-		scope.Unique(s.PkgName)
-	}
-	apipkg := scope.Unique(strings.ToLower(codegen.Goify(root.API.Name, false)), "api")
-
+// ExampleServiceFiles returns a basic implementation for every service
+// copied into plan.
+func ExampleServiceFiles(plan *Plan) []*codegen.File {
 	var fw []*codegen.File
-	for _, svc := range root.Services {
-		if f := exampleServiceFile(genpkg, root, svc, services, apipkg); f != nil {
+	for _, facts := range plan.facts.services {
+		if f := exampleServiceFile(plan, facts, plan.facts.examplePackageName); f != nil {
 			fw = append(fw, f)
 		}
 	}
 	return fw
 }
 
-// exampleServiceFile returns a basic implementation of the given service.
-func exampleServiceFile(genpkg string, _ *expr.RootExpr, svc *expr.ServiceExpr, services *ServicesData, apipkg string) *codegen.File {
-	data := services.Get(svc.Name)
+// exampleServiceFile renders a basic implementation from one service copied
+// into plan.
+func exampleServiceFile(plan *Plan, facts *serviceFacts, apipkg string) *codegen.File {
+	genpkg := plan.generation.GenPkg()
+	services := plan.Services()
+	data := services.Get(facts.name)
 	svcName := data.PathName
+	servicePath := path.Join(genpkg, svcName)
+	servicePkg := services.aliases.name(path.Dir(genpkg), servicePath)
+	renderData := &exampleServiceData{Data: data, ServicePkg: servicePkg}
 	fpath := svcName + ".go"
-	if _, err := os.Stat(fpath); !os.IsNotExist(err) {
-		return nil // file already exists, skip it.
-	}
-	specs := []*codegen.ImportSpec{
-		{Path: "io"},
-		{Path: "context"},
-		{Path: "fmt"},
-		{Path: "strings"},
-		{Path: path.Join(genpkg, svcName), Name: data.PkgName},
-		{Path: "goa.design/clue/log"},
-		{Path: "goa.design/goa/v3/security"},
-	}
 	sections := []*codegen.SectionTemplate{
-		codegen.Header("", apipkg, specs),
+		codegen.Header("", apipkg, facts.imports.exampleService.Imports()),
 		{
 			Name:   "basic-service-struct",
 			Source: serviceTemplates.Read(exampleServiceStructT),
-			Data:   data,
+			Data:   renderData,
 		}, {
 			Name:   "basic-service-init",
 			Source: serviceTemplates.Read(exampleServiceInitT),
-			Data:   data,
+			Data:   renderData,
 		},
 	}
 	if len(data.Schemes) > 0 {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "security-authfuncs",
 			Source: serviceTemplates.Read(exampleSecurityAuthfuncsT),
-			Data:   data,
+			Data:   renderData,
 		})
 	}
-	for _, m := range svc.Methods {
-		sections = append(sections, basicEndpointSection(m, data))
-	}
-
-	// Add HandleStream method for JSON-RPC WebSocket services (not SSE)
-	if hasJSONRPCWebSocket(data) {
-		sections = append(sections, &codegen.SectionTemplate{
-			Name:   "jsonrpc-handle-stream",
-			Source: serviceTemplates.Read(jsonrpcHandleStreamT),
-			Data:   data,
-		})
+	outputPath := path.Dir(genpkg)
+	for _, method := range facts.orderedMethods {
+		sections = append(sections, basicEndpointSection(method, data, outputPath, services.aliases, servicePkg))
 	}
 
 	return &codegen.File{
@@ -112,31 +98,33 @@ func exampleServiceFile(genpkg string, _ *expr.RootExpr, svc *expr.ServiceExpr, 
 	}
 }
 
-// basicEndpointSection returns a section with a basic implementation for the
-// given method.
-func basicEndpointSection(m *expr.MethodExpr, svcData *Data) *codegen.SectionTemplate {
-	md := svcData.Method(m.Name)
+// basicEndpointSection returns a starter implementation whose payload and
+// result references come from the method records after all generated package
+// and declaration names have been chosen.
+func basicEndpointSection(facts *methodFacts, svcData *Data, outputPath string, aliases *importAliases, servicePkg string) *codegen.SectionTemplate {
+	md := svcData.Method(facts.name)
 	ed := &basicEndpointData{
-		MethodData:     md,
-		ServiceVarName: svcData.VarName,
+		MethodData:               md,
+		ServiceVarName:           svcData.VarName,
+		ExampleStructDeclaration: svcData.ExampleStructDeclaration,
 	}
-	if m.Payload.Type != expr.Empty {
-		ed.PayloadFullRef = svcData.Scope.GoFullTypeRef(m.Payload, svcData.PkgName)
+	if facts.payload != nil && facts.payload.layout.Kind() != codegen.GoEmpty {
+		ed.PayloadFullRef = facts.payload.layout.Link(outputPath, retainedTypeQualifier(aliases, outputPath)).Ref()
 	}
-	if m.Result.Type != expr.Empty {
-		ed.ResultFullName = svcData.Scope.GoFullTypeName(m.Result, svcData.PkgName)
-		ed.ResultFullRef = svcData.Scope.GoFullTypeRef(m.Result, svcData.PkgName)
-		ed.ResultIsStruct = expr.IsObject(m.Result.Type)
+	if facts.result != nil && facts.result.layout.Kind() != codegen.GoEmpty {
+		linked := facts.result.layout.Link(outputPath, retainedTypeQualifier(aliases, outputPath))
+		ed.ResultFullName = linked.Name()
+		ed.ResultFullRef = linked.Ref()
+		ed.ResultIsStruct = facts.result.isObject
 		if md.ViewedResult != nil {
-			view := expr.DefaultView
-			if v, ok := m.Result.Meta.Last(expr.ViewMetaKey); ok {
-				view = v
+			ed.ResultView = facts.viewedResult.viewName
+			if ed.ResultView == "" {
+				ed.ResultView = expr.DefaultView
 			}
-			ed.ResultView = view
 		}
 	}
 	if md.ServerStream != nil {
-		ed.StreamInterface = svcData.PkgName + "." + md.ServerStream.Interface
+		ed.StreamInterface = servicePkg + "." + md.ServerStreamDeclaration.Name()
 	}
 	return &codegen.SectionTemplate{
 		Name:   "basic-endpoint",

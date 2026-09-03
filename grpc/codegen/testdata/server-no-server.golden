@@ -25,12 +25,7 @@ func handleGRPCServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 
 	// Register the servers.
 	servicepb.RegisterServiceServer(srv, serviceServer)
-
-	for svc, info := range srv.GetServiceInfo() {
-		for _, m := range info.Methods {
-			log.Printf(ctx, "serving gRPC method %s", svc+"/"+m.Name)
-		}
-	}
+	log.Printf(ctx, "serving gRPC method %s", "service.Service/Method")
 
 	// Register the server reflection service on the server.
 	// See https://grpc.github.io/grpc/core/md_doc_server-reflection.html.

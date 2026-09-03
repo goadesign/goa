@@ -1,0 +1,12 @@
+
+
+// wrapMethodAuthorization applies the authorization server interceptor to
+// endpoints.
+func wrapMethodAuthorization(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		info := &authorizationMethodServerUnaryInfo{
+			authorizationMethodInfo: authorizationMethodInfo{rawPayload: req},
+		}
+		return i.Authorization(ctx, info, endpoint)
+	}
+}

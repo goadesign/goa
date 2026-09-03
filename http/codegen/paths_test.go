@@ -38,8 +38,8 @@ func TestPaths(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			root := expr.RunDSL(t, c.DSL)
 			require.Len(t, root.API.HTTP.Services, 1)
-			services := CreateHTTPServices(root)
-			fs := serverPath(root.API.HTTP.Services[0], services)
+			plan := linkedHTTPPlanForRoot(t, root)
+			fs := plan.PathFiles()[0]
 			sections := fs.SectionTemplates
 			code := codegen.SectionCode(t, sections[1])
 			testutil.AssertGo(t, "testdata/golden/paths_"+c.Name+".go.golden", code)
@@ -64,8 +64,8 @@ func TestPathTrailingShash(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			root := expr.RunDSL(t, c.DSL)
 			require.Len(t, root.API.HTTP.Services, 1)
-			services := CreateHTTPServices(root)
-			fs := serverPath(root.API.HTTP.Services[0], services)
+			plan := linkedHTTPPlanForRoot(t, root)
+			fs := plan.PathFiles()[0]
 			sections := fs.SectionTemplates
 			code := codegen.SectionCode(t, sections[1])
 			testutil.AssertGo(t, "testdata/golden/paths_"+c.Name+".go.golden", code)

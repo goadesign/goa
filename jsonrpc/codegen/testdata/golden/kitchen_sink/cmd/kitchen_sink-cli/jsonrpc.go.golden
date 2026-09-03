@@ -1,17 +1,19 @@
 package main
 
 import (
+	"context"
+	"flag"
 	"fmt"
-	cli "kitchensink/jsonrpc/cli/kitchen_sink"
+	"io"
 	"net/http"
 	"time"
 
-	"github.com/gorilla/websocket"
+	feed "generated.local/gen/feed"
+	cli2 "generated.local/gen/jsonrpc/cli/kitchen_sink"
 	goahttp "goa.design/goa/v3/http"
-	goa "goa.design/goa/v3/pkg"
 )
 
-func doJSONRPC(scheme, host string, timeout int, debug bool) (goa.Endpoint, any, error) {
+func doJSONRPC(ctx context.Context, scheme, host string, timeout int, debug bool, stdout io.Writer) error {
 	var (
 		doer goahttp.Doer
 	)
@@ -22,33 +24,49 @@ func doJSONRPC(scheme, host string, timeout int, debug bool) (goa.Endpoint, any,
 		}
 	}
 
-	var (
-		dialer *websocket.Dialer
-	)
-	{
-		dialer = websocket.DefaultDialer
-	}
-
-	endpoint, payload, err := cli.ParseEndpoint(
+	endpoint, payload, err := cli2.ParseEndpoint(
 		scheme,
 		host,
 		doer,
 		goahttp.RequestEncoder,
 		goahttp.ResponseDecoder,
 		debug,
-		dialer,
-		nil,
 	)
 	if err != nil {
-		return nil, nil, fmt.Errorf("parse endpoint: %w", err)
+		return fmt.Errorf("parse endpoint: %w", err)
 	}
-	return endpoint, payload, nil
-}
 
-func jsonrpcUsageCommands() []string {
-	return cli.UsageCommands()
+	switch flag.Arg(0) {
+	case "calc":
+		switch flag.Arg(1) {
+		case "add":
+			return writeEndpointResult(ctx, stdout, endpoint, payload)
+		case "ping":
+			return writeEndpointResult(ctx, stdout, endpoint, payload)
+		case "log":
+			return writeEndpointResult(ctx, stdout, endpoint, payload)
+		}
+	case "feed":
+		switch flag.Arg(1) {
+		case "watch":
+			data, err := endpoint(ctx, payload)
+			if err != nil {
+				return err
+			}
+			stream := data.(feed.WatchClientStream)
+			return writeStreamResults(ctx, stdout, stream.RecvWithContext)
+		case "snapshot":
+			return writeEndpointResult(ctx, stdout, endpoint, payload)
+		}
+	case "mixed":
+		switch flag.Arg(1) {
+		case "lookup":
+			return writeEndpointResult(ctx, stdout, endpoint, payload)
+		}
+	}
+	panic("parsed JSON-RPC command has no generated result writer")
 }
 
 func jsonrpcUsageExamples() string {
-	return cli.UsageExamples()
+	return cli2.UsageExamples()
 }

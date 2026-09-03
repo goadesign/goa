@@ -1,12 +1,12 @@
 // BuildMethodQueryUIntPayload builds the payload for the ServiceQueryUInt
 // MethodQueryUInt endpoint from CLI flags.
-func BuildMethodQueryUIntPayload(serviceQueryUIntMethodQueryUIntQ string) (*servicequeryuint.MethodQueryUIntPayload, error) {
+func BuildMethodQueryUIntPayload(serviceQueryUIntMethodQueryUIntQ *string) (*servicequeryuint.MethodQueryUIntPayload, error) {
 	var err error
 	var q *uint
 	{
-		if serviceQueryUIntMethodQueryUIntQ != "" {
+		if serviceQueryUIntMethodQueryUIntQ != nil {
 			var v uint64
-			v, err = strconv.ParseUint(serviceQueryUIntMethodQueryUIntQ, 10, strconv.IntSize)
+			v, err = strconv.ParseUint(*serviceQueryUIntMethodQueryUIntQ, 10, strconv.IntSize)
 			val := uint(v)
 			q = &val
 			if err != nil {

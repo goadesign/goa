@@ -33,7 +33,7 @@ func TestServerGRPCInterface(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			root := RunGRPCDSL(t, c.DSL)
 			services := CreateGRPCServices(root)
-			fs := ServerFiles("", services)
+			fs := serverFiles(services)
 			require.Len(t, fs, 2)
 			sections := fs[0].Section("server-grpc-interface")
 			require.NotEmpty(t, sections)
@@ -61,7 +61,7 @@ func TestServerHandlerInit(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			root := RunGRPCDSL(t, c.DSL)
 			services := CreateGRPCServices(root)
-			fs := ServerFiles("", services)
+			fs := serverFiles(services)
 			require.Len(t, fs, 2)
 			sections := fs[0].Section("grpc-handler-init")
 			require.NotEmpty(t, sections)
@@ -82,18 +82,20 @@ func TestRequestDecoder(t *testing.T) {
 		{"request-decoder-payload-primitive", testdata.ServerStreamingRPCDSL},
 		{"request-decoder-payload-primitive-with-streaming-payload", testdata.ClientStreamingRPCWithPayloadDSL},
 		{"request-decoder-payload-user-type-with-streaming-payload", testdata.BidirectionalStreamingRPCWithPayloadDSL},
+		{"request-decoder-metadata-only-payload-with-streaming-payload", testdata.ClientStreamingRPCWithMetadataOnlyPayloadDSL},
 		{"request-decoder-payload-primitive-with-streaming-payload-legacy-compat", testdata.ClientStreamingRPCWithPayloadLegacyCompatDSL},
 		{"request-decoder-payload-user-type-with-streaming-payload-legacy-compat", testdata.BidirectionalStreamingRPCWithPayloadLegacyCompatDSL},
 		{"request-decoder-payload-with-metadata-with-streaming-payload-legacy-compat", testdata.BidirectionalStreamingRPCWithMetadataLegacyCompatDSL},
 		{"request-decoder-payload-with-metadata", testdata.MessageWithMetadataDSL},
 		{"request-decoder-payload-with-validate", testdata.MessageWithValidateDSL},
 		{"request-decoder-payload-with-security-attributes", testdata.MessageWithSecurityAttrsDSL},
+		{"request-decoder-named-security-metadata", testdata.NamedSecurityMetadataDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := RunGRPCDSL(t, c.DSL)
 			services := CreateGRPCServices(root)
-			fs := ServerFiles("", services)
+			fs := serverFiles(services)
 			require.Len(t, fs, 2)
 			sections := fs[1].Section("request-decoder")
 			require.NotEmpty(t, sections)
@@ -121,7 +123,7 @@ func TestResponseEncoder(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			root := RunGRPCDSL(t, c.DSL)
 			services := CreateGRPCServices(root)
-			fs := ServerFiles("", services)
+			fs := serverFiles(services)
 			require.Len(t, fs, 2)
 			sections := fs[1].Section("response-encoder")
 			require.NotEmpty(t, sections)

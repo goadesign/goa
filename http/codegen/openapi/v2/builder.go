@@ -1,3 +1,5 @@
+// This file builds Swagger 2.0 operations and schemas from HTTP endpoints. It
+// uses the request or response being described to choose each example value.
 package openapiv2
 
 import (
@@ -20,6 +22,21 @@ func NewV2(root *expr.RootExpr, h *expr.HostExpr) (*V2, error) {
 	if root == nil {
 		return nil, nil
 	}
+	return NewV2WithValues(
+		root,
+		h,
+		expr.NewExampleGenerator(root.API.RandomizerFactory),
+		openapi.Values{},
+	)
+}
+
+// NewV2WithValues returns the OpenAPI v2 specification using values in place
+// of matching titles, descriptions, and examples from the evaluated design.
+// The generator supplies examples for attributes that have no matching value.
+func NewV2WithValues(root *expr.RootExpr, h *expr.HostExpr, generator *expr.ExampleGenerator, values openapi.Values) (*V2, error) {
+	if root == nil {
+		return nil, nil
+	}
 	tags := openapi.TagsFromExpr(root.API.Meta, openapi.Version20)
 	u, err := url.Parse(defaultURI(h))
 	if err != nil {
@@ -31,12 +48,23 @@ func NewV2(root *expr.RootExpr, h *expr.HostExpr) (*V2, error) {
 	if !openapi.MustGenerate(root.API.Servers[0].Meta) || !openapi.MustGenerate(h.Meta) {
 		host = ""
 	}
+	schemas := newSchemaBuilder(values)
+	var contact *expr.ContactExpr
+	if root.API.Contact != nil {
+		contactCopy := *root.API.Contact
+		contact = &contactCopy
+	}
+	var license *expr.LicenseExpr
+	if root.API.License != nil {
+		licenseCopy := *root.API.License
+		license = &licenseCopy
+	}
 
 	basePath := root.API.HTTP.Path
 	if hasAbsoluteRoutes(root) {
 		basePath = ""
 	}
-	params := paramsFromExpr(nil, root.API.HTTP.Params, basePath)
+	params := paramsFromExpr(nil, root.API.HTTP.Params, basePath, values)
 	var paramMap map[string]*Parameter
 	if len(params) > 0 {
 		paramMap = make(map[string]*Parameter, len(params))
@@ -47,23 +75,23 @@ func NewV2(root *expr.RootExpr, h *expr.HostExpr) (*V2, error) {
 	s := &V2{
 		Swagger: "2.0",
 		Info: &Info{
-			Title:          root.API.Title,
-			Description:    root.API.Description,
+			Title:          values.Title(root.API, root.API.Title),
+			Description:    values.Description(root.API, root.API.Description),
 			TermsOfService: root.API.TermsOfService,
-			Contact:        root.API.Contact,
-			License:        root.API.License,
+			Contact:        contact,
+			License:        license,
 			Version:        root.API.Version,
 			Extensions:     openapi.ExtensionsFromExpr(root.API.Meta),
 		},
 		Host:                host,
 		BasePath:            basePath,
 		Paths:               make(map[string]any),
-		Consumes:            root.API.HTTP.Consumes,
-		Produces:            root.API.HTTP.Produces,
+		Consumes:            slices.Clone(root.API.HTTP.Consumes),
+		Produces:            slices.Clone(root.API.HTTP.Produces),
 		Parameters:          paramMap,
 		Tags:                tags,
-		SecurityDefinitions: securitySpecFromExpr(root),
-		ExternalDocs:        openapi.DocsFromExpr(root.API.Docs, root.API.Meta),
+		SecurityDefinitions: securitySpecFromExpr(root, values),
+		ExternalDocs:        openapi.DocsFromExprWithValues(root.API.Docs, root.API.Meta, values),
 	}
 	for _, res := range root.API.HTTP.Services {
 		if !openapi.MustGenerate(res.Meta) || !openapi.MustGenerate(res.ServiceExpr.Meta) {
@@ -74,24 +102,23 @@ func NewV2(root *expr.RootExpr, h *expr.HostExpr) (*V2, error) {
 			if !openapi.MustGenerate(fs.Meta) || !openapi.MustGenerate(fs.Service.Meta) {
 				continue
 			}
-			buildPathFromFileServer(s, root, fs)
+			buildPathFromFileServer(s, root, fs, schemas, generator, values)
 		}
 		for _, a := range res.HTTPEndpoints {
 			if !openapi.MustGenerate(a.Meta) || !openapi.MustGenerate(a.MethodExpr.Meta) {
 				continue
 			}
 			for _, route := range a.Routes {
-				buildPathFromExpr(s, root, h, route, basePath)
+				buildPathFromExpr(s, root, h, route, basePath, schemas, generator, values)
 			}
 		}
 	}
-	if len(openapi.Definitions) > 0 {
-		s.Definitions = make(map[string]*openapi.Schema)
-		for n, d := range openapi.Definitions {
-			// sad but swagger doesn't support these
+	if len(schemas.definitions) > 0 {
+		s.Definitions = schemas.definitions
+		for _, d := range schemas.definitions {
+			// Swagger 2.0 does not support media metadata or schema links.
 			d.Media = nil
 			d.Links = nil
-			s.Definitions[n] = d
 		}
 	}
 	// Convert OpenAPI 3.0 references (#/$defs/) to Swagger 2.0 format (#/definitions/)
@@ -140,14 +167,20 @@ func addScopeDescription(scopes []*expr.ScopeExpr, sd *SecurityDefinition) {
 
 // securitySpecFromExpr generates the OpenAPI security definitions from the
 // security design.
-func securitySpecFromExpr(root *expr.RootExpr) map[string]*SecurityDefinition {
+func securitySpecFromExpr(root *expr.RootExpr, values openapi.Values) map[string]*SecurityDefinition {
 	sds := make(map[string]*SecurityDefinition)
 	for _, svc := range root.API.HTTP.Services {
+		if !openapi.MustGenerate(svc.Meta) || !openapi.MustGenerate(svc.ServiceExpr.Meta) {
+			continue
+		}
 		for _, e := range svc.HTTPEndpoints {
+			if !openapi.MustGenerate(e.Meta) || !openapi.MustGenerate(e.MethodExpr.Meta) {
+				continue
+			}
 			for _, req := range e.Requirements {
 				for _, s := range req.Schemes {
 					sd := SecurityDefinition{
-						Description: s.Description,
+						Description: values.Description(s.AuthoredScheme(), s.Description),
 						Extensions:  openapi.ExtensionsFromExpr(s.Meta),
 					}
 
@@ -270,7 +303,7 @@ func summaryFromMeta(name string, meta expr.MetaExpr) string {
 	return name
 }
 
-func paramsFromExpr(endpoint *expr.HTTPEndpointExpr, params *expr.MappedAttributeExpr, path string) []*Parameter {
+func paramsFromExpr(endpoint *expr.HTTPEndpointExpr, params *expr.MappedAttributeExpr, path string, values openapi.Values) []*Parameter {
 	if params == nil {
 		return nil
 	}
@@ -287,14 +320,14 @@ func paramsFromExpr(endpoint *expr.HTTPEndpointExpr, params *expr.MappedAttribut
 		if endpoint != nil && in != "path" && openapiinternal.IsSecurityParameter(endpoint, in, pn) {
 			return nil
 		}
-		param := paramFor(at, pn, in, required)
+		param := paramFor(at, pn, in, required, values)
 		res = append(res, param)
 		return nil
 	})
 	return res
 }
 
-func paramsFromHeaders(endpoint *expr.HTTPEndpointExpr) []*Parameter {
+func paramsFromHeaders(endpoint *expr.HTTPEndpointExpr, values openapi.Values) []*Parameter {
 	var params []*Parameter
 
 	expr.WalkMappedAttr(endpoint.Headers, func(name, elem string, att *expr.AttributeExpr) error { // nolint: errcheck
@@ -302,21 +335,21 @@ func paramsFromHeaders(endpoint *expr.HTTPEndpointExpr) []*Parameter {
 			return nil
 		}
 		required := endpoint.Headers.IsRequiredNoDefault(name)
-		params = append(params, paramFor(att, elem, "header", required))
+		params = append(params, paramFor(att, elem, "header", required, values))
 		return nil
 	})
 
 	return params
 }
 
-func paramFor(at *expr.AttributeExpr, name, in string, required bool) *Parameter {
+func paramFor(at *expr.AttributeExpr, name, in string, required bool, values openapi.Values) *Parameter {
 	alias := at
 	at = resolvedAliasAttribute(at)
 	p := &Parameter{
 		In:          in,
 		Name:        name,
 		Default:     openapi.ToStringMap(at.DefaultValue),
-		Description: at.Description,
+		Description: values.Description(alias.AuthoredAttribute(), at.Description),
 		Required:    required,
 	}
 	p.Type, p.Format = openAPITypeFormat(at)
@@ -342,7 +375,7 @@ func itemsFromExpr(at *expr.AttributeExpr) *Items {
 	return items
 }
 
-func responseSpecFromExpr(_ *V2, root *expr.RootExpr, r *expr.HTTPResponseExpr, typeNamePrefix string) *Response {
+func responseSpecFromExpr(_ *V2, root *expr.RootExpr, r *expr.HTTPResponseExpr, typeNamePrefix string, schemas *schemaBuilder, generator *expr.ExampleGenerator, fallbackDescription string, values openapi.Values) *Response {
 	var schema *openapi.Schema
 	if mt, ok := r.Body.Type.(*expr.ResultTypeExpr); ok {
 		view := expr.DefaultView
@@ -350,15 +383,19 @@ func responseSpecFromExpr(_ *V2, root *expr.RootExpr, r *expr.HTTPResponseExpr, 
 			view = v
 		}
 		schema = openapi.NewSchema()
-		schema.Ref = openapi.ResultTypeRefWithPrefix(root.API, mt, view, typeNamePrefix)
+		projection := openapi.ProjectResponseResult(mt, view)
+		schema.Ref = schemas.projectedResultTypeRefWithPrefix(root.API, mt, projection.Result, typeNamePrefix, generator)
 	} else if r.Body.Type != expr.Empty {
-		schema = openapi.AttributeTypeSchemaWithPrefix(root.API, r.Body, typeNamePrefix)
+		schema = schemas.attributeTypeSchemaWithPrefix(root.API, r.Body, typeNamePrefix, generator)
 	}
 	if schema != nil {
 		schema.Extensions = openapi.ExtensionsFromExpr(r.Meta)
 	}
-	headers := headersFromExpr(r.Headers)
-	desc := r.Description
+	headers := headersFromExpr(r.Headers, values)
+	desc := values.Description(r, r.Description)
+	if desc == "" {
+		desc = fallbackDescription
+	}
 	if desc == "" {
 		desc = fmt.Sprintf("%s response.", http.StatusText(r.StatusCode))
 	}
@@ -370,7 +407,7 @@ func responseSpecFromExpr(_ *V2, root *expr.RootExpr, r *expr.HTTPResponseExpr, 
 	}
 }
 
-func headersFromExpr(headers *expr.MappedAttributeExpr) map[string]*Header {
+func headersFromExpr(headers *expr.MappedAttributeExpr, values openapi.Values) map[string]*Header {
 	if headers == nil {
 		return nil
 	}
@@ -379,7 +416,7 @@ func headersFromExpr(headers *expr.MappedAttributeExpr) map[string]*Header {
 		headerType, headerFormat := openAPITypeFormat(at)
 		header := &Header{
 			Default:     at.DefaultValue,
-			Description: at.Description,
+			Description: values.Description(at.AuthoredAttribute(), at.Description),
 			Type:        headerType,
 			Format:      headerFormat,
 		}
@@ -435,7 +472,7 @@ func initAttributeValidations(at *expr.AttributeExpr, def any) {
 	initValidations(at, def)
 }
 
-func buildPathFromFileServer(s *V2, root *expr.RootExpr, fs *expr.HTTPFileServerExpr) {
+func buildPathFromFileServer(s *V2, root *expr.RootExpr, fs *expr.HTTPFileServerExpr, schemas *schemaBuilder, generator *expr.ExampleGenerator, values openapi.Values) {
 	for _, path := range fs.RequestPaths {
 		wcs := expr.ExtractHTTPWildcards(path)
 		var param []*Parameter
@@ -456,7 +493,8 @@ func buildPathFromFileServer(s *V2, root *expr.RootExpr, fs *expr.HTTPFileServer
 			},
 		}
 		if len(wcs) > 0 {
-			schema := openapi.TypeSchema(root.API, expr.ErrorResult)
+			errgen := generator.At(expr.UserTypeExampleIdentity(expr.ErrorResult))
+			schema := schemas.typeSchema(root.API, expr.ErrorResult, errgen)
 			responses["404"] = &Response{Description: "File not found", Schema: schema}
 		}
 
@@ -477,9 +515,9 @@ func buildPathFromFileServer(s *V2, root *expr.RootExpr, fs *expr.HTTPFileServer
 		}
 
 		operation := &Operation{
-			Description:  fs.Description,
+			Description:  values.Description(fs, fs.Description),
 			Summary:      summaryFromMeta(fmt.Sprintf("Download %s", fs.FilePath), fs.Meta),
-			ExternalDocs: openapi.DocsFromExpr(fs.Docs, fs.Meta),
+			ExternalDocs: openapi.DocsFromExprWithValues(fs.Docs, fs.Meta, values),
 			OperationID:  operationID,
 			Parameters:   param,
 			Responses:    responses,
@@ -503,7 +541,7 @@ func buildPathFromFileServer(s *V2, root *expr.RootExpr, fs *expr.HTTPFileServer
 	}
 }
 
-func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr.RouteExpr, basePath string) {
+func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr.RouteExpr, basePath string, schemas *schemaBuilder, generator *expr.ExampleGenerator, values openapi.Values) {
 	endpoint := route.Endpoint
 
 	tagNames := openapi.TagNamesFromExpr(endpoint.Meta)
@@ -515,12 +553,13 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 		// Remove any wildcards that is defined in path as a workaround to
 		// https://github.com/OAI/OpenAPI-Specification/issues/291
 		key = expr.HTTPWildcardRegex.ReplaceAllString(key, "/{$1}")
-		params := paramsFromExpr(endpoint, endpoint.Params, key)
-		params = append(params, paramsFromHeaders(endpoint)...)
+		params := paramsFromExpr(endpoint, endpoint.Params, key, values)
+		params = append(params, paramsFromHeaders(endpoint, values)...)
 		var produces []string
 
 		responses := make(map[string]*Response, len(endpoint.Responses))
 		for _, r := range endpoint.Responses {
+			responseGenerator := generator.At(expr.ResponseBodyExampleIdentity(endpoint, r))
 			if endpoint.UsesWebSocket() {
 				// A WebSocket endpoint allows at most one successful response
 				// definition. So it is okay to change the first successful
@@ -530,7 +569,7 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 					r.StatusCode = expr.StatusSwitchingProtocols
 				}
 			}
-			resp := responseSpecFromExpr(s, root, r, endpoint.Service.Name())
+			resp := responseSpecFromExpr(s, root, r, endpoint.Service.Name(), schemas, responseGenerator, "", values)
 			responses[strconv.Itoa(r.StatusCode)] = resp
 			if r.ContentType != "" {
 				foundCT := slices.Contains(produces, r.ContentType)
@@ -540,7 +579,13 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 			}
 		}
 		for _, er := range endpoint.HTTPErrors {
-			resp := responseSpecFromExpr(s, root, er.Response, endpoint.Service.Name())
+			responseGenerator := generator.At(expr.ErrorResponseBodyExampleIdentity(endpoint, er))
+			errorDescription := values.Description(er.ErrorExpr, er.Description)
+			resp := responseSpecFromExpr(s, root, er.Response, endpoint.Service.Name(), schemas, responseGenerator, errorDescription, values)
+			resp.Description = er.Name + ": " + resp.Description
+			if example, ok := openapi.ErrorResponseExample(er.ErrorExpr, er.Response.Body, responseGenerator, values); ok {
+				resp.Examples = map[string]any{openapi.ResponseContentType(er.Response): example}
+			}
 			responses[strconv.Itoa(er.Response.StatusCode)] = resp
 		}
 
@@ -557,9 +602,14 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 			pp := &Parameter{
 				Name:        endpoint.Body.Type.Name(),
 				In:          in,
-				Description: endpoint.Body.Description,
+				Description: values.Description(endpoint.Body.AuthoredAttribute(), endpoint.Body.Description),
 				Required:    true,
-				Schema:      openapi.AttributeTypeSchemaWithPrefix(root.API, endpoint.Body, codegen.Goify(endpoint.Service.Name(), true)),
+				Schema: schemas.attributeTypeSchemaWithPrefix(
+					root.API,
+					endpoint.Body,
+					codegen.Goify(endpoint.Service.Name(), true),
+					generator.At(expr.RequestBodyExampleIdentity(endpoint)),
+				),
 			}
 			params = append(params, pp)
 		}
@@ -599,7 +649,7 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 			}
 		}
 
-		description := endpoint.Description()
+		description := values.Description(endpoint.MethodExpr, endpoint.Description())
 
 		var requirements SecurityRequirements
 		if len(endpoint.Requirements) > 0 {
@@ -608,7 +658,7 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 		for i, req := range endpoint.Requirements {
 			requirement := make(map[string][]string)
 			for _, s := range req.Schemes {
-				requirement[s.Hash()] = nil
+				requirement[s.Hash()] = make([]string, 0)
 				switch s.Kind {
 				case expr.OAuth2Kind:
 					if len(req.Scopes) > 0 {
@@ -638,7 +688,7 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 			Tags:         tagNames,
 			Description:  description,
 			Summary:      summaryFromExpr(endpoint.Name()+" "+endpoint.Service.Name(), endpoint, root.API.Meta),
-			ExternalDocs: openapi.DocsFromExpr(endpoint.MethodExpr.Docs, endpoint.MethodExpr.Meta),
+			ExternalDocs: openapi.DocsFromExprWithValues(endpoint.MethodExpr.Docs, endpoint.MethodExpr.Meta, values),
 			OperationID:  operationID,
 			Parameters:   params,
 			Consumes:     consumes,

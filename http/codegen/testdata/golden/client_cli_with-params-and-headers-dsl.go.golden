@@ -1,18 +1,24 @@
 // BuildMethodAPayload builds the payload for the
 // ServiceWithParamsAndHeadersBlock MethodA endpoint from CLI flags.
-func BuildMethodAPayload(serviceWithParamsAndHeadersBlockMethodABody string, serviceWithParamsAndHeadersBlockMethodAPath string, serviceWithParamsAndHeadersBlockMethodAOptional string, serviceWithParamsAndHeadersBlockMethodAOptionalButRequiredParam string, serviceWithParamsAndHeadersBlockMethodARequired string, serviceWithParamsAndHeadersBlockMethodAOptionalButRequiredHeader string) (*servicewithparamsandheadersblock.MethodAPayload, error) {
+func BuildMethodAPayload(serviceWithParamsAndHeadersBlockMethodABody *string, serviceWithParamsAndHeadersBlockMethodAPath *string, serviceWithParamsAndHeadersBlockMethodAOptional *string, serviceWithParamsAndHeadersBlockMethodAOptionalButRequiredParam *string, serviceWithParamsAndHeadersBlockMethodARequired *string, serviceWithParamsAndHeadersBlockMethodAOptionalButRequiredHeader *string) (*servicewithparamsandheadersblock.MethodAPayload, error) {
 	var err error
 	var body MethodARequestBody
 	{
-		err = json.Unmarshal([]byte(serviceWithParamsAndHeadersBlockMethodABody), &body)
+		if serviceWithParamsAndHeadersBlockMethodABody == nil {
+			return nil, fmt.Errorf("missing required flag --body")
+		}
+		err = json.Unmarshal([]byte(*serviceWithParamsAndHeadersBlockMethodABody), &body)
 		if err != nil {
-			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"body\": \"Molestias quia.\"\n   }'")
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"body\": \"Dolores eos voluptas.\"\n   }'")
 		}
 	}
 	var path uint
 	{
+		if serviceWithParamsAndHeadersBlockMethodAPath == nil {
+			return nil, fmt.Errorf("missing required flag --path")
+		}
 		var v uint64
-		v, err = strconv.ParseUint(serviceWithParamsAndHeadersBlockMethodAPath, 10, strconv.IntSize)
+		v, err = strconv.ParseUint(*serviceWithParamsAndHeadersBlockMethodAPath, 10, strconv.IntSize)
 		path = uint(v)
 		if err != nil {
 			return nil, fmt.Errorf("invalid value for path, must be UINT")
@@ -20,9 +26,9 @@ func BuildMethodAPayload(serviceWithParamsAndHeadersBlockMethodABody string, ser
 	}
 	var optional *int
 	{
-		if serviceWithParamsAndHeadersBlockMethodAOptional != "" {
+		if serviceWithParamsAndHeadersBlockMethodAOptional != nil {
 			var v int64
-			v, err = strconv.ParseInt(serviceWithParamsAndHeadersBlockMethodAOptional, 10, strconv.IntSize)
+			v, err = strconv.ParseInt(*serviceWithParamsAndHeadersBlockMethodAOptional, 10, strconv.IntSize)
 			val := int(v)
 			optional = &val
 			if err != nil {
@@ -32,8 +38,11 @@ func BuildMethodAPayload(serviceWithParamsAndHeadersBlockMethodABody string, ser
 	}
 	var optionalButRequiredParam float32
 	{
+		if serviceWithParamsAndHeadersBlockMethodAOptionalButRequiredParam == nil {
+			return nil, fmt.Errorf("missing required flag --optional-but-required-param")
+		}
 		var v float64
-		v, err = strconv.ParseFloat(serviceWithParamsAndHeadersBlockMethodAOptionalButRequiredParam, 32)
+		v, err = strconv.ParseFloat(*serviceWithParamsAndHeadersBlockMethodAOptionalButRequiredParam, 32)
 		optionalButRequiredParam = float32(v)
 		if err != nil {
 			return nil, fmt.Errorf("invalid value for optionalButRequiredParam, must be FLOAT32")
@@ -41,12 +50,18 @@ func BuildMethodAPayload(serviceWithParamsAndHeadersBlockMethodABody string, ser
 	}
 	var required string
 	{
-		required = serviceWithParamsAndHeadersBlockMethodARequired
+		if serviceWithParamsAndHeadersBlockMethodARequired == nil {
+			return nil, fmt.Errorf("missing required flag --required")
+		}
+		required = *serviceWithParamsAndHeadersBlockMethodARequired
 	}
 	var optionalButRequiredHeader float32
 	{
+		if serviceWithParamsAndHeadersBlockMethodAOptionalButRequiredHeader == nil {
+			return nil, fmt.Errorf("missing required flag --optional-but-required-header")
+		}
 		var v float64
-		v, err = strconv.ParseFloat(serviceWithParamsAndHeadersBlockMethodAOptionalButRequiredHeader, 32)
+		v, err = strconv.ParseFloat(*serviceWithParamsAndHeadersBlockMethodAOptionalButRequiredHeader, 32)
 		optionalButRequiredHeader = float32(v)
 		if err != nil {
 			return nil, fmt.Errorf("invalid value for optionalButRequiredHeader, must be FLOAT32")

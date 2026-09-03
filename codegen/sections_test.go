@@ -122,3 +122,45 @@ package testpackage
 		})
 	}
 }
+
+func TestHeaderKeepsOneImportPerPath(t *testing.T) {
+	section := Header("", "testpackage", []*ImportSpec{
+		{Path: "encoding/json"},
+		{Name: "json", Path: "encoding/json"},
+	})
+	var source bytes.Buffer
+	if err := section.Write(&source); err != nil {
+		t.Fatal(err)
+	}
+	if count := strings.Count(source.String(), `"encoding/json"`); count != 1 {
+		t.Fatalf("encoding/json import count = %d, want 1\n%s", count, source.String())
+	}
+	if !strings.Contains(source.String(), `json "encoding/json"`) {
+		t.Fatalf("encoding/json import did not keep its explicit name\n%s", source.String())
+	}
+}
+
+func TestAddImportKeepsOneImportPerPath(t *testing.T) {
+	section := Header("", "testpackage", []*ImportSpec{{Path: "encoding/json"}})
+	AddImport(section, &ImportSpec{Name: "json", Path: "encoding/json"})
+	var source bytes.Buffer
+	if err := section.Write(&source); err != nil {
+		t.Fatal(err)
+	}
+	if count := strings.Count(source.String(), `"encoding/json"`); count != 1 {
+		t.Fatalf("encoding/json import count = %d, want 1\n%s", count, source.String())
+	}
+	if !strings.Contains(source.String(), `json "encoding/json"`) {
+		t.Fatalf("encoding/json import did not keep its explicit name\n%s", source.String())
+	}
+
+	t.Run("different explicit names", func(t *testing.T) {
+		section := Header("", "testpackage", []*ImportSpec{{Name: "first", Path: "example.com/log"}})
+		defer func() {
+			if recovered := recover(); recovered == nil {
+				t.Fatal("AddImport did not reject different explicit names for one package")
+			}
+		}()
+		AddImport(section, &ImportSpec{Name: "second", Path: "example.com/log"})
+	})
+}

@@ -14,7 +14,6 @@ import (
 )
 
 func TestServerTypes(t *testing.T) {
-	const genpkg = "gen"
 	cases := []struct {
 		Name string
 		DSL  func()
@@ -23,11 +22,15 @@ func TestServerTypes(t *testing.T) {
 		{"server-multiple-methods", testdata.MultipleMethodsDSL},
 		{"server-payload-extend-validate", testdata.PayloadExtendedValidateDSL},
 		{"server-result-type-validate", testdata.ResultTypeValidateDSL},
+		{"server-status-tag-required", testdata.ResultStatusTagRequiredDSL},
 		{"server-with-result-collection", testdata.ResultWithResultCollectionDSL},
 		{"server-with-result-view", testdata.ResultWithResultViewDSL},
 		{"server-with-result-sibling-user-type-fields", testdata.ResultTypeSiblingUserTypeFieldsDSL},
 		{"server-with-result-collection-sibling-user-type-fields", testdata.ResultTypeCollectionSiblingUserTypeFieldsDSL},
 		{"server-with-result-nested-user-type-fields", testdata.ResultTypeNestedUserTypeFieldsDSL},
+		{"server-with-result-required-user-type-array", testdata.ResultTypeRequiredUserTypeArrayDSL},
+		{"server-with-result-required-nested-array", testdata.ResultTypeRequiredNestedArrayDSL},
+		{"server-with-result-viewed-required-array", testdata.ResultTypeMultipleViewsRequiredArrayDSL},
 		{"server-empty-error-response-body", testdata.EmptyErrorResponseBodyDSL},
 		{"server-with-error-custom-pkg", testdata.WithErrorCustomPkgDSL},
 		{"server-body-custom-name", testdata.PayloadBodyCustomNameDSL},
@@ -36,13 +39,15 @@ func TestServerTypes(t *testing.T) {
 		{"server-header-custom-name", testdata.PayloadHeaderCustomNameDSL},
 		{"server-cookie-custom-name", testdata.PayloadCookieCustomNameDSL},
 		{"server-payload-with-validated-alias", testdata.PayloadWithValidatedAliasDSL},
+		{"server-required-primitive-arrays", testdata.RequiredPrimitiveArrayDSL},
+		{"server-multipart-validation", testdata.PayloadMultipartValidationDSL},
 		{"server-streaming-payload-required-fields", testdata.StreamingPayloadRequiredFieldsDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := expr.RunDSL(t, c.DSL)
-			services := CreateHTTPServices(root)
-			fs := typesFile(genpkg, root.API.HTTP.Services[0], true, services)
+			plan := linkedHTTPPlanForRoot(t, root)
+			fs := plan.ServerTypeFiles()[0]
 			var buf bytes.Buffer
 			for _, s := range fs.SectionTemplates[1:] {
 				require.NoError(t, s.Write(&buf))

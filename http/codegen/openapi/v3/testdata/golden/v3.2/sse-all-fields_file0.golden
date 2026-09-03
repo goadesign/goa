@@ -1,19 +1,6 @@
 {
   "components": {
     "schemas": {
-      "SSEAllFieldsMethodRequestBody": {
-        "description": "Request body for SSEAllFieldsMethod.",
-        "example": {
-          "id": "Ducimus vel."
-        },
-        "properties": {
-          "id": {
-            "example": "Ducimus vel.",
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
       "SSEAllFieldsMethodResponseBody": {
         "example": {
           "data": {
@@ -65,29 +52,15 @@
         "operationId": "SSEAllFieldsService#SSEAllFieldsMethod",
         "parameters": [
           {
-            "example": "Non sed saepe voluptatem.",
+            "example": "request",
             "in": "header",
             "name": "Last-Event-ID",
             "schema": {
-              "example": "Natus magni voluptates consequatur suscipit.",
+              "example": "request",
               "type": "string"
             }
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "example": {
-                "id": "Ducimus vel."
-              },
-              "schema": {
-                "$ref": "#/components/schemas/SSEAllFieldsMethodRequestBody"
-              }
-            }
-          },
-          "description": "Request body for SSEAllFieldsMethod.",
-          "required": true
-        },
         "responses": {
           "200": {
             "content": {
@@ -124,9 +97,6 @@
                       "type": "integer"
                     }
                   },
-                  "required": [
-                    "data"
-                  ],
                   "type": "object"
                 }
               }

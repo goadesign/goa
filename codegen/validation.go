@@ -1,13 +1,65 @@
+// This file generates functions that check service values and values sent over
+// HTTP, gRPC, and JSON-RPC. Each function uses the Go names already chosen for
+// its package.
 package codegen
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"text/template"
 
 	"goa.design/goa/v3/expr"
+)
+
+type (
+	// nilUserTypeValidationAttributor reports generated user types whose
+	// validator defines what nil means. Other user-type validators are called
+	// only for a present value.
+	nilUserTypeValidationAttributor interface {
+		ValidationAcceptsNil(*expr.AttributeExpr) bool
+	}
+
+	// unionValidationCase describes one possible union branch in generated
+	// validation code.
+	unionValidationCase struct {
+		// Type is the generated Go type for the branch.
+		Type string
+		// Field is the field which stores the branch value.
+		Field string
+		// Name is the branch name shown in validation errors.
+		Name string
+		// PayloadRequiresPresence is true when selecting this branch also
+		// requires a non-nil value.
+		PayloadRequiresPresence bool
+		// Validation checks the value stored by this branch.
+		Validation string
+	}
+
+	// unionValidationData contains the information needed to write one union
+	// check.
+	unionValidationData struct {
+		// Target is the generated union value being checked.
+		Target string
+		// Context identifies the union in validation errors.
+		Context validationPath
+		// Protobuf is true when each selected branch is stored in its own generated
+		// protobuf struct.
+		Protobuf bool
+		// Cases lists every branch accepted by the union.
+		Cases []unionValidationCase
+		// Goa is the generated import name of Goa's error package.
+		Goa string
+	}
+
+	// validationPath stores an error path while Goa writes validation source.
+	// variable is true when root names a parameter in the generated function.
+	validationPath struct {
+		root     string
+		suffix   string
+		variable bool
+	}
 )
 
 var (
@@ -27,21 +79,21 @@ var (
 
 func init() {
 	fm := template.FuncMap{
-		"slice":    toSlice,
-		"oneof":    oneof,
-		"constant": constant,
+		"slice":          toSlice,
+		"oneof":          oneof,
+		"constant":       constant,
+		"validationPath": renderValidationPath,
 		"isUnion": func(att *expr.AttributeExpr) bool {
 			if att == nil {
 				return false
 			}
 			return expr.IsUnion(att.Type)
 		},
-		"isAttributeScope": func(scope Attributor) bool {
+		"isSumType": func(scope Attributor) bool {
 			if scope == nil {
 				return false
 			}
-			_, ok := scope.(*AttributeScope)
-			return ok
+			return scope.IsSumType()
 		},
 		"isUnionPointer": func(ctx *AttributeContext, required bool) bool {
 			return ctx.IsUnionPointer(required)
@@ -67,7 +119,7 @@ func init() {
 //
 // See ValidationCode for a description of the arguments.
 func AttributeValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *AttributeContext, req, alias bool, target, attName string) string {
-	return recurseValidationCode(att, put, attCtx, req, alias, false, target, attName, nil).String()
+	return recurseValidationCode(att, put, attCtx, req, alias, false, target, literalValidationPath(attName), nil).String()
 }
 
 // ValidationCode produces Go code that runs the validations defined in the
@@ -91,12 +143,26 @@ func AttributeValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx 
 //
 // context is used to produce helpful messages in case of error.
 func ValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *AttributeContext, req, alias, view bool, target string) string {
-	return recurseValidationCode(att, put, attCtx, req, alias, view, target, target, nil).String()
+	return recurseValidationCode(att, put, attCtx, req, alias, view, target, literalValidationPath(target), nil).String()
 }
 
-func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *AttributeContext, req, alias, view bool, target, context string, seen map[string]*bytes.Buffer) *bytes.Buffer {
+// ValidationCodeWithPathParameter produces validation code whose error paths
+// begin with the string held by pathParameter. target and pathParameter are Go
+// expressions.
+func ValidationCodeWithPathParameter(att *expr.AttributeExpr, put expr.UserType, attCtx *AttributeContext, req, alias, view bool, target, pathParameter string) string {
+	return recurseValidationCode(att, put, attCtx, req, alias, view, target, parameterValidationPath(pathParameter), nil).String()
+}
+
+func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *AttributeContext, req, alias, view bool, target string, context validationPath, seen map[expr.UserType]*bytes.Buffer) *bytes.Buffer {
+	return renderValidationCode(att, put, attCtx, req, alias, view, target, context, seen, true)
+}
+
+// renderValidationCode writes one validation tree. localGuards reports whether
+// local rule templates must check a pointer before reading it. Nested fields
+// disable those checks when validateAttribute wraps the whole field once.
+func renderValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *AttributeContext, req, alias, view bool, target string, context validationPath, seen map[expr.UserType]*bytes.Buffer, localGuards bool) *bytes.Buffer {
 	if seen == nil {
-		seen = make(map[string]*bytes.Buffer)
+		seen = make(map[expr.UserType]*bytes.Buffer)
 	}
 	var (
 		buf      = new(bytes.Buffer)
@@ -109,10 +175,11 @@ func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *A
 	// so alias types shouldn't use the recursion guard. Only non-alias user
 	// types need cycle protection.
 	if isUT && !alias {
-		if buf, ok := seen[ut.ID()]; ok {
+		origin := ut.Origin()
+		if buf, ok := seen[origin]; ok {
 			return buf
 		}
-		seen[ut.ID()] = buf
+		seen[origin] = buf
 	}
 
 	newline := func() {
@@ -124,7 +191,7 @@ func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *A
 	}
 
 	// Write validations on attribute if any.
-	validation := validationCode(att, attCtx, req, alias, target, context)
+	validation := validationCode(att, attCtx, req, alias, target, context, localGuards)
 	if validation != "" {
 		buf.WriteString(validation)
 		first = false
@@ -138,7 +205,7 @@ func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *A
 		}
 		for _, nat := range *(expr.AsObject(att.Type)) {
 			tgt := fmt.Sprintf("%s.%s", target, attCtx.Scope.Field(nat.Attribute, nat.Name, true))
-			ctx := fmt.Sprintf("%s.%s", context, nat.Name)
+			ctx := context.child("." + nat.Name)
 			val := validateAttribute(attCtx, nat.Attribute, put, tgt, ctx, att.IsRequired(nat.Name), view, seen)
 			if val != "" {
 				newline()
@@ -149,19 +216,21 @@ func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *A
 		arr := expr.AsArray(att.Type)
 		elem := arr.ElemType
 		ctx := attCtx
-		if ctx.Pointer && expr.IsPrimitive(elem.Type) {
-			// Array elements of primitive type are never pointers
+		if expr.IsPrimitive(elem.Type) {
 			ctx = attCtx.Dup()
-			ctx.Pointer = false
+			ctx.Pointer = attCtx.IsArrayElementPointer(arr)
 		}
-		val := validateAttribute(ctx, elem, put, "e", context+"[*]", true, view, seen)
-		if val != "" || arr.NonNullableElems {
+		val := validateAttribute(ctx, elem, put, "e", context.child("[*]"), true, view, seen)
+		nonNullableElems := arr.NonNullableElems &&
+			(IsNilable(elem.Type) || attCtx.IsArrayElementPointer(arr))
+		if val != "" || nonNullableElems {
 			newline()
 			data := map[string]any{
 				"target":           target,
 				"validation":       val,
-				"nonNullableElems": arr.NonNullableElems,
+				"checkNilElements": nonNullableElems,
 				"context":          context,
+				"goa":              "goa",
 			}
 			if err := arrayValT.Execute(buf, data); err != nil {
 				panic(err) // bug
@@ -171,11 +240,11 @@ func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *A
 		m := expr.AsMap(att.Type)
 		ctx := attCtx.Dup()
 		ctx.Pointer = false
-		keyVal := validateAttribute(ctx, m.KeyType, put, "k", context+".key", true, view, seen)
+		keyVal := validateAttribute(ctx, m.KeyType, put, "k", context.child(".key"), true, view, seen)
 		if keyVal != "" {
 			keyVal = "\n" + keyVal
 		}
-		valueVal := validateAttribute(ctx, m.ElemType, put, "v", context+"[key]", true, view, seen)
+		valueVal := validateAttribute(ctx, m.ElemType, put, "v", context.child("[key]"), true, view, seen)
 		if valueVal != "" {
 			valueVal = "\n" + valueVal
 		}
@@ -188,7 +257,7 @@ func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *A
 		}
 	case expr.IsUnion(att.Type):
 		u := expr.AsUnion(att.Type)
-		if _, ok := attCtx.Scope.(*AttributeScope); ok {
+		if attCtx.Scope.IsSumType() {
 			cases := make([]map[string]any, 0, len(u.Values))
 			for _, v := range u.Values {
 				// Sum-type unions (struct-based, with Kind/AsX accessors) store each
@@ -198,7 +267,7 @@ func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *A
 				// only keep pointer semantics when both layers use pointers.
 				unionCtx := attCtx.Dup()
 				unionCtx.Pointer = unionCtx.Pointer && expr.IsObject(v.Attribute.Type)
-				val := validateAttribute(unionCtx, v.Attribute, put, "actual", context+".value", true, view, seen)
+				val := validateAttribute(unionCtx, v.Attribute, put, "actual", context.child(".value"), true, view, seen)
 				if val == "" {
 					continue
 				}
@@ -213,6 +282,7 @@ func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *A
 				data := map[string]any{
 					"target": target,
 					"cases":  cases,
+					"goa":    "goa",
 				}
 				if err := unionSumValT.Execute(buf, data); err != nil {
 					panic(err) // bug
@@ -222,35 +292,49 @@ func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *A
 		}
 
 		// Validate unions represented as interfaces (e.g., protobuf oneof wrappers).
-		var vals []string
-		var types []string
+		var cases []unionValidationCase
 		for _, v := range u.Values {
 			vatt := v.Attribute
 			if view {
 				// Union values in views are never pointers - they are concrete typed values
 				unionCtx := attCtx.Dup()
 				unionCtx.Pointer = false
-				val := validateAttribute(unionCtx, vatt, put, "v", context+".value", true, view, seen)
+				val := validateAttribute(unionCtx, vatt, put, "v", context.child(".value"), true, view, seen)
 				if val != "" {
-					types = append(types, attCtx.Scope.Ref(vatt, attCtx.DefaultPkg))
-					vals = append(vals, val)
+					cases = append(cases, unionValidationCase{
+						Type:       attCtx.Scope.Ref(vatt, attCtx.Pkg(vatt)),
+						Validation: val,
+					})
 				}
 			} else {
 				fieldName := attCtx.Scope.Field(vatt, v.Name, true)
-				val := validateAttribute(attCtx, vatt, put, "v."+fieldName, context+".value", true, view, seen)
-				if val != "" {
-					tref := attCtx.Scope.Ref(&expr.AttributeExpr{Type: put}, attCtx.DefaultPkg)
-					types = append(types, tref+"_"+fieldName)
-					vals = append(vals, val)
+				branchCtx := attCtx
+				if expr.IsPrimitive(vatt.Type) {
+					// A union wrapper stores its scalar directly. The wrapper
+					// itself records whether that branch was selected.
+					branchCtx = attCtx.Dup()
+					branchCtx.Pointer = false
 				}
+				val := validateAttribute(branchCtx, vatt, put, "v."+fieldName, context.child(".value"), true, view, seen)
+				parent := &expr.AttributeExpr{Type: put}
+				tref := attCtx.Scope.Ref(parent, attCtx.Pkg(parent))
+				cases = append(cases, unionValidationCase{
+					Type:                    tref + "_" + fieldName,
+					Field:                   fieldName,
+					Name:                    v.Name,
+					PayloadRequiresPresence: protobufUnionPayloadRequiresPresence(vatt),
+					Validation:              val,
+				})
 			}
 		}
-		if len(vals) > 0 {
+		if len(cases) > 0 {
 			newline()
-			data := map[string]any{
-				"target": target,
-				"types":  types,
-				"values": vals,
+			data := unionValidationData{
+				Target:   target,
+				Context:  context,
+				Protobuf: !view,
+				Cases:    cases,
+				Goa:      "goa",
 			}
 			if err := unionValT.Execute(buf, data); err != nil {
 				panic(err) // bug
@@ -261,38 +345,29 @@ func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *A
 	return buf
 }
 
-func validateAttribute(ctx *AttributeContext, att *expr.AttributeExpr, put expr.UserType, target, context string, req, view bool, seen map[string]*bytes.Buffer) string {
+// protobufUnionPayloadRequiresPresence reports whether selecting a protobuf
+// union branch requires a non-nil value. Messages, byte slices, and Any values
+// may be nil in Go, so their generated checks must reject nil explicitly.
+func protobufUnionPayloadRequiresPresence(att *expr.AttributeExpr) bool {
+	kind := unalias(att.Type).Kind()
+	return !expr.IsPrimitive(att.Type) || kind == expr.BytesKind || kind == expr.AnyKind
+}
+
+func validateAttribute(ctx *AttributeContext, att *expr.AttributeExpr, put expr.UserType, target string, context validationPath, req, view bool, seen map[expr.UserType]*bytes.Buffer) string {
 	ut, isUT := att.Type.(expr.UserType)
 	if !isUT {
-		code := recurseValidationCode(att, put, ctx, req, false, view, target, context, seen).String()
+		guard := validationAttributeNeedsNilGuard(att, ctx, req)
+		code := renderValidationCode(att, put, ctx, req, false, view, target, context, seen, !guard).String()
 		if code == "" {
 			return ""
 		}
 		if expr.IsArray(att.Type) || expr.IsMap(att.Type) {
 			return code
 		}
-		if expr.IsUnion(att.Type) {
-			_, sumType := ctx.Scope.(*AttributeScope)
-			if sumType {
-				if !ctx.IsUnionPointer(req) {
-					return code
-				}
-			} else if req {
-				return code
-			}
-			cond := fmt.Sprintf("if %s != nil {\n", target)
-			if strings.HasPrefix(code, cond) {
-				return code
-			}
-			return fmt.Sprintf("%s%s\n}", cond, code)
-		}
-		if !ctx.Pointer && (req || (att.DefaultValue != nil && ctx.UseDefault)) {
+		if !guard {
 			return code
 		}
 		cond := fmt.Sprintf("if %s != nil {\n", target)
-		if strings.HasPrefix(code, cond) {
-			return code
-		}
 		return fmt.Sprintf("%s%s\n}", cond, code)
 	}
 	// Alias user types: validate underlying attribute with alias flag so that
@@ -303,34 +378,45 @@ func validateAttribute(ctx *AttributeContext, att *expr.AttributeExpr, put expr.
 		// validating alias user types against their underlying base. Passing
 		// the original attribute with alias=true ensures validations operate
 		// on the correct value type without dropping field defaults.
-		code := recurseValidationCode(att, put, ctx, req, true, view, target, context, seen).String()
+		guard := validationAttributeNeedsNilGuard(att, ctx, req)
+		code := renderValidationCode(att, put, ctx, req, true, view, target, context, seen, !guard).String()
 		if code == "" {
 			return ""
 		}
-		// For optional pointer fields, wrap validation code in nil check
-		if !ctx.Pointer && (req || (att.DefaultValue != nil && ctx.UseDefault)) {
+		if !guard {
 			return code
 		}
 		cond := fmt.Sprintf("if %s != nil {\n", target)
-		if strings.HasPrefix(code, cond) {
-			return code
-		}
 		return fmt.Sprintf("%s%s\n}", cond, code)
 	}
 	if !hasValidations(ctx, ut) {
 		return ""
 	}
 	var buf bytes.Buffer
-	name := ctx.Scope.Name(att, "", ctx.Pointer, ctx.UseDefault)
-	// Use the scoped type name directly to preserve identifiers such as
-	// protocol buffer-reserved names that include a trailing underscore
-	// (e.g., Message_). Applying Goify here would drop underscores and
-	// cause mismatches between function declarations and call sites.
-	data := map[string]any{"name": name, "target": target}
+	call := ctx.Scope.ValidatorCall(att, "", target, renderValidationPath(context))
+	data := map[string]any{"call": call, "goa": "goa"}
 	if err := userValT.Execute(&buf, data); err != nil {
 		panic(err) // bug
 	}
+	if resolver, ok := ctx.Scope.(nilUserTypeValidationAttributor); ok && resolver.ValidationAcceptsNil(att) {
+		return buf.String()
+	}
 	return fmt.Sprintf("if %s != nil {\n\t%s\n}", target, buf.String())
+}
+
+// validationAttributeNeedsNilGuard reports whether a nested value may be nil
+// in the generated Go layout and must be checked before any validation uses it.
+func validationAttributeNeedsNilGuard(att *expr.AttributeExpr, ctx *AttributeContext, required bool) bool {
+	if expr.IsArray(att.Type) || expr.IsMap(att.Type) {
+		return false
+	}
+	if expr.IsUnion(att.Type) {
+		if ctx.Scope.IsSumType() {
+			return ctx.IsUnionPointer(required)
+		}
+		return !required
+	}
+	return ctx.Pointer || !required && (att.DefaultValue == nil || !ctx.UseDefault)
 }
 
 // validationCode produces Go code that runs the validations that effectively
@@ -353,7 +439,7 @@ func validateAttribute(ctx *AttributeContext, att *expr.AttributeExpr, put expr.
 // target is the variable name against which the validation code is generated
 //
 // context is used to produce helpful messages in case of error.
-func validationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req, alias bool, target, context string) string {
+func validationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req, alias bool, target string, context validationPath, localGuards bool) string {
 	validation := expr.EffectiveValidation(att)
 	if validation == nil {
 		return ""
@@ -378,10 +464,12 @@ func validationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req, alia
 	data := map[string]any{
 		"attribute": att,
 		"attCtx":    attCtx,
-		"isPointer": isPointer,
+		"isPointer": isPointer && localGuards,
 		"context":   context,
 		"target":    target,
 		"targetVal": tval,
+		"goa":       "goa",
+		"utf8":      "utf8",
 		"string":    kind == expr.StringKind,
 		"array":     expr.IsArray(att.Type),
 		"map":       expr.IsMap(att.Type),
@@ -434,7 +522,7 @@ func validationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req, alia
 	}
 	if exclMax := validation.ExclusiveMaximum; exclMax != nil {
 		data["exclMax"] = *exclMax
-		data["isExclMax"] = true
+		data["isExclMin"] = false
 		if val := runTemplate(exclMinMaxValT, data); val != "" {
 			res = append(res, val)
 		}
@@ -473,29 +561,48 @@ func validationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req, alia
 	return strings.Join(res, "\n")
 }
 
-// hasValidations returns true if a UserType contains validations. It is a
-// pure predicate: it never mutates the design expression tree.
+// literalValidationPath folds a complete error path into a quoted Go string
+// while Goa is generating source.
+func literalValidationPath(root string) validationPath {
+	return validationPath{root: root}
+}
+
+// parameterValidationPath writes an error path relative to the string held by
+// a generated validator parameter.
+func parameterValidationPath(parameter string) validationPath {
+	return validationPath{root: parameter, variable: true}
+}
+
+// child returns the context used for a field or collection value below c.
+func (p validationPath) child(prefix string) validationPath {
+	p.suffix += prefix
+	return p
+}
+
+// renderValidationPath returns the Go expression passed to a generated
+// validation error.
+func renderValidationPath(path validationPath) string {
+	if !path.variable {
+		return strconv.Quote(path.root + path.suffix)
+	}
+	if path.suffix == "" {
+		return path.root
+	}
+	return path.root + " + " + strconv.Quote(path.suffix)
+}
+
+// hasValidations reports whether validating ut can write any code with the Go
+// layout described by attCtx.
 func hasValidations(attCtx *AttributeContext, ut expr.UserType) bool {
-	// We need to check empirically whether there are validations to be
-	// generated. We can't call recurseValidationCode() to avoid infinite
-	// recursions, but we can use validationCode() for the local (non-recursive)
-	// attribute-level checks — it is the source of truth for whether a given
-	// attribute produces any validation output, including any skips (e.g.
-	// format checks on struct:field:type attributes). For nested user types
-	// and required-field checks we keep the structural walk.
-	res := false
-	done := errors.New("done")
-	Walk(ut.Attribute(), func(a *expr.AttributeExpr) error { // nolint: errcheck
-		// validationCode computes the validation that effectively applies
-		// to a - including user type alias chain validations - and returns
-		// the empty string when there is nothing to validate.
-		if validationCode(a, attCtx, true, false, "x", "x") != "" {
-			res = true
-			return done
-		}
-		return nil
-	})
-	return res
+	policy := GoLayoutPolicy{
+		Pointer:             attCtx.Pointer,
+		IgnoreRequired:      attCtx.IgnoreRequired,
+		UseDefault:          attCtx.UseDefault,
+		UnionPointer:        attCtx.UnionPointer,
+		ArrayElementPointer: attCtx.ArrayElementPointer,
+		SumType:             attCtx.Scope.IsSumType(),
+	}
+	return NeedsValidation(ut.Attribute(), policy)
 }
 
 // There is a case where there is validation but no actual validation code: if

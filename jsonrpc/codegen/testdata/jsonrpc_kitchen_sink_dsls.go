@@ -6,11 +6,10 @@ import (
 
 // JSONRPCKitchenSinkDSL exercises the full JSON-RPC generated surface in one
 // design so golden tests can pin every generator output: a plain JSON-RPC
-// service (required and optional request IDs, a no-payload method, a method
-// with no result, custom errors with JSON-RPC code mappings), a
-// WebSocket-only streaming service, an SSE streaming service, a service
-// mixing HTTP and JSON-RPC transports on the same methods, and a plain HTTP
-// service sharing the design.
+// service (required, optional, and generated request IDs, a no-payload method, a method
+// with no result, custom errors with JSON-RPC code mappings), an SSE streaming
+// service, a service mixing HTTP and JSON-RPC transports on the same methods,
+// and a plain HTTP service sharing the design.
 var JSONRPCKitchenSinkDSL = func() {
 	API("kitchen-sink", func() {
 		JSONRPC(func() {})
@@ -28,9 +27,8 @@ var JSONRPCKitchenSinkDSL = func() {
 				Required("id", "a", "b")
 			})
 			Result(func() {
-				ID("id", String, "Request ID")
 				Attribute("sum", Int)
-				Required("id", "sum")
+				Required("sum")
 			})
 			Error("overflow")
 			JSONRPC(func() {
@@ -45,26 +43,9 @@ var JSONRPCKitchenSinkDSL = func() {
 		})
 		Method("log", func() {
 			Payload(func() {
-				ID("id", String, "Optional request ID")
+				ID("id", String, "Optional caller-supplied request ID")
 				Attribute("message", String)
 				Required("message")
-			})
-			JSONRPC(func() {})
-		})
-	})
-
-	Service("Chat", func() {
-		JSONRPC(func() {
-			Path("/ws")
-		})
-		Method("echo", func() {
-			StreamingPayload(func() {
-				ID("id", String, "Request ID")
-				Attribute("msg", String)
-			})
-			StreamingResult(func() {
-				ID("id", String, "Request ID")
-				Attribute("echo", String)
 			})
 			JSONRPC(func() {})
 		})
@@ -91,6 +72,14 @@ var JSONRPCKitchenSinkDSL = func() {
 				})
 			})
 		})
+		Method("snapshot", func() {
+			Payload(func() {
+				ID("request_id", String, "Request ID")
+				Required("request_id")
+			})
+			Result(String)
+			JSONRPC(func() {})
+		})
 	})
 
 	Service("Mixed", func() {
@@ -104,9 +93,7 @@ var JSONRPCKitchenSinkDSL = func() {
 				Required("id", "key")
 			})
 			Result(func() {
-				ID("id", String, "Request ID")
 				Attribute("value", String)
-				Required("id")
 			})
 			HTTP(func() {
 				POST("/lookup")

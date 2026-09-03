@@ -1,32 +1,30 @@
+// This file renders gRPC servers and codecs per service; each returned file
+// receives imports from the complete endpoint set it renders.
 package codegen
 
 import (
 	"fmt"
-	"path"
 	"path/filepath"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
 )
 
-// ServerFiles returns all the server files for every gRPC service. The files
-// contain the server which implements the generated gRPC server interface and
-// encoders and decoders to transform protocol buffer types and gRPC metadata
-// into goa types and vice versa.
-func ServerFiles(genpkg string, services *ServicesData) []*codegen.File {
-	svcLen := len(services.Root.API.GRPC.Services)
+// serverFiles returns the planned server interfaces, encoders, and decoders.
+func serverFiles(services *ServicesData) []*codegen.File {
+	svcLen := len(services.servicePlans)
 	fw := make([]*codegen.File, 2*svcLen)
-	for i, svc := range services.Root.API.GRPC.Services {
-		fw[i] = serverFile(genpkg, svc, services)
+	for i, servicePlan := range services.servicePlans {
+		fw[i] = addEndpointImports(serverFile(servicePlan.expression, services), services)
 	}
-	for i, svc := range services.Root.API.GRPC.Services {
-		fw[i+svcLen] = serverEncodeDecode(genpkg, svc, services)
+	for i, servicePlan := range services.servicePlans {
+		fw[i+svcLen] = addEndpointImports(serverEncodeDecode(servicePlan.expression, services), services)
 	}
 	return fw
 }
 
 // serverFile returns the files defining the gRPC server.
-func serverFile(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData) *codegen.File {
+func serverFile(svc *expr.GRPCServiceExpr, services *ServicesData) *codegen.File {
 	var (
 		fpath    string
 		sections []*codegen.SectionTemplate
@@ -36,24 +34,8 @@ func serverFile(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData
 	{
 		svcName := data.Service.PathName
 		fpath = filepath.Join(codegen.Gendir, "grpc", svcName, "server", "server.go")
-		imports := []*codegen.ImportSpec{
-			{Path: "context"},
-			{Path: "errors"},
-			codegen.GoaImport(""),
-			codegen.GoaNamedImport("grpc", "goagrpc"),
-			{Path: "google.golang.org/grpc/codes"},
-			{Path: path.Join(genpkg, svcName), Name: data.Service.PkgName},
-			{Path: path.Join(genpkg, svcName, "views"), Name: data.Service.ViewsPkg},
-			{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: data.PkgName},
-		}
-		for _, e := range data.Endpoints {
-			if e.Request.StreamEnvelope != nil {
-				imports = append(imports, &codegen.ImportSpec{Path: "io"})
-				break
-			}
-		}
 		sections = []*codegen.SectionTemplate{
-			codegen.Header(svc.Name()+" gRPC server", "server", imports),
+			codegen.Header(svc.Name()+" gRPC server", "server", nil),
 			{
 				Name:   "server-struct",
 				Source: grpcTemplates.Read(grpcServerStructTypeT),
@@ -123,7 +105,7 @@ func serverFile(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData
 
 // serverEncodeDecode returns the file defining the gRPC server encoding and
 // decoding logic.
-func serverEncodeDecode(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData) *codegen.File {
+func serverEncodeDecode(svc *expr.GRPCServiceExpr, services *ServicesData) *codegen.File {
 	var (
 		fpath    string
 		sections []*codegen.SectionTemplate
@@ -134,35 +116,22 @@ func serverEncodeDecode(genpkg string, svc *expr.GRPCServiceExpr, services *Serv
 		svcName := data.Service.PathName
 		fpath = filepath.Join(codegen.Gendir, "grpc", svcName, "server", "encode_decode.go")
 		title := fmt.Sprintf("%s gRPC server encoders and decoders", svc.Name())
-		imports := []*codegen.ImportSpec{
-			{Path: "context"},
-			{Path: "strings"},
-			{Path: "strconv"},
-			{Path: "unicode/utf8"},
-			{Path: "google.golang.org/grpc"},
-			{Path: "google.golang.org/grpc/metadata"},
-			codegen.GoaImport(""),
-			codegen.GoaNamedImport("grpc", "goagrpc"),
-			{Path: path.Join(genpkg, svcName), Name: data.Service.PkgName},
-			{Path: path.Join(genpkg, svcName, "views"), Name: data.Service.ViewsPkg},
-			{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: data.PkgName},
-		}
-		sections = []*codegen.SectionTemplate{codegen.Header(title, "server", imports)}
+		sections = []*codegen.SectionTemplate{codegen.Header(title, "server", nil)}
 
 		for _, e := range data.Endpoints {
 			if e.Response.ServerConvert != nil {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:   "response-encoder",
-					Source: grpcTemplates.Read(grpcResponseEncoderT, grpcConvertTypeToStringP, "string_conversion"),
+					Source: grpcTemplates.Read(grpcResponseEncoderT, grpcTypeToStringExpressionP),
 					Data:   e,
 					FuncMap: map[string]any{
-						"typeConversionData":       typeConversionData,
+						"typeStringExpressionData": typeStringExpressionData,
 						"metadataEncodeDecodeData": metadataEncodeDecodeData,
 					},
 				})
 			}
 			if e.PayloadRef != "" {
-				fm := transTmplFuncs(svc, services)
+				fm := transTmplFuncs(data)
 				fm["isEmpty"] = isEmpty
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:    "request-decoder",
@@ -176,21 +145,22 @@ func serverEncodeDecode(genpkg string, svc *expr.GRPCServiceExpr, services *Serv
 	return &codegen.File{Path: fpath, SectionTemplates: sections}
 }
 
-func transTmplFuncs(s *expr.GRPCServiceExpr, services *ServicesData) map[string]any {
+// transTmplFuncs returns the type formatter used by metadata templates for one
+// saved service.
+func transTmplFuncs(service *ServiceData) map[string]any {
 	return map[string]any{
 		"goTypeRef": func(dt expr.DataType) string {
-			return services.ServicesData.Get(s.Name()).Scope.GoTypeRef(&expr.AttributeExpr{Type: dt})
+			return service.Scope.GoTypeRef(&expr.AttributeExpr{Type: dt})
 		},
 	}
 }
 
-// typeConversionData produces the template data suitable for executing the
-// "type_conversion" template.
-func typeConversionData(dt expr.DataType, varName, target string) map[string]any {
+// typeStringExpressionData describes one primitive value that generated code
+// converts to a metadata string.
+func typeStringExpressionData(dt expr.DataType, target string) map[string]any {
 	return map[string]any{
-		"Type":    dt,
-		"VarName": varName,
-		"Target":  target,
+		"Type":   dt,
+		"Target": target,
 	}
 }
 

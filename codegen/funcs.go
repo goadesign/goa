@@ -1,3 +1,6 @@
+// This file contains helpers shared by Goa's code generators. The helpers
+// receive names and types chosen while a generated file is planned and return
+// the Go source inserted into that file.
 package codegen
 
 import (
@@ -8,6 +11,7 @@ import (
 	"unicode"
 
 	"goa.design/goa/v3/expr"
+	"goa.design/goa/v3/internal/codegenname"
 )
 
 type (
@@ -28,6 +32,9 @@ type (
 		FieldPointer bool
 		// FieldType is the type of the field in the struct.
 		FieldType expr.DataType
+		// FieldTypeRef is the field's final Go type name in the generated file.
+		// Callers set it when converting an argument to a named primitive type.
+		FieldTypeRef string
 	}
 )
 
@@ -39,7 +46,7 @@ func TemplateFuncs() map[string]any {
 	}
 }
 
-// CommandLine return the command used to run this process.
+// CommandLine returns the command used to run this process.
 func CommandLine() string {
 	cmdl := "goa"
 	for _, arg := range os.Args {
@@ -115,84 +122,8 @@ func CamelCase(name string, firstUpper, acronym bool) string {
 		operation:  "camel",
 	}
 	return globalStringCache.getCached(key, func() string {
-		return camelCaseUncached(name, firstUpper, acronym)
+		return codegenname.CamelCase(name, firstUpper, acronym)
 	})
-}
-
-// camelCaseUncached is the original implementation without caching.
-func camelCaseUncached(name string, firstUpper, acronym bool) string {
-	runes := []rune(name)
-	// remove trailing invalid identifiers (makes code below simpler)
-	runes = removeTrailingInvalid(runes)
-
-	// all characters are invalid
-	if len(runes) == 0 {
-		return ""
-	}
-
-	w, i := 0, 0 // index of start of word, scan
-	for i+1 <= len(runes) {
-		eow := false // whether we hit the end of a word
-
-		// remove leading invalid identifiers
-		runes = removeInvalidAtIndex(i, runes)
-
-		switch {
-		case i+1 == len(runes):
-			eow = true
-		case !validIdentifier(runes[i]):
-			// get rid of it
-			runes = append(runes[:i], runes[i+1:]...)
-		case runes[i+1] == '_':
-			// underscore; shift the remainder forward over any run of underscores
-			eow = true
-			n := 1
-			for i+n+1 < len(runes) && runes[i+n+1] == '_' {
-				n++
-			}
-			copy(runes[i+1:], runes[i+n+1:])
-			runes = runes[:len(runes)-n]
-		case isLower(runes[i]) && !isLower(runes[i+1]):
-			// lower->non-lower
-			eow = true
-		}
-		i++
-		if !eow {
-			continue
-		}
-
-		// [w,i] is a word.
-		word := string(runes[w:i])
-		// is it one of our initialisms?
-		if u := strings.ToUpper(word); commonInitialisms[u] {
-			switch {
-			case firstUpper && acronym:
-				// u is already in upper case. Nothing to do here.
-			case firstUpper && !acronym:
-				u = expr.Title(strings.ToLower(u))
-			case w > 0 && !acronym:
-				u = expr.Title(strings.ToLower(u))
-			case w == 0:
-				u = strings.ToLower(u)
-			}
-
-			// All the common initialisms are ASCII,
-			// so we can replace the bytes exactly.
-			copy(runes[w:], []rune(u))
-		} else if w > 0 && strings.ToLower(word) == word {
-			// already all lowercase, and not the first word, so uppercase the first character.
-			runes[w] = unicode.ToUpper(runes[w])
-		} else if w == 0 && strings.ToLower(word) == word && firstUpper {
-			runes[w] = unicode.ToUpper(runes[w])
-		}
-		if w == 0 && !firstUpper {
-			runes[w] = unicode.ToLower(runes[w])
-		}
-		// advance to next word
-		w = i
-	}
-
-	return string(runes)
 }
 
 // SnakeCase produces the snake_case version of the given CamelCase string.
@@ -304,11 +235,10 @@ func InitStructFields(args []*InitArgData, targetVar, sourcePkg, targetPkg strin
 			code += fmt.Sprintf("%s.%s = %s%s\n", targetVar, arg.FieldName, deref, arg.Name)
 		case expr.IsPrimitive(arg.FieldType):
 			// aliased primitive type
-			pkg := targetPkg
-			if loc := UserTypeLocation(arg.FieldType); loc != nil {
-				pkg = loc.PackageName()
+			if arg.FieldTypeRef == "" {
+				return "", helpers, fmt.Errorf("initialize field %q: missing final field type reference", arg.FieldName)
 			}
-			t := scope.GoFullTypeRef(&expr.AttributeExpr{Type: arg.FieldType}, pkg)
+			t := arg.FieldTypeRef
 			cast := fmt.Sprintf("%s(%s)", t, arg.Name)
 			if arg.Pointer {
 				code += "if " + arg.Name + " != nil {\n"
@@ -370,78 +300,3 @@ func runeSpacePos(r []rune) int {
 	}
 	return len(r)
 }
-
-// isLower returns true if the character is considered a lower case character
-// when transforming word into CamelCase.
-func isLower(r rune) bool {
-	return unicode.IsDigit(r) || unicode.IsLower(r)
-}
-
-// validIdentifier returns true if the rune is a letter or number
-func validIdentifier(r rune) bool {
-	return unicode.IsLetter(r) || unicode.IsDigit(r)
-}
-
-// removeTrailingInvalid removes trailing invalid identifiers from runes.
-func removeTrailingInvalid(runes []rune) []rune {
-	valid := len(runes) - 1
-	for ; valid >= 0 && !validIdentifier(runes[valid]); valid-- {
-	}
-
-	return runes[0 : valid+1]
-}
-
-// removeInvalidAtIndex removes consecutive invalid identifiers from runes starting at index i.
-func removeInvalidAtIndex(i int, runes []rune) []rune {
-	valid := i
-	for ; valid < len(runes) && !validIdentifier(runes[valid]); valid++ {
-	}
-
-	return append(runes[:i], runes[valid:]...)
-}
-
-var (
-	// common words who need to keep their
-	commonInitialisms = map[string]bool{
-		"API":   true,
-		"ASCII": true,
-		"CPU":   true,
-		"CSS":   true,
-		"DNS":   true,
-		"EOF":   true,
-		"GUID":  true,
-		"HTML":  true,
-		"HTTP":  true,
-		"HTTPS": true,
-		"ID":    true,
-		"IP":    true,
-		"JMES":  true,
-		"JSON":  true,
-		"JWT":   true,
-		"LHS":   true,
-		"OK":    true,
-		"QPS":   true,
-		"RAM":   true,
-		"RHS":   true,
-		"RPC":   true,
-		"SDK":   true,
-		"SLA":   true,
-		"SMTP":  true,
-		"SQL":   true,
-		"SSH":   true,
-		"TCP":   true,
-		"TLS":   true,
-		"TTL":   true,
-		"UDP":   true,
-		"UI":    true,
-		"UID":   true,
-		"UUID":  true,
-		"URI":   true,
-		"URL":   true,
-		"UTF8":  true,
-		"VM":    true,
-		"XML":   true,
-		"XSRF":  true,
-		"XSS":   true,
-	}
-)

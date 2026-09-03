@@ -1,3 +1,5 @@
+// This file verifies that typed example owners make values independent of
+// unrelated draws while preserving member-local values in composite examples.
 package expr_test
 
 import (
@@ -27,11 +29,16 @@ func TestExampleOrderIndependence(t *testing.T) {
 	}
 
 	// Reference value computed on a fresh generator.
-	ref := newUT("Stable").Example(expr.NewRandom("test"))
+	stable := newUT("Stable")
+	ref := stable.Example(expr.NewExampleGenerator(expr.NewFakerRandomizerFactory("test")).At(
+		expr.UserTypeExampleIdentity(stable),
+	))
 	require.NotNil(t, ref)
 
 	// Same value after unrelated draws were consumed from the generator.
-	r := expr.NewRandom("test")
+	r := expr.NewExampleGenerator(expr.NewFakerRandomizerFactory("test")).At(
+		expr.MethodPayloadExampleIdentity(exampleMethod("noise", "draw")),
+	)
 	noise := make([]any, 0, 14)
 	for range 7 {
 		noise = append(noise, r.Int(), r.String())
@@ -40,8 +47,11 @@ func TestExampleOrderIndependence(t *testing.T) {
 	require.Equal(t, ref, newUT("Stable").Example(r))
 
 	// Same value after another type's example was computed first.
-	r = expr.NewRandom("test")
-	newUT("Other").Example(r)
+	r = expr.NewExampleGenerator(expr.NewFakerRandomizerFactory("test")).At(
+		expr.MethodPayloadExampleIdentity(exampleMethod("noise", "other")),
+	)
+	other := newUT("Other")
+	other.Example(r.At(expr.UserTypeExampleIdentity(other)))
 	require.Equal(t, ref, newUT("Stable").Example(r))
 }
 
@@ -57,8 +67,9 @@ func TestExampleFieldLocality(t *testing.T) {
 		{Name: "b", Attribute: &expr.AttributeExpr{Type: expr.Int}},
 		{Name: "c", Attribute: &expr.AttributeExpr{Type: expr.Boolean}},
 	}
-	exSmall := small.Example(expr.NewRandom("test")).(map[string]any)
-	exLarge := large.Example(expr.NewRandom("test")).(map[string]any)
+	owner := expr.MethodPayloadExampleIdentity(exampleMethod("locality", "object"))
+	exSmall := small.Example(expr.NewExampleGenerator(expr.NewFakerRandomizerFactory("test")).At(owner)).(map[string]any)
+	exLarge := large.Example(expr.NewExampleGenerator(expr.NewFakerRandomizerFactory("test")).At(owner)).(map[string]any)
 	require.Equal(t, exSmall["a"], exLarge["a"])
 	require.Equal(t, exSmall["b"], exLarge["b"])
 }
@@ -77,9 +88,8 @@ func TestExampleFieldAnchor(t *testing.T) {
 			},
 		},
 	}
-	parent := &expr.AttributeExpr{Type: ut}
-
-	composite := ut.Example(expr.NewRandom("test")).(map[string]any)
-	standalone := field.Example(expr.NewRandom("test").Field(parent, "id"))
+	identity := expr.UserTypeExampleIdentity(ut)
+	composite := ut.Example(expr.NewExampleGenerator(expr.NewFakerRandomizerFactory("test")).At(identity)).(map[string]any)
+	standalone := field.Example(expr.NewExampleGenerator(expr.NewFakerRandomizerFactory("test")).At(identity).Member("id"))
 	require.Equal(t, composite["id"], standalone)
 }

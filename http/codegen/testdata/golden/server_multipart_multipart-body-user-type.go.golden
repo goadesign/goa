@@ -1,4 +1,4 @@
 // ServiceMultipartUserTypeMethodMultipartUserTypeDecoderFunc is the type to
 // decode multipart request for the "ServiceMultipartUserType" service
 // "MethodMultipartUserType" endpoint.
-type ServiceMultipartUserTypeMethodMultipartUserTypeDecoderFunc func(*multipart.Reader, **servicemultipartusertype.MethodMultipartUserTypePayload) error
+type ServiceMultipartUserTypeMethodMultipartUserTypeDecoderFunc func(*multipart.Reader, *MethodMultipartUserTypeRequestBody) error

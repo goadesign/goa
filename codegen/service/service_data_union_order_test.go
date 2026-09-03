@@ -1,92 +1,70 @@
+// This file verifies retained service union declarations keep deterministic
+// names regardless of design traversal order.
 package service
 
 import (
+	"sort"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
-	"goa.design/goa/v3/expr"
+	"goa.design/goa/v3/dsl"
 )
 
-func TestCollectUnionTypesDeterministicAcrossObjectOrder(t *testing.T) {
-	sourceFromSignals := makeUnionForOrderTest("source",
-		"physical_point",
-		"synthetic_series",
-	)
-	sourceFromInputs := makeUnionForOrderTest("source",
-		"time_series",
-		"energy_rates",
-	)
+func TestServicePlanUnionNamesAreIndependentOfObjectOrder(t *testing.T) {
+	forward := retainedUnionNames(t, false)
+	reverse := retainedUnionNames(t, true)
 
-	forward := &expr.AttributeExpr{
-		Type: &expr.Object{
-			{
-				Name: "alpha",
-				Attribute: &expr.AttributeExpr{
-					Type: sourceFromSignals,
-				},
-			},
-			{
-				Name: "beta",
-				Attribute: &expr.AttributeExpr{
-					Type: sourceFromInputs,
-				},
-			},
-		},
-	}
-	reverse := &expr.AttributeExpr{
-		Type: &expr.Object{
-			{
-				Name: "beta",
-				Attribute: &expr.AttributeExpr{
-					Type: sourceFromInputs,
-				},
-			},
-			{
-				Name: "alpha",
-				Attribute: &expr.AttributeExpr{
-					Type: sourceFromSignals,
-				},
-			},
-		},
-	}
-
-	loc := &codegen.Location{
-		RelImportPath: "gen/service",
-	}
-	forwardNames := collectServiceUnionTypeNames(forward, loc)
-	reverseNames := collectServiceUnionTypeNames(reverse, loc)
-
-	require.Len(t, forwardNames, 2)
-	require.Equal(t, forwardNames, reverseNames)
+	require.Len(t, forward, 2)
+	require.Equal(t, forward, reverse)
 }
 
-func collectServiceUnionTypeNames(att *expr.AttributeExpr, loc *codegen.Location) map[string]string {
-	scope := codegen.NewNameScope()
-	seen := make(map[string]struct{})
-	unionByHash := make(map[string]*UnionTypeData)
-	collectUnionTypes(att, scope, loc, unionByHash, seen, false)
-
-	names := make(map[string]string, len(unionByHash))
-	for hash, data := range unionByHash {
-		names[hash] = data.Name
+// retainedUnionNames plans two same-base unions in the requested field order
+// and indexes their frozen names by their ordered branch contract.
+func retainedUnionNames(t *testing.T, reverse bool) map[string]string {
+	t.Helper()
+	root := codegen.RunDSL(t, func() {
+		signals := dsl.Type("Signals", func() {
+			dsl.Meta("struct:pkg:path", "types")
+			dsl.OneOf("source", func() {
+				dsl.TypeName("SignalSource")
+				dsl.Attribute("physical_point", dsl.String)
+				dsl.Attribute("synthetic_series", dsl.String)
+			})
+		})
+		inputs := dsl.Type("Inputs", func() {
+			dsl.Meta("struct:pkg:path", "types")
+			dsl.OneOf("source", func() {
+				dsl.TypeName("InputSource")
+				dsl.Attribute("time_series", dsl.String)
+				dsl.Attribute("energy_rates", dsl.String)
+			})
+		})
+		dsl.Service("test", func() {
+			dsl.Method("read", func() {
+				dsl.Payload(func() {
+					if reverse {
+						dsl.Attribute("beta", inputs)
+						dsl.Attribute("alpha", signals)
+					} else {
+						dsl.Attribute("alpha", signals)
+						dsl.Attribute("beta", inputs)
+					}
+				})
+			})
+		})
+	})
+	plan := mustServicePlan(t, root)
+	names := make(map[string]string)
+	for _, union := range plan.Services().Get("test").unions {
+		branches := make([]string, len(union.Fields))
+		for index, field := range union.Fields {
+			branches[index] = field.Name
+		}
+		sort.Strings(branches)
+		names[strings.Join(branches, ",")] = union.Name
 	}
 	return names
-}
-
-func makeUnionForOrderTest(typeName string, variants ...string) *expr.Union {
-	values := make([]*expr.NamedAttributeExpr, len(variants))
-	for i, variant := range variants {
-		values[i] = &expr.NamedAttributeExpr{
-			Name: variant,
-			Attribute: &expr.AttributeExpr{
-				Type: expr.String,
-			},
-		}
-	}
-	return &expr.Union{
-		TypeName: typeName,
-		Values:   values,
-	}
 }

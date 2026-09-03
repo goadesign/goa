@@ -157,10 +157,13 @@ const DefaultProtoc = expr.DefaultProtoc
 // that command. The given command will have additional arguments appended and
 // is expected to behave similar to protoc.
 //
-// Can be used to specify custom options or alternate implementations. The
-// default command can be specified using DefaultProtoc.
+// Goa always uses protoc-gen-go v1.36.12 and protoc-gen-go-grpc v1.6.2. It
+// finds and checks both programs before code generation starts, then passes
+// their absolute paths to the chosen compiler. A protoc:cmd value may add
+// other compiler options, but it cannot use --plugin to replace either of
+// these programs. The default compiler can be specified using DefaultProtoc.
 //
-//	// Use Go run to run a drop-in replacement for protoc.
+//	// Use Go run to run another compiler that accepts protoc arguments.
 //	var _ = API("myapi", func() {
 //	    Meta("protoc:cmd", "go", "run", "github.com/duckbrain/goprotoc")
 //	})

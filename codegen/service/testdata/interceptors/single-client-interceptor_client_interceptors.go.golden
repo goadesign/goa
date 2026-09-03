@@ -3,18 +3,24 @@
 // is sent to the server. The implementation is responsible for calling next to
 // complete the request.
 type ClientInterceptors interface {
-	Tracing(ctx context.Context, info *TracingInfo, next goa.Endpoint) (any, error)
+	Tracing(ctx context.Context, info TracingInfo, next goa.Endpoint) (any, error)
 }
 
 // Access interfaces for interceptor payloads and results
 type (
-	// TracingInfo provides metadata about the current interception.
-	// It includes service name, method name, and access to the endpoint.
-	TracingInfo struct {
-		service    string
-		method     string
-		callType   goa.InterceptorCallType
+	// TracingInfo describes the service call currently passed to the interceptor.
+	TracingInfo interface {
+		goa.InterceptorInfo
+	}
+)
+
+// Types used to provide information about each service call
+type (
+	tracingMethodInfo struct {
 		rawPayload any
+	}
+	tracingMethodClientUnaryInfo struct {
+		tracingMethodInfo
 	}
 )
 
@@ -22,29 +28,29 @@ type (
 // interceptors defined in the design.
 func WrapMethodClientEndpoint(endpoint goa.Endpoint, i ClientInterceptors) goa.Endpoint {
 	if i != nil {
-		endpoint = wrapClientMethodtracing(endpoint, i)
+		endpoint = wrapClientMethodTracing(endpoint, i)
 	}
 	return endpoint
 }
 
-// Public accessor methods for Info types
+// Methods that provide information about each service call
 
-// Service returns the name of the service handling the request.
-func (info *TracingInfo) Service() string {
-	return info.service
+// Service returns the service selected for this interceptor call.
+func (info *tracingMethodInfo) Service() string {
+	return "SingleClientInterceptor"
 }
 
-// Method returns the name of the method handling the request.
-func (info *TracingInfo) Method() string {
-	return info.method
+// Method returns the method selected for this interceptor call.
+func (info *tracingMethodInfo) Method() string {
+	return "Method"
 }
 
-// CallType returns the type of call the interceptor is handling.
-func (info *TracingInfo) CallType() goa.InterceptorCallType {
-	return info.callType
-}
-
-// RawPayload returns the raw payload of the request.
-func (info *TracingInfo) RawPayload() any {
+// RawPayload returns the payload supplied for this interceptor call.
+func (info *tracingMethodInfo) RawPayload() any {
 	return info.rawPayload
+}
+
+// CallType reports that this is a client endpoint call.
+func (info *tracingMethodClientUnaryInfo) CallType() goa.InterceptorCallType {
+	return goa.InterceptorUnary
 }

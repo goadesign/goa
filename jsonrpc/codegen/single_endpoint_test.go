@@ -25,7 +25,6 @@ func TestJSONRPCSingleEndpoint(t *testing.T) {
 						dsl.Attribute("b", dsl.Int)
 					})
 					dsl.Result(func() {
-						dsl.ID("id")
 						dsl.Attribute("sum", dsl.Int)
 					})
 					dsl.JSONRPC(func() {})
@@ -38,7 +37,6 @@ func TestJSONRPCSingleEndpoint(t *testing.T) {
 						dsl.Attribute("b", dsl.Int)
 					})
 					dsl.Result(func() {
-						dsl.ID("id")
 						dsl.Attribute("diff", dsl.Int)
 					})
 					dsl.JSONRPC(func() {})
@@ -96,7 +94,6 @@ func TestJSONRPCSingleEndpoint(t *testing.T) {
 						dsl.Attribute("b", dsl.Int)
 					})
 					dsl.Result(func() {
-						dsl.ID("id")
 						dsl.Attribute("product", dsl.Int)
 					})
 					dsl.JSONRPC(func() {}) // Should auto-enable service
@@ -109,44 +106,5 @@ func TestJSONRPCSingleEndpoint(t *testing.T) {
 		require.NotNil(t, svc)
 		require.NotNil(t, svc.Meta)
 		assert.NotNil(t, svc.Meta["jsonrpc:service"], "service should be auto-marked as JSON-RPC")
-	})
-
-	t.Run("WebSocket forces GET", func(t *testing.T) {
-		root := expr.RunDSL(t, func() {
-			dsl.Service("stream", func() {
-				dsl.JSONRPC(func() {})
-
-				dsl.Method("echo", func() {
-					dsl.StreamingPayload(func() {
-						dsl.ID("id")
-						dsl.Attribute("msg", dsl.String)
-					})
-					dsl.StreamingResult(func() {
-						dsl.ID("id")
-						dsl.Attribute("echo", dsl.String)
-					})
-					dsl.JSONRPC(func() {})
-				})
-			})
-		})
-
-		// Check route method
-		httpSvc := root.API.JSONRPC.Service("stream")
-		require.NotNil(t, httpSvc)
-
-		// Prepare the service to create routes
-		httpSvc.Prepare()
-
-		// Find first endpoint with route
-		var route *expr.RouteExpr
-		for _, e := range httpSvc.HTTPEndpoints {
-			if e.IsJSONRPC() && len(e.Routes) > 0 {
-				route = e.Routes[0]
-				break
-			}
-		}
-
-		require.NotNil(t, route)
-		assert.Equal(t, "GET", route.Method, "WebSocket should force GET method")
 	})
 }

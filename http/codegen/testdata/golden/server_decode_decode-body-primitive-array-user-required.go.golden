@@ -21,7 +21,7 @@ func DecodeMethodBodyPrimitiveArrayUserRequiredRequest(mux goahttp.Muxer, decode
 		}
 		for _, e := range body {
 			if e != nil {
-				if err2 := ValidatePayloadTypeRequestBody(e); err2 != nil {
+				if err2 := validatePayloadTypeRequestBody(e, "body[*]"); err2 != nil {
 					err = goa.MergeErrors(err, err2)
 				}
 			}

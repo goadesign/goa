@@ -8,8 +8,8 @@
 package server
 
 import (
-	testservice "/test_service"
 	"context"
+	testservice "generated.local/gen/test_service"
 	"github.com/gorilla/websocket"
 	goahttp "goa.design/goa/v3/http"
 	goa "goa.design/goa/v3/pkg"
@@ -31,6 +31,11 @@ type BidirectionalWithViewsServerStream struct {
 	once sync.Once
 	// upgradeErr is the error returned by the websocket upgrade attempt.
 	upgradeErr error
+	// closeOnce makes repeated Close calls return the first close result without
+	// writing again.
+	closeOnce sync.Once
+	// closeErr is the result of the first Close call.
+	closeErr error
 	// upgrader is the websocket connection upgrader.
 	upgrader goahttp.Upgrader
 	// configurer is the websocket connection configurer.
@@ -44,9 +49,6 @@ type BidirectionalWithViewsServerStream struct {
 	r *http.Request
 	// conn is the underlying websocket connection.
 	conn *websocket.Conn
-	// view is the view to render testservice.Response result type before sending
-	// to the websocket connection.
-	view string
 }
 
 // NewConnConfigurer initializes the websocket connection configurer function
@@ -65,10 +67,8 @@ func (s *BidirectionalWithViewsServerStream) Send(v *testservice.Response) error
 	// upgrade is done here so that authorization logic in the endpoint is executed
 	// before calling the actual service method which may call Send().
 	s.once.Do(func() {
-		respHdr := make(http.Header)
-		respHdr.Add("goa-view", s.view)
 		var conn *websocket.Conn
-		conn, err = s.upgrader.Upgrade(s.w, s.r, respHdr)
+		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
 		if err != nil {
 			s.upgradeErr = err
 			return
@@ -81,14 +81,8 @@ func (s *BidirectionalWithViewsServerStream) Send(v *testservice.Response) error
 	if s.upgradeErr != nil {
 		return s.upgradeErr
 	}
-	res := testservice.NewViewedResponse(v, s.view)
-	var body any
-	switch s.view {
-	case "default", "":
-		body = NewBidirectionalWithViewsResponseBody(res.Projected)
-	case "minimal":
-		body = NewBidirectionalWithViewsResponseBodyMinimal(res.Projected)
-	}
+	res := testservice.NewViewedResponse(v, "minimal")
+	body := NewBidirectionalWithViewsResponseBodyMinimal(res.Projected)
 	return s.conn.WriteJSON(body)
 }
 
@@ -146,9 +140,33 @@ func (s *BidirectionalWithViewsServerStream) RecvWithContext(ctx context.Context
 
 // Close closes the "BidirectionalWithViews" endpoint websocket connection.
 func (s *BidirectionalWithViewsServerStream) Close() error {
+	s.closeOnce.Do(func() {
+		s.closeErr = s.close()
+	})
+	return s.closeErr
+}
+
+// close opens the websocket connection when needed, sends its normal close
+// message, and closes it.
+func (s *BidirectionalWithViewsServerStream) close() error {
 	var err error
-	if s.conn == nil {
-		return nil
+	// Upgrade the HTTP connection to a websocket connection only once. Connection
+	// upgrade is done here so that authorization logic in the endpoint is executed
+	// before calling the actual service method which may call Close().
+	s.once.Do(func() {
+		var conn *websocket.Conn
+		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
+		if err != nil {
+			s.upgradeErr = err
+			return
+		}
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
+		}
+		s.conn = conn
+	})
+	if s.upgradeErr != nil {
+		return s.upgradeErr
 	}
 	if err = s.conn.WriteControl(
 		websocket.CloseMessage,
@@ -158,10 +176,4 @@ func (s *BidirectionalWithViewsServerStream) Close() error {
 		return err
 	}
 	return s.conn.Close()
-}
-
-// SetView sets the view to render the testservice.Response type before sending
-// to the "BidirectionalWithViews" endpoint websocket connection.
-func (s *BidirectionalWithViewsServerStream) SetView(view string) {
-	s.view = view
 }

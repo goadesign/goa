@@ -1,87 +1,135 @@
+// This file collects example service, server, and client files from the copied
+// server data and the package names already chosen for this generation.
 package generator
 
 import (
+	"fmt"
+
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/example"
 	"goa.design/goa/v3/codegen/service"
 	"goa.design/goa/v3/eval"
-	"goa.design/goa/v3/expr"
 	grpccodegen "goa.design/goa/v3/grpc/codegen"
 	httpcodegen "goa.design/goa/v3/http/codegen"
 	jsonrpccodegen "goa.design/goa/v3/jsonrpc/codegen"
 )
 
-// Example iterates through the roots and returns files that implement an
-// example service, server, and client.
+// Example returns example service, server, and client files for roots.
 func Example(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
+	return runStandaloneGenerator(genpkg, roots, exampleGeneratorFactory)
+}
+
+// exampleFiles returns the service, server, and client examples selected for
+// this generation.
+func exampleFiles(plan *Plan) ([]*codegen.File, error) {
 	var files []*codegen.File
-	for _, root := range roots {
-		r, ok := root.(*expr.RootExpr)
-		if !ok {
-			continue // could be a plugin root expression
-		}
-
-		// Create service data
-		services := service.NewServicesData(r)
-		for _, s := range r.Services {
-			service.SetUserTypeImports(genpkg, services.Get(s.Name))
-		}
-
+	for _, entry := range plan.example {
+		services := entry.service.Services()
 		// example service implementation
-		if fs := service.ExampleServiceFiles(genpkg, r, services); len(fs) != 0 {
+		if fs := service.ExampleServiceFiles(entry.service); len(fs) != 0 {
 			files = append(files, fs...)
 		}
 
 		// example interceptors implementation
-		if fs := service.ExampleInterceptorsFiles(genpkg, r, services); len(fs) != 0 {
+		if fs := service.ExampleInterceptorsFiles(entry.service); len(fs) != 0 {
 			files = append(files, fs...)
 		}
 
 		// server main
-		if fs := example.ServerFiles(genpkg, r, services); len(fs) != 0 {
+		if fs := example.ServerFiles(entry.root, services); len(fs) != 0 {
 			files = append(files, fs...)
 		}
 
 		// CLI main
-		if fs := example.CLIFiles(genpkg, r); len(fs) != 0 {
+		if fs := example.CLIFiles(entry.root); len(fs) != 0 {
 			files = append(files, fs...)
 		}
 
 		// HTTP
-		if len(r.API.HTTP.Services) > 0 {
-			httpServices := httpcodegen.NewServicesData(services, r.API.HTTP)
-			if fs := httpcodegen.ExampleServerFiles(genpkg, httpServices); len(fs) != 0 {
-				files = append(files, fs...)
+		if entry.http != nil {
+			if entry.jsonrpc == nil {
+				if fs := entry.http.ServerFiles(); len(fs) != 0 {
+					files = append(files, fs...)
+				}
 			}
-			if fs := httpcodegen.ExampleCLIFiles(genpkg, httpServices); len(fs) != 0 {
+			if fs := entry.http.CLIFiles(); len(fs) != 0 {
 				files = append(files, fs...)
 			}
 		}
 
 		// JSON-RPC
-		if len(r.API.JSONRPC.Services) > 0 {
-			jsonrpcServices := httpcodegen.NewJSONRPCServicesData(services, &r.API.JSONRPC.HTTPExpr)
-			if fs := jsonrpccodegen.ExampleServerFiles(genpkg, jsonrpcServices, files); len(fs) > 0 {
+		if entry.jsonrpc != nil {
+			if fs := entry.jsonrpc.ServerFiles(); len(fs) > 0 {
 				files = append(files, fs...)
 			}
-			if fs := httpcodegen.ExampleCLIFiles(genpkg, jsonrpcServices); len(fs) > 0 {
+			if fs := entry.jsonrpc.CLIFiles(); len(fs) > 0 {
 				files = append(files, fs...)
 			}
 		}
 
 		// GRPC
-		if len(r.API.GRPC.Services) > 0 {
-			grpcServices := grpccodegen.NewServicesData(services)
-			if fs := grpccodegen.ExampleServerFiles(genpkg, grpcServices); len(fs) > 0 {
+		if entry.grpc != nil {
+			if fs := entry.grpc.ServerFiles(); len(fs) > 0 {
 				files = append(files, fs...)
 			}
-			if fs := grpccodegen.ExampleCLIFiles(genpkg, grpcServices); len(fs) > 0 {
+			if fs := entry.grpc.CLIFiles(); len(fs) > 0 {
 				files = append(files, fs...)
 			}
 		}
-
-		// Add imports defined via struct:field:type
-		addServicesMetaTypeImports(files, services, r.Services)
 	}
 	return files, nil
+}
+
+// planExampleData copies the server information used by example programs and
+// prepares the selected transports.
+func planExampleData(plan *Plan) error {
+	if err := planTransportData(plan); err != nil {
+		return err
+	}
+	roots := serviceRoots(plan.preparedRoots)
+	services := make([]*service.Plan, len(roots))
+	for index, root := range roots {
+		services[index] = plan.Service(root)
+	}
+	examplePlan, err := example.NewPlan(plan.Generation(), services...)
+	if err != nil {
+		return err
+	}
+	plan.example = make([]*examplePlanEntry, len(roots))
+	for index, root := range roots {
+		var httpExamples *httpcodegen.ExamplePlan
+		if transport := plan.http[root]; transport != nil {
+			httpExamples, err = httpcodegen.NewExamplePlan(transport, examplePlan)
+			if err != nil {
+				return err
+			}
+		}
+		var jsonrpcExamples *jsonrpccodegen.ExamplePlan
+		if transport := plan.jsonrpc[root]; transport != nil {
+			jsonrpcExamples, err = jsonrpccodegen.NewExamplePlan(transport, examplePlan)
+			if err != nil {
+				return err
+			}
+		}
+		var grpcExamples *grpccodegen.ExamplePlan
+		if transport := plan.grpc[root]; transport != nil {
+			grpcExamples, err = grpccodegen.NewExamplePlan(transport, examplePlan)
+			if err != nil {
+				return err
+			}
+		}
+		rootData, ok := examplePlan.Root(services[index])
+		if !ok {
+			return fmt.Errorf("example plan does not contain server data for API %q", root.API.Name)
+		}
+		plan.example[index] = &examplePlanEntry{
+			source:  root,
+			root:    rootData,
+			service: services[index],
+			http:    httpExamples,
+			jsonrpc: jsonrpcExamples,
+			grpc:    grpcExamples,
+		}
+	}
+	return nil
 }

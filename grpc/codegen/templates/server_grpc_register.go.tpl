@@ -17,14 +17,14 @@
 
 	// Register the servers.
 	{{- range .Services }}
-	{{ .PkgName }}.Register{{ goify .Service.VarName true }}Server(srv, {{ .Service.VarName }}Server)
+	{{ .ServerProtobufPkgName }}.{{ .RegisterFunction }}(srv, {{ .Service.VarName }}Server)
 	{{- end }}
 
-	for svc, info := range srv.GetServiceInfo() {
-		for _, m := range info.Methods {
-			log.Printf(ctx, "serving gRPC method %s", svc + "/" + m.Name)
-		}
-	}
+	{{- range .Services }}
+		{{- range .Endpoints }}
+	log.Printf(ctx, "serving gRPC method %s", {{ printf "%q" .FullMethodName }})
+		{{- end }}
+	{{- end }}
 
 	// Register the server reflection service on the server.
 	// See https://grpc.github.io/grpc/core/md_doc_server-reflection.html.

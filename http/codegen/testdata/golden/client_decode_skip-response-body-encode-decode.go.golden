@@ -1,0 +1,36 @@
+// DecodeMethodSkipResponseBodyEncodeDecodeResponse returns a decoder for
+// responses returned by the ServiceSkipResponseBodyEncodeDecode
+// MethodSkipResponseBodyEncodeDecode endpoint. restoreBody controls whether
+// the response body should be restored after having been read.
+// DecodeMethodSkipResponseBodyEncodeDecodeResponse may return the following
+// errors:
+//   - "internal_error" (type *goa.ServiceError): http.StatusInternalServerError
+//   - error: internal error
+func DecodeMethodSkipResponseBodyEncodeDecodeResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (any, error) {
+		switch resp.StatusCode {
+		case http.StatusOK:
+			return nil, nil
+		case http.StatusInternalServerError:
+			var (
+				body MethodSkipResponseBodyEncodeDecodeInternalErrorResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("ServiceSkipResponseBodyEncodeDecode", "MethodSkipResponseBodyEncodeDecode", err)
+			}
+			err = ValidateMethodSkipResponseBodyEncodeDecodeInternalErrorResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("ServiceSkipResponseBodyEncodeDecode", "MethodSkipResponseBodyEncodeDecode", err)
+			}
+			return nil, NewMethodSkipResponseBodyEncodeDecodeInternalError(&body)
+		default:
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("ServiceSkipResponseBodyEncodeDecode", "MethodSkipResponseBodyEncodeDecode", err)
+			}
+			return nil, goahttp.ErrInvalidResponse("ServiceSkipResponseBodyEncodeDecode", "MethodSkipResponseBodyEncodeDecode", resp.StatusCode, string(body))
+		}
+	}
+}

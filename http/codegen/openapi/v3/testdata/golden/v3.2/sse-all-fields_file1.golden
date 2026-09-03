@@ -18,17 +18,8 @@ paths:
                   in: header
                   schema:
                     type: string
-                    example: Natus magni voluptates consequatur suscipit.
-                  example: Non sed saepe voluptatem.
-            requestBody:
-                description: Request body for SSEAllFieldsMethod.
-                required: true
-                content:
-                    application/json:
-                        schema:
-                            $ref: '#/components/schemas/SSEAllFieldsMethodRequestBody'
-                        example:
-                            id: Ducimus vel.
+                    example: request
+                  example: request
             responses:
                 "200":
                     description: OK response.
@@ -58,19 +49,8 @@ paths:
                                         type: integer
                                         example: 3000
                                         format: int64
-                                required:
-                                    - data
 components:
     schemas:
-        SSEAllFieldsMethodRequestBody:
-            type: object
-            properties:
-                id:
-                    type: string
-                    example: Ducimus vel.
-            description: Request body for SSEAllFieldsMethod.
-            example:
-                id: Ducimus vel.
         SSEAllFieldsMethodResponseBody:
             type: object
             properties:

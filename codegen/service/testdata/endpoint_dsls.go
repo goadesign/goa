@@ -138,6 +138,32 @@ var MixedResultsEndpointDSL = func() {
 	})
 }
 
+var MixedResultsWithViewsEndpointDSL = func() {
+	var ResultType = ResultType("application/vnd.mixed-result", func() {
+		TypeName("MixedResult")
+		Attributes(func() {
+			Attribute("id", String)
+			Attribute("detail", String)
+		})
+		View("default", func() {
+			Attribute("id")
+		})
+		View("detailed", func() {
+			Attribute("id")
+			Attribute("detail")
+		})
+	})
+	var EventType = Type("MixedEvent", func() {
+		Attribute("message", String)
+	})
+	Service("MixedResultsWithViewsEndpoint", func() {
+		Method("MixedResultsWithViewsMethod", func() {
+			Result(ResultType)
+			StreamingResult(EventType)
+		})
+	})
+}
+
 var StreamingPayloadEndpointDSL = func() {
 	var AType = Type("AType", func() {
 		Attribute("a", String)

@@ -1,0 +1,57 @@
+// NewProtoResultTypeCollection builds
+// *service_client_streaming_result_type_collection_with_explicit_viewpb.ResultTypeCollection
+// from
+// serviceclientstreamingresulttypecollectionwithexplicitviewviews.ResultTypeCollectionView.
+func NewProtoResultTypeCollection(result serviceclientstreamingresulttypecollectionwithexplicitviewviews.ResultTypeCollectionView) *service_client_streaming_result_type_collection_with_explicit_viewpb.ResultTypeCollection {
+	message := &service_client_streaming_result_type_collection_with_explicit_viewpb.ResultTypeCollection{}
+	message.Field = make([]*service_client_streaming_result_type_collection_with_explicit_viewpb.ResultType, len(result))
+	for i, val := range result {
+		message.Field[i] = &service_client_streaming_result_type_collection_with_explicit_viewpb.ResultType{}
+		if val.IntField != nil {
+			intField := int32(*val.IntField)
+			message.Field[i].IntField = &intField
+		}
+	}
+	return message
+}
+
+// NewMethodClientStreamingResultTypeCollectionWithExplicitViewStreamingRequestMethodClientStreamingResultTypeCollectionWithExplicitViewStreamingRequest
+// builds string from
+// *service_client_streaming_result_type_collection_with_explicit_viewpb.MethodClientStreamingResultTypeCollectionWithExplicitViewStreamingRequest.
+func NewMethodClientStreamingResultTypeCollectionWithExplicitViewStreamingRequestMethodClientStreamingResultTypeCollectionWithExplicitViewStreamingRequest(v *service_client_streaming_result_type_collection_with_explicit_viewpb.MethodClientStreamingResultTypeCollectionWithExplicitViewStreamingRequest) string {
+	spayload := *v.Field
+	return spayload
+}
+
+// EncodeMethodClientStreamingResultTypeCollectionWithExplicitViewResponse
+// encodes responses from the
+// "ServiceClientStreamingResultTypeCollectionWithExplicitView" service
+// "MethodClientStreamingResultTypeCollectionWithExplicitView" endpoint.
+func EncodeMethodClientStreamingResultTypeCollectionWithExplicitViewResponse(ctx context.Context, v any, hdr, trlr *metadata.MD) (any, error) {
+	vres, ok := v.(serviceclientstreamingresulttypecollectionwithexplicitviewviews.ResultTypeCollection)
+	if !ok {
+		return nil, goagrpc.ErrInvalidType("ServiceClientStreamingResultTypeCollectionWithExplicitView", "MethodClientStreamingResultTypeCollectionWithExplicitView", "serviceclientstreamingresulttypecollectionwithexplicitviewviews.ResultTypeCollection", v)
+	}
+	result := vres.Projected
+	resp := NewProtoResultTypeCollection(result)
+	(*hdr).Append("goa-view", "tiny")
+	return resp, nil
+}
+
+// SendAndClose streams instances of
+// "service_client_streaming_result_type_collection_with_explicit_viewpb.ResultTypeCollection"
+// to the "MethodClientStreamingResultTypeCollectionWithExplicitView" endpoint
+// gRPC stream.
+func (s *MethodClientStreamingResultTypeCollectionWithExplicitViewServerStream) SendAndClose(res serviceclientstreamingresulttypecollectionwithexplicitview.ResultTypeCollection) error {
+	vres := serviceclientstreamingresulttypecollectionwithexplicitview.NewViewedResultTypeCollection(res, "tiny")
+	v := NewProtoResultTypeCollection(vres.Projected)
+	return s.stream.SendAndClose(v)
+}
+
+// SendAndCloseWithContext streams instances of
+// "service_client_streaming_result_type_collection_with_explicit_viewpb.ResultTypeCollection"
+// to the "MethodClientStreamingResultTypeCollectionWithExplicitView" endpoint
+// gRPC stream with context.
+func (s *MethodClientStreamingResultTypeCollectionWithExplicitViewServerStream) SendAndCloseWithContext(ctx context.Context, res serviceclientstreamingresulttypecollectionwithexplicitview.ResultTypeCollection) error {
+	return s.SendAndClose(res)
+}

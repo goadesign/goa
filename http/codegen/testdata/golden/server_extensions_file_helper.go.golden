@@ -1,0 +1,6 @@
+// MountAssets configures the mux to serve GET request made to "/assets".
+func MountAssets(mux goahttp.Muxer, h http.Handler) {
+	h = First(Second(h))
+	mux.Handle("GET", "/assets/", h.ServeHTTP)
+	mux.Handle("GET", "/assets/{*path}", h.ServeHTTP)
+}

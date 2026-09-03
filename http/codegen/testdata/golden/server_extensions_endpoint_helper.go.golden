@@ -1,0 +1,12 @@
+// MountReadHandler configures the mux to serve the "Files" service "Read"
+// endpoint.
+func MountReadHandler(mux goahttp.Muxer, h http.Handler) {
+	h = First(Second(wrapEndpoint(h)))
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("GET", "/items/{id}", f)
+}

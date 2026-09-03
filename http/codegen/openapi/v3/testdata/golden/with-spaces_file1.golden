@@ -20,7 +20,7 @@ paths:
                         schema:
                             $ref: '#/components/schemas/Bar'
                         example:
-                            string: ""
+                            string: item
             responses:
                 "200":
                     description: OK response.
@@ -28,24 +28,25 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/GoaFoobar'
-                            example:
-                                bar:
-                                    - string: ""
-                                    - string: ""
-                                    - string: ""
-                                foo: ""
+                            examples:
+                                default:
+                                    summary: default
+                                    value:
+                                        bar:
+                                            - string: item
+                                        foo: ""
                 "404":
                     description: Not Found response.
                     content:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/GoaFoobar'
-                            example:
-                                bar:
-                                    - string: ""
-                                    - string: ""
-                                    - string: ""
-                                foo: ""
+                            examples:
+                                default:
+                                    summary: default
+                                    value:
+                                        bar:
+                                            - string: item
 components:
     schemas:
         Bar:
@@ -56,7 +57,7 @@ components:
                     example: ""
             description: Request body for test endpoint.
             example:
-                string: ""
+                string: item
         GoaFoobar:
             type: object
             properties:
@@ -65,15 +66,13 @@ components:
                     items:
                         $ref: '#/components/schemas/Bar'
                     example:
-                        - string: ""
-                        - string: ""
+                        - string: item
                 foo:
                     type: string
                     example: ""
             example:
                 bar:
-                    - string: ""
-                    - string: ""
+                    - string: item
                 foo: ""
 tags:
     - name: test service

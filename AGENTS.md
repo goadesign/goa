@@ -55,10 +55,36 @@ No commented-out code—delete dead code.
 
 ### Codegen Implementation
 
+- **Critical — finish work during generation**: Use the complete design, generation plan,
+  and Go templates to decide everything that is known before the generated
+  program runs. Select branches, names, types, imports, field paths, helper
+  calls, and emitted files while generating source. Templates must write only
+  the selected code. Do not make generated programs inspect generated type
+  shapes, parse generator-made names, carry generator mode flags, or execute
+  branches whose answer was already known. Runtime code should contain only
+  logic that depends on actual runtime values. When a runtime value is truly
+  required, keep that input narrow and specialize all surrounding code during
+  generation.
 - **Use NameScope helpers** for type references: `GoTypeRef`, `GoFullTypeRef`, `GoTypeName`. Never concatenate strings for types.
 - Let Goa decide pointer/value semantics. Do not force `pointer=true` except in transport validation.
 - **Keep helper visibility minimal**: If logic is shared only inside one codegen area, keep it package-private or move it under an `internal` package. Do not export helpers from a parent package just to share them across sibling generators.
 - **Avoid pass-through wrappers**: When two helper functions differ only by forwarding arguments or hard-coding `nil`, collapse them into a single implementation instead of adding an extra layer.
+- **Generated packages own names**: When several services or plugins write to
+  one Go package, collect every package-level name before rendering and then
+  make those names final. A declaration and every HTTP, gRPC, or JSON-RPC use
+  of it must read the same name record. Do not give each service or plugin a
+  separate name scope for the same package, and do not add declarations after
+  names become final.
+- **Keep identity typed and explicit**: Do not hide a declaration's kind,
+  package, or use in a decorated name or a made-up string map key. Do not
+  change an expression's `Hash` behavior to solve a generation problem. Pass a
+  typed identifier where the generated declaration is named.
+- **Trace the complete lifecycle**: Before changing relocated types, union
+  naming, generation roots, plugins, or file merging, follow the declaration
+  from the evaluated design through service analysis, its generated Go
+  package, the emitted service code, HTTP and gRPC uses, plugin changes, and
+  the final file merge. A service-only rendering test is not enough.
+  See [`codegen/ARCHITECTURE.md`](codegen/ARCHITECTURE.md).
 
 ### Documentation
 

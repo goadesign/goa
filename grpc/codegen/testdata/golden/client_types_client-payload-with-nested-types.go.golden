@@ -1,67 +1,21 @@
-// NewProtoMethodPayloadWithNestedTypesRequest builds the gRPC request type
-// from the payload of the "MethodPayloadWithNestedTypes" endpoint of the
-// "ServicePayloadWithNestedTypes" service.
+// NewProtoMethodPayloadWithNestedTypesRequest builds
+// *service_payload_with_nested_typespb.MethodPayloadWithNestedTypesRequest
+// from *servicepayloadwithnestedtypes.MethodPayloadWithNestedTypesPayload.
 func NewProtoMethodPayloadWithNestedTypesRequest(payload *servicepayloadwithnestedtypes.MethodPayloadWithNestedTypesPayload) *service_payload_with_nested_typespb.MethodPayloadWithNestedTypesRequest {
 	message := &service_payload_with_nested_typespb.MethodPayloadWithNestedTypesRequest{}
 	if payload.AParams != nil {
-		message.AParams = svcServicepayloadwithnestedtypesAParamsToServicePayloadWithNestedTypespbAParams(payload.AParams)
+		message.AParams = transformAParamsToProtoAParams(payload.AParams)
 	}
 	if payload.BParams != nil {
-		message.BParams = svcServicepayloadwithnestedtypesBParamsToServicePayloadWithNestedTypespbBParams(payload.BParams)
+		message.BParams = transformBParamsToProtoBParams(payload.BParams)
 	}
 	return message
 }
 
-// protobufServicePayloadWithNestedTypespbAParamsToServicepayloadwithnestedtypesAParams
-// builds a value of type *servicepayloadwithnestedtypes.AParams from a value
-// of type *service_payload_with_nested_typespb.AParams.
-func protobufServicePayloadWithNestedTypespbAParamsToServicepayloadwithnestedtypesAParams(v *service_payload_with_nested_typespb.AParams) *servicepayloadwithnestedtypes.AParams {
-	if v == nil {
-		return nil
-	}
-	res := &servicepayloadwithnestedtypes.AParams{}
-	if v.A != nil {
-		res.A = make(map[string][]string, len(v.A))
-		for key, val := range v.A {
-			tk := key
-			tv := make([]string, len(val.Field))
-			for i, val := range val.Field {
-				tv[i] = val
-			}
-			res.A[tk] = tv
-		}
-	}
-
-	return res
-}
-
-// protobufServicePayloadWithNestedTypespbBParamsToServicepayloadwithnestedtypesBParams
-// builds a value of type *servicepayloadwithnestedtypes.BParams from a value
-// of type *service_payload_with_nested_typespb.BParams.
-func protobufServicePayloadWithNestedTypespbBParamsToServicepayloadwithnestedtypesBParams(v *service_payload_with_nested_typespb.BParams) *servicepayloadwithnestedtypes.BParams {
-	if v == nil {
-		return nil
-	}
-	res := &servicepayloadwithnestedtypes.BParams{}
-	if v.B != nil {
-		res.B = make(map[string]string, len(v.B))
-		for key, val := range v.B {
-			tk := key
-			tv := val
-			res.B[tk] = tv
-		}
-	}
-
-	return res
-}
-
-// svcServicepayloadwithnestedtypesAParamsToServicePayloadWithNestedTypespbAParams
-// builds a value of type *service_payload_with_nested_typespb.AParams from a
-// value of type *servicepayloadwithnestedtypes.AParams.
-func svcServicepayloadwithnestedtypesAParamsToServicePayloadWithNestedTypespbAParams(v *servicepayloadwithnestedtypes.AParams) *service_payload_with_nested_typespb.AParams {
-	if v == nil {
-		return nil
-	}
+// transformAParamsToProtoAParams builds a value of type
+// *service_payload_with_nested_typespb.AParams from a value of type
+// *servicepayloadwithnestedtypes.AParams.
+func transformAParamsToProtoAParams(v *servicepayloadwithnestedtypes.AParams) *service_payload_with_nested_typespb.AParams {
 	res := &service_payload_with_nested_typespb.AParams{}
 	if v.A != nil {
 		res.A = make(map[string]*service_payload_with_nested_typespb.ArrayOfString, len(v.A))
@@ -79,14 +33,51 @@ func svcServicepayloadwithnestedtypesAParamsToServicePayloadWithNestedTypespbAPa
 	return res
 }
 
-// svcServicepayloadwithnestedtypesBParamsToServicePayloadWithNestedTypespbBParams
-// builds a value of type *service_payload_with_nested_typespb.BParams from a
-// value of type *servicepayloadwithnestedtypes.BParams.
-func svcServicepayloadwithnestedtypesBParamsToServicePayloadWithNestedTypespbBParams(v *servicepayloadwithnestedtypes.BParams) *service_payload_with_nested_typespb.BParams {
-	if v == nil {
-		return nil
-	}
+// transformBParamsToProtoBParams builds a value of type
+// *service_payload_with_nested_typespb.BParams from a value of type
+// *servicepayloadwithnestedtypes.BParams.
+func transformBParamsToProtoBParams(v *servicepayloadwithnestedtypes.BParams) *service_payload_with_nested_typespb.BParams {
 	res := &service_payload_with_nested_typespb.BParams{}
+	if v.B != nil {
+		res.B = make(map[string]string, len(v.B))
+		for key, val := range v.B {
+			tk := key
+			tv := val
+			res.B[tk] = tv
+		}
+	}
+
+	return res
+}
+
+// transformProtoAParamsToAParams builds a value of type
+// *servicepayloadwithnestedtypes.AParams from a value of type
+// *service_payload_with_nested_typespb.AParams.
+func transformProtoAParamsToAParams(v *service_payload_with_nested_typespb.AParams) *servicepayloadwithnestedtypes.AParams {
+	res := &servicepayloadwithnestedtypes.AParams{}
+	if v.A != nil {
+		res.A = make(map[string][]string, len(v.A))
+		for key, val := range v.A {
+			tk := key
+			var tv []string
+			if val != nil {
+				tv = make([]string, len(val.Field))
+				for i, val := range val.Field {
+					tv[i] = val
+				}
+			}
+			res.A[tk] = tv
+		}
+	}
+
+	return res
+}
+
+// transformProtoBParamsToBParams builds a value of type
+// *servicepayloadwithnestedtypes.BParams from a value of type
+// *service_payload_with_nested_typespb.BParams.
+func transformProtoBParamsToBParams(v *service_payload_with_nested_typespb.BParams) *servicepayloadwithnestedtypes.BParams {
+	res := &servicepayloadwithnestedtypes.BParams{}
 	if v.B != nil {
 		res.B = make(map[string]string, len(v.B))
 		for key, val := range v.B {
