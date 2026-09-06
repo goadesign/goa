@@ -106,13 +106,27 @@ func NewTransportError(err error) *goa.ServiceError {
 
 // ContextError returns a context error when the gRPC status code matches the
 // ended caller context. The returned error retains the transport text and
-// unwraps to ctx.Err(). It returns nil when the caller context remains active
-// or the status codes differ. Deadlines added internally by gRPC are not part
-// of the caller context.
+// status, unwraps to ctx.Err(), and preserves errors.Is and errors.As inspection
+// of the transport error. It returns nil when the caller context remains active,
+// the status codes differ, or the transport error contains multiple causes.
+// A join containing one error is treated like any other wrapper; multiple causes
+// must remain separate failures rather than becoming one context error.
+// Deadlines added internally by gRPC are not part of the caller context.
 func ContextError(ctx context.Context, transportErr error) error {
 	ctxErr := ctx.Err()
 	if ctxErr == nil {
 		return nil
+	}
+	for err := transportErr; err != nil; {
+		if joined, ok := err.(interface{ Unwrap() []error }); ok {
+			causes := joined.Unwrap()
+			if len(causes) != 1 || causes[0] == nil {
+				return nil
+			}
+			err = causes[0]
+		} else {
+			err = errors.Unwrap(err)
+		}
 	}
 	transportStatus, ok := status.FromError(transportErr)
 	if !ok || transportStatus.Code() != status.FromContextError(ctxErr).Code() {
@@ -226,8 +240,19 @@ func (e *contextError) GRPCStatus() *status.Status {
 	return e.transportStatus
 }
 
-// Unwrap exposes the gRPC status and matching context error without discarding
-// either inspection contract.
-func (e *contextError) Unwrap() []error {
-	return []error{e.transportErr, e.ctxErr}
+// Unwrap exposes the caller context error as the cause of this canceled RPC.
+// The transport status describes the same failure, not an independent cause.
+func (e *contextError) Unwrap() error {
+	return e.ctxErr
+}
+
+// Is preserves comparisons against the original transport error. Comparisons
+// against the context error follow Unwrap.
+func (e *contextError) Is(target error) bool {
+	return errors.Is(e.transportErr, target)
+}
+
+// As preserves access to the original transport error and its wrapped types.
+func (e *contextError) As(target any) bool {
+	return errors.As(e.transportErr, target)
 }
