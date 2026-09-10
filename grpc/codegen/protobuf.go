@@ -106,6 +106,7 @@ func (p *protoBufScope) Scope() *codegen.NameScope {
 // remain slices. Message fields, including Any, already use pointers.
 func protoBufTypeContext(pkg string, service *ServiceData) *codegen.AttributeContext {
 	ctx := codegen.NewAttributeContext(true, false, false, pkg, service.Scope)
+	ctx.IgnoreRequiredCollections = true
 	ctx.Scope = &protoBufScope{service: service, pkg: pkg}
 	return ctx
 }

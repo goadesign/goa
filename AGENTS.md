@@ -155,4 +155,9 @@ To reproduce a codegen issue:
 
 ### Slices/Maps and Required Fields
 
-Do not rely on nil vs empty to encode presence. Goa uses `omitempty`—both nil and empty serialize as "missing". If empty is valid, do not mark the field as required.
+Do not rely on nil versus empty slices or maps to encode domain meaning.
+Required JSON fields may contain empty collections unless a length constraint
+forbids them; keep `Required` when the JSON property must be present. Protobuf
+repeated and map fields cannot distinguish absent from empty, so their generated
+validation checks length and contents, not presence. Message, scalar, and oneof
+presence checks remain independent of collection emptiness.

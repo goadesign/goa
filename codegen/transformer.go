@@ -47,6 +47,10 @@ type (
 		// (proto) uses non-pointers to hold required attributes and
 		// therefore do not need to be validated.
 		IgnoreRequired bool
+		// IgnoreRequiredCollections suppresses presence checks for arrays and maps
+		// in transports such as protobuf that cannot distinguish empty from absent.
+		// Length and element validations still apply.
+		IgnoreRequiredCollections bool
 		// UseDefault if true indicates that the attribute uses non-pointers for
 		// primitive types if they have default value. If false, the attribute with
 		// primitive types are non-pointers if they are required, otherwise they
@@ -502,12 +506,13 @@ func (a *AttributeContext) IsArrayElementPointer(array *expr.Array) bool {
 // generated value.
 func (a *AttributeContext) LayoutPolicy() GoLayoutPolicy {
 	return GoLayoutPolicy{
-		Pointer:             a.Pointer,
-		IgnoreRequired:      a.IgnoreRequired,
-		UseDefault:          a.UseDefault,
-		UnionPointer:        a.UnionPointer,
-		ArrayElementPointer: a.ArrayElementPointer,
-		SumType:             a.Scope.IsSumType(),
+		Pointer:                   a.Pointer,
+		IgnoreRequired:            a.IgnoreRequired,
+		IgnoreRequiredCollections: a.IgnoreRequiredCollections,
+		UseDefault:                a.UseDefault,
+		UnionPointer:              a.UnionPointer,
+		ArrayElementPointer:       a.ArrayElementPointer,
+		SumType:                   a.Scope.IsSumType(),
 	}
 }
 
@@ -550,12 +555,13 @@ func (a *AttributeContext) WithGoTypeLayout(layout LinkedGoType) (*AttributeCont
 // Dup creates a shallow copy of the AttributeContext.
 func (a *AttributeContext) Dup() *AttributeContext {
 	return &AttributeContext{
-		Pointer:             a.Pointer,
-		IgnoreRequired:      a.IgnoreRequired,
-		UseDefault:          a.UseDefault,
-		Scope:               a.Scope,
-		UnionPointer:        a.UnionPointer,
-		ArrayElementPointer: a.ArrayElementPointer,
+		Pointer:                   a.Pointer,
+		IgnoreRequired:            a.IgnoreRequired,
+		IgnoreRequiredCollections: a.IgnoreRequiredCollections,
+		UseDefault:                a.UseDefault,
+		Scope:                     a.Scope,
+		UnionPointer:              a.UnionPointer,
+		ArrayElementPointer:       a.ArrayElementPointer,
 	}
 }
 

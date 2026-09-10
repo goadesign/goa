@@ -550,7 +550,7 @@ func validationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req, alia
 			res = append(res, val)
 		}
 	}
-	reqs := generatedRequiredValidation(att, validation, attCtx)
+	reqs := generatedRequiredValidationNames(att, validation, attCtx.LayoutPolicy())
 	obj := expr.AsObject(att.Type)
 	for _, r := range reqs {
 		reqAtt := obj.Attribute(r)
@@ -594,39 +594,7 @@ func renderValidationPath(path validationPath) string {
 // hasValidations reports whether validating ut can write any code with the Go
 // layout described by attCtx.
 func hasValidations(attCtx *AttributeContext, ut expr.UserType) bool {
-	policy := GoLayoutPolicy{
-		Pointer:             attCtx.Pointer,
-		IgnoreRequired:      attCtx.IgnoreRequired,
-		UseDefault:          attCtx.UseDefault,
-		UnionPointer:        attCtx.UnionPointer,
-		ArrayElementPointer: attCtx.ArrayElementPointer,
-		SumType:             attCtx.Scope.IsSumType(),
-	}
-	return NeedsValidation(ut.Attribute(), policy)
-}
-
-// There is a case where there is validation but no actual validation code: if
-// the validation is a required validation that applies to attributes that
-// cannot be nil i.e. primitive types. val is the validation that effectively
-// applies to att as computed by expr.EffectiveValidation.
-func generatedRequiredValidation(att *expr.AttributeExpr, val *expr.ValidationExpr, attCtx *AttributeContext) (res []string) {
-	obj := expr.AsObject(att.Type)
-	for _, req := range val.Required {
-		reqAtt := obj.Attribute(req)
-		if reqAtt == nil {
-			continue
-		}
-		if !attCtx.Pointer && expr.IsPrimitive(reqAtt.Type) &&
-			reqAtt.Type.Kind() != expr.BytesKind &&
-			reqAtt.Type.Kind() != expr.AnyKind {
-			continue
-		}
-		if attCtx.IgnoreRequired && expr.IsPrimitive(reqAtt.Type) {
-			continue
-		}
-		res = append(res, req)
-	}
-	return
+	return NeedsValidation(ut.Attribute(), attCtx.LayoutPolicy())
 }
 
 // toSlice returns Go code that represents the given slice.
