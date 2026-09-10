@@ -494,6 +494,9 @@ func generatedRequiredValidationNames(attribute *expr.AttributeExpr, validation 
 		if policy.IgnoreRequired && expr.IsPrimitive(required.Type) {
 			continue
 		}
+		if policy.IgnoreRequiredCollections && (expr.IsArray(required.Type) || expr.IsMap(required.Type)) {
+			continue
+		}
 		names = append(names, name)
 	}
 	return names

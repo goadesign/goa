@@ -101,6 +101,8 @@ func TestProtoBufTypeContextPreservesPrimitivePresence(t *testing.T) {
 	ctx := protoBufTypeContext("proto", sd)
 	require.True(t, ctx.Pointer)
 	require.False(t, ctx.IgnoreRequired)
+	require.True(t, ctx.IgnoreRequiredCollections)
+	require.True(t, ctx.Dup().LayoutPolicy().IgnoreRequiredCollections)
 	require.False(t, ctx.UseDefault)
 }
 

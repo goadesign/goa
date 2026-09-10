@@ -60,6 +60,9 @@ type (
 		Pointer bool
 		// IgnoreRequired suppresses required checks for primitive transport fields.
 		IgnoreRequired bool
+		// IgnoreRequiredCollections suppresses array and map presence checks when
+		// the transport represents absent and empty collections identically.
+		IgnoreRequiredCollections bool
 		// UseDefault keeps optional primitive fields with defaults as values.
 		UseDefault bool
 		// UnionPointer uses pointers for optional sum-type union fields and for
