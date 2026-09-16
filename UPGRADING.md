@@ -1,21 +1,31 @@
-# Testing the Planned Generation Preview
+# Upgrading to Goa v3.31.0
 
-Goa `v3.31.0-preview.5` is an opt-in preview of a broad correction to code
-generation. It is intended for application authors and plugin authors who can
-regenerate their code, review the result, and report problems before the work
-becomes a stable release.
+**This is a substantial generator upgrade with intentional breaking changes.**
+Goa remains on the `goa.design/goa/v3` module path. Keeping v3 does not mean
+that every generated API, plugin API, or transport exchange is compatible
+with v3.30.0. Read the relevant sections before regenerating a production
+application.
 
-This preview does not replace the current stable release. The Go command does
-not select a pre-release version for `@latest` while a stable version exists.
-Projects receive this preview only when they request its complete version.
-See the Go documentation for [version queries][go-version-queries] and the
-[pre-release workflow][go-prereleases].
+The release promotes the generation preview and includes the subsequent gRPC
+collection-presence and cancellation fixes. Goa still requires Go 1.25 or later.
+The examples and plugins repositories require Go 1.26 or later, as on their
+existing stable branches.
 
-The final stable version number has not been chosen. These changes include
-intentional source breaks, so feedback from this preview will inform both the
-final contract and whether the stable release requires a new major version.
+## Plan the upgrade
 
-## Why this preview exists
+| If you use… | Required action |
+| --- | --- |
+| Generated Goa packages | Upgrade the module and command together, regenerate the complete `gen` tree, compile, and test. Do not mix files from different generator versions. |
+| `OneOf`, interceptors, multipart decoders, or direct transport helpers | Update handwritten callers for the generated signatures and types described below. |
+| Required gRPC scalar fields | Regenerate protobuf code and update direct message literals. Coordinate peers when required zero or empty values matter. |
+| JSON-RPC errors, selected views, or server streams | Update both generated peers and custom clients for the changed envelopes and stream lifecycle. JSON-RPC WebSocket generation has been removed. |
+| Dynamic gRPC views or optional primitive HTTP SSE data | Regenerate and deploy both peers together for the cases listed under coordinated deployment. |
+| Code-generation plugins | Upgrade `goa.design/plugins/v3` to v3.31.0 and migrate custom plugins that declare names or call removed generator APIs. |
+
+There is no persisted-data migration. Keep the previous binaries, dependency
+versions, design, and generated tree available for rollback.
+
+## Why generation changed
 
 Goa used to make some generated-name and type decisions in separate passes.
 Those passes could describe the same Go package while seeing different sets of
@@ -32,34 +42,28 @@ that were already known during generation.
 
 That architectural correction exposed places where the old output accepted
 values that the design rejected, described transport behavior the transport
-could not provide, or exposed generator details as public APIs. The preview
+could not provide, or exposed generator details as public APIs. This release
 fixes those contracts together instead of preserving contradictory behavior.
 
-## Changes since preview.4
+## Corrections carried forward from the preview
 
-Preview.5 fixes three generation failures found while testing preview.4:
+The stable release includes the preview fixes for selected HTTP result views,
+explicit response-body attributes, collection types with suffixed identifiers,
+required arrays of viewed types, named string credentials, and shared errors.
+Generated HTTP path files also retain imports for custom parameter types such
+as `uuid.UUID`.
+Required gRPC arrays and maps now accept valid empty collections after a
+protobuf round trip; their length and item rules still apply.
 
-- an explicit HTTP response body field can be used with a viewed result whose
-  method selects the default view;
-- repeated `CollectionOf` declarations reuse a generated collection type when
-  its identifier has a suffix such as `+json`; and
-- required arrays of user types generate the correct conversion when the
-  enclosing result uses views.
+HTTP response selection also becomes explicit. A method must define exactly
+one response without `Tag`; this is its default response. Every other success
+response must use `Tag`. Remove extra untagged responses or give them a tag
+that the result can select. Generated encoders test tagged responses in design
+order and use the default last.
 
-These fixes restore established generated shapes; they do not introduce new
-generated APIs.
+## Identify affected features
 
-Preview.5 also enforces the documented HTTP response-selection rule. A method
-must define exactly one response without `Tag`; this is the default response.
-Every other response must use `Tag` so the generated server can select it from
-the method result. Goa now rejects a second untagged response even when it uses
-a different status code, rather than advertising a response the server can
-never send. Generated encoders test tagged responses in the order written in
-the design and use the default last.
-
-## Who should test it
-
-Please test the preview if your project has any of these characteristics:
+Review the matching migration sections if your project has any of these characteristics:
 
 - it uses a Goa code-generation plugin;
 - it uses required primitive fields, `OneOf`, result views, defaults, repeated
@@ -71,28 +75,28 @@ Please test the preview if your project has any of these characteristics:
 - it has several services, generation roots, transports, or plugins that write
   into the same generated Go package.
 
-Small HTTP-only services are also valuable tests. They help confirm that the
-new planning work leaves ordinary generated APIs and wire behavior unchanged.
+Test ordinary HTTP-only services as well. Review the generated diff even when
+none of the specialized migrations below applies.
 
-## Install the preview
+## Install v3.31.0
 
 Start from a branch with the current generated tree committed. Install both the
-Goa module and the `goa` command from the exact preview version:
+Goa module and the `goa` command from the same release version:
 
 ```bash
-go get goa.design/goa/v3@v3.31.0-preview.5
-go install goa.design/goa/v3/cmd/goa@v3.31.0-preview.5
+go get goa.design/goa/v3@v3.31.0
+go install goa.design/goa/v3/cmd/goa@v3.31.0
 goa version
 ```
 
-The Go command records the exact preview version in `go.mod`. The installed
+The Go command records the same release version in `go.mod`. The installed
 command reports the same version:
 
 ```text
-Goa version v3.31.0-preview.5
+Goa version v3.31.0
 ```
 
-Do not use an older `goa` command with the preview module. Also install the
+Do not use an older `goa` command with the new module. Also install the
 protobuf generators covered by this release if the design uses gRPC:
 
 ```bash
@@ -101,6 +105,16 @@ go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.6.2
 ```
 
 Goa checks these two program versions before writing gRPC files.
+
+If your design imports the official plugins, update that module in the same
+application change:
+
+```bash
+go get goa.design/plugins/v3@v3.31.0
+```
+
+Use matching release tags when copying examples. Custom plugins must complete
+the generator-library migration below before regenerating an application.
 
 ## Regenerate and test an application
 
@@ -331,6 +345,19 @@ still use the result shape required by that protocol.
 Designed JSON-RPC errors keep the authored JSON-RPC code and place their Goa
 error name and body in the error's `data` member. Custom clients that decode
 that data must accept the new `{ "name": ..., "body": ... }` shape.
+Regenerate both peers together for designed errors. A client receiving an
+unknown error code, name, or body preserves the raw JSON-RPC error instead of
+misidentifying it as a designed error.
+
+Server streams now use the service stream's `Send`, `SendWithContext`, and
+`Close` methods. Clients use `Recv()` or `RecvWithContext(ctx)` instead of
+`Recv(ctx)`. Each sent value is a notification; the opening request has a
+non-null ID and ends with a terminal success or error response. Update custom
+peers for this lifecycle. The former JSON-RPC-only `StreamEvent`, `SendAndClose`,
+`SendError`, concrete client-stream, and WebSocket configuration APIs are removed.
+
+Code calling `jsonrpc.IDToString` directly must handle its new `(string, error)`
+return. Positional `RawRequest` and `RawResponse` literals must use named fields.
 
 ### HTTP decoding, validation, and streams are more exact
 
@@ -378,6 +405,17 @@ them, and return endpoint, stream, output, and close errors. Review handwritten
 command code against the new starter when updating it. gRPC flags for complete
 messages now decode protobuf JSON.
 
+Update a command's `main.go` and its transport helpers together: private
+`doHTTP`, `doGRPC`, and `doJSONRPC` helpers now execute and print results rather
+than returning an endpoint and payload. `goa example` keeps existing files, so
+it cannot complete this handwritten migration automatically. Input-streaming
+and bidirectional command starters return an unsupported-input error.
+
+Direct callers of generated `Build<Method>Payload` functions must also follow
+the new signatures: a flag without a default uses `*string`, with nil meaning
+omitted. A pointer to an empty string means explicitly supplied. Required
+flags are checked rather than populated with the literal text `REQUIRED`.
+
 Generated example values now belong to the design declaration that authored
 them. Another service or transport can no longer consume shared random state
 and change those values. This causes a large one-time text change in some
@@ -388,6 +426,32 @@ arrays instead of JSON null, independent server-variable examples, selected
 view schemas, and server-sent-event data schemas. Review these changes as
 contract corrections rather than accepting the complete generated diff
 without inspection.
+
+## Designs that now fail validation
+
+Generation now rejects ambiguous designs before writing files. In addition to
+the error, response, security, and streaming rules above, check these cases:
+
+- Nested defaults must satisfy their complete type, required fields, and
+  validation rules.
+- A relocated authored type using `struct:pkg:path` must give its referenced
+  authored types explicit generated package locations too.
+- Ordinary HTTP and JSON-RPC routes on one server cannot overlap, even when
+  their path parameter names differ.
+- JSON-RPC routes must use `POST`; method names cannot start with `rpc.`.
+  Keep request IDs as one direct string payload field with no competing
+  parameter, header, cookie, or event-ID mapping.
+- Multipart requests need a non-empty request body for the decoder to fill.
+- `SSERequestID` must be the sole mapping for `Last-Event-ID`. A viewed stream
+  cannot use `SSEEventData` to discard the rest of its view information.
+- HTTP client-streaming and bidirectional methods must use a fixed response
+  view. Server-only streams may still select a view from their request.
+- Remove duplicate conversions and unsupported transport mappings, including
+  non-primitive gRPC metadata and JSON-RPC response fields mapped to HTTP
+  response headers or cookies.
+
+The [complete design migration table](codegen/ARCHITECTURE.md#designs-that-now-stop-generation)
+describes each rejected combination and its replacement.
 
 ## Plugin and generator-library migration
 
@@ -434,6 +498,7 @@ migration.
 
 Regenerate, deploy, and roll back both client and server together for:
 
+- designed JSON-RPC errors;
 - caller-selected JSON-RPC views;
 - JSON-RPC server-sent-event streams;
 - dynamic caller-selected gRPC streams;
@@ -450,9 +515,21 @@ Most other changes are source changes in generated Go packages or stricter
 validation of previously invalid input. They require regeneration and a normal
 application build, but not a data migration.
 
-## Return to the stable release
+For required protobuf zero or empty values, update all affected clients before
+enabling the new server's presence validation, or deploy matching peers
+together. For changed JSON-RPC and streaming exchanges, use a coordinated
+cutover or route clients to a matching server version. An independently rolling
+deployment cannot assume those old and new generated contracts interoperate.
 
-To stop testing the preview:
+The gRPC cancellation fix also applies when rebuilding clients that already
+call `grpc.ContextError`. A locally canceled call has one context cause while
+retaining its gRPC status and transport details. Independent cleanup errors
+remain separate; no coordinated deployment is required for this runtime fix.
+
+## Roll back to v3.30.0
+
+Restore the previous design and handwritten application changes as well as the
+module version. For a project upgrading from v3.30.0:
 
 ```bash
 go get goa.design/goa/v3@v3.30.0
@@ -460,20 +537,34 @@ go install goa.design/goa/v3/cmd/goa@v3.30.0
 goa gen YOUR_MODULE/design
 ```
 
-Regenerate the complete `gen` directory with the stable command. Do not keep a
-mixture of stable and preview files. If a changed transport shape was deployed,
-return both client and server to stable output together. No persisted data
-needs to be changed or restored.
+Restore the previous plugin dependency versions too, if used. Regenerate the
+complete `gen` directory with the v3.30.0 command, or restore the recorded v3.30.0
+generated tree and matching binaries. Do not mix generated versions. For a
+changed transport exchange, roll back both client and server together. No
+persisted data needs to be changed or restored.
 
-## Report what you find
+## Existing limitations checked for this release
 
-Use [pull request #3971][preview-pr] for feedback about the preview as a whole.
+The issue review reproduced two problems that also affect v3.30.0:
+
+- A custom `uuid.UUID` field mapped to an HTTP query parameter can produce a
+  client that does not compile. Server-side text decoding is supported, but the
+  generated client does not perform the corresponding conversion to text.
+  Until [#3924](https://github.com/goadesign/goa/issues/3924) is resolved, keep
+  the contract field as `String` with `FormatUUID` and convert inside the
+  implementation when a UUID value is needed.
+- A recursive gRPC result containing an array of itself can make generation
+  recurse indefinitely ([#2515](https://github.com/goadesign/goa/issues/2515)).
+  This release does not fix that case.
+
+## Report a problem
+
 Open a [GitHub issue][issues] for a reproducible bug. Use
 [GitHub Discussions][discussions] for design and migration questions.
 
 A useful report includes:
 
-- the preview version, Go version, and operating system;
+- the exact Goa version, Go version, and operating system;
 - `protoc`, `protoc-gen-go`, and `protoc-gen-go-grpc` versions for gRPC;
 - the affected transport and whether a plugin participates;
 - the smallest design that reproduces the behavior;
@@ -486,7 +577,4 @@ Please remove credentials and private application data. A small public
 reproduction is ideal.
 
 [discussions]: https://github.com/goadesign/goa/discussions
-[go-prereleases]: https://go.dev/doc/modules/release-workflow#pre-release
-[go-version-queries]: https://go.dev/ref/mod#version-queries
 [issues]: https://github.com/goadesign/goa/issues
-[preview-pr]: https://github.com/goadesign/goa/pull/3971

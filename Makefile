@@ -125,6 +125,10 @@ build-goa:
 release-preflight: lint test-release integration-test
 
 stable-release-check:
+	@if [ "$(MAJOR)" != "3" ]; then \
+		echo "error: Goa releases must use major version 3"; \
+		exit 1; \
+	fi
 	@if [ -n "$(PREVIEW_NUMBER)" ]; then \
 		echo "error: PREVIEW_NUMBER is set; use the preview release targets"; \
 		exit 1; \
@@ -215,6 +219,7 @@ release-preview: preview-preflight
 
 release-goa:
 	# First make sure all is clean
+	@test "$$(git branch --show-current)" = "v$(MAJOR)"
 	@status="$$(git status --porcelain)"; \
 	if [ -n "$$status" ]; then \
 		echo "error: goa repo has uncommitted changes:"; \
@@ -222,23 +227,23 @@ release-goa:
 		exit 1; \
 	fi
 	cd $(GOPATH)/src/goa.design/examples && \
-		git checkout main && \
-		git pull origin main && \
+		test "$$(git branch --show-current)" = main && \
 		status="$$(git status --porcelain)" && \
 		if [ -n "$$status" ]; then \
 			echo "error: examples repo has uncommitted changes:"; \
 			echo "$$status"; \
 			exit 1; \
-		fi
+		fi && \
+		git pull --ff-only origin main
 	cd $(GOPATH)/src/goa.design/plugins && \
-		git checkout v$(MAJOR) && \
-		git pull origin v$(MAJOR) && \
+		test "$$(git branch --show-current)" = "v$(MAJOR)" && \
 		status="$$(git status --porcelain)" && \
 		if [ -n "$$status" ]; then \
 			echo "error: plugins repo has uncommitted changes:"; \
 			echo "$$status"; \
 			exit 1; \
-		fi
+		fi && \
+		git pull --ff-only origin v$(MAJOR)
 	go mod tidy 
 	# Bump version number, commit and push
 	sed 's/Major = .*/Major = $(MAJOR)/' pkg/version.go > _tmp && mv _tmp pkg/version.go
@@ -267,7 +272,11 @@ release-examples:
 
 release-plugins:
 	cd $(GOPATH)/src/goa.design/plugins && \
-		sed 's/goa.design\/goa\/v.*/goa.design\/goa\/v$(MAJOR) v$(MAJOR).$(MINOR).$(BUILD)/' go.mod > _tmp && mv _tmp go.mod && \
+		for module in $$(find . -name go.mod -not -path './.git/*'); do \
+			(cd "$$(dirname "$$module")" && \
+				go mod edit -require=goa.design/goa/v$(MAJOR)@v$(MAJOR).$(MINOR).$(BUILD) && \
+				go mod tidy) || exit 1; \
+		done && \
 		make && \
 		git add . && \
 		git commit -m "Release v$(MAJOR).$(MINOR).$(BUILD)" && \

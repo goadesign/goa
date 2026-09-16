@@ -20,7 +20,7 @@ explicitly approves that exact release.
   - Patch release: increment `BUILD`.
   - Minor release: increment `MINOR` and reset `BUILD=0`.
 - An opt-in preview uses `v3.MINOR.BUILD-preview.NUMBER`. Its version is a testing label, not a
-  promise that the final stable release will keep major version 3.
+  promise of the final stable minor version. The major version remains 3.
 - The preparation commit message must be exactly `Prepare v3.x.y`, where `x` is `MINOR` and `y`
   is `BUILD`.
 - The preview preparation commit message must be exactly `Prepare v3.x.y-preview.n`.
@@ -94,7 +94,7 @@ Use this workflow only when the confirmed version ends in `-preview.N`.
 4. If the command fails after creating the local tag, inspect local and remote state before any
    rerun. Never delete a public tag or force-push without an approved recovery plan.
 5. Create a GitHub release for the tag with `--prerelease`. Link `UPGRADING.md`, describe the
-   preview as opt-in, and state that the final stable version remains undecided.
+   preview as opt-in, and explain that the final stable minor version follows compatibility review.
 6. Verify the Go proxy resolves the exact preview version and that `@latest` still resolves the
    current stable release.
 

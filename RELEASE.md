@@ -16,9 +16,8 @@ Preview versions use `v3.MINOR.BUILD-preview.NUMBER`. For example:
 v3.31.0-preview.1
 ```
 
-The preview version does not promise the final stable version. Decide the
-stable major version after community feedback and the final compatibility
-review.
+Goa stays on major version 3. A preview's minor version is a testing label;
+the stable minor version and compatibility guidance follow the final review.
 
 ### Prepare the preview
 
@@ -70,8 +69,8 @@ gh release create v3.31.0-preview.1 \
   --notes-file PREVIEW_NOTES.md
 ```
 
-Release notes should link to `UPGRADING.md`, state that the final stable
-version is undecided, identify the users most likely to be affected, and ask
+Release notes should link to `UPGRADING.md`, identify the users most likely to
+be affected, and ask
 for reports with a small design and generated diff. Remove the temporary notes
 file after GitHub has accepted the release.
 
@@ -84,9 +83,12 @@ go install goa.design/goa/v3/cmd/goa@v3.31.0-preview.1
 
 ## Publishing a stable release
 
-## Using `make release`
+### Using `make release`
 
-1. Update `MAJOR`, `MINOR` and `BUILD` as needed in `Makefile`. Leave
+Follow [the release skill](.cursor/skills/goa-release/SKILL.md) for dependency
+updates, checks, preparation commits, publication, and release notes.
+
+1. Keep `MAJOR=3` and update `MINOR` and `BUILD` in `Makefile`. Leave
    `PREVIEW_NUMBER` empty. The stable release target refuses to run while a
    preview number is set and clears the preview suffix in `pkg/version.go`.
 2. Make sure the `goa.design/examples` and `goa.design/plugins` repositories exist in `$(go env GOPATH)/src` and are clean:
@@ -94,21 +96,26 @@ go install goa.design/goa/v3/cmd/goa@v3.31.0-preview.1
    - `$(go env GOPATH)/src/goa.design/plugins` on branch `v3`
 3. Run `make release`
 
+Merge compatible preview changes into Goa `v3`, examples `main`, and plugins
+`v3` before releasing. The release target checks those branches and refuses to
+switch a working tree automatically. All repositories must be clean; local
+preparation commits may be ahead of the remote, but the remote must not be
+ahead. Do not push preparation commits separately.
+
 `make release` runs a preflight check (`release-preflight`) after bumping the version and updating
 the README badge. The preflight runs `lint`, `test-release` (no coverage artifact) and
 `integration-test` before tagging and pushing.
 
-## Manual release procedure
+The examples phase updates every example module. The plugins phase updates
+the root module and every nested example module before regenerating and testing.
 
-1. Update `MAJOR`, `MINOR` and `BUILD` as needed in `Makefile`, and leave
-   `PREVIEW_NUMBER` empty.
-2. Update `pkg/version.go` and `README.md` to reflect the new version.
-3. Commit and push to v3.
-4. Create and push release git tag.
-5. Update `go.mod` in the examples repo `master` branch.
-6. Run `make` in the examples repo.
-7. Push the examples repo `master` branch.
-8. Create and push release git tag.
-9. Update `go.mod` in the plugins repo `v3` branch.
-10. Run `make` in the plugins repo.
-11. Create and push release git tag.
+### Recovering a partial release
+
+If a phase fails, inspect the current branch, working tree, local tag, and
+remote branch and tag in all three repositories. Preserve successful pushes.
+Fix the failed phase and run the narrowest remaining target:
+`release-goa`, `release-examples`, or `release-plugins`. Never blindly repeat
+the complete release, recreate an existing tag, or replace a public tag.
+
+After all three tags are published, create the Goa GitHub release and verify
+that the Go proxy resolves the stable version and the downstream module pins.

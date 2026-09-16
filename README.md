@@ -182,17 +182,16 @@ curl -X POST http://localhost:8000/jsonrpc \
   -d '{"jsonrpc":"2.0","method":"hello.say_hello","params":{"name":"world"},"id":"1"}'
 ```
 
-## Test the Generation Preview
+## Upgrading to v3.31.0
 
-`v3.31.0-preview.5` is an opt-in preview of Goa's planned generation changes.
-It fixes generated names and contracts across services, transports, examples,
-and plugins. It also includes intentional source changes that need community
-testing before a stable release.
+v3.31.0 is a substantial generator upgrade that stays on the v3 module path
+and includes intentional breaking changes. Regenerate the complete generated
+tree and review changes to handwritten code and plugins. Some gRPC, JSON-RPC,
+and streaming contracts require coordinated client/server deployment.
 
-The preview does not replace the current stable version and is not selected by
-`@latest`. See [Testing the Planned Generation Preview](UPGRADING.md) for the
-exact installation command, affected APIs, migration steps, deployment notes,
-rollback instructions, and how to report a problem.
+Read the [v3.31.0 upgrade guide](UPGRADING.md) before updating. It covers the
+exact installation commands, source and design migrations, deployment order,
+and rollback.
 
 ## Documentation
 

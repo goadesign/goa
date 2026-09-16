@@ -1378,6 +1378,18 @@ func planImports(generation *codegen.Generation, transport transportKind, plans 
 						references = httpCLIPayloadBuilderReferenceAttributes(transportService)
 					case httpTransportFile:
 						references = httpTransportReferenceAttributes(transportService)
+					case httpPathsFile:
+						for _, endpoint := range transportService.HTTPEndpoints {
+							parameters := endpoint.PathParams()
+							if parameters.IsEmpty() {
+								continue
+							}
+							for _, parameter := range *expr.AsObject(parameters.Attribute().Type) {
+								if custom, _ := codegen.GetMetaType(parameter.Attribute); custom != "" {
+									definitions = append(definitions, parameter.Attribute)
+								}
+							}
+						}
 					}
 					filePath := path.Join(codegen.Gendir, dir, pathName, side, file.name)
 					if err := retainPlannedFileImports(
