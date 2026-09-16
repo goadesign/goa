@@ -62,18 +62,26 @@ func ValidateMethodBRequestBody(body *MethodBRequestBody) (err error) {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.b", *body.B, "patternb"))
 	}
 	if body.C != nil {
-		if err2 := ValidateAPayloadRequestBody(body.C); err2 != nil {
+		if err2 := validateAPayloadRequestBody(body.C, "body.c"); err2 != nil {
 			err = goa.MergeErrors(err, err2)
 		}
 	}
 	return
 }
 
-// ValidateAPayloadRequestBody runs the validations defined on
-// APayloadRequestBody
+// ValidateAPayloadRequestBody runs the validations defined on APayload
 func ValidateAPayloadRequestBody(body *APayloadRequestBody) (err error) {
 	if body.A != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.a", *body.A, "patterna"))
+	}
+	return
+}
+
+// validateAPayloadRequestBody checks APayload and reports errors using the
+// path supplied by its caller
+func validateAPayloadRequestBody(body *APayloadRequestBody, path string) (err error) {
+	if body.A != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern(path+".a", *body.A, "patterna"))
 	}
 	return
 }

@@ -1,0 +1,100 @@
+openapi: 3.0.3
+info:
+    title: Goa API
+    version: 0.0.1
+servers:
+    - url: http://localhost:80
+      description: Default server for test api
+paths:
+    /default:
+        get:
+            tags:
+                - storage
+            summary: list_default storage
+            operationId: storage#list_default
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/StoredBottleResponseCollection'
+                            example:
+                                - name: Blue's Cuvee
+                                  vintage: 2003
+                                - name: Blue's Cuvee
+                                  vintage: 2003
+                                - name: Blue's Cuvee
+                                  vintage: 2003
+    /tiny:
+        get:
+            tags:
+                - storage
+            summary: list_tiny storage
+            operationId: storage#list_tiny
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/StoredBottleResponseTinyCollection'
+                            example:
+                                - name: Blue's Cuvee
+                                - name: Blue's Cuvee
+                                - name: Blue's Cuvee
+                                - name: Blue's Cuvee
+components:
+    schemas:
+        StoredBottleResponse:
+            type: object
+            properties:
+                name:
+                    type: string
+                    example: Blue's Cuvee
+                vintage:
+                    type: integer
+                    example: 2003
+                    format: int32
+            description: StoredBottle result type (default view)
+            example:
+                name: Blue's Cuvee
+                vintage: 2003
+            required:
+                - name
+                - vintage
+        StoredBottleResponseCollection:
+            type: array
+            items:
+                $ref: '#/components/schemas/StoredBottleResponse'
+            description: list_default_response_body is the result type for an array of StoredBottle (default view)
+            example:
+                - name: Blue's Cuvee
+                  vintage: 2003
+                - name: Blue's Cuvee
+                  vintage: 2003
+                - name: Blue's Cuvee
+                  vintage: 2003
+        StoredBottleResponseTiny:
+            type: object
+            properties:
+                name:
+                    type: string
+                    example: Blue's Cuvee
+            description: StoredBottle result type (tiny view)
+            example:
+                name: Blue's Cuvee
+            required:
+                - name
+        StoredBottleResponseTinyCollection:
+            type: array
+            items:
+                $ref: '#/components/schemas/StoredBottleResponseTiny'
+            description: list_tiny_response_body is the result type for an array of StoredBottle (tiny view)
+            example:
+                - name: Blue's Cuvee
+                - name: Blue's Cuvee
+                - name: Blue's Cuvee
+                - name: Blue's Cuvee
+tags:
+    - name: storage

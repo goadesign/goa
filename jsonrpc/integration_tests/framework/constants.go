@@ -2,9 +2,8 @@ package framework
 
 // Transport constants define available transport protocols
 const (
-	TransportHTTP      = "http"
-	TransportWebSocket = "websocket"
-	TransportSSE       = "sse"
+	TransportHTTP = "http"
+	TransportSSE  = "sse"
 )
 
 // Action constants define server behavior patterns
@@ -12,9 +11,7 @@ const (
 	ActionEcho      = "echo"      // Returns input unchanged
 	ActionTransform = "transform" // Modifies input predictably
 	ActionGenerate  = "generate"  // Returns fixed values
-	ActionStream    = "stream"    // Server-side streaming
-	ActionCollect   = "collect"   // Client-side streaming
-	ActionBroadcast = "broadcast" // Server-initiated messages
+	ActionStream    = "stream"    // Sends results with server-sent events
 )
 
 // Type constants define data structures
@@ -33,6 +30,5 @@ const (
 	ModifierNotify   = "notify"   // No response expected
 	ModifierError    = "error"    // Always returns error
 	ModifierValidate = "validate" // Includes validation
-	ModifierFinal    = "final"    // SSE: final response
-	ModifierIDMap    = "idmap"    // Map envelope ID to payload/result field
+	ModifierIDMap    = "idmap"    // Map the request ID to a payload field
 )

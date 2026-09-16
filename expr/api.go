@@ -1,3 +1,5 @@
+// This file defines the evaluated API expression and the immutable example
+// randomizer configuration shared by independent code generation runs.
 package expr
 
 import (
@@ -47,8 +49,9 @@ type (
 		// JSONRPC contains the JSON-RPC specific API level expressions.
 		JSONRPC *JSONRPCExpr
 
-		// random generator used to build examples for the API types.
-		ExampleGenerator *ExampleGenerator
+		// RandomizerFactory is the immutable configuration used to create a
+		// fresh example value stream for each code generation run.
+		RandomizerFactory RandomizerFactory
 	}
 
 	// ContactExpr contains the API contact information.
@@ -116,12 +119,12 @@ type (
 // NewAPIExpr initializes an API expression.
 func NewAPIExpr(name string, dsl func()) *APIExpr {
 	return &APIExpr{
-		Name:             name,
-		HTTP:             new(HTTPExpr),
-		GRPC:             new(GRPCExpr),
-		JSONRPC:          new(JSONRPCExpr),
-		DSLFunc:          dsl,
-		ExampleGenerator: NewRandom(name),
+		Name:              name,
+		HTTP:              new(HTTPExpr),
+		GRPC:              new(GRPCExpr),
+		JSONRPC:           new(JSONRPCExpr),
+		DSLFunc:           dsl,
+		RandomizerFactory: NewFakerRandomizerFactory(name),
 	}
 }
 

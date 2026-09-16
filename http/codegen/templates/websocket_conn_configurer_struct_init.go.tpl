@@ -1,6 +1,6 @@
-{{ printf "NewConnConfigurer initializes the websocket connection configurer function with fn for all the streaming endpoints in %q service." .Service.Name | comment }}
-func NewConnConfigurer(fn goahttp.ConnConfigureFunc) *ConnConfigurer {
-	return &ConnConfigurer{
+{{ printf "%s initializes the websocket connection configurer function with fn for all the streaming endpoints in %q service." .InitDeclaration.Name .Service.Name | comment }}
+func {{ .InitDeclaration.Name }}(fn goahttp.ConnConfigureFunc) *{{ .Declaration.Name }} {
+	return &{{ .Declaration.Name }}{
 {{- range .Endpoints }}
 	{{- if isWebSocketEndpoint . }}
 		{{ .Method.VarName}}Fn: fn,

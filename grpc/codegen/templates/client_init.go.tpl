@@ -1,6 +1,6 @@
-{{ printf "New%s instantiates gRPC client for all the %s service servers." .ClientStruct .Service.Name | comment }}
-func New{{ .ClientStruct }}(cc *grpc.ClientConn, opts ...grpc.CallOption) *{{ .ClientStruct }} {
-  return &{{ .ClientStruct }}{
+{{ printf "%s instantiates gRPC client for all the %s service servers." .ClientInitDeclaration.Name .Service.Name | comment }}
+func {{ .ClientInitDeclaration.Name }}(cc *grpc.ClientConn, opts ...grpc.CallOption) *{{ .ClientStructDeclaration.Name }} {
+  return &{{ .ClientStructDeclaration.Name }}{
 		grpccli: {{ .ClientInterfaceInit }}(cc),
 		opts: opts,
 	}

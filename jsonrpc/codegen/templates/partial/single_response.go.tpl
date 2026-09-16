@@ -1,14 +1,22 @@
 {{- with .Data }}
 	{{- if .ClientBody }}
 			var (
-				body {{ .ClientBody.VarName }}
+				body {{ if .ClientBody.Declaration }}{{ .ClientBody.Declaration.Name }}{{ else }}{{ .ClientBody.VarName }}{{ end }}
 				err error
 			)
 			err = decoder(resp).Decode(&body)
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("{{ $.ServiceName }}", "{{ $.Method.Name }}", err)
 			}
-		{{- if .ClientBody.ValidateRef }}
+		{{- if $.SSE }}
+			{{- template "viewed_sse_outer_fields" $ }}
+		{{- end }}
+		{{- if and .ClientBody.ValidatorDeclaration .ClientBody.ValidationTarget }}
+			err = {{ .ClientBody.ValidatorDeclaration.Name }}({{ .ClientBody.ValidationTarget }})
+			if err != nil {
+				return nil, goahttp.ErrValidationError("{{ $.ServiceName }}", "{{ $.Method.Name }}", err)
+			}
+		{{- else if .ClientBody.ValidateRef }}
 			{{ .ClientBody.ValidateRef }}
 			if err != nil {
 				return nil, goahttp.ErrValidationError("{{ $.ServiceName }}", "{{ $.Method.Name }}", err)
@@ -29,19 +37,19 @@
 			)
 		{{- range .Headers }}
 
-		{{- if (or (eq .Type.Name "string") (eq .Type.Name "any")) }}
+		{{- if (or (eq .TypeName "string") (eq .TypeName "any")) }}
 			{{ .VarName }}Raw := resp.Header.Get("{{ .CanonicalName }}")
 			{{- if .Required }}
 				if {{ .VarName }}Raw == "" {
 					err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "header"))
 				}
-				{{ .VarName }} = {{ if and (eq .Type.Name "string") .Pointer }}&{{ end }}{{ .VarName }}Raw
+				{{ .VarName }} = {{ if and (eq .TypeName "string") .Pointer }}&{{ end }}{{ .VarName }}Raw
 			{{- else }}
 				if {{ .VarName }}Raw != "" {
-					{{ .VarName }} = {{ if and (eq .Type.Name "string") .Pointer }}&{{ end }}{{ .VarName }}Raw
+					{{ .VarName }} = {{ if and (eq .TypeName "string") .Pointer }}&{{ end }}{{ .VarName }}Raw
 				}
 				{{- if .DefaultValue }} else {
-					{{ .VarName }} = {{ if eq .Type.Name "string" }}{{ printf "%q" .DefaultValue }}{{ else }}{{ printf "%#v" .DefaultValue }}{{ end }}
+					{{ .VarName }} = {{ if eq .TypeName "string" }}{{ printf "%q" .DefaultValue }}{{ else }}{{ printf "%#v" .DefaultValue }}{{ end }}
 				}
 				{{- end }}
 			{{- end }}
@@ -135,18 +143,18 @@
 		}
 		{{- range .Cookies }}
 
-		{{- if (or (eq .Type.Name "string") (eq .Type.Name "any")) }}
+		{{- if (or (eq .TypeName "string") (eq .TypeName "any")) }}
 			{{- if .Required }}
 				if {{ .VarName }}Raw == "" {
 					err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "cookie"))
 				}
-				{{ .VarName }} = {{ if and (eq .Type.Name "string") .Pointer }}&{{ end }}{{ .VarName }}Raw
+				{{ .VarName }} = {{ if and (eq .TypeName "string") .Pointer }}&{{ end }}{{ .VarName }}Raw
 			{{- else }}
 				if {{ .VarName }}Raw != "" {
-					{{ .VarName }} = {{ if and (eq .Type.Name "string") .Pointer }}&{{ end }}{{ .VarName }}Raw
+					{{ .VarName }} = {{ if and (eq .TypeName "string") .Pointer }}&{{ end }}{{ .VarName }}Raw
 				}
 				{{- if .DefaultValue }} else {
-					{{ .VarName }} = {{ if eq .Type.Name "string" }}{{ printf "%q" .DefaultValue }}{{ else }}{{ printf "%#v" .DefaultValue }}{{ end }}
+					{{ .VarName }} = {{ if eq .TypeName "string" }}{{ printf "%q" .DefaultValue }}{{ else }}{{ printf "%#v" .DefaultValue }}{{ end }}
 				}
 				{{- end }}
 			{{- end }}

@@ -3,13 +3,22 @@
 func DecodeMethodMultipartPrimitiveRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (string, error) {
 	return func(r *http.Request) (string, error) {
 		var payload string
-		if err := decoder(r).Decode(&payload); err != nil {
+		var (
+			body string
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return payload, goa.MissingPayloadError()
+			}
 			var gerr *goa.ServiceError
 			if errors.As(err, &gerr) {
 				return payload, gerr
 			}
 			return payload, goa.DecodePayloadError(err.Error())
 		}
+		payload = body
 
 		return payload, nil
 	}

@@ -1,0 +1,41 @@
+// encodeFetchViewedResult builds the JSON body selected by the result view for
+// the viewed service fetch method.
+func encodeFetchViewedResult(viewed *viewedviews.ViewedGolden) (any, error) {
+	if err := viewedviews.ValidateViewedGolden(viewed); err != nil {
+		return nil, err
+	}
+	switch viewed.View {
+	case "summary":
+		res := viewed
+		body := NewFetchResponseBodySummary(res.Projected)
+		return struct {
+			View string                    `json:"view"`
+			Body *FetchResponseBodySummary `json:"body"`
+		}{
+			View: "summary",
+			Body: body,
+		}, nil
+	case "detailed":
+		res := viewed
+		body := NewFetchResponseBodyDetailed(res.Projected)
+		return struct {
+			View string                     `json:"view"`
+			Body *FetchResponseBodyDetailed `json:"body"`
+		}{
+			View: "detailed",
+			Body: body,
+		}, nil
+	case "default":
+		res := viewed
+		body := NewFetchResponseBody(res.Projected)
+		return struct {
+			View string             `json:"view"`
+			Body *FetchResponseBody `json:"body"`
+		}{
+			View: "default",
+			Body: body,
+		}, nil
+	default:
+		panic("validated viewed result has no JSON-RPC representation")
+	}
+}

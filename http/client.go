@@ -180,7 +180,7 @@ func ErrInvalidURL(svc, m, u string, err error) error {
 	return &ClientError{Name: "invalid_url", Message: msg, Service: svc, Method: m, Err: err}
 }
 
-// ErrDecodingError is the error returned when the decoder fails to decode the
+// ErrDecodingError reports a failure while reading, decoding, or closing a
 // response body.
 func ErrDecodingError(svc, m string, err error) error {
 	msg := fmt.Sprintf("failed to decode response body: %s", err)

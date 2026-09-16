@@ -121,6 +121,7 @@ func TestClientEncode(t *testing.T) {
 		{"body-string", testdata.PayloadBodyStringDSL},
 		{"body-string-validate", testdata.PayloadBodyStringValidateDSL},
 		{"body-user", testdata.PayloadBodyUserDSL},
+		{"body-user-nested", testdata.PayloadBodyNestedUserDSL},
 		{"body-user-validate", testdata.PayloadBodyUserValidateDSL},
 		{"body-array-string", testdata.PayloadBodyArrayStringDSL},
 		{"body-array-string-validate", testdata.PayloadBodyArrayStringValidateDSL},
@@ -177,12 +178,13 @@ func TestClientEncode(t *testing.T) {
 		{"query-custom-name", testdata.PayloadQueryCustomNameDSL},
 		{"header-custom-name", testdata.PayloadHeaderCustomNameDSL},
 		{"cookie-custom-name", testdata.PayloadCookieCustomNameDSL},
+		{"skip-request-body-header", testdata.SkipRequestBodyEncodeDecodeHeaderDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := expr.RunDSL(t, c.DSL)
-			services := CreateHTTPServices(root)
-			fs := ClientFiles("", services)
+			plan := linkedHTTPPlanForRoot(t, root)
+			fs := plan.ClientFiles()
 			require.Len(t, fs, 2)
 			sections := fs[1].SectionTemplates
 			require.Greater(t, len(sections), 2)
@@ -192,21 +194,42 @@ func TestClientEncode(t *testing.T) {
 	}
 }
 
+// TestSkipRequestBodyEncoderSelection verifies raw body access keeps encoders
+// needed for headers while omitting an encoder that would do no work.
+func TestSkipRequestBodyEncoderSelection(t *testing.T) {
+	t.Run("mapped header", func(t *testing.T) {
+		root := expr.RunDSL(t, testdata.SkipRequestBodyEncodeDecodeHeaderDSL)
+		plan := linkedHTTPPlanForRoot(t, root)
+		service, ok := plan.Service(root.API.HTTP.Service("SkipRequestBodyEncodeDecodeHeader"))
+		require.True(t, ok)
+		require.NotNil(t, service.Endpoints[0].RequestEncoderDeclaration)
+	})
+	t.Run("raw body only", func(t *testing.T) {
+		root := expr.RunDSL(t, testdata.SkipRequestBodyEncodeDecodeDSL)
+		plan := linkedHTTPPlanForRoot(t, root)
+		service, ok := plan.Service(root.API.HTTP.Service("SkipRequestBodyEncodeDecode"))
+		require.True(t, ok)
+		require.Nil(t, service.Endpoints[0].RequestEncoderDeclaration)
+	})
+}
+
 func TestClientBuildRequest(t *testing.T) {
 	cases := []struct {
 		Name string
 		DSL  func()
 	}{
 		{"path-string", testdata.PayloadPathStringDSL},
+		{"path-int-alias", testdata.PathIntAliasDSL},
 		{"path-string-required", testdata.PayloadPathStringValidateDSL},
 		{"path-string-default", testdata.PayloadPathStringDefaultDSL},
+		{"path-primitive-string", testdata.PayloadPathPrimitiveStringFormatIPValidateDSL},
 		{"path-object", testdata.PayloadPathObjectDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := expr.RunDSL(t, c.DSL)
-			services := CreateHTTPServices(root)
-			fs := ClientFiles("", services)
+			plan := linkedHTTPPlanForRoot(t, root)
+			fs := plan.ClientFiles()
 			require.Len(t, fs, 2)
 			sections := fs[1].SectionTemplates
 			require.Greater(t, len(sections), 2)

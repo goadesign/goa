@@ -1,0 +1,23 @@
+// EncodeMethodResponseOrderResponse returns an encoder for responses returned
+// by the ServiceResponseOrder MethodResponseOrder endpoint.
+func EncodeMethodResponseOrderResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		res, _ := v.(*serviceresponseorder.MethodResponseOrderResult)
+		if res.First != nil && *res.First == "match" {
+			enc := encoder(ctx, w)
+			body := NewMethodResponseOrderAcceptedResponseBody(res)
+			w.WriteHeader(http.StatusAccepted)
+			return enc.Encode(body)
+		}
+		if res.Second != nil && *res.Second == "match" {
+			enc := encoder(ctx, w)
+			body := NewMethodResponseOrderCreatedResponseBody(res)
+			w.WriteHeader(http.StatusCreated)
+			return enc.Encode(body)
+		}
+		enc := encoder(ctx, w)
+		body := NewMethodResponseOrderOKResponseBody(res)
+		w.WriteHeader(http.StatusOK)
+		return enc.Encode(body)
+	}
+}

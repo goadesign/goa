@@ -4,16 +4,22 @@ func transform() {
 		target.NestedMap = make(map[float64]map[int]map[float64]uint64, len(source.NestedMap))
 		for key, val := range source.NestedMap {
 			tk := key
-			tvc := make(map[int]map[float64]uint64, len(val.Field))
-			for key, val := range val.Field {
-				tk := int(key)
-				tvb := make(map[float64]uint64, len(val.Field))
+			var tvc map[int]map[float64]uint64
+			if val != nil {
+				tvc = make(map[int]map[float64]uint64, len(val.Field))
 				for key, val := range val.Field {
-					tk := key
-					tv := val
-					tvb[tk] = tv
+					tk := int(key)
+					var tvb map[float64]uint64
+					if val != nil {
+						tvb = make(map[float64]uint64, len(val.Field))
+						for key, val := range val.Field {
+							tk := key
+							tv := val
+							tvb[tk] = tv
+						}
+					}
+					tvc[tk] = tvb
 				}
-				tvc[tk] = tvb
 			}
 			target.NestedMap[tk] = tvc
 		}

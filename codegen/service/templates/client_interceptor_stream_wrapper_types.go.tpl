@@ -1,7 +1,7 @@
 {{- range .WrappedClientStreams }}
 
-{{ comment (printf "wrapped%s is a client interceptor wrapper for the %s stream." .Interface .Interface) }}
-type wrapped{{ .Interface }} struct {
+{{ comment (printf "%s is a client interceptor wrapper for the %s stream." .WrapperDeclaration.Name .InterfaceDeclaration.Name) }}
+type {{ .WrapperDeclaration.Name }} struct {
 	ctx context.Context
 	{{- if ne .SendTypeRef "" }}
 	sendWithContext func(context.Context, {{ .SendTypeRef }}) error
@@ -9,6 +9,6 @@ type wrapped{{ .Interface }} struct {
 	{{- if ne .RecvTypeRef "" }}
 	recvWithContext func(context.Context) ({{ .RecvTypeRef }}, error)
 	{{- end }}
-	stream {{ .Interface }}
+	stream {{ .InterfaceDeclaration.Name }}
 }
 {{- end }}

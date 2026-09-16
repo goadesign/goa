@@ -1,0 +1,5 @@
+// UsertypeResponseTinyCollection is the type of the
+// "StreamingPayloadResultCollectionWithExplicitViewService" service
+// "StreamingPayloadResultCollectionWithExplicitViewMethod" endpoint HTTP
+// response body.
+type UsertypeResponseTinyCollection []*UsertypeResponseTiny

@@ -1,0 +1,289 @@
+// BuildWatchFunc2 builds the remote method to invoke for "SavedTransport"
+// service "Watch" endpoint.
+func BuildWatchFunc2(grpccli saved_transportpb.SavedTransportClient, cliopts ...grpc.CallOption) goagrpc.RemoteFunc {
+	return func(ctx context.Context, reqpb any, opts ...grpc.CallOption) (any, error) {
+		for _, opt := range cliopts {
+			opts = append(opts, opt)
+		}
+		stream, err := grpccli.Watch(ctx, opts...)
+		if err != nil {
+			return nil, err
+		}
+		if reqpb != nil {
+			if err := stream.Send(reqpb.(*saved_transportpb.WatchStreamingRequest)); err != nil {
+				return nil, err
+			}
+		}
+		return stream, nil
+	}
+}
+
+// EncodeWatchRequest2 encodes requests sent to SavedTransport Watch endpoint.
+func EncodeWatchRequest2(ctx context.Context, v any, md *metadata.MD) (any, error) {
+	payload, ok := v.(*savedtransport.SavedPayload)
+	if !ok {
+		return nil, goagrpc.ErrInvalidType("SavedTransport", "Watch", "*savedtransport.SavedPayload", v)
+	}
+	tokenWire := payload.Token
+	(*md).Append("authorization", tokenWire)
+	(*md).Append(goagrpc.StreamProtocolMetadataKey, goagrpc.StreamProtocolEnvelope)
+	message := NewProtoWatchRequest2(payload)
+	return &saved_transportpb.WatchStreamingRequest{
+		Body: &saved_transportpb.WatchStreamingRequest_InitialPayload{
+			InitialPayload: message,
+		},
+	}, nil
+}
+
+// DecodeWatchResponse2 decodes responses from the SavedTransport Watch
+// endpoint.
+func DecodeWatchResponse2(ctx context.Context, v any, hdr, trlr metadata.MD) (any, error) {
+	var (
+		count int
+		value string
+		err   error
+	)
+	{
+
+		if vals := hdr.Get("x-count"); len(vals) == 0 {
+			err = goa.MergeErrors(err, goa.MissingFieldError("x-count", "metadata"))
+		} else {
+			countRaw := vals[0]
+
+			v, err2 := strconv.ParseInt(countRaw, 10, strconv.IntSize)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("count", countRaw, "integer"))
+			}
+			count = int(v)
+		}
+
+		if vals := trlr.Get("x-value"); len(vals) == 0 {
+			err = goa.MergeErrors(err, goa.MissingFieldError("x-value", "metadata"))
+		} else {
+			value = vals[0]
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &WatchClientStream2{
+		stream: v.(saved_transportpb.SavedTransport_WatchClient),
+		ctx:    ctx,
+	}, nil
+}
+
+// Watch calls the "Watch" function in saved_transportpb.SavedTransportClient
+// interface.
+func (c *Client) Watch() goa.Endpoint {
+	return func(ctx context.Context, v any) (any, error) {
+		inv := goagrpc.NewInvoker(
+			BuildWatchFunc2(c.grpccli, c.opts...),
+			EncodeWatchRequest2,
+			DecodeWatchResponse2)
+		res, err := inv.Invoke(ctx, v)
+		if err != nil {
+			// Decode a Goa error detail before returning a matching context error or falling back to Fault.
+			resp := goagrpc.DecodeError(err)
+			if eresp, ok := resp.(*goapb.ErrorResponse); ok {
+				return nil, goagrpc.NewServiceError(eresp)
+			}
+			if ctxErr := goagrpc.ContextError(ctx, err); ctxErr != nil {
+				return nil, ctxErr
+			}
+			return nil, goa.Fault("%s", err.Error())
+		}
+		return res, nil
+	}
+}
+
+// WatchClientStream2 implements the savedtransport.WatchClientStream interface.
+type WatchClientStream2 struct {
+	stream saved_transportpb.SavedTransport_WatchClient
+	ctx    context.Context
+}
+
+// DecodeWatchRequest2 decodes requests sent to "SavedTransport" service
+// "Watch" endpoint.
+func DecodeWatchRequest2(ctx context.Context, v any, md metadata.MD) (any, error) {
+	var (
+		token string
+		err   error
+	)
+	{
+		if vals := md.Get("authorization"); len(vals) == 0 {
+			err = goa.MergeErrors(err, goa.MissingFieldError("authorization", "metadata"))
+		} else {
+			token = vals[0]
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	var (
+		message *saved_transportpb.WatchRequest
+		ok      bool
+	)
+	{
+		if v == nil {
+			return nil, goa.MissingFieldError("initial_payload", "stream")
+		}
+		var envelope *saved_transportpb.WatchStreamingRequest
+		if envelope, ok = v.(*saved_transportpb.WatchStreamingRequest); !ok {
+			return nil, goagrpc.ErrInvalidType("SavedTransport", "Watch", "*saved_transportpb.WatchStreamingRequest", v)
+		}
+		switch body := envelope.Body.(type) {
+		case *saved_transportpb.WatchStreamingRequest_InitialPayload:
+			if body.InitialPayload == nil {
+				return nil, goa.MissingFieldError("initial_payload", "stream")
+			}
+			message = body.InitialPayload
+		case *saved_transportpb.WatchStreamingRequest_StreamItem:
+			return nil, goa.InvalidFieldTypeError("body", "stream_item", "initial_payload")
+		default:
+			return nil, goa.MissingFieldError("initial_payload", "stream")
+		}
+		if err = ValidateWatchRequest2(message); err != nil {
+			return nil, err
+		}
+	}
+	var payload *savedtransport.SavedPayload
+	{
+		payload = NewWatchPayload(message, token)
+	}
+	return payload, nil
+}
+
+// EncodeWatchResponse2 encodes responses from the "SavedTransport" service
+// "Watch" endpoint.
+func EncodeWatchResponse2(ctx context.Context, v any, hdr, trlr *metadata.MD) (any, error) {
+	result, ok := v.(*savedtransport.SavedResult)
+	if !ok {
+		return nil, goagrpc.ErrInvalidType("SavedTransport", "Watch", "*savedtransport.SavedResult", v)
+	}
+	resp := NewProtoSavedResult()
+
+	countWire := result.Count
+	(*hdr).Append("x-count", strconv.Itoa(countWire))
+
+	valueWire := result.Value
+	(*trlr).Append("x-value", valueWire)
+	return resp, nil
+}
+
+// NewWatchHandler2 creates a gRPC handler which serves the "SavedTransport"
+// service "Watch" endpoint.
+func NewWatchHandler2(endpoint goa.Endpoint, h goagrpc.StreamHandler) goagrpc.StreamHandler {
+	if h == nil {
+		h = goagrpc.NewStreamHandler(endpoint, DecodeWatchRequest2)
+	}
+	return h
+}
+
+// Watch implements the "Watch" method in
+// saved_transportpb.SavedTransportServer interface.
+func (s *Server) Watch(stream saved_transportpb.SavedTransport_WatchServer) error {
+	ctx := stream.Context()
+	ctx = context.WithValue(ctx, goa.MethodKey, "Watch")
+	ctx = context.WithValue(ctx, goa.ServiceKey, "SavedTransport")
+	var reqpb any
+	message, err := stream.Recv()
+	if err != nil {
+		if errors.Is(err, io.EOF) {
+			reqpb = nil
+		} else {
+			return goagrpc.EncodeError(err)
+		}
+	} else {
+		reqpb = message
+	}
+	p, err := s.WatchH.Decode(ctx, reqpb)
+	if err != nil {
+		return goagrpc.EncodeError(err)
+	}
+	ep := &savedtransport.WatchEndpointInput{
+		Stream:  &WatchServerStream2{stream: stream},
+		Payload: p.(*savedtransport.SavedPayload),
+	}
+	err = s.WatchH.Handle(ctx, ep)
+	if err != nil {
+		return goagrpc.EncodeError(err)
+	}
+	return nil
+}
+
+// WatchServerStream2 implements the savedtransport.WatchServerStream interface.
+type WatchServerStream2 struct {
+	stream saved_transportpb.SavedTransport_WatchServer
+}
+
+// NewProtoWatchRequest2 builds *saved_transportpb.WatchRequest from
+// *savedtransport.SavedPayload.
+func NewProtoWatchRequest2(payload *savedtransport.SavedPayload) *saved_transportpb.WatchRequest {
+	message := &saved_transportpb.WatchRequest{
+		Value: &payload.Value,
+	}
+	return message
+}
+
+// NewWatchResponseSavedResult builds *savedtransport.SavedResult from metadata
+// values.
+func NewWatchResponseSavedResult() *savedtransport.SavedResult {
+	result := &savedtransport.SavedResult{}
+	return result
+}
+
+// NewProtoSavedStreamWatchStreamItem builds *saved_transportpb.WatchStreamItem
+// from *savedtransport.SavedStream.
+func NewProtoSavedStreamWatchStreamItem(spayload *savedtransport.SavedStream) *saved_transportpb.WatchStreamItem {
+	v := &saved_transportpb.WatchStreamItem{
+		Value: &spayload.Value,
+	}
+	return v
+}
+
+// NewWatchPayload builds *savedtransport.SavedPayload from
+// *saved_transportpb.WatchRequest.
+func NewWatchPayload(message *saved_transportpb.WatchRequest, token string) *savedtransport.SavedPayload {
+	v := &savedtransport.SavedPayload{
+		Value: *message.Value,
+	}
+	v.Token = token
+	return v
+}
+
+// NewProtoSavedResult builds *saved_transportpb.WatchResponse from
+// *savedtransport.SavedResult.
+func NewProtoSavedResult() *saved_transportpb.WatchResponse {
+	message := &saved_transportpb.WatchResponse{}
+	return message
+}
+
+// NewWatchStreamItemSavedStream builds *savedtransport.SavedStream from
+// *saved_transportpb.WatchStreamItem.
+func NewWatchStreamItemSavedStream(v *saved_transportpb.WatchStreamItem) *savedtransport.SavedStream {
+	spayload := &savedtransport.SavedStream{
+		Value: *v.Value,
+	}
+	return spayload
+}
+
+// ValidateWatchRequest2 runs the validations defined on WatchRequest.
+func ValidateWatchRequest2(message *saved_transportpb.WatchRequest) (err error) {
+	if message.Value == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("value", "message"))
+	}
+	if message.Value != nil {
+		if utf8.RuneCountInString(*message.Value) < 2 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("message.value", *message.Value, utf8.RuneCountInString(*message.Value), 2, true))
+		}
+	}
+	return
+}
+
+// ValidateWatchStreamItem runs the validations defined on WatchStreamItem.
+func ValidateWatchStreamItem(stream *saved_transportpb.WatchStreamItem) (err error) {
+	if stream.Value == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("value", "stream"))
+	}
+	return
+}

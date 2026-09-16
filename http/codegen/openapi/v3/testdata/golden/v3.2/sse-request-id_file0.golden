@@ -1,21 +1,5 @@
 {
-  "components": {
-    "schemas": {
-      "SSERequestIDMethodRequestBody": {
-        "description": "Request body for SSERequestIDMethod.",
-        "example": {
-          "id": "Est voluptas est repellat."
-        },
-        "properties": {
-          "id": {
-            "example": "Est voluptas est repellat.",
-            "type": "string"
-          }
-        },
-        "type": "object"
-      }
-    }
-  },
+  "components": {},
   "info": {
     "title": "Goa API",
     "version": "0.0.1"
@@ -27,29 +11,15 @@
         "operationId": "SSERequestIDService#SSERequestIDMethod",
         "parameters": [
           {
-            "example": "Non sed saepe voluptatem.",
+            "example": "request",
             "in": "header",
             "name": "Last-Event-ID",
             "schema": {
-              "example": "Natus magni voluptates consequatur suscipit.",
+              "example": "request",
               "type": "string"
             }
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "example": {
-                "id": "Est voluptas est repellat."
-              },
-              "schema": {
-                "$ref": "#/components/schemas/SSERequestIDMethodRequestBody"
-              }
-            }
-          },
-          "description": "Request body for SSERequestIDMethod.",
-          "required": true
-        },
         "responses": {
           "200": {
             "content": {
@@ -57,7 +27,7 @@
                 "itemSchema": {
                   "properties": {
                     "data": {
-                      "example": "Quia molestias.",
+                      "example": "event",
                       "type": "string"
                     }
                   },

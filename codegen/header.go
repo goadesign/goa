@@ -2,12 +2,14 @@ package codegen
 
 import (
 	"encoding/json"
+	"fmt"
 	"path/filepath"
 
 	goa "goa.design/goa/v3/pkg"
 )
 
-// Header returns a Go source file header section template.
+// Header returns a Go source file header section template. It panics when the
+// imports give one package path different explicit package names.
 func Header(title, pack string, imports []*ImportSpec) *SectionTemplate {
 	return &SectionTemplate{
 		Name:   "source-header",
@@ -15,7 +17,7 @@ func Header(title, pack string, imports []*ImportSpec) *SectionTemplate {
 		Data: map[string]any{
 			"Title":   title,
 			"Pkg":     pack,
-			"Imports": imports,
+			"Imports": appendImports(nil, imports...),
 		},
 	}
 }
@@ -34,8 +36,8 @@ func VersionFile() *File {
 	}
 }
 
-// AddImport adds imports to a section template that was generated with
-// Header.
+// AddImport adds imports to a section template that was generated with Header.
+// It panics when one package path is given different explicit package names.
 func AddImport(section *SectionTemplate, imprts ...*ImportSpec) {
 	if len(imprts) == 0 {
 		return
@@ -45,16 +47,42 @@ func AddImport(section *SectionTemplate, imprts ...*ImportSpec) {
 	if imports, ok := data["Imports"]; ok {
 		specs = imports.([]*ImportSpec)
 	}
-	seen := make(map[ImportSpec]struct{}, len(specs)+len(imprts))
-	for _, spec := range specs {
-		seen[*spec] = struct{}{}
-	}
-	for _, spec := range imprts {
-		if _, ok := seen[*spec]; ok {
-			continue
+	data["Imports"] = appendImports(specs, imprts...)
+}
+
+// appendImports keeps one import for each package path. An explicit package
+// name replaces an unspecified name. Different explicit names are a generator
+// error because one Go file cannot use both names for the same package.
+func appendImports(existing []*ImportSpec, additions ...*ImportSpec) []*ImportSpec {
+	positions := make(map[string]int, len(existing)+len(additions))
+	result := make([]*ImportSpec, 0, len(existing)+len(additions))
+	appendImport := func(spec *ImportSpec) {
+		position, ok := positions[spec.Path]
+		if !ok {
+			positions[spec.Path] = len(result)
+			result = append(result, spec)
+			return
 		}
-		seen[*spec] = struct{}{}
-		specs = append(specs, spec)
+		current := result[position]
+		switch {
+		case current.Name == spec.Name, spec.Name == "":
+			return
+		case current.Name == "":
+			result[position] = spec
+		default:
+			panic(fmt.Sprintf(
+				"import path %q uses package names %q and %q",
+				spec.Path,
+				current.Name,
+				spec.Name,
+			))
+		}
 	}
-	data["Imports"] = specs
+	for _, spec := range existing {
+		appendImport(spec)
+	}
+	for _, spec := range additions {
+		appendImport(spec)
+	}
+	return result
 }

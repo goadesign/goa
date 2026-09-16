@@ -12,7 +12,13 @@ func DecodeMethodMessageUserTypeWithNestedUserTypesResponse(ctx context.Context,
 	if !ok {
 		return nil, goagrpc.ErrInvalidType("ServiceMessageUserTypeWithNestedUserTypes", "MethodMessageUserTypeWithNestedUserTypes", "*service_message_user_type_with_nested_user_typespb.RTCollection", v)
 	}
-	res := NewMethodMessageUserTypeWithNestedUserTypesResult(message)
+	var res servicemessageusertypewithnestedusertypesviews.RTCollectionView
+	switch view {
+	case "default", "":
+		res = NewMethodMessageUserTypeWithNestedUserTypesResult(message)
+	case "tiny":
+		res = NewMethodMessageUserTypeWithNestedUserTypesResultTiny(message)
+	}
 	vres := servicemessageusertypewithnestedusertypesviews.RTCollection{Projected: res, View: view}
 	if err := servicemessageusertypewithnestedusertypesviews.ValidateRTCollection(vres); err != nil {
 		return nil, err

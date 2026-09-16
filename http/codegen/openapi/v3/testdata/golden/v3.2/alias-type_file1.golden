@@ -22,10 +22,7 @@ paths:
                             $ref: '#/components/schemas/Setup'
                         example:
                             completed:
-                                - who
-                                - who
-                                - who
-                                - who
+                                - when
                             current: who
             responses:
                 "200":
@@ -36,9 +33,8 @@ paths:
                                 $ref: '#/components/schemas/Setup'
                             example:
                                 completed:
-                                    - where
-                                    - where
-                                current: where
+                                    - when
+                                current: who
 components:
     schemas:
         Setup:
@@ -49,19 +45,13 @@ components:
                     items:
                         $ref: '#/components/schemas/Stage'
                     example:
-                        - who
-                        - who
-                        - who
-                        - who
+                        - when
                 current:
                     $ref: '#/components/schemas/Stage'
             description: Request body for testEndpoint.
             example:
                 completed:
-                    - who
-                    - who
-                    - who
-                    - who
+                    - when
                 current: who
         Stage:
             type: string

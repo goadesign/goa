@@ -37,8 +37,7 @@ func NewPayloadBRequestBody(p []*servicemultiplemethods.PayloadB) []*PayloadBReq
 	return body
 }
 
-// ValidatePayloadARequestBody runs the validations defined on
-// PayloadARequestBody
+// ValidatePayloadARequestBody runs the validations defined on PayloadA
 func ValidatePayloadARequestBody(body *PayloadARequestBody) (err error) {
 	if body.A != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.a", *body.A, "patterna"))
@@ -46,8 +45,7 @@ func ValidatePayloadARequestBody(body *PayloadARequestBody) (err error) {
 	return
 }
 
-// ValidatePayloadBRequestBody runs the validations defined on
-// PayloadBRequestBody
+// ValidatePayloadBRequestBody runs the validations defined on PayloadB
 func ValidatePayloadBRequestBody(body *PayloadBRequestBody) (err error) {
 	err = goa.MergeErrors(err, goa.ValidatePattern("body.a", body.A, "patterna"))
 	err = goa.MergeErrors(err, goa.ValidatePattern("body.b", body.B, "patternb"))

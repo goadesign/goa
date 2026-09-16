@@ -1,3 +1,5 @@
+// This file renders complete Swagger 2.0 documents from prepared HTTP designs
+// and compares the JSON and YAML output produced with run-owned example state.
 package openapiv2_test
 
 import (
@@ -33,6 +35,7 @@ func TestSections(t *testing.T) {
 		{"multiple-services", testdata.MultipleServicesDSL},
 		{"multiple-views", testdata.MultipleViewsDSL},
 		{"explicit-view", testdata.ExplicitViewDSL},
+		{"released-response-collection-names", testdata.ReleasedResponseCollectionNamesDSL},
 		{"security", testdata.SecurityDSL},
 		{"server-host-with-variables", testdata.ServerHostWithVariablesDSL},
 		{"with-spaces", testdata.WithSpacesDSL},
@@ -52,11 +55,11 @@ func TestSections(t *testing.T) {
 		{"additional-properties-type", testdata.AdditionalPropertiesTypeDSL},
 		{"additional-properties-payload-result", testdata.AdditionalPropertiesPayloadResultDSL},
 		{"additional-properties-embedded-payload-result", testdata.AdditionalPropertiesPayloadResultDSL},
+		{"error-examples", testdata.ErrorExamplesDSL},
+		{"shared-error-description", testdata.SharedErrorDescriptionDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			// Reset global variables
-			openapi.Definitions = make(map[string]*openapi.Schema)
 			root := expr.RunDSL(t, c.DSL)
 			oFiles, err := openapiv2.Files(root, openapi.DefaultPath20)
 			if err != nil {
@@ -112,8 +115,6 @@ func TestValidations(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			// Reset global variables
-			openapi.Definitions = make(map[string]*openapi.Schema)
 			root := expr.RunDSL(t, c.DSL)
 			oFiles, err := openapiv2.Files(root, openapi.DefaultPath20)
 			require.NoError(t, err, "OpenAPI failed")
@@ -156,8 +157,6 @@ func TestExtensions(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			// Reset global variables
-			openapi.Definitions = make(map[string]*openapi.Schema)
 			root := expr.RunDSL(t, c.DSL)
 			oFiles, err := openapiv2.Files(root, openapi.DefaultPath20)
 			require.NoError(t, err, "OpenAPI failed")
@@ -189,9 +188,6 @@ func TestExtensions(t *testing.T) {
 }
 
 func TestNamedPrimitiveParamsAndHeadersUseOpenAPIBaseTypes(t *testing.T) {
-	// Reset global variables
-	openapi.Definitions = make(map[string]*openapi.Schema)
-
 	root := expr.RunDSL(t, func() {
 		var UUID = dsl.Type("UUID", dsl.String, func() {
 			dsl.Format(dsl.FormatUUID)

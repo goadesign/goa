@@ -55,7 +55,7 @@ definitions:
             foo:
                 type: string
                 example: ""
-        description: Foo BarResponseBody result type (default view)
+        description: Foo Bar result type (default view)
         example:
             bar:
                 - string: ""
@@ -107,6 +107,7 @@ definitions:
                         bar:
                             - string: ""
                             - string: ""
+                            - string: ""
                         foo: ""
                 additionalProperties:
                     $ref: '#/definitions/GoaFoobar'
@@ -130,6 +131,7 @@ definitions:
             resulttype_map:
                 "":
                     bar:
+                        - string: ""
                         - string: ""
                         - string: ""
                     foo: ""

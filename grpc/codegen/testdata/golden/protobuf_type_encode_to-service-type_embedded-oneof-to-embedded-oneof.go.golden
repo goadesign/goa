@@ -4,10 +4,10 @@ func transform() {
 	}
 	if source.EmbeddedOneOf != nil {
 		switch val := source.EmbeddedOneOf.(type) {
-		case *proto.EmbeddedOneOf_String_:
+		case *proto.EmbeddedOneOf_String_2:
 			{
 				u := target.EmbeddedOneOf
-				u.SetString(proto.EmbeddedOneOfString(val.String_))
+				u.SetString(proto.EmbeddedOneOfString(val.String_2))
 				target.EmbeddedOneOf = u
 			}
 		case *proto.EmbeddedOneOf_Integer:
@@ -31,13 +31,13 @@ func transform() {
 		case *proto.EmbeddedOneOf_Array:
 			{
 				u := target.EmbeddedOneOf
-				u.SetArray(protobufProtoEmbeddedOneOfArrayToProtoEmbeddedOneOfArray(val.Array))
+				u.SetArray(protobufProtoEmbeddedOneOfArray2ToProtoEmbeddedOneOfArray(val.Array))
 				target.EmbeddedOneOf = u
 			}
 		case *proto.EmbeddedOneOf_Map_:
 			{
 				u := target.EmbeddedOneOf
-				u.SetMap(protobufProtoEmbeddedOneOfMapToProtoEmbeddedOneOfMap(val.Map_))
+				u.SetMap(protobufProtoEmbeddedOneOfMap2ToProtoEmbeddedOneOfMap(val.Map_))
 				target.EmbeddedOneOf = u
 			}
 		case *proto.EmbeddedOneOf_UserType:

@@ -9,11 +9,10 @@ package server
 
 import (
 	"bytes"
-	"errors"
 	"io"
-	feed "kitchensink/feed"
 	"net/http"
 
+	feed "generated.local/gen/feed"
 	goahttp "goa.design/goa/v3/http"
 	"goa.design/goa/v3/jsonrpc"
 	goa "goa.design/goa/v3/pkg"
@@ -25,26 +24,55 @@ func DecodeWatchRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.D
 	return func(r *http.Request, req *jsonrpc.RawRequest) (*feed.WatchPayload, error) {
 		r.Body = io.NopCloser(bytes.NewReader(req.Params))
 		var payload *feed.WatchPayload
-		var (
-			body WatchRequestBody
-			err  error
-		)
-		err = decoder(r).Decode(&body)
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				return payload, goa.MissingPayloadError()
-			}
-			var gerr *goa.ServiceError
-			if errors.As(err, &gerr) {
-				return payload, gerr
-			}
-			return payload, goa.DecodePayloadError(err.Error())
+		if !req.HasID || req.ID == nil {
+			return payload, goa.MissingFieldError("id", "JSON-RPC request")
 		}
-		err = ValidateWatchRequestBody(&body)
+		var requestID string
+		decodedID, decodeErr := jsonrpc.IDToString(req.ID)
+		if decodeErr != nil {
+			return payload, goa.DecodePayloadError(decodeErr.Error())
+		}
+		requestID = decodedID
+		var (
+			lastEventID *string
+			err         error
+		)
+		lastEventIDValues, lastEventIDPresent := r.Header["Last-Event-Id"]
+		if lastEventIDPresent && len(lastEventIDValues) > 0 {
+			for _, character := range lastEventIDValues[0] {
+				if character == 0 || character == '\r' || character == '\n' {
+					err = goa.MergeErrors(err, goa.InvalidPatternError("last_event_id", lastEventIDValues[0], "[^\\x00\\r\\n]*"))
+					break
+				}
+			}
+			value := lastEventIDValues[0]
+			lastEventID = &value
+		}
 		if err != nil {
 			return payload, err
 		}
-		payload = NewWatchPayload(&body)
+		payload = NewWatchPayload(lastEventID, requestID)
+
+		return payload, nil
+	}
+}
+
+// DecodeSnapshotRequest returns a decoder for requests sent to the Feed
+// snapshot endpoint.
+func DecodeSnapshotRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request, *jsonrpc.RawRequest) (*feed.SnapshotPayload, error) {
+	return func(r *http.Request, req *jsonrpc.RawRequest) (*feed.SnapshotPayload, error) {
+		r.Body = io.NopCloser(bytes.NewReader(req.Params))
+		var payload *feed.SnapshotPayload
+		if !req.HasID || req.ID == nil {
+			return payload, goa.MissingFieldError("id", "JSON-RPC request")
+		}
+		var requestID string
+		decodedID, decodeErr := jsonrpc.IDToString(req.ID)
+		if decodeErr != nil {
+			return payload, goa.DecodePayloadError(decodeErr.Error())
+		}
+		requestID = decodedID
+		payload = NewSnapshotPayload(requestID)
 
 		return payload, nil
 	}

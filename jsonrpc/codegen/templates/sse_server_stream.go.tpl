@@ -1,138 +1,126 @@
-{{ comment (printf "%s implements the %s.%s interface using Server-Sent Events." .SSE.StructName .ServicePkgName .Method.ServerStream.Interface) }}
-type {{ .SSE.StructName }} struct {
-	// sseServerStream provides the shared SSE event encoding machinery
-	sseServerStream
-	// requestID is the JSON-RPC request ID for sending final response
-	requestID any
-	// closed indicates if the stream has been closed via SendAndClose
-	closed bool
-	// mu protects the closed flag
-	mu sync.Mutex
+{{ comment (printf "%s implements the %s.%s interface using Server-Sent Events." .SSE.StructDeclaration.Name .ServicePkgName .Method.ServerStream.Interface) }}
+type {{ .SSE.StructDeclaration.Name }} struct {
+	// {{ sseStreamName }} writes JSON-RPC messages as server-sent events.
+	{{ sseStreamName }}
+	{{- if and .Method.ViewedResult (not .Method.ViewedResult.ViewName) }}
+	// view is the result view used to encode later stream values.
+	view string
+	{{ comment "sentView is the result view used by the first event. Later sends must use the same view." }}
+	sentView string
+	{{- end }}
 }
 
-{{ comment "Send sends a JSON-RPC notification to the client." }}
-{{ comment "Notifications do not expect a response from the client." }}
-func (s *{{ .SSE.StructName }}) Send(ctx context.Context, event {{ .ServicePkgName }}.{{ .Method.VarName }}Event) error {
-	{{ comment "Check if stream is closed" }}
-	s.mu.Lock()
-	if s.closed {
-		s.mu.Unlock()
-		return fmt.Errorf("stream closed")
-	}
-	s.mu.Unlock()
+{{- if and .Method.ViewedResult (not .Method.ViewedResult.ViewName) }}
+{{ comment "SetView selects the result view used by later stream values." }}
+func (s *{{ .SSE.StructDeclaration.Name }}) SetView(view string) {
+	s.view = view
+}
+{{- end }}
 
-	{{ comment "Type assert to the specific result type" }}
-	result, ok := event.({{ .SSE.EventTypeRef }})
-	if !ok {
-		return fmt.Errorf("unexpected event type: %T", event)
-	}
+{{ comment .Method.ServerStream.SendDesc }}
+func (s *{{ .SSE.StructDeclaration.Name }}) {{ .Method.ServerStream.SendName }}(event {{ .SSE.EventTypeRef }}) error {
+	return s.{{ .Method.ServerStream.SendWithContextName }}(context.Background(), event)
+}
 
-	{{- if and .Result (index .Result.Responses 0).ServerBody (index (index .Result.Responses 0).ServerBody 0).Init }}
-	{{ comment "Convert to response body type for proper JSON encoding" }}
-	body := {{ (index (index .Result.Responses 0).ServerBody 0).Init.Name }}(result)
+{{ comment .Method.ServerStream.SendWithContextDesc }}
+func (s *{{ .SSE.StructDeclaration.Name }}) {{ .Method.ServerStream.SendWithContextName }}(ctx context.Context, event {{ .SSE.EventTypeRef }}) error {
+	{{- $directData := and .SSE.DataField .SSE.Params .SSE.Params.Positional }}
+	result := event
+
+	{{- if and (not $directData) (not .SSE.Params.OmitAbsent) }}
+	{{- if .Method.ViewedResult }}
+	{{- if not .Method.ViewedResult.ViewName }}
+	view := s.view
+	if view == "" {
+		view = "default"
+	}
+	if s.sentView != "" && view != s.sentView {
+		return goa.InvalidEnumValueError("view", view, []any{s.sentView})
+	}
+	{{- end }}
+	body, err := {{ viewedStreamEncodeName .Method.Name }}(result{{ if not .Method.ViewedResult.ViewName }}, view{{ end }})
+	if err != nil {
+		return err
+	}
+	{{- if not .Method.ViewedResult.ViewName }}
+	s.sentView = view
+	{{- end }}
+	{{- else if and .SSE.HasResponseBody .SSE.Response (index .SSE.Response.ServerBody 0).Init }}
+	body := {{ (index .SSE.Response.ServerBody 0).Init.Declaration.Name }}(result)
 	{{- else }}
 	body := result
 	{{- end }}
-
-	{{ comment "Send as notification (no ID)" }}
-	message := map[string]any{
-		"jsonrpc": "2.0",
-		"method":  {{ printf "%q" .Method.Name }},
-		"params":  body,
+	{{- end }}
+	{{- if .SSE.IDField }}
+	var eventID *string
+	{{- if .SSE.ID.Pointer }}
+	if result.{{ .SSE.IDField }} != nil {
+		value := string(*result.{{ .SSE.IDField }})
+		eventID = &value
 	}
-
-	return s.sendSSEEvent("notification", message)
-}
-
-{{ comment "SendAndClose sends a final JSON-RPC response to the client and closes the stream." }}
-{{ comment "The response will include the original request ID unless the result has an ID field populated." }}
-{{ comment "After calling this method, no more events can be sent on this stream." }}
-func (s *{{ .SSE.StructName }}) SendAndClose(ctx context.Context, event {{ .ServicePkgName }}.{{ .Method.VarName }}Event) error {
-	{{ comment "Check if stream is already closed" }}
-	s.mu.Lock()
-	if s.closed {
-		s.mu.Unlock()
-		return fmt.Errorf("stream already closed")
+	{{- else }}
+	valueID := string(result.{{ .SSE.IDField }})
+	eventID = &valueID
+	{{- end }}
+	{{- end }}
+	{{- if .SSE.EventField }}
+	var eventType *string
+	{{- if .SSE.Event.Pointer }}
+	if result.{{ .SSE.EventField }} != nil {
+		value := string(*result.{{ .SSE.EventField }})
+		eventType = &value
 	}
-	s.closed = true
-	s.mu.Unlock()
-
-	{{ comment "Type assert to the specific result type" }}
-	result, ok := event.({{ .SSE.EventTypeRef }})
-	if !ok {
-		return fmt.Errorf("unexpected event type: %T", event)
+	{{- else }}
+	valueType := string(result.{{ .SSE.EventField }})
+	eventType = &valueType
+	{{- end }}
+	{{- end }}
+	{{- if .SSE.RetryField }}
+	var eventRetry *string
+	{{- if .SSE.Retry.Pointer }}
+	if result.{{ .SSE.RetryField }} != nil {
+		{{- if sseRetrySigned .SSE.Retry }}
+		if *result.{{ .SSE.RetryField }} < 0 {
+			return fmt.Errorf("server-sent event retry cannot be negative")
+		}
+		{{- end }}
+		value := fmt.Sprintf("%d", *result.{{ .SSE.RetryField }})
+		eventRetry = &value
 	}
-
-	{{ comment "Determine the ID to use for the response" }}
-	var id any = s.requestID
-	{{- if .Result.IDAttribute }}
-		{{- if .Result.IDAttributeRequired }}
-	if result.{{ .Result.IDAttribute }} != "" {
-		{{ comment "Use the ID from the result if provided" }}
-		id = result.{{ .Result.IDAttribute }}
-		{{ comment "Clear the ID field so it's not duplicated in the result" }}
-		result.{{ .Result.IDAttribute }} = ""
+	{{- else }}
+	{{- if sseRetrySigned .SSE.Retry }}
+	if result.{{ .SSE.RetryField }} < 0 {
+		return fmt.Errorf("server-sent event retry cannot be negative")
 	}
+	{{- end }}
+	valueRetry := fmt.Sprintf("%d", result.{{ .SSE.RetryField }})
+	eventRetry = &valueRetry
+	{{- end }}
+	{{- end }}
+
+	{{ if .SSE.Params.OmitAbsent }}
+	message := &jsonrpc.Request{
+		JSONRPC: "2.0",
+		Method:  {{ printf "%q" .Method.Name }},
+	}
+	if {{ if .SSE.Data.Union }}result.{{ .SSE.DataField }}.Kind() != ""{{ else }}result.{{ .SSE.DataField }} != nil{{ end }} {
+		{{- if and .SSE.HasResponseBody .SSE.Response (index .SSE.Response.ServerBody 0).Init }}
+		body := {{ (index .SSE.Response.ServerBody 0).Init.Declaration.Name }}(result)
+		message.Params = body.{{ .SSE.DataField }}
 		{{- else }}
-	if result.{{ .Result.IDAttribute }} != nil && *result.{{ .Result.IDAttribute }} != "" {
-		{{ comment "Use the ID from the result if provided" }}
-		id = *result.{{ .Result.IDAttribute }}
-		{{ comment "Clear the ID field so it's not duplicated in the result" }}
-		result.{{ .Result.IDAttribute }} = nil
-	}
+		message.Params = result.{{ .SSE.DataField }}
 		{{- end }}
-	{{- end }}
-
-	{{- if and .Result (index .Result.Responses 0).ServerBody (index (index .Result.Responses 0).ServerBody 0).Init }}
-	{{ comment "Convert to response body type for proper JSON encoding" }}
-	body := {{ (index (index .Result.Responses 0).ServerBody 0).Init.Name }}(result)
-	{{- else }}
-	body := result
-	{{- end }}
-
-	{{ comment "Send as response with ID" }}
-	message := map[string]any{
-		"jsonrpc": "2.0",
-		"id":      id,
-		"result":  body,
 	}
-
-	return s.sendSSEEvent("response", message)
+	{{- else }}
+	message := jsonrpc.MakeNotification(
+		{{ printf "%q" .Method.Name }},
+		{{ if and .SSE.Params .SSE.Params.Positional }}[]{{ .SSE.Params.TypeRef }}{ {{- if $directData }}result.{{ .SSE.DataField }}{{ else }}body{{ end }} }{{ else }}body{{ if .SSE.DataField }}.{{ .SSE.DataField }}{{ end }}{{ end }},
+	)
+	{{- end }}
+	return s.sendSSEEvent(ctx, message, {{ if .SSE.IDField }}eventID{{ else }}nil{{ end }}, {{ if .SSE.EventField }}eventType{{ else }}nil{{ end }}, {{ if .SSE.RetryField }}eventRetry{{ else }}nil{{ end }})
 }
 
-{{ comment "SendError sends a JSON-RPC error response." }}
-func (s *{{ .SSE.StructName }}) SendError(ctx context.Context, id string, err error) error {
-	{{- if .Errors }}
-	var en goa.GoaErrorNamer
-	if !errors.As(err, &en) {
-		code := jsonrpc.InternalError
-		if _, ok := err.(*goa.ServiceError); ok {
-			code = jsonrpc.InvalidParams
-		}
-		return s.sendError(ctx, id, code, err.Error(), nil)
-	}
-	switch en.GoaErrorName() {
-	{{- range $gerr := .Errors }}
-		{{- range $err := $gerr.Errors }}
-	case {{ printf "%q" $err.Name }}:
-			{{- with $err.Response}}
-		return s.sendError(ctx, id, {{ .Code }}, err.Error(), err)
-			{{- end }}
-		{{- end }}
-	{{- end }}
-	default:
-		code := jsonrpc.InternalError
-		if _, ok := err.(*goa.ServiceError); ok {
-			code = jsonrpc.InvalidParams
-		}
-		return s.sendError(ctx, id, code, err.Error(), nil)
-	}
-    {{- else }}
-    {{ comment "No custom errors defined - check if it's a validation error, otherwise use internal error" }}
-    code := jsonrpc.InternalError
-    if _, ok := err.(*goa.ServiceError); ok {
-        code = jsonrpc.InvalidParams
-    }
-    return s.sendError(ctx, id, code, err.Error(), nil)
-    {{- end }}
+{{ comment "Close does nothing because the HTTP response closes when the service method returns." }}
+func (s *{{ .SSE.StructDeclaration.Name }}) Close() error {
+	return nil
 }

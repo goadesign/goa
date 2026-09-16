@@ -7,7 +7,7 @@ func EncodeMethodQueryFloat32ValidateRequest(encoder func(*http.Request) goahttp
 			return goahttp.ErrInvalidType("ServiceQueryFloat32Validate", "MethodQueryFloat32Validate", "*servicequeryfloat32validate.MethodQueryFloat32ValidatePayload", v)
 		}
 		values := req.URL.Query()
-		values.Add("q", fmt.Sprintf("%v", p.Q))
+		values.Add("q", strconv.FormatFloat(float64(p.Q), 'g', -1, 32))
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}

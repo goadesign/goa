@@ -2,7 +2,7 @@
 // Service is the PkgPathPayloadAttributeDSL service interface.
 type Service interface {
 	// Foo implements Foo.
-	FooEndpoint(context.Context, *Bar) (res *Bar, err error)
+	Foo(context.Context, *Bar) (res *Bar, err error)
 }
 
 // APIName is the name of the API as defined in the design.

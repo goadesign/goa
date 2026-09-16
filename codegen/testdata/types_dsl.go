@@ -196,7 +196,7 @@ var TestTypesDSL = func() {
 				Default(100)
 			})
 			Attribute("raw_json", func() {
-				Meta("struct:field:type", "json.RawMessage", "json")
+				Meta("struct:field:type", "json.RawMessage", "encoding/json", "json")
 				Default(json.RawMessage("foo"))
 			})
 			Attribute("required_int", Int, func() {

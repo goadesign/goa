@@ -1,0 +1,45 @@
+
+// Service is the Secured service interface.
+type Service interface {
+	// Read implements Read.
+	Read(context.Context) (err error)
+	// Write implements Write.
+	Write(context.Context) (err error)
+	// Delete implements Delete.
+	Delete(context.Context) (err error)
+}
+
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "Secured"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = [3]string{"Read", "Write", "Delete"}
+
+type InvalidScopes string
+
+// Error returns an error description.
+func (e InvalidScopes) Error() string {
+	return ""
+}
+
+// ErrorName returns the error name.
+//
+// Deprecated: Use GoaErrorName - https://github.com/goadesign/goa/issues/3105
+func (e InvalidScopes) ErrorName() string {
+	return e.GoaErrorName()
+}
+
+// GoaErrorName returns the error name.
+func (e InvalidScopes) GoaErrorName() string {
+	return "invalid_scopes"
+}

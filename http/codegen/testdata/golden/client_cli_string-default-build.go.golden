@@ -3,9 +3,7 @@
 func BuildMethodQueryStringDefaultPayload(serviceQueryStringDefaultMethodQueryStringDefaultQ string) (*servicequerystringdefault.MethodQueryStringDefaultPayload, error) {
 	var q string
 	{
-		if serviceQueryStringDefaultMethodQueryStringDefaultQ != "" {
-			q = serviceQueryStringDefaultMethodQueryStringDefaultQ
-		}
+		q = serviceQueryStringDefaultMethodQueryStringDefaultQ
 	}
 	v := &servicequerystringdefault.MethodQueryStringDefaultPayload{}
 	v.Q = q

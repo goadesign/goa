@@ -13,21 +13,21 @@ import (
 )
 
 func TestServerMultipartFuncType(t *testing.T) {
-	const genpkg = "gen"
 	cases := []struct {
 		Name string
 		DSL  func()
 	}{
 		{"multipart-body-primitive", testdata.PayloadMultipartPrimitiveDSL},
 		{"multipart-body-user-type", testdata.PayloadMultipartUserTypeDSL},
+		{"multipart-body-validation", testdata.PayloadMultipartValidationDSL},
 		{"multipart-body-array-type", testdata.PayloadMultipartArrayTypeDSL},
 		{"multipart-body-map-type", testdata.PayloadMultipartMapTypeDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := expr.RunDSL(t, c.DSL)
-			services := CreateHTTPServices(root)
-			fs := ServerFiles(genpkg, services)
+			plan := linkedHTTPPlanForRoot(t, root)
+			fs := plan.ServerFiles()
 			require.Len(t, fs, 2)
 			sections := fs[0].SectionTemplates
 			require.Greater(t, len(sections), 5)
@@ -38,7 +38,6 @@ func TestServerMultipartFuncType(t *testing.T) {
 }
 
 func TestClientMultipartFuncType(t *testing.T) {
-	const genpkg = "gen"
 	cases := []struct {
 		Name string
 		DSL  func()
@@ -51,8 +50,8 @@ func TestClientMultipartFuncType(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := expr.RunDSL(t, c.DSL)
-			services := CreateHTTPServices(root)
-			fs := ClientFiles(genpkg, services)
+			plan := linkedHTTPPlanForRoot(t, root)
+			fs := plan.ClientFiles()
 			require.Len(t, fs, 2)
 			sections := fs[0].SectionTemplates
 			require.Greater(t, len(sections), 4)
@@ -63,13 +62,13 @@ func TestClientMultipartFuncType(t *testing.T) {
 }
 
 func TestServerMultipartNewFunc(t *testing.T) {
-	const genpkg = "gen"
 	cases := []struct {
 		Name string
 		DSL  func()
 	}{
 		{"server-multipart-body-primitive", testdata.PayloadMultipartPrimitiveDSL},
 		{"server-multipart-body-user-type", testdata.PayloadMultipartUserTypeDSL},
+		{"server-multipart-body-validation", testdata.PayloadMultipartValidationDSL},
 		{"server-multipart-body-array-type", testdata.PayloadMultipartArrayTypeDSL},
 		{"server-multipart-body-map-type", testdata.PayloadMultipartMapTypeDSL},
 		{"server-multipart-with-param", testdata.PayloadMultipartWithParamDSL},
@@ -78,8 +77,8 @@ func TestServerMultipartNewFunc(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := expr.RunDSL(t, c.DSL)
-			services := CreateHTTPServices(root)
-			fs := ServerFiles(genpkg, services)
+			plan := linkedHTTPPlanForRoot(t, root)
+			fs := plan.ServerFiles()
 			require.Len(t, fs, 2)
 			sections := fs[1].SectionTemplates
 			require.Greater(t, len(sections), 3)
@@ -90,7 +89,6 @@ func TestServerMultipartNewFunc(t *testing.T) {
 }
 
 func TestClientMultipartNewFunc(t *testing.T) {
-	const genpkg = "gen"
 	cases := []struct {
 		Name string
 		DSL  func()
@@ -105,8 +103,8 @@ func TestClientMultipartNewFunc(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := expr.RunDSL(t, c.DSL)
-			services := CreateHTTPServices(root)
-			fs := ClientFiles(genpkg, services)
+			plan := linkedHTTPPlanForRoot(t, root)
+			fs := plan.ClientFiles()
 			require.Len(t, fs, 2)
 			sections := fs[1].SectionTemplates
 			require.Greater(t, len(sections), 3)

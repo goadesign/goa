@@ -1,7 +1,5 @@
 
 	var (
-		endpoint goa.Endpoint
-		payload any
 		err error
 	)
 	{
@@ -11,18 +9,29 @@
 		{{- if and (eq $t.Type  "http") $.HasJSONRPC }}
 			{{- if $.HasHTTP }}
 			if *jsonrpcF || *jF {
-				endpoint, payload, err = doJSONRPC(scheme, host, timeout, debug)
+				err = doJSONRPC(context.Background(), scheme, host, timeout, debug, os.Stdout)
 			} else {
-				endpoint, payload, err = doHTTP(scheme, host, timeout, debug)
-				if err != nil && strings.HasPrefix(err.Error(), "unknown") {
-					endpoint, payload, err = doJSONRPC(scheme, host, timeout, debug)
+				switch flag.Arg(0) {
+				{{- range $.JSONRPCOnly }}
+				case {{ printf "%q" .Service }}:
+					switch flag.Arg(1) {
+					{{- range .Endpoints }}
+					case {{ printf "%q" . }}:
+						err = doJSONRPC(context.Background(), scheme, host, timeout, debug, os.Stdout)
+					{{- end }}
+					default:
+						err = doHTTP(context.Background(), scheme, host, timeout, debug, os.Stdout)
+					}
+				{{- end }}
+				default:
+					err = doHTTP(context.Background(), scheme, host, timeout, debug, os.Stdout)
 				}
 			}
 			{{- else }}
-			endpoint, payload, err = doJSONRPC(scheme, host, timeout, debug)
+			err = doJSONRPC(context.Background(), scheme, host, timeout, debug, os.Stdout)
 			{{- end }}
 		{{- else }}
-			endpoint, payload, err = do{{ toUpper $t.Name }}(scheme, host, timeout, debug)
+			err = do{{ toUpper $t.Name }}(context.Background(), scheme, host, timeout, debug, os.Stdout)
 		{{- end }}
 	{{- end }}
 		default:

@@ -8,7 +8,4 @@ func transform() {
 			target.Simple[tk] = tv
 		}
 	}
-	if source.Simple == nil {
-		target.Simple = map[string]int{"foo": 1}
-	}
 }

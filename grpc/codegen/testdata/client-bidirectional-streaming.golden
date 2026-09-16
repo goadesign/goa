@@ -1,0 +1,40 @@
+import (
+	"context"
+	"errors"
+	"flag"
+	"fmt"
+	"io"
+
+	cli "generated.local/gen/grpc/cli/test_api"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+)
+
+func doGRPC(ctx context.Context, _ string, host string, _ int, _ bool, stdout io.Writer) (err error) {
+	switch flag.Arg(0) {
+	case "service-bidirectional-streaming-rpc":
+		switch flag.Arg(1) {
+		case "method-bidirectional-streaming-rpc":
+			return errors.New("example client does not support streamed input for service \"ServiceBidirectionalStreamingRPC\" method \"MethodBidirectionalStreamingRPC\"")
+		}
+	}
+	conn, err := grpc.NewClient(host, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return fmt.Errorf("connect to gRPC server at %s: %w", host, err)
+	}
+	defer func() {
+		err = errors.Join(err, conn.Close())
+	}()
+	_, _, err = cli.ParseEndpoint(
+		conn,
+	)
+	if err != nil {
+		return fmt.Errorf("parse endpoint: %w", err)
+	}
+
+	panic("parsed gRPC command has no generated result writer")
+}
+
+func grpcUsageExamples() string {
+	return cli.UsageExamples()
+}

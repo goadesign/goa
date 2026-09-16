@@ -20,7 +20,7 @@ func TestClientCLIInlinesOneOfRequestValidation(t *testing.T) {
 
 	require.Contains(t, code, "BuildMethodBodyUnionUserValidatePayload")
 	require.Contains(t, code, "if body.A == nil")
-	require.Contains(t, code, "marshalUnionUserValidateRequestBodyTo")
+	require.Contains(t, code, "marshalUnionUserValidateRequestBodyToServicebodyunionuservalidateUnionUserValidate")
 	require.NotContains(t, code, "ValidateMethodBodyUnionUserValidateRequestBody")
 }
 
@@ -66,8 +66,8 @@ func renderClientCLISectionCode(t *testing.T, dsl func(), fileIndex, sectionInde
 	t.Helper()
 
 	root := expr.RunDSL(t, dsl)
-	services := CreateHTTPServices(root)
-	fs := ClientCLIFiles("", services)
+	plan := linkedHTTPPlanForRoot(t, root)
+	fs := plan.ClientCLIFiles()
 
 	return codegen.SectionCode(t, fs[fileIndex].SectionTemplates[sectionIndex])
 }
@@ -76,11 +76,9 @@ func renderClientCLISectionCode(t *testing.T, dsl func(), fileIndex, sectionInde
 func renderClientTypesCode(t *testing.T, dsl func()) string {
 	t.Helper()
 
-	const genpkg = "gen"
-
 	root := expr.RunDSL(t, dsl)
-	services := CreateHTTPServices(root)
-	fs := typesFile(genpkg, root.API.HTTP.Services[0], false, services)
+	plan := linkedHTTPPlanForRoot(t, root)
+	fs := plan.ClientTypeFiles()[0]
 
 	var buf bytes.Buffer
 	for _, s := range fs.SectionTemplates[1:] {
@@ -96,8 +94,8 @@ func renderClientDecodeCode(t *testing.T, dsl func()) string {
 	t.Helper()
 
 	root := expr.RunDSL(t, dsl)
-	services := CreateHTTPServices(root)
-	fs := ClientFiles("", services)
+	plan := linkedHTTPPlanForRoot(t, root)
+	fs := plan.ClientFiles()
 	require.Len(t, fs, 2)
 
 	sections := fs[1].SectionTemplates

@@ -1,3 +1,5 @@
+// This file exercises attribute example generation across validation rules and
+// confirms every configured generator is anchored to its owning expression.
 package expr_test
 
 import (
@@ -21,11 +23,13 @@ func TestByPattern(t *testing.T) {
 		{"max-len", "foo[a-z]+", 9},
 		{"max-len-2", "^/api/example/[0-9]+$", 19},
 	}
-	r := expr.NewRandom("test")
 	for _, k := range cases {
 		t.Run(k.Name, func(t *testing.T) {
 			val := &expr.ValidationExpr{Pattern: k.Pattern}
 			att := expr.AttributeExpr{Validation: val}
+			r := expr.NewExampleGenerator(expr.NewFakerRandomizerFactory("test")).At(
+				expr.MethodPayloadExampleIdentity(exampleMethod("pattern", k.Name)),
+			)
 
 			example := att.Example(r).(string)
 
@@ -42,7 +46,9 @@ func TestByPattern(t *testing.T) {
 func TestByFormatUUID(t *testing.T) {
 	val := &expr.ValidationExpr{Format: expr.FormatUUID}
 	att := expr.AttributeExpr{Validation: val}
-	r := expr.NewRandom("test")
+	r := expr.NewExampleGenerator(expr.NewFakerRandomizerFactory("test")).At(
+		expr.MethodPayloadExampleIdentity(exampleMethod("format", "uuid")),
+	)
 	example := att.Example(r).(string)
 	if !regexp.MustCompile(`[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`).MatchString(example) {
 		t.Errorf("got %s, expected a match with `[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}`", example)
@@ -68,12 +74,15 @@ func TestExample(t *testing.T) {
 		{"openapi-generate-false-array-example", testdata.OpenAPIGenerateFalseArrayExampleDSL, map[string]any{"items": []map[string]any{{"name": "example"}}}, ""},
 		{"overriding-hidden-examples", testdata.OverridingHiddenExamplesDSL, "example", ""},
 	}
-	r := expr.NewRandom("test")
 	for _, k := range cases {
 		t.Run(k.Name, func(t *testing.T) {
 			if k.Error == "" {
 				expr.RunDSL(t, k.DSL)
-				example := expr.Root.Services[0].Methods[0].Payload.Example(r)
+				method := expr.Root.Services[0].Methods[0]
+				r := expr.NewExampleGenerator(expr.NewFakerRandomizerFactory("test")).At(
+					expr.MethodPayloadExampleIdentity(method),
+				)
+				example := method.Payload.Example(r)
 				if !reflect.DeepEqual(example, k.Expected) {
 					t.Errorf("invalid example: got %v, expected %v", example, k.Expected)
 				}
@@ -92,14 +101,15 @@ func TestExample(t *testing.T) {
 // can generate examples correctly. Previously, this would panic because the
 // code checked a.Type.Kind() instead of the underlying type's kind.
 func TestByLengthWithAliasType(t *testing.T) {
-	r := expr.NewRandom("test")
-
 	// Create an alias type based on String with length validation
 	// We need to use the DSL package properly
 	root := expr.RunDSL(t, testdata.AliasLengthValidationDSL)
 
 	aliasType := root.UserType("ValidatedString")
 	att := aliasType.Attribute()
+	r := expr.NewExampleGenerator(expr.NewFakerRandomizerFactory("test")).At(
+		expr.UserTypeExampleIdentity(aliasType),
+	)
 
 	// This should not panic and should generate a string example
 	// The key test is that byLength handles alias types correctly by unaliasing
@@ -119,12 +129,13 @@ func TestByLengthWithAliasType(t *testing.T) {
 // TestByLengthWithAliasArray tests that alias array types with length
 // validations generate examples correctly.
 func TestByLengthWithAliasArray(t *testing.T) {
-	r := expr.NewRandom("test")
-
 	root := expr.RunDSL(t, testdata.AliasArrayLengthValidationDSL)
 
 	aliasType := root.UserType("StringArray")
 	att := aliasType.Attribute()
+	r := expr.NewExampleGenerator(expr.NewFakerRandomizerFactory("test")).At(
+		expr.UserTypeExampleIdentity(aliasType),
+	)
 
 	// This should not panic and should generate an array example
 	example := att.Example(r)

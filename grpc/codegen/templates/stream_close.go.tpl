@@ -1,5 +1,5 @@
 
-func (s *{{ .VarName }}) Close() error {
+func (s *{{ .Declaration.Name }}) Close() error {
 {{- if eq .Type "client" }}
 {{- if .Endpoint.Method.Result }}
 	{{ comment "Close the send direction of the stream" }}
@@ -15,11 +15,11 @@ func (s *{{ .VarName }}) Close() error {
 			{{- if .Response.ClientConvert }}
 		case {{ .Response.ClientConvert.SrcRef }}:
 			{{- if .Response.ClientConvert.Validation }}
-			if err := {{ .Response.ClientConvert.Validation.Name }}(message); err != nil {
+			if err := {{ .Response.ClientConvert.Validation.Declaration.Name }}(message); err != nil {
 				return err
 			}
 			{{- end }}
-			return {{ .Response.ClientConvert.Init.Name }}({{ range .Response.ClientConvert.Init.Args }}{{ .Name }}, {{ end }})
+			return {{ .Response.ClientConvert.Init.Declaration.Name }}({{ range .Response.ClientConvert.Init.Args }}{{ .Name }}, {{ end }})
 			{{- end }}
 		{{- end }}
 		case *goapb.ErrorResponse:

@@ -1129,3 +1129,79 @@ func TestAttributeExprValidationValidate(t *testing.T) {
 		}
 	}
 }
+
+func TestAttributeExprValidateChecksEachCall(t *testing.T) {
+	parent := &UserTypeExpr{
+		AttributeExpr: &AttributeExpr{Type: String},
+		TypeName:      "Parent",
+	}
+	attribute := &AttributeExpr{
+		Type:       &Object{},
+		Validation: &ValidationExpr{Required: []string{"missing"}},
+	}
+
+	first := attribute.Validate("payload", parent)
+	second := attribute.Validate("payload", parent)
+
+	if first == nil {
+		t.Error("first check returned no errors, expected 1")
+	} else if len(first.Errors) != 1 {
+		t.Errorf("first check returned %d errors, expected 1", len(first.Errors))
+	}
+	if second == nil {
+		t.Error("second check returned no errors, expected 1")
+	} else if len(second.Errors) != 1 {
+		t.Errorf("second check returned %d errors, expected 1", len(second.Errors))
+	}
+}
+
+func TestAttributeExprValidateChecksSharedTypeOncePerCall(t *testing.T) {
+	minLength, maxLength := 2, 1
+	shared := &UserTypeExpr{
+		AttributeExpr: &AttributeExpr{Type: &Object{
+			&NamedAttributeExpr{
+				Name: "value",
+				Attribute: &AttributeExpr{
+					Type: String,
+					Validation: &ValidationExpr{
+						MinLength: &minLength,
+						MaxLength: &maxLength,
+					},
+				},
+			},
+		}},
+		TypeName: "Shared",
+	}
+	attribute := &AttributeExpr{Type: &Object{
+		&NamedAttributeExpr{
+			Name:      "first",
+			Attribute: &AttributeExpr{Type: shared},
+		},
+		&NamedAttributeExpr{
+			Name:      "second",
+			Attribute: &AttributeExpr{Type: shared},
+		},
+	}}
+	parent := &UserTypeExpr{
+		AttributeExpr: &AttributeExpr{Type: String},
+		TypeName:      "Parent",
+	}
+
+	checks := []*eval.ValidationErrors{
+		attribute.Validate("payload", parent),
+		attribute.Validate("payload", parent),
+	}
+	for i, result := range checks {
+		if result == nil {
+			t.Errorf("check %d returned no errors, expected 1", i+1)
+			continue
+		}
+		if len(result.Errors) != 1 {
+			t.Errorf("check %d returned %d errors, expected 1", i+1, len(result.Errors))
+			continue
+		}
+		if got, want := result.Errors[0].Error(), "field value - min length is greater than max length"; got != want {
+			t.Errorf("check %d returned %q, expected %q", i+1, got, want)
+		}
+	}
+}

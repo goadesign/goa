@@ -1,0 +1,79 @@
+// DecodeMethodMultipartWithParamsAndHeadersRequest returns a decoder for
+// requests sent to the ServiceMultipartWithParamsAndHeaders
+// MethodMultipartWithParamsAndHeaders endpoint.
+func DecodeMethodMultipartWithParamsAndHeadersRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicemultipartwithparamsandheaders.PayloadType, error) {
+	return func(r *http.Request) (*servicemultipartwithparamsandheaders.PayloadType, error) {
+		var payload *servicemultipartwithparamsandheaders.PayloadType
+		var (
+			body MethodMultipartWithParamsAndHeadersRequestBody
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return payload, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return payload, gerr
+			}
+			return payload, goa.DecodePayloadError(err.Error())
+		}
+		err = ValidateMethodMultipartWithParamsAndHeadersRequestBody(&body)
+		if err != nil {
+			return payload, err
+		}
+
+		var (
+			a  string
+			c2 map[int][]string
+			b  *string
+
+			params = mux.Vars(r)
+		)
+		a = params["a"]
+		err = goa.MergeErrors(err, goa.ValidatePattern("a", a, "patterna"))
+		{
+			c2Raw := r.URL.Query()
+			if len(c2Raw) == 0 {
+				err = goa.MergeErrors(err, goa.MissingFieldError("c", "query string"))
+			}
+			for keyRaw, valRaw := range c2Raw {
+				if strings.HasPrefix(keyRaw, "c[") {
+					if c2 == nil {
+						c2 = make(map[int][]string)
+					}
+					var keya int
+					{
+						openIdx := strings.IndexRune(keyRaw, '[')
+						closeIdx := strings.IndexRune(keyRaw, ']')
+						if openIdx == -1 || closeIdx == -1 || closeIdx <= openIdx {
+							err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: malformed brackets"))
+						} else {
+							keyaRaw := keyRaw[openIdx+1 : closeIdx]
+							v, err2 := strconv.ParseInt(keyaRaw, 10, strconv.IntSize)
+							if err2 != nil {
+								err = goa.MergeErrors(err, goa.InvalidFieldTypeError("query", keyaRaw, "integer"))
+							}
+							keya = int(v)
+						}
+					}
+					c2[keya] = valRaw
+				}
+			}
+		}
+		bRaw := r.Header.Get("Authorization")
+		if bRaw != "" {
+			b = &bRaw
+		}
+		if b != nil {
+			err = goa.MergeErrors(err, goa.ValidatePattern("b", *b, "patternb"))
+		}
+		if err != nil {
+			return payload, err
+		}
+		payload = NewMethodMultipartWithParamsAndHeadersPayloadType(&body, a, c2, b)
+
+		return payload, nil
+	}
+}

@@ -1,19 +1,19 @@
 // BuildMethodParamValidatePayload builds the payload for the
 // ServiceParamValidate MethodParamValidate endpoint from CLI flags.
-func BuildMethodParamValidatePayload(serviceParamValidateMethodParamValidateA string) (*serviceparamvalidate.MethodParamValidatePayload, error) {
+func BuildMethodParamValidatePayload(serviceParamValidateMethodParamValidateA *string) (*serviceparamvalidate.MethodParamValidatePayload, error) {
 	var err error
 	var a *int
 	{
-		if serviceParamValidateMethodParamValidateA != "" {
+		if serviceParamValidateMethodParamValidateA != nil {
 			var v int64
-			v, err = strconv.ParseInt(serviceParamValidateMethodParamValidateA, 10, strconv.IntSize)
+			v, err = strconv.ParseInt(*serviceParamValidateMethodParamValidateA, 10, strconv.IntSize)
 			val := int(v)
 			a = &val
 			if err != nil {
 				return nil, fmt.Errorf("invalid value for a, must be INT")
 			}
-			if *a < 1 {
-				err = goa.MergeErrors(err, goa.InvalidRangeError("a", *a, 1, true))
+			if val < 1 {
+				err = goa.MergeErrors(err, goa.InvalidRangeError("a", val, 1, true))
 			}
 			if err != nil {
 				return nil, err

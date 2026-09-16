@@ -1,6 +1,6 @@
 func transform() {
 	target := &proto.Recursive{
-		RequiredString: source.RequiredString,
+		RequiredString: *source.RequiredString,
 	}
 	if source.Recursive != nil {
 		target.Recursive = protobufProtoRecursiveToProtoRecursive(source.Recursive)

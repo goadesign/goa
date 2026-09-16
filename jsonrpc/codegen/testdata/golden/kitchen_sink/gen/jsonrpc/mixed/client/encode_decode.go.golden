@@ -10,11 +10,12 @@ package client
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
-	mixed "kitchensink/mixed"
 	"net/http"
 	"net/url"
 
+	mixed "generated.local/gen/mixed"
 	goahttp "goa.design/goa/v3/http"
 	"goa.design/goa/v3/jsonrpc"
 )
@@ -34,13 +35,14 @@ func (c *Client) BuildLookupRequest(ctx context.Context, v any) (*http.Request, 
 	return req, nil
 }
 
-// EncodeLookupRequest returns an encoder for requests sent to the Mixed lookup
-// server.
-func EncodeLookupRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
-	return func(req *http.Request, v any) error {
+// EncodeLookupRequest returns an encoder for requests sent to the Mixed
+// service lookup JSON-RPC method. The encoder returns the request ID written
+// into the JSON-RPC message.
+func EncodeLookupRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) (string, error) {
+	return func(req *http.Request, v any) (string, error) {
 		p, ok := v.(*mixed.LookupPayload)
 		if !ok {
-			return goahttp.ErrInvalidType("Mixed", "lookup", "*mixed.LookupPayload", v)
+			return "", goahttp.ErrInvalidType("Mixed", "lookup", "*mixed.LookupPayload", v)
 		}
 		b := NewLookupRequestBody(p)
 		body := &jsonrpc.Request{
@@ -48,36 +50,45 @@ func EncodeLookupRequest(encoder func(*http.Request) goahttp.Encoder) func(*http
 			Method:  "lookup",
 			Params:  b,
 		}
-		if p.ID != "" {
-			body.ID = p.ID
-		}
-		// If ID is empty, this is a notification - no ID field
+		requestID := p.ID
+		body.ID = requestID
 		if err := encoder(req).Encode(&body); err != nil {
-			return goahttp.ErrEncodingError("Mixed", "lookup", err)
+			return "", goahttp.ErrEncodingError("Mixed", "lookup", err)
 		}
-		return nil
+		return requestID, nil
 	}
 }
 
 // DecodeLookupResponse returns a decoder for responses returned by the Mixed
-// service lookup JSON-RPC method. restoreBody controls whether the response
-// body should be restored after having been read.
-func DecodeLookupResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
-	return func(resp *http.Response) (any, error) {
+// service lookup JSON-RPC method. The decoder rejects responses that do not
+// repeat requestID. restoreBody controls whether the response body should be
+// restored after having been read.
+func DecodeLookupResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response, string) (any, error) {
+	return func(resp *http.Response, requestID string) (result any, decodeErr error) {
+		responseBody := resp.Body
 		if restoreBody {
-			b, err := io.ReadAll(resp.Body)
-			if err != nil {
-				return nil, err
+			b, readErr := io.ReadAll(responseBody)
+			closeErr := responseBody.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("Mixed", "lookup", err)
 			}
 			resp.Body = io.NopCloser(bytes.NewBuffer(b))
 			defer func() {
 				resp.Body = io.NopCloser(bytes.NewBuffer(b))
 			}()
+		} else {
+			defer func() {
+				if err := responseBody.Close(); err != nil {
+					decodeErr = errors.Join(decodeErr, goahttp.ErrDecodingError("Mixed", "lookup", err))
+				}
+			}()
 		}
-		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
-			body, _ := io.ReadAll(resp.Body)
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("Mixed", "lookup", err)
+			}
 			return nil, goahttp.ErrInvalidResponse("Mixed", "lookup", resp.StatusCode, string(body))
 		}
 
@@ -85,13 +96,12 @@ func DecodeLookupResponse(decoder func(*http.Response) goahttp.Decoder, restoreB
 		if err := decoder(resp).Decode(&jresp); err != nil {
 			return nil, goahttp.ErrDecodingError("Mixed", "lookup", err)
 		}
+		if err := jresp.Validate(requestID); err != nil {
+			return nil, goahttp.ErrInvalidResponse("Mixed", "lookup", resp.StatusCode, err.Error())
+		}
 
 		if jresp.Error != nil {
-			switch jresp.Error.Code {
-			default:
-				body, _ := io.ReadAll(resp.Body)
-				return nil, goahttp.ErrInvalidResponse("Mixed", "lookup", resp.StatusCode, string(body))
-			}
+			return nil, jresp.Error
 		}
 		resp.Body = io.NopCloser(bytes.NewBuffer(jresp.Result))
 		var (
@@ -101,10 +111,6 @@ func DecodeLookupResponse(decoder func(*http.Response) goahttp.Decoder, restoreB
 		err = decoder(resp).Decode(&body)
 		if err != nil {
 			return nil, goahttp.ErrDecodingError("Mixed", "lookup", err)
-		}
-		err = ValidateLookupResponseBody(&body)
-		if err != nil {
-			return nil, goahttp.ErrValidationError("Mixed", "lookup", err)
 		}
 		res := NewLookupResultOK(&body)
 		return res, nil

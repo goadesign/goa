@@ -1,10 +1,12 @@
 {{ comment .Description }}
-func {{ .Name }}({{ range .Args }}{{ .Name }} {{ .TypeRef }}, {{ end }}) {{ .ReturnTypeRef }} {
+func {{ .Declaration.Name }}({{ range .Args }}{{ .Name }} {{ .TypeRef }}, {{ end }}) {{ .ReturnTypeRef }} {
 	{{ .Code }}
 {{- if .ReturnIsStruct }}
 	{{- range .Args }}
-		{{- if .FieldName }}
-			{{ $.ReturnVarName }}.{{ .FieldName }} = {{ if isAlias .FieldType }}{{ fullName .FieldType }}({{ end }}{{ .Name }}{{ if isAlias .FieldType }}){{ end }}
+		{{- if .InitCode }}
+			{{ .InitCode }}
+		{{- else if .FieldName }}
+			{{ $.ReturnVarName }}.{{ .FieldName }} = {{ .Name }}
 		{{- end }}
 	{{- end }}
 {{- end }}

@@ -1,0 +1,36 @@
+// Send streams instances of
+// "service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse"
+// to the "MethodServerStreamingUserTypeRPC" endpoint gRPC stream.
+func (s *MethodServerStreamingUserTypeRPCServerStream) Send(res *serviceserverstreamingusertyperpc.ResultType) error {
+	view := s.view
+	if view == "" {
+		view = "default"
+	}
+	if s.sentView != "" && view != s.sentView {
+		return goa.InvalidEnumValueError("view", view, []any{s.sentView})
+	}
+	vres := serviceserverstreamingusertyperpc.NewViewedResultType(res, view)
+	var v *service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse
+	switch view {
+	case "tiny":
+		v = NewProtoMethodServerStreamingUserTypeRPCResponseTiny(vres.Projected)
+	case "default", "":
+		v = NewProtoMethodServerStreamingUserTypeRPCResponse(vres.Projected)
+	default:
+		return goa.InvalidEnumValueError("view", view, []any{"tiny", "default"})
+	}
+	if s.sentView == "" {
+		if err := s.stream.SetHeader(metadata.Pairs("goa-view", view)); err != nil {
+			return err
+		}
+		s.sentView = view
+	}
+	return s.stream.Send(v)
+}
+
+// SendWithContext streams instances of
+// "service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse"
+// to the "MethodServerStreamingUserTypeRPC" endpoint gRPC stream with context.
+func (s *MethodServerStreamingUserTypeRPCServerStream) SendWithContext(ctx context.Context, res *serviceserverstreamingusertyperpc.ResultType) error {
+	return s.Send(res)
+}

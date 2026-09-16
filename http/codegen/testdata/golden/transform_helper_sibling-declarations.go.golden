@@ -1,0 +1,10 @@
+// marshalServiceresultusertypesiblingviewsUserTypeViewToUserTypeResponseBody
+// builds a value of type *UserTypeResponseBody from a value of type
+// *serviceresultusertypesiblingviews.UserTypeView.
+func marshalServiceresultusertypesiblingviewsUserTypeViewToUserTypeResponseBody(v *serviceresultusertypesiblingviews.UserTypeView) *UserTypeResponseBody {
+	res := &UserTypeResponseBody{
+		U: v.U,
+	}
+
+	return res
+}

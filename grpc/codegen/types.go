@@ -1,29 +1,27 @@
+// This file renders gRPC client and server conversion types per service and
+// attaches imports to the exact side-specific file that uses them.
 package codegen
 
 import (
-	"path"
 	"path/filepath"
 
 	"goa.design/goa/v3/codegen"
-	"goa.design/goa/v3/expr"
 )
 
-// ServerTypeFiles returns the server types files containing all the server
-// interfaces and types needed to implement gRPC server.
-func ServerTypeFiles(genpkg string, services *ServicesData) []*codegen.File {
-	fw := make([]*codegen.File, len(services.Root.API.GRPC.Services))
-	for i, svc := range services.Root.API.GRPC.Services {
-		fw[i] = typesFile(genpkg, svc, services, true)
+// serverTypeFiles returns the planned conversion types used by gRPC servers.
+func serverTypeFiles(services *ServicesData) []*codegen.File {
+	fw := make([]*codegen.File, len(services.servicePlans))
+	for i, servicePlan := range services.servicePlans {
+		fw[i] = addEndpointImports(typesFile(servicePlan, services, true), services)
 	}
 	return fw
 }
 
-// ClientTypeFiles returns the client types files containing all the client
-// interfaces and types needed to implement gRPC client.
-func ClientTypeFiles(genpkg string, services *ServicesData) []*codegen.File {
-	fw := make([]*codegen.File, len(services.Root.API.GRPC.Services))
-	for i, svc := range services.Root.API.GRPC.Services {
-		fw[i] = typesFile(genpkg, svc, services, false)
+// clientTypeFiles returns the planned conversion types used by gRPC clients.
+func clientTypeFiles(services *ServicesData) []*codegen.File {
+	fw := make([]*codegen.File, len(services.servicePlans))
+	for i, servicePlan := range services.servicePlans {
+		fw[i] = addEndpointImports(typesFile(servicePlan, services, false), services)
 	}
 	return fw
 }
@@ -31,22 +29,23 @@ func ClientTypeFiles(genpkg string, services *ServicesData) []*codegen.File {
 // typesFile returns the file defining the gRPC types for the given service.
 // svr indicates whether the file is generated for the server (true) or the
 // client (false) package.
-func typesFile(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData, svr bool) *codegen.File {
+func typesFile(servicePlan *grpcServicePlan, services *ServicesData, svr bool) *codegen.File {
+	svc := servicePlan.expression
 	var (
 		initData []*InitData
 
 		sd = services.Get(svc.Name())
 	)
 	{
-		seen := make(map[string]struct{})
+		seen := make(map[*codegen.NameDeclaration]struct{})
 		collect := func(c *ConvertData) {
 			if c == nil || c.Init == nil {
 				return
 			}
-			if _, ok := seen[c.Init.Name]; ok {
+			if _, ok := seen[c.Init.Declaration]; ok {
 				return
 			}
-			seen[c.Init.Name] = struct{}{}
+			seen[c.Init.Declaration] = struct{}{}
 			initData = append(initData, c.Init)
 		}
 		for _, a := range svc.GRPCEndpoints {
@@ -57,8 +56,14 @@ func typesFile(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData,
 					collect(ed.Request.LegacyDecode.ServerConvert)
 				}
 				collect(ed.Response.ServerConvert)
+				for _, conversion := range ed.Response.ServerConverts {
+					collect(conversion.Convert)
+				}
 				if ed.ServerStream != nil {
 					collect(ed.ServerStream.SendConvert)
+					for _, conversion := range ed.ServerStream.SendConverts {
+						collect(conversion.Convert)
+					}
 					collect(ed.ServerStream.RecvConvert)
 				}
 				for _, e := range ed.Errors {
@@ -67,8 +72,14 @@ func typesFile(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData,
 			} else {
 				collect(ed.Request.ClientConvert)
 				collect(ed.Response.ClientConvert)
+				for _, conversion := range ed.Response.ClientConverts {
+					collect(conversion.Convert)
+				}
 				if ed.ClientStream != nil {
 					collect(ed.ClientStream.RecvConvert)
+					for _, conversion := range ed.ClientStream.RecvConverts {
+						collect(conversion.Convert)
+					}
 					collect(ed.ClientStream.SendConvert)
 				}
 				for _, e := range ed.Errors {
@@ -92,29 +103,12 @@ func typesFile(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData,
 	{
 		svcName := sd.Service.PathName
 		fpath = filepath.Join(codegen.Gendir, "grpc", svcName, side, "types.go")
-		imports := []*codegen.ImportSpec{
-			{Path: "unicode/utf8"},
-			codegen.GoaImport(""),
-			{Path: path.Join(genpkg, svcName), Name: sd.Service.PkgName},
-			{Path: path.Join(genpkg, svcName, "views"), Name: sd.Service.ViewsPkg},
-			{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: sd.PkgName},
-		}
-		// Add imports if Any type is used
-		if usesAnyType(svc.GRPCEndpoints, true) {
-			imports = append(imports, &codegen.ImportSpec{Path: "fmt"})
-			imports = append(imports, &codegen.ImportSpec{Path: "google.golang.org/protobuf/types/known/structpb", Name: "structpb"})
-		}
-		imports = append(imports, sd.Service.ProtoImports...)
-		sections = []*codegen.SectionTemplate{codegen.Header(svc.Name()+" gRPC "+side+" types", side, imports)}
+		sections = []*codegen.SectionTemplate{codegen.Header(svc.Name()+" gRPC "+side+" types", side, nil)}
 		for _, init := range initData {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   side + "-type-init",
 				Source: grpcTemplates.Read(grpcTypeInitT),
 				Data:   init,
-				FuncMap: map[string]any{
-					"isAlias":  expr.IsAlias,
-					"fullName": fullTypeName,
-				},
 			})
 		}
 		for _, data := range sd.validations {
@@ -127,7 +121,11 @@ func typesFile(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData,
 				Data:   data,
 			})
 		}
-		for _, h := range sd.transformHelpers {
+		helpers := sd.clientTransformHelpers
+		if svr {
+			helpers = sd.serverTransformHelpers
+		}
+		for _, h := range helpers {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   side + "-transform-helper",
 				Source: grpcTemplates.Read(grpcTransformHelperT),
@@ -136,13 +134,4 @@ func typesFile(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData,
 		}
 	}
 	return &codegen.File{Path: fpath, SectionTemplates: sections}
-}
-
-// fullTypeName returns the name of the given type qualified with the name of
-// its package when the type is defined in an explicit user type location.
-func fullTypeName(dt expr.DataType) string {
-	if loc := codegen.UserTypeLocation(dt); loc != nil {
-		return loc.PackageName() + "." + dt.Name()
-	}
-	return dt.Name()
 }

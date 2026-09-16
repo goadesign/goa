@@ -19,10 +19,6 @@ func() {
 	{{- if $required }}
 	Required({{ range $i, $f := $required }}{{ if $i }}, {{ end }}"{{ $f }}"{{ end }})
 	{{- end }}
-	{{- if .NeedsID }}
-	// Accept JSON-RPC ID in payload for WS, optional; transport-level ID is handled separately
-	Field(99, "id", String)
-	{{- end }}
 }
 {{- else if eq .Kind "map" -}}
 func() {

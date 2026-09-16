@@ -1,0 +1,45 @@
+func doHTTP(ctx context.Context, scheme, host string, timeout int, debug bool, stdout io.Writer) error {
+	var (
+		doer goahttp.Doer
+	)
+	{
+		doer = &http.Client{Timeout: time.Duration(timeout) * time.Second}
+		if debug {
+			doer = goahttp.NewDebugDoer(doer)
+		}
+	}
+
+	var (
+		dialer *websocket.Dialer
+	)
+	{
+		dialer = websocket.DefaultDialer
+	}
+
+	switch flag.Arg(0) {
+	case "streaming-payload-service":
+		switch flag.Arg(1) {
+		case "streaming-payload-method":
+			return errors.New("example client does not support streamed input for service \"StreamingPayloadService\" method \"StreamingPayloadMethod\"")
+		}
+	}
+	_, _, err := cli.ParseEndpoint(
+		scheme,
+		host,
+		doer,
+		goahttp.RequestEncoder,
+		goahttp.ResponseDecoder,
+		debug,
+		dialer,
+		nil,
+	)
+	if err != nil {
+		return fmt.Errorf("parse endpoint: %w", err)
+	}
+
+	panic("parsed HTTP command has no generated result writer")
+}
+
+func httpUsageExamples() string {
+	return cli.UsageExamples()
+}

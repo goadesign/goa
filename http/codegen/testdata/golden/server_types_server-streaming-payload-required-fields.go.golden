@@ -65,13 +65,25 @@ func ValidateBidirectionalStreamStreamingBody(body *BidirectionalStreamStreaming
 }
 
 // ValidateStreamingRequestStreamingBody runs the validations defined on
-// StreamingRequestStreamingBody
+// StreamingRequest
 func ValidateStreamingRequestStreamingBody(body *StreamingRequestStreamingBody) (err error) {
 	if body.Required == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("required", "body"))
 	}
 	if body.BaseRequired == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("baseRequired", "body"))
+	}
+	return
+}
+
+// validateStreamingRequestStreamingBody checks StreamingRequest and reports
+// errors using the path supplied by its caller
+func validateStreamingRequestStreamingBody(body *StreamingRequestStreamingBody, path string) (err error) {
+	if body.Required == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("required", path))
+	}
+	if body.BaseRequired == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("baseRequired", path))
 	}
 	return
 }

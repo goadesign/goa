@@ -1,3 +1,5 @@
+// This file renders one service's endpoint API and derives type imports only
+// from the methods emitted into that endpoint file.
 package service
 
 import (
@@ -6,23 +8,42 @@ import (
 	"strings"
 
 	"goa.design/goa/v3/codegen"
-	"goa.design/goa/v3/expr"
 )
 
 type (
 	// EndpointsData contains the data necessary to render the
 	// service endpoints struct template.
 	EndpointsData struct {
+		// EndpointsDeclaration is the exact package-level endpoint collection.
+		EndpointsDeclaration *codegen.NameDeclaration
+		// NewEndpointsDeclaration is the exact endpoint constructor.
+		NewEndpointsDeclaration *codegen.NameDeclaration
+		// ClientDeclaration is the exact package-level client.
+		ClientDeclaration *codegen.NameDeclaration
+		// NewClientDeclaration is the exact client constructor.
+		NewClientDeclaration *codegen.NameDeclaration
+		// ServiceDeclaration is the exact service interface.
+		ServiceDeclaration *codegen.NameDeclaration
+		// ServerInterceptorsDeclaration is the exact server interceptor interface.
+		ServerInterceptorsDeclaration *codegen.NameDeclaration
+		// ClientInterceptorsDeclaration is the exact client interceptor interface.
+		ClientInterceptorsDeclaration *codegen.NameDeclaration
+		// VarName is the generated endpoint collection name kept for existing plugins.
+		//
+		// Deprecated: Use EndpointsDeclaration.Name() after planning.
+		VarName string
+		// ClientVarName is the generated client name kept for existing plugins.
+		//
+		// Deprecated: Use ClientDeclaration.Name() after planning.
+		ClientVarName string
+		// ServiceVarName is the generated service interface name kept for existing plugins.
+		//
+		// Deprecated: Use ServiceDeclaration.Name() after planning.
+		ServiceVarName string
 		// Name is the service name.
 		Name string
 		// Description is the service description.
 		Description string
-		// VarName is the endpoint struct name.
-		VarName string
-		// ClientVarName is the client struct name.
-		ClientVarName string
-		// ServiceVarName is the service interface name.
-		ServiceVarName string
 		// Methods lists the endpoint struct methods.
 		Methods []*EndpointMethodData
 		// ClientInitArgs lists the arguments needed to instantiate the client.
@@ -41,6 +62,18 @@ type (
 	// EndpointMethodData describes a single endpoint method.
 	EndpointMethodData struct {
 		*MethodData
+		// ClientDeclaration is the exact package-level client used as the method receiver.
+		ClientDeclaration *codegen.NameDeclaration
+		// ServiceDeclaration is the exact service interface accepted by the endpoint constructor.
+		ServiceDeclaration *codegen.NameDeclaration
+		// ClientVarName is the generated client name kept for existing plugins.
+		//
+		// Deprecated: Use ClientDeclaration.Name() after planning.
+		ClientVarName string
+		// ServiceVarName is the generated service interface name kept for existing plugins.
+		//
+		// Deprecated: Use ServiceDeclaration.Name() after planning.
+		ServiceVarName string
 		// ArgName is the name of the argument used to initialize the client
 		// struct method field.
 		ArgName string
@@ -49,27 +82,15 @@ type (
 		//
 		// It is only set when HasMixedResults is true.
 		StreamArgName string
-		// ClientVarName is the corresponding client struct field name.
-		ClientVarName string
-		// ServiceName is the name of the owner service.
+		// ServiceName is the name of the service that declares this method.
 		ServiceName string
-		// ServiceVarName is the name of the owner service Go interface.
-		ServiceVarName string
 	}
 )
 
-const (
-	// endpointsStructName is the name of the generated endpoints data
-	// structure.
-	endpointsStructName = "Endpoints"
-
-	// serviceInterfaceName is the name of the generated service interface.
-	serviceInterfaceName = "Service"
-)
-
-// EndpointFile returns the endpoint file for the given service.
-func EndpointFile(genpkg string, service *expr.ServiceExpr, services *ServicesData) *codegen.File {
-	svc := services.Get(service.Name)
+// endpointFile renders endpoints from the service data copied into plan.
+func endpointFile(plan *Plan, facts *serviceFacts) *codegen.File {
+	services := plan.Services()
+	svc := services.Get(facts.name)
 	svcName := svc.PathName
 	path := filepath.Join(codegen.Gendir, svcName, "endpoints.go")
 	data := endpointData(svc)
@@ -77,15 +98,7 @@ func EndpointFile(genpkg string, service *expr.ServiceExpr, services *ServicesDa
 		sections []*codegen.SectionTemplate
 	)
 	{
-		imports := []*codegen.ImportSpec{
-			{Path: "context"},
-			{Path: "io"},
-			{Path: "fmt"},
-			codegen.GoaImport(""),
-			codegen.GoaImport("security"),
-			{Path: genpkg + "/" + svcName + "/" + "views", Name: svc.ViewsPkg},
-		}
-		header := codegen.Header(service.Name+" endpoints", svc.PkgName, imports)
+		header := codegen.Header(facts.name+" endpoints", svc.PkgName, facts.imports.endpoint.Imports())
 		def := &codegen.SectionTemplate{
 			Name:   "endpoints-struct",
 			Source: serviceTemplates.Read(serviceEndpointsT),
@@ -94,18 +107,11 @@ func EndpointFile(genpkg string, service *expr.ServiceExpr, services *ServicesDa
 		sections = []*codegen.SectionTemplate{header, def}
 		for _, m := range data.Methods {
 			if m.ServerStream != nil {
-				// Generate endpoint input struct for streaming methods
-				// For JSON-RPC WebSocket with StreamingResult: generate struct (needed for stream handle)
-				// For JSON-RPC WebSocket without StreamingResult (client streaming only): no struct needed
-				// For JSON-RPC SSE: always generate struct (methods have stream params)
-				// For HTTP/gRPC: always generate endpoint input struct
-				if !m.IsJSONRPCWebSocket || m.ServerStream.EndpointStruct != "" {
-					sections = append(sections, &codegen.SectionTemplate{
-						Name:   "endpoint-input-struct",
-						Source: serviceTemplates.Read(serviceEndpointStreamStructT),
-						Data:   m,
-					})
-				}
+				sections = append(sections, &codegen.SectionTemplate{
+					Name:   "endpoint-input-struct",
+					Source: serviceTemplates.Read(serviceEndpointStreamStructT),
+					Data:   m,
+				})
 			}
 			if m.SkipRequestBodyEncodeDecode {
 				sections = append(sections, &codegen.SectionTemplate{
@@ -157,36 +163,41 @@ func endpointData(svc *Data) *EndpointsData {
 			names = append(names, streamArgName)
 		}
 		methods[i] = &EndpointMethodData{
-			MethodData:     m,
-			ArgName:        argName,
-			StreamArgName:  streamArgName,
-			ServiceName:    svc.Name,
-			ServiceVarName: serviceInterfaceName,
-			ClientVarName:  clientStructName,
+			MethodData:         m,
+			ClientDeclaration:  svc.ClientDeclaration,
+			ServiceDeclaration: svc.ServiceDeclaration,
+			ClientVarName:      svc.ClientDeclaration.Name(),
+			ServiceVarName:     svc.ServiceDeclaration.Name(),
+			ArgName:            argName,
+			StreamArgName:      streamArgName,
+			ServiceName:        svc.Name,
 		}
 	}
-	desc := fmt.Sprintf("%s wraps the %q service endpoints.", endpointsStructName, svc.Name)
+	desc := fmt.Sprintf("%s wraps the %q service endpoints.", svc.EndpointsDeclaration.Name(), svc.Name)
 	return &EndpointsData{
-		Name:                  svc.Name,
-		Description:           desc,
-		VarName:               endpointsStructName,
-		ClientVarName:         clientStructName,
-		ServiceVarName:        serviceInterfaceName,
-		ClientInitArgs:        strings.Join(names, ", "),
-		Methods:               methods,
-		Schemes:               svc.Schemes,
-		HasServerInterceptors: len(svc.ServerInterceptors) > 0,
-		HasClientInterceptors: len(svc.ClientInterceptors) > 0,
+		EndpointsDeclaration:          svc.EndpointsDeclaration,
+		NewEndpointsDeclaration:       svc.NewEndpointsDeclaration,
+		ClientDeclaration:             svc.ClientDeclaration,
+		NewClientDeclaration:          svc.NewClientDeclaration,
+		ServiceDeclaration:            svc.ServiceDeclaration,
+		ServerInterceptorsDeclaration: svc.ServerInterceptorsDeclaration,
+		ClientInterceptorsDeclaration: svc.ClientInterceptorsDeclaration,
+		VarName:                       svc.EndpointsDeclaration.Name(),
+		ClientVarName:                 svc.ClientDeclaration.Name(),
+		ServiceVarName:                svc.ServiceDeclaration.Name(),
+		Name:                          svc.Name,
+		Description:                   desc,
+		ClientInitArgs:                strings.Join(names, ", "),
+		Methods:                       methods,
+		Schemes:                       svc.Schemes,
+		HasServerInterceptors:         len(svc.ServerInterceptors) > 0,
+		HasClientInterceptors:         len(svc.ClientInterceptors) > 0,
 	}
 }
 
 func payloadVar(e *EndpointMethodData) string {
 	if e.ServerStream != nil {
-		if e.ServerStream.EndpointStruct != "" {
-			return "ep.Payload"
-		}
-		// JSON-RPC WebSocket has no payload for server streaming
-		return ""
+		return "ep.Payload"
 	}
 	if e.SkipRequestBodyEncodeDecode {
 		return "ep.Payload"

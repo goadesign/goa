@@ -1,3 +1,5 @@
+// This file verifies repeated HTTP generation produces the same Go names and
+// does not keep changeable values from an earlier run.
 package codegen
 
 import (
@@ -37,8 +39,8 @@ func TestIdempotentHTTPEndpointCodegen(t *testing.T) {
 			})
 		})
 	})
-	services := CreateHTTPServices(root)
-	clientFiles := ClientFiles("", services)
+	plan := linkedHTTPPlanForRoot(t, root)
+	clientFiles := plan.ClientFiles()
 	require.NotEmpty(t, clientFiles)
 
 	clientCode := codegen.SectionsCode(t, clientFiles[0].Section("client-endpoint-init"))
@@ -50,8 +52,8 @@ func TestIdempotentHTTPEndpointCodegen(t *testing.T) {
 // TestFileGenerationIdempotent builds the HTTP services data once and renders
 // the complete generated file set twice, asserting that both renders produce
 // byte-identical outputs. This guards against file generators mutating shared
-// analysis state (e.g. the ServerTypeNames/ClientTypeNames dedup sets or the
-// PathInit argument data) in ways that change subsequent renders.
+// analysis state (for example package declaration catalogs or PathInit
+// argument data) in ways that change subsequent renders.
 func TestFileGenerationIdempotent(t *testing.T) {
 	cases := []struct {
 		Name string
@@ -64,14 +66,14 @@ func TestFileGenerationIdempotent(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := expr.RunDSL(t, c.DSL)
-			services := CreateHTTPServices(root)
+			plan := linkedHTTPPlanForRoot(t, root)
 
 			render := func(dir string) {
-				files := PathFiles(services)
-				files = append(files, ServerFiles("gen", services)...)
-				files = append(files, ClientFiles("gen", services)...)
-				files = append(files, ServerTypeFiles("gen", services)...)
-				files = append(files, ClientTypeFiles("gen", services)...)
+				files := plan.PathFiles()
+				files = append(files, plan.ServerFiles()...)
+				files = append(files, plan.ClientFiles()...)
+				files = append(files, plan.ServerTypeFiles()...)
+				files = append(files, plan.ClientTypeFiles()...)
 				require.NotEmpty(t, files)
 				for _, f := range files {
 					_, err := f.Render(dir)

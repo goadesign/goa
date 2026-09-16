@@ -1,9 +1,11 @@
 func transform() {
 	target := &proto.Composite{
-		RequiredString: &source.RequiredString,
+		RequiredString: source.RequiredString,
 	}
-	defaultInt := int(source.DefaultInt)
-	target.DefaultInt = &defaultInt
+	if source.DefaultInt != nil {
+		defaultInt := int(*source.DefaultInt)
+		target.DefaultInt = &defaultInt
+	}
 	if source.Type != nil {
 		target.Type = protobufProtoSimpleToProtoSimple(source.Type)
 	}

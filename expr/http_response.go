@@ -88,6 +88,9 @@ type (
 	HTTPResponseExpr struct {
 		// HTTP status
 		StatusCode int
+		// StatusCodeSet is true when the design explicitly chose StatusCode.
+		// It distinguishes code zero from an omitted code.
+		StatusCodeSet bool
 		// Response description
 		Description string
 		// Headers describe the HTTP response headers.
@@ -133,6 +136,18 @@ func (r *HTTPResponseExpr) Prepare() {
 // and the result type definition if any is valid.
 func (r *HTTPResponseExpr) Validate(e *HTTPEndpointExpr) *eval.ValidationErrors {
 	verr := new(eval.ValidationErrors)
+
+	// A JSON-RPC message cannot carry HTTP headers or cookies that belong only
+	// to that message. Several messages may share one batch response or
+	// server-sent-event connection.
+	if e.IsJSONRPC() {
+		if r.Headers != nil && !r.Headers.IsEmpty() {
+			verr.Add(r, "JSON-RPC success response cannot map result attributes to HTTP headers")
+		}
+		if r.Cookies != nil && !r.Cookies.IsEmpty() {
+			verr.Add(r, "JSON-RPC success response cannot map result attributes to HTTP cookies")
+		}
+	}
 
 	if r.StatusCode == 0 {
 		verr.Add(r, "HTTP response status not defined")
@@ -324,11 +339,12 @@ func (r *HTTPResponseExpr) Finalize(a *HTTPEndpointExpr, svcAtt *AttributeExpr) 
 // Dup creates a copy of the response expression.
 func (r *HTTPResponseExpr) Dup() *HTTPResponseExpr {
 	res := HTTPResponseExpr{
-		StatusCode:  r.StatusCode,
-		Description: r.Description,
-		ContentType: r.ContentType,
-		Parent:      r.Parent,
-		Meta:        r.Meta,
+		StatusCode:    r.StatusCode,
+		StatusCodeSet: r.StatusCodeSet,
+		Description:   r.Description,
+		ContentType:   r.ContentType,
+		Parent:        r.Parent,
+		Meta:          r.Meta,
 	}
 	if r.Body != nil {
 		res.Body = DupAtt(r.Body)
@@ -348,7 +364,7 @@ func (r *HTTPResponseExpr) Dup() *HTTPResponseExpr {
 // attributes are mapped to special goa headers in the form of
 // "Goa-Attribute(-<Attribute Name>)".
 func (r *HTTPResponseExpr) mapUnmappedAttrs(svcAtt *AttributeExpr) {
-	if svcAtt.Type != ErrorResult {
+	if !IsErrorResult(svcAtt.Type) {
 		return
 	}
 

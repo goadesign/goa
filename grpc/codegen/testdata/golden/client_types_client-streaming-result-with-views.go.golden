@@ -1,0 +1,50 @@
+// NewProtoMethodServerStreamingUserTypeRPCRequest builds
+// *service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCRequest
+// from metadata values.
+func NewProtoMethodServerStreamingUserTypeRPCRequest() *service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCRequest {
+	message := &service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCRequest{}
+	return message
+}
+
+// NewMethodServerStreamingUserTypeRPCResponseResultTypeView builds
+// *serviceserverstreamingusertyperpcviews.ResultTypeView from
+// *service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse.
+func NewMethodServerStreamingUserTypeRPCResponseResultTypeView(v *service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse) *serviceserverstreamingusertyperpcviews.ResultTypeView {
+	vresult := &serviceserverstreamingusertyperpcviews.ResultTypeView{
+		DoubleField: v.DoubleField,
+	}
+	intField := int(*v.IntField)
+	vresult.IntField = &intField
+	return vresult
+}
+
+// NewMethodServerStreamingUserTypeRPCResponseResultTypeViewTiny builds
+// *serviceserverstreamingusertyperpcviews.ResultTypeView from
+// *service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse.
+func NewMethodServerStreamingUserTypeRPCResponseResultTypeViewTiny(v *service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse) *serviceserverstreamingusertyperpcviews.ResultTypeView {
+	vresult := &serviceserverstreamingusertyperpcviews.ResultTypeView{}
+	intField := int(*v.IntField)
+	vresult.IntField = &intField
+	return vresult
+}
+
+// ValidateMethodServerStreamingUserTypeRPCResponseTiny runs the validations
+// defined on MethodServerStreamingUserTypeRPCResponse.
+func ValidateMethodServerStreamingUserTypeRPCResponseTiny(message *service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse) (err error) {
+	if message.IntField == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("IntField", "message"))
+	}
+	return
+}
+
+// ValidateMethodServerStreamingUserTypeRPCResponse runs the validations
+// defined on MethodServerStreamingUserTypeRPCResponse.
+func ValidateMethodServerStreamingUserTypeRPCResponse(message *service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse) (err error) {
+	if message.IntField == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("IntField", "message"))
+	}
+	if message.DoubleField == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("DoubleField", "message"))
+	}
+	return
+}

@@ -34,6 +34,8 @@ var OAuth2AuthorizationCode = OAuth2Security("authCode", func() {
 	Scope("api:read", "Read access")
 })
 
+var SecurityCredential = Type("SecurityCredential", String)
+
 var EndpointWithoutRequirementDSL = func() {
 	Service("EndpointWithoutRequirement", func() {
 		Method("Unsecure", func() {
@@ -114,7 +116,8 @@ var EndpointWithRequiredScopesDSL = func() {
 				Scope("api:write")
 			})
 			Payload(func() {
-				Token("token", String)
+				Token("token", SecurityCredential)
+				Required("token")
 			})
 			HTTP(func() {
 				GET("/")
@@ -131,8 +134,9 @@ var EndpointWithOptionalRequiredScopesDSL = func() {
 				Scope("api:write")
 			})
 			Payload(func() {
-				Username("user", String)
-				Password("pass", String)
+				Username("user", SecurityCredential)
+				Password("pass", SecurityCredential)
+				Required("user")
 			})
 			HTTP(func() {
 				GET("/")
@@ -147,7 +151,8 @@ var EndpointWithAPIKeyOverrideDSL = func() {
 		Method("SecureWithAPIKeyOverride", func() {
 			Security(APIKeyAuth)
 			Payload(func() {
-				APIKey("api_key", "key", String)
+				APIKey("api_key", "key", SecurityCredential)
+				Required("key")
 			})
 			HTTP(func() {
 				GET("/")
@@ -163,7 +168,7 @@ var EndpointWithBearerDSL = func() {
 				Scope("api:read")
 			})
 			Payload(func() {
-				BearerToken("token", String)
+				BearerToken("token", SecurityCredential)
 			})
 			HTTP(func() {
 				GET("/")
@@ -173,11 +178,12 @@ var EndpointWithBearerDSL = func() {
 }
 
 var EndpointWithOAuth2DSL = func() {
+	var accessToken = Type("AccessToken", String)
 	Service("EndpointWithOAuth2", func() {
 		Method("SecureWithOAuth2", func() {
 			Security(OAuth2AuthorizationCode)
 			Payload(func() {
-				AccessToken("token", String)
+				AccessToken("token", accessToken)
 			})
 			HTTP(func() {
 				GET("/")

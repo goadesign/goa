@@ -19,8 +19,8 @@ paths:
                         text/event-stream:
                             schema:
                                 type: string
-                                example: Adipisci necessitatibus enim voluptas asperiores corporis.
-                            example: Adipisci necessitatibus enim voluptas asperiores corporis.
+                                example: event
+                            example: event
 components: {}
 tags:
     - name: SSEStringService

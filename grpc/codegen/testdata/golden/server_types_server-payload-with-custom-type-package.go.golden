@@ -1,6 +1,5 @@
-// NewMethodPayloadWithCustomTypePackagePayload builds the payload of the
-// "MethodPayloadWithCustomTypePackage" endpoint of the
-// "ServicePayloadWithCustomTypePackage" service from the gRPC request type.
+// NewMethodPayloadWithCustomTypePackagePayload builds *types.CustomType from
+// *service_payload_with_custom_type_packagepb.MethodPayloadWithCustomTypePackageRequest.
 func NewMethodPayloadWithCustomTypePackagePayload(message *service_payload_with_custom_type_packagepb.MethodPayloadWithCustomTypePackageRequest) *types.CustomType {
 	v := &types.CustomType{}
 	if message.Field != nil {
@@ -10,9 +9,9 @@ func NewMethodPayloadWithCustomTypePackagePayload(message *service_payload_with_
 	return v
 }
 
-// NewProtoMethodPayloadWithCustomTypePackageResponse builds the gRPC response
-// type from the result of the "MethodPayloadWithCustomTypePackage" endpoint of
-// the "ServicePayloadWithCustomTypePackage" service.
+// NewProtoMethodPayloadWithCustomTypePackageResponse builds
+// *service_payload_with_custom_type_packagepb.MethodPayloadWithCustomTypePackageResponse
+// from *types.CustomType.
 func NewProtoMethodPayloadWithCustomTypePackageResponse(result *types.CustomType) *service_payload_with_custom_type_packagepb.MethodPayloadWithCustomTypePackageResponse {
 	message := &service_payload_with_custom_type_packagepb.MethodPayloadWithCustomTypePackageResponse{}
 	if result.Field != nil {

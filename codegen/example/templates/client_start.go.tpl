@@ -4,7 +4,7 @@ func main() {
 		hostF = flag.String("host", {{ printf "%q" .Server.DefaultHost.Name }}, "Server host (valid values: {{ (join .Server.AvailableHosts ", ") }})")
 		addrF = flag.String("url", "", "URL to service host")
 	{{- range .Server.Variables }}
-		{{ .VarName }}F = flag.String({{ printf "%q" .Name }}, {{ printf "%q" .DefaultValue }}, {{ printf "%q" .Description }})
+		{{ .VarName }} = flag.String({{ printf "%q" .FlagName }}, {{ printf "%q" .DefaultValue }}, {{ printf "%q" .Description }})
 	{{- end }}
 	{{- if and .HasJSONRPC .HasHTTP }}
 		jsonrpcF = flag.Bool("jsonrpc", false, "Force JSON-RPC transport")

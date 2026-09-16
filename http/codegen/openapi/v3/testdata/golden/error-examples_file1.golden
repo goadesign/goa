@@ -34,6 +34,13 @@ paths:
                         application/vnd.goa.error:
                             schema:
                                 $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: not_found
+                                temporary: false
+                                timeout: false
                 "409":
                     description: 'custom: Conflict response.'
                     content:
@@ -43,6 +50,58 @@ paths:
                             example:
                                 message: error message
                                 name: custom
+                "429":
+                    description: 'retry: Too Many Requests response.'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: retry
+                                temporary: true
+                                timeout: false
+                "500":
+                    description: 'internal: Internal Server Error response.'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: true
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: internal
+                                temporary: false
+                                timeout: false
+                "503":
+                    description: 'retry_deadline: Service Unavailable response.'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: retry_deadline
+                                temporary: true
+                                timeout: true
+                "504":
+                    description: 'deadline: Gateway Timeout response.'
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: deadline
+                                temporary: false
+                                timeout: true
 components:
     schemas:
         Error:
@@ -51,7 +110,7 @@ components:
                 fault:
                     type: boolean
                     description: Is the error a server-side fault?
-                    example: true
+                    example: false
                 id:
                     type: string
                     description: ID is a unique identifier for this particular occurrence of the problem.
@@ -71,15 +130,15 @@ components:
                 timeout:
                     type: boolean
                     description: Is the error a timeout?
-                    example: false
+                    example: true
             description: Error response result type
             example:
-                fault: true
+                fault: false
                 id: 123abc
                 message: parameter 'p' must be an integer
                 name: bad_request
                 temporary: true
-                timeout: false
+                timeout: true
             required:
                 - name
                 - id

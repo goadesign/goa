@@ -1,0 +1,25 @@
+// EncodeOptionalArrayRequest returns an encoder for requests sent to the
+// params service optional_array JSON-RPC method. The encoder returns the
+// request ID written into the JSON-RPC message.
+func EncodeOptionalArrayRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) (string, error) {
+	return func(req *http.Request, v any) (string, error) {
+		p, ok := v.(*params.OptionalArrayPayload)
+		if !ok {
+			return "", goahttp.ErrInvalidType("params", "optional_array", "*params.OptionalArrayPayload", v)
+		}
+		body := &jsonrpc.Request{
+			JSONRPC: "2.0",
+			Method:  "optional_array",
+		}
+		requestID := uuid.New().String()
+		body.ID = requestID
+		if p.Value != nil {
+			b := NewObjectRequestBody(p)
+			body.Params = b
+		}
+		if err := encoder(req).Encode(&body); err != nil {
+			return "", goahttp.ErrEncodingError("params", "optional_array", err)
+		}
+		return requestID, nil
+	}
+}

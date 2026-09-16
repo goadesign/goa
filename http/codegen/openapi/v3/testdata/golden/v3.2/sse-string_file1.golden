@@ -23,7 +23,7 @@ paths:
                                 properties:
                                     data:
                                         type: string
-                                        example: Quia molestias.
+                                        example: event
                                 required:
                                     - data
 components: {}

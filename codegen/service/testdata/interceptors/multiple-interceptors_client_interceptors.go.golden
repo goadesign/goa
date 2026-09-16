@@ -3,27 +3,35 @@
 // is sent to the server. The implementation is responsible for calling next to
 // complete the request.
 type ClientInterceptors interface {
-	Test2(ctx context.Context, info *Test2Info, next goa.Endpoint) (any, error)
-	Test4(ctx context.Context, info *Test4Info, next goa.Endpoint) (any, error)
+	Test2(ctx context.Context, info Test2Info, next goa.Endpoint) (any, error)
+	Test4(ctx context.Context, info Test4Info, next goa.Endpoint) (any, error)
 }
 
 // Access interfaces for interceptor payloads and results
 type (
-	// Test2Info provides metadata about the current interception.
-	// It includes service name, method name, and access to the endpoint.
-	Test2Info struct {
-		service    string
-		method     string
-		callType   goa.InterceptorCallType
+	// Test2Info describes the service call currently passed to the interceptor.
+	Test2Info interface {
+		goa.InterceptorInfo
+	}
+	// Test4Info describes the service call currently passed to the interceptor.
+	Test4Info interface {
+		goa.InterceptorInfo
+	}
+)
+
+// Types used to provide information about each service call
+type (
+	test2MethodInfo struct {
 		rawPayload any
 	}
-	// Test4Info provides metadata about the current interception.
-	// It includes service name, method name, and access to the endpoint.
-	Test4Info struct {
-		service    string
-		method     string
-		callType   goa.InterceptorCallType
+	test2MethodClientUnaryInfo struct {
+		test2MethodInfo
+	}
+	test4MethodInfo struct {
 		rawPayload any
+	}
+	test4MethodClientUnaryInfo struct {
+		test4MethodInfo
 	}
 )
 
@@ -31,50 +39,50 @@ type (
 // interceptors defined in the design.
 func WrapMethodClientEndpoint(endpoint goa.Endpoint, i ClientInterceptors) goa.Endpoint {
 	if i != nil {
-		endpoint = wrapClientMethodtest2(endpoint, i)
-		endpoint = wrapClientMethodtest4(endpoint, i)
+		endpoint = wrapClientMethodTest2(endpoint, i)
+		endpoint = wrapClientMethodTest4(endpoint, i)
 	}
 	return endpoint
 }
 
-// Public accessor methods for Info types
+// Methods that provide information about each service call
 
-// Service returns the name of the service handling the request.
-func (info *Test2Info) Service() string {
-	return info.service
+// Service returns the service selected for this interceptor call.
+func (info *test2MethodInfo) Service() string {
+	return "MultipleInterceptorsService"
 }
 
-// Method returns the name of the method handling the request.
-func (info *Test2Info) Method() string {
-	return info.method
+// Method returns the method selected for this interceptor call.
+func (info *test2MethodInfo) Method() string {
+	return "Method"
 }
 
-// CallType returns the type of call the interceptor is handling.
-func (info *Test2Info) CallType() goa.InterceptorCallType {
-	return info.callType
-}
-
-// RawPayload returns the raw payload of the request.
-func (info *Test2Info) RawPayload() any {
+// RawPayload returns the payload supplied for this interceptor call.
+func (info *test2MethodInfo) RawPayload() any {
 	return info.rawPayload
 }
 
-// Service returns the name of the service handling the request.
-func (info *Test4Info) Service() string {
-	return info.service
+// CallType reports that this is a client endpoint call.
+func (info *test2MethodClientUnaryInfo) CallType() goa.InterceptorCallType {
+	return goa.InterceptorUnary
 }
 
-// Method returns the name of the method handling the request.
-func (info *Test4Info) Method() string {
-	return info.method
+// Service returns the service selected for this interceptor call.
+func (info *test4MethodInfo) Service() string {
+	return "MultipleInterceptorsService"
 }
 
-// CallType returns the type of call the interceptor is handling.
-func (info *Test4Info) CallType() goa.InterceptorCallType {
-	return info.callType
+// Method returns the method selected for this interceptor call.
+func (info *test4MethodInfo) Method() string {
+	return "Method"
 }
 
-// RawPayload returns the raw payload of the request.
-func (info *Test4Info) RawPayload() any {
+// RawPayload returns the payload supplied for this interceptor call.
+func (info *test4MethodInfo) RawPayload() any {
 	return info.rawPayload
+}
+
+// CallType reports that this is a client endpoint call.
+func (info *test4MethodClientUnaryInfo) CallType() goa.InterceptorCallType {
+	return goa.InterceptorUnary
 }

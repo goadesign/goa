@@ -1,3 +1,5 @@
+// This file verifies expression type conversion, compatibility, and example
+// behavior, including the tagged representation produced for union values.
 package expr
 
 import "testing"
@@ -919,7 +921,12 @@ func TestUnionExampleAndCompatibilityUseTaggedEnvelope(t *testing.T) {
 		},
 	}
 
-	example := union.Example(NewRandom("test"))
+	example := union.Example(NewExampleGenerator(NewFakerRandomizerFactory("test")).At(
+		MethodPayloadExampleIdentity(&MethodExpr{
+			Name:    "union",
+			Service: &ServiceExpr{Name: "test"},
+		}),
+	))
 	envelope, ok := example.(map[string]any)
 	if !ok {
 		t.Fatalf("expected tagged envelope, got %T", example)

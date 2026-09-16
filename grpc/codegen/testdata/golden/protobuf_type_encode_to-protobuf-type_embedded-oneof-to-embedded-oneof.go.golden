@@ -6,7 +6,7 @@ func transform() {
 		switch string(source.EmbeddedOneOf.Kind()) {
 		case "string":
 			actual, _ := source.EmbeddedOneOf.AsString()
-			target.EmbeddedOneOf = &proto.EmbeddedOneOf_String_{String_: string(actual)}
+			target.EmbeddedOneOf = &proto.EmbeddedOneOf_String_2{String_2: string(actual)}
 		case "integer":
 			actual, _ := source.EmbeddedOneOf.AsInteger()
 			target.EmbeddedOneOf = &proto.EmbeddedOneOf_Integer{Integer: int32(actual)}
@@ -18,10 +18,10 @@ func transform() {
 			target.EmbeddedOneOf = &proto.EmbeddedOneOf_Number{Number: int32(actual)}
 		case "array":
 			actual, _ := source.EmbeddedOneOf.AsArray()
-			target.EmbeddedOneOf = &proto.EmbeddedOneOf_Array{Array: svcProtoEmbeddedOneOfArrayToProtoEmbeddedOneOfArray(actual)}
+			target.EmbeddedOneOf = &proto.EmbeddedOneOf_Array{Array: svcProtoEmbeddedOneOfArrayToProtoEmbeddedOneOfArray2(actual)}
 		case "map":
 			actual, _ := source.EmbeddedOneOf.AsMap()
-			target.EmbeddedOneOf = &proto.EmbeddedOneOf_Map_{Map_: svcProtoEmbeddedOneOfMapToProtoEmbeddedOneOfMap(actual)}
+			target.EmbeddedOneOf = &proto.EmbeddedOneOf_Map_{Map_: svcProtoEmbeddedOneOfMapToProtoEmbeddedOneOfMap2(actual)}
 		case "user_type":
 			actual, _ := source.EmbeddedOneOf.AsUserType()
 			target.EmbeddedOneOf = &proto.EmbeddedOneOf_UserType{UserType: svcProtoSimpleOneOfToProtoSimpleOneOf(actual)}

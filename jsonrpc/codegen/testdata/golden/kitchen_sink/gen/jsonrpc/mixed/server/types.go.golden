@@ -8,24 +8,19 @@
 package server
 
 import (
-	mixed "kitchensink/mixed"
-
+	mixed "generated.local/gen/mixed"
 	goa "goa.design/goa/v3/pkg"
 )
 
 // LookupRequestBody is the type of the "Mixed" service "lookup" endpoint HTTP
 // request body.
 type LookupRequestBody struct {
-	// Request ID
-	ID  *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
 	Key *string `form:"key,omitempty" json:"key,omitempty" xml:"key,omitempty"`
 }
 
 // LookupResponseBody is the type of the "Mixed" service "lookup" endpoint HTTP
 // response body.
 type LookupResponseBody struct {
-	// Request ID
-	ID    string  `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
 	Value *string `form:"value,omitempty" json:"value,omitempty" xml:"value,omitempty"`
 }
 
@@ -33,27 +28,23 @@ type LookupResponseBody struct {
 // "lookup" endpoint of the "Mixed" service.
 func NewLookupResponseBody(res *mixed.LookupResult) *LookupResponseBody {
 	body := &LookupResponseBody{
-		ID:    res.ID,
 		Value: res.Value,
 	}
 	return body
 }
 
 // NewLookupPayload builds a Mixed service lookup endpoint payload.
-func NewLookupPayload(body *LookupRequestBody) *mixed.LookupPayload {
+func NewLookupPayload(body *LookupRequestBody, requestID string) *mixed.LookupPayload {
 	v := &mixed.LookupPayload{
-		ID:  *body.ID,
 		Key: *body.Key,
 	}
+	v.ID = requestID
 
 	return v
 }
 
 // ValidateLookupRequestBody runs the validations defined on LookupRequestBody
 func ValidateLookupRequestBody(body *LookupRequestBody) (err error) {
-	if body.ID == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
-	}
 	if body.Key == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("key", "body"))
 	}

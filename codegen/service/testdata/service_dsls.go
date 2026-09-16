@@ -82,6 +82,16 @@ var MultipleMethodsDSL = func() {
 	})
 }
 
+var RepeatedInlineErrorsDSL = func() {
+	Service("Secured", func() {
+		for _, method := range []string{"Read", "Write", "Delete"} {
+			Method(method, func() {
+				Error("invalid_scopes", String)
+			})
+		}
+	})
+}
+
 var UnionMethodDSL = func() {
 	var AUnion = Type("AUnion", func() {
 		OneOf("Values", func() {
@@ -155,6 +165,56 @@ var PkgPathUnionDSL = func() {
 	Service("PkgPathUnion", func() {
 		Method("M", func() {
 			Payload(TypeWithUnion)
+		})
+	})
+}
+
+// PkgPathUnionNameScopeDSL exercises services that place separately named
+// unions in relocated files that compile in one Go package.
+var PkgPathUnionNameScopeDSL = func() {
+	var FirstValue = Type("FirstValue", func() {
+		Meta("struct:pkg:path", "types")
+		Meta("type:generate:force")
+		OneOf("Value", func() {
+			TypeName("FirstValueChoice")
+			Attribute("Bool", Boolean)
+			Attribute("Enum", String)
+			Attribute("Number", Float64)
+		})
+	})
+	var SecondValue = Type("SecondValue", func() {
+		Meta("struct:pkg:path", "types")
+		Meta("type:generate:force")
+		OneOf("Value", func() {
+			TypeName("SecondValueChoice")
+			Attribute("Bool", Boolean)
+			Attribute("Enum", String)
+			Attribute("Number", Float64)
+		})
+	})
+	var ThirdValue = Type("ThirdValue", func() {
+		Meta("struct:pkg:path", "types")
+		Meta("type:generate:force")
+		OneOf("Value", func() {
+			TypeName("ThirdValueChoice")
+			Attribute("Bool", Boolean)
+			Attribute("Enum", String)
+			Attribute("Number", Float64)
+		})
+	})
+	Service("FirstValueService", func() {
+		Method("Read", func() {
+			Payload(FirstValue)
+		})
+	})
+	Service("SecondValueService", func() {
+		Method("Read", func() {
+			Payload(SecondValue)
+		})
+	})
+	Service("ThirdValueService", func() {
+		Method("Read", func() {
+			Payload(ThirdValue)
 		})
 	})
 }
@@ -284,6 +344,22 @@ var ServiceErrorDSL = func() {
 	})
 }
 
+var APIErrorReferenceDSL = func() {
+	API("ErrorReference", func() {
+		Error("busy", func() {
+			Temporary()
+			Timeout()
+			Fault()
+		})
+	})
+	Service("ErrorReference", func() {
+		Error("busy")
+		Method("Run", func() {
+			Error("busy")
+		})
+	})
+}
+
 var CustomErrorsDSL = func() {
 	var APayload = Type("APayload", func() {
 		Attribute("IntField", Int)
@@ -305,6 +381,20 @@ var CustomErrorsDSL = func() {
 			Error("primitive", String, "primitive error description")
 			Error("user_type", APayload, "user type error description")
 			Error("struct_error_name", Result, "struct error name description")
+		})
+	})
+}
+
+var NestedCustomErrorDSL = func() {
+	var Detail = Type("Detail", func() {
+		Attribute("Message", String)
+	})
+	var Failure = Type("Failure", func() {
+		Attribute("Detail", Detail)
+	})
+	Service("NestedCustomError", func() {
+		Method("Fail", func() {
+			Error("failure", Failure)
 		})
 	})
 }
@@ -388,7 +478,7 @@ var WithExplicitAndDefaultViewsDSL = func() {
 		Method("A", func() {
 			Result(RTWithViews)
 		})
-		Method("A", func() {
+		Method("B", func() {
 			Result(RTWithViews, func() {
 				View("tiny")
 			})
@@ -1035,6 +1125,35 @@ var PkgPathDupeDSL = func() {
 		Method("B", func() {
 			Payload(Foo)
 			Result(Foo)
+		})
+	})
+}
+
+var PkgPathSharedRolesDSL = func() {
+	var Detail = Type("Detail", func() {
+		Attribute("Message", String)
+		Meta("struct:pkg:path", "shared")
+	})
+	var Shared = Type("Shared", func() {
+		Attribute("IntField", Int)
+		Attribute("Detail", Detail)
+		Meta("struct:pkg:path", "shared")
+		Meta("type:generate:force")
+	})
+
+	Service("PkgPathSharedRoles", func() {
+		Method("Exchange", func() {
+			Payload(Shared)
+			StreamingPayload(Shared)
+			Result(Shared)
+			StreamingResult(Shared)
+			Error("shared_error", Shared)
+		})
+	})
+
+	Service("PkgPathSharedError", func() {
+		Method("Fail", func() {
+			Error("shared_error", Shared)
 		})
 	})
 }

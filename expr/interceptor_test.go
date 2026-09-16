@@ -70,6 +70,14 @@ func TestInterceptorExpr_Validate(t *testing.T) {
 				m.StreamingPayload = &AttributeExpr{Type: ut}
 			}),
 		},
+		"streaming-result-distinct-from-result": {
+			intercept: makeInterceptor(t, withReadStreamingResult(t, namedAttr(t, "event"))),
+			method: makeMethod(t, func(m *MethodExpr) {
+				m.Stream = ServerStreamKind
+				m.Result = &AttributeExpr{Type: &Object{namedAttr(t, "summary")}}
+				m.StreamingResult = &AttributeExpr{Type: &Object{namedAttr(t, "event")}}
+			}),
+		},
 		"invalid-payload-not-object": {
 			intercept: makeInterceptor(t, withReadPayload(t, namedAttr(t, "foo"))),
 			method: makeMethod(t, func(m *MethodExpr) {

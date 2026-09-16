@@ -50,7 +50,7 @@ func NewMultipleViewsCollection(vres resultcollectionmultipleviewsmethodviews.Mu
 // MultipleViewsCollection from result type MultipleViewsCollection using the
 // given view.
 func NewViewedMultipleViewsCollection(res MultipleViewsCollection, view string) resultcollectionmultipleviewsmethodviews.MultipleViewsCollection {
-	var vres resultcollectionmultipleviewsmethodviews.MultipleViewsCollection
+	vres := resultcollectionmultipleviewsmethodviews.MultipleViewsCollection{View: view}
 	switch view {
 	case "default", "":
 		p := newMultipleViewsCollectionView(res)

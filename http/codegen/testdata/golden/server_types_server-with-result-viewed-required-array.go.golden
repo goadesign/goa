@@ -1,0 +1,61 @@
+// MethodResultViewedRequiredArrayResponseBody is the type of the
+// "ServiceResultViewedRequiredArray" service "MethodResultViewedRequiredArray"
+// endpoint HTTP response body.
+type MethodResultViewedRequiredArrayResponseBody struct {
+	Items []*ViewedElemResponseBody `form:"items" json:"items" xml:"items"`
+	Name  *string                   `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+}
+
+// MethodResultViewedRequiredArrayResponseBodyTiny is the type of the
+// "ServiceResultViewedRequiredArray" service "MethodResultViewedRequiredArray"
+// endpoint HTTP response body.
+type MethodResultViewedRequiredArrayResponseBodyTiny struct {
+	Items []*ViewedElemResponseBody `form:"items" json:"items" xml:"items"`
+}
+
+// ViewedElemResponseBody is used to define fields on response body types.
+type ViewedElemResponseBody struct {
+	A *string `form:"a,omitempty" json:"a,omitempty" xml:"a,omitempty"`
+}
+
+// NewMethodResultViewedRequiredArrayResponseBody builds the HTTP response body
+// from the result of the "MethodResultViewedRequiredArray" endpoint of the
+// "ServiceResultViewedRequiredArray" service.
+func NewMethodResultViewedRequiredArrayResponseBody(res *serviceresultviewedrequiredarrayviews.GoaViewedRequiredArrayView) *MethodResultViewedRequiredArrayResponseBody {
+	body := &MethodResultViewedRequiredArrayResponseBody{
+		Name: res.Name,
+	}
+	if res.Items != nil {
+		body.Items = make([]*ViewedElemResponseBody, len(res.Items))
+		for i, val := range res.Items {
+			if val == nil {
+				body.Items[i] = nil
+				continue
+			}
+			body.Items[i] = marshalServiceresultviewedrequiredarrayviewsViewedElemViewToViewedElemResponseBody(val)
+		}
+	} else {
+		body.Items = []*ViewedElemResponseBody{}
+	}
+	return body
+}
+
+// NewMethodResultViewedRequiredArrayResponseBodyTiny builds the HTTP response
+// body from the result of the "MethodResultViewedRequiredArray" endpoint of
+// the "ServiceResultViewedRequiredArray" service.
+func NewMethodResultViewedRequiredArrayResponseBodyTiny(res *serviceresultviewedrequiredarrayviews.GoaViewedRequiredArrayView) *MethodResultViewedRequiredArrayResponseBodyTiny {
+	body := &MethodResultViewedRequiredArrayResponseBodyTiny{}
+	if res.Items != nil {
+		body.Items = make([]*ViewedElemResponseBody, len(res.Items))
+		for i, val := range res.Items {
+			if val == nil {
+				body.Items[i] = nil
+				continue
+			}
+			body.Items[i] = marshalServiceresultviewedrequiredarrayviewsViewedElemViewToViewedElemResponseBody(val)
+		}
+	} else {
+		body.Items = []*ViewedElemResponseBody{}
+	}
+	return body
+}

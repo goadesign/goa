@@ -4,17 +4,17 @@
       "Error": {
         "description": "Error response result type",
         "example": {
-          "fault": true,
+          "fault": false,
           "id": "123abc",
           "message": "parameter 'p' must be an integer",
           "name": "bad_request",
           "temporary": true,
-          "timeout": false
+          "timeout": true
         },
         "properties": {
           "fault": {
             "description": "Is the error a server-side fault?",
-            "example": true,
+            "example": false,
             "type": "boolean"
           },
           "id": {
@@ -39,7 +39,7 @@
           },
           "timeout": {
             "description": "Is the error a timeout?",
-            "example": false,
+            "example": true,
             "type": "boolean"
           }
         },
@@ -110,6 +110,14 @@
           "404": {
             "content": {
               "application/vnd.goa.error": {
+                "example": {
+                  "fault": false,
+                  "id": "123abc",
+                  "message": "parameter 'p' must be an integer",
+                  "name": "not_found",
+                  "temporary": false,
+                  "timeout": false
+                },
                 "schema": {
                   "$ref": "#/components/schemas/Error"
                 }
@@ -130,6 +138,78 @@
               }
             },
             "description": "custom: Conflict response."
+          },
+          "429": {
+            "content": {
+              "application/vnd.goa.error": {
+                "example": {
+                  "fault": false,
+                  "id": "123abc",
+                  "message": "parameter 'p' must be an integer",
+                  "name": "retry",
+                  "temporary": true,
+                  "timeout": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "retry: Too Many Requests response."
+          },
+          "500": {
+            "content": {
+              "application/vnd.goa.error": {
+                "example": {
+                  "fault": true,
+                  "id": "123abc",
+                  "message": "parameter 'p' must be an integer",
+                  "name": "internal",
+                  "temporary": false,
+                  "timeout": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "internal: Internal Server Error response."
+          },
+          "503": {
+            "content": {
+              "application/vnd.goa.error": {
+                "example": {
+                  "fault": false,
+                  "id": "123abc",
+                  "message": "parameter 'p' must be an integer",
+                  "name": "retry_deadline",
+                  "temporary": true,
+                  "timeout": true
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "retry_deadline: Service Unavailable response."
+          },
+          "504": {
+            "content": {
+              "application/vnd.goa.error": {
+                "example": {
+                  "fault": false,
+                  "id": "123abc",
+                  "message": "parameter 'p' must be an integer",
+                  "name": "deadline",
+                  "temporary": false,
+                  "timeout": true
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "deadline: Gateway Timeout response."
           }
         },
         "summary": "Error Errors",

@@ -2,7 +2,6 @@ package codegen
 
 import (
 	"path/filepath"
-	"strings"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
@@ -10,33 +9,22 @@ import (
 
 // sseClientFile returns the file implementing the SSE client code for SSE endpoints if any.
 // Relies on SSEData (ed.SSE) for all codegen needs.
-func sseClientFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
+func sseClientFile(svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
 	data := services.Get(svc.Name())
 	if !HasSSE(data) {
 		return nil
 	}
-	path := filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svc.Name()), "client", "sse.go")
+	path := filepath.Join(codegen.Gendir, "http", data.Service.PathName, "client", "sse.go")
+	outputPackage := generatedFileOutputPackage(services, path)
+	data = serviceDataForOutput(data, services, outputPackage)
 	tmplSections := sseClientTemplateSections(data)
 	sections := make([]*codegen.SectionTemplate, 0, 1+len(tmplSections))
 	sections = append(sections,
-		codegen.Header(
+		plannedFileHeader(
 			"sse-client",
 			"client",
-			[]*codegen.ImportSpec{
-				{Path: "bytes"},
-				{Path: "context"},
-				{Path: "encoding/json"},
-				{Path: "errors"},
-				{Path: "io"},
-				{Path: "net/http"},
-				{Path: "fmt"},
-				{Path: "strings"},
-				{Path: "strconv"},
-				{Path: "sync"},
-				{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()), Name: data.Service.PkgName},
-				{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()) + "/views", Name: data.Service.ViewsPkg},
-				{Path: "goa.design/goa/v3/http", Name: "goahttp"},
-			},
+			path,
+			services,
 		),
 	)
 	sections = append(sections, tmplSections...) // add SSE client methods
@@ -50,16 +38,16 @@ func sseClientTemplateSections(data *ServiceData) []*codegen.SectionTemplate {
 		if ed.SSE == nil {
 			continue
 		}
+		funcs := sseTemplateFuncs()
+		funcs["dict"] = dict
+		funcs["goTypeRef"] = func(dataType expr.DataType) string {
+			return data.Scope.GoTypeRef(&expr.AttributeExpr{Type: dataType})
+		}
 		sections = append(sections, &codegen.SectionTemplate{
-			Name:   "client-sse",
-			Source: httpTemplates.Read(clientSseT, sseParseP),
-			Data:   ed,
-			FuncMap: map[string]any{
-				"dict": dict,
-				"deref": func(ref string) string {
-					return strings.TrimPrefix(ref, "*")
-				},
-			},
+			Name:    "client-sse",
+			Source:  httpTemplates.Read(clientSseT, sseParseP, queryTypeConversionP, elementSliceConversionP, sliceItemConversionP),
+			Data:    ed,
+			FuncMap: funcs,
 		})
 	}
 	return sections

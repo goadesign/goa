@@ -1,0 +1,39 @@
+
+syntax = "proto3";
+
+package required_primitive_presence;
+
+option go_package = "/required_primitive_presencepb";
+import "google/protobuf/struct.proto";
+
+// Service is the RequiredPrimitivePresence service interface.
+service RequiredPrimitivePresence {
+	// Exchange implements Exchange.
+	rpc Exchange (ExchangeRequest) returns (ExchangeResponse);
+	// Echo implements Echo.
+	rpc Echo (StringAlias) returns (StringAlias);
+}
+
+message ExchangeRequest {
+	optional bool boolean_field = 1;
+	optional sint32 integer_field = 2;
+	optional string string_field = 3;
+	optional bytes bytes_field = 4;
+	optional string string_alias_field = 5;
+	optional bytes bytes_alias_field = 6;
+	google.protobuf.Value any_alias_field = 7;
+}
+
+message ExchangeResponse {
+	optional bool boolean_field = 1;
+	optional sint32 integer_field = 2;
+	optional string string_field = 3;
+	optional bytes bytes_field = 4;
+	optional string string_alias_field = 5;
+	optional bytes bytes_alias_field = 6;
+	google.protobuf.Value any_alias_field = 7;
+}
+
+message StringAlias {
+	optional string field = 1;
+}

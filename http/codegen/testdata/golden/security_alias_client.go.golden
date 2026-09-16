@@ -1,0 +1,120 @@
+// EncodeBasicRequest returns an encoder for requests sent to the
+// NamedSecurityTypes Basic server.
+func EncodeBasicRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*namedsecuritytypes.BasicPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("NamedSecurityTypes", "Basic", "*namedsecuritytypes.BasicPayload", v)
+		}
+		var pass string
+		if p.Password != nil {
+			pass = string(*p.Password)
+		}
+		req.SetBasicAuth(string(p.Username), pass)
+		return nil
+	}
+}
+
+// EncodeBasicOptionalRequest returns an encoder for requests sent to the
+// NamedSecurityTypes BasicOptional server.
+func EncodeBasicOptionalRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*namedsecuritytypes.BasicOptionalPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("NamedSecurityTypes", "BasicOptional", "*namedsecuritytypes.BasicOptionalPayload", v)
+		}
+		var user string
+		if p.Username != nil {
+			user = string(*p.Username)
+		}
+		var pass string
+		if p.Password != nil {
+			pass = string(*p.Password)
+		}
+		if p.Username != nil || p.Password != nil {
+			req.SetBasicAuth(user, pass)
+		}
+		return nil
+	}
+}
+
+// EncodeBasicPasswordRequiredRequest returns an encoder for requests sent to
+// the NamedSecurityTypes BasicPasswordRequired server.
+func EncodeBasicPasswordRequiredRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*namedsecuritytypes.BasicPasswordRequiredPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("NamedSecurityTypes", "BasicPasswordRequired", "*namedsecuritytypes.BasicPasswordRequiredPayload", v)
+		}
+		var user string
+		if p.Username != nil {
+			user = string(*p.Username)
+		}
+		req.SetBasicAuth(user, string(p.Password))
+		return nil
+	}
+}
+
+// EncodeAPIKeyRequest returns an encoder for requests sent to the
+// NamedSecurityTypes APIKey server.
+func EncodeAPIKeyRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*namedsecuritytypes.APIKeyPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("NamedSecurityTypes", "APIKey", "*namedsecuritytypes.APIKeyPayload", v)
+		}
+		{
+			head := p.Key
+			req.Header.Set("X-API-Key", string(head))
+		}
+		return nil
+	}
+}
+
+// EncodeBearerRequest returns an encoder for requests sent to the
+// NamedSecurityTypes Bearer server.
+func EncodeBearerRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*namedsecuritytypes.BearerPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("NamedSecurityTypes", "Bearer", "*namedsecuritytypes.BearerPayload", v)
+		}
+		if p.Token != nil {
+			head := *p.Token
+			req.Header.Set("X-Bearer", string(head))
+		}
+		return nil
+	}
+}
+
+// EncodeJWTRequest returns an encoder for requests sent to the
+// NamedSecurityTypes JWT server.
+func EncodeJWTRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*namedsecuritytypes.JWTPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("NamedSecurityTypes", "JWT", "*namedsecuritytypes.JWTPayload", v)
+		}
+		{
+			head := p.Token
+			req.Header.Set("X-JWT", string(head))
+		}
+		return nil
+	}
+}
+
+// EncodeOAuth2Request returns an encoder for requests sent to the
+// NamedSecurityTypes OAuth2 server.
+func EncodeOAuth2Request(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*namedsecuritytypes.OAuth2Payload)
+		if !ok {
+			return goahttp.ErrInvalidType("NamedSecurityTypes", "OAuth2", "*namedsecuritytypes.OAuth2Payload", v)
+		}
+		if p.Token != nil {
+			head := *p.Token
+			req.Header.Set("X-OAuth", string(head))
+		}
+		return nil
+	}
+}

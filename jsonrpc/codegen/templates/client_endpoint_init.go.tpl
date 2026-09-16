@@ -1,64 +1,40 @@
-{{- $retry := and .Method.Idempotent (eq .Method.StreamKind 1) (not .Method.SkipRequestBodyEncodeDecode) (not (isWebSocketEndpoint .)) (not (isSSEEndpoint .)) }}
+{{- $retry := and .Method.Idempotent (eq .Method.StreamKind 1) (not .Method.SkipRequestBodyEncodeDecode) (not (isSSEEndpoint .)) }}
+{{- if .IsJSONRPCNotification }}
+{{ printf "%s returns an endpoint that sends JSON-RPC notifications to the %s service %s method." .EndpointInit .ServiceName .Method.Name | comment }}
+{{- else }}
 {{ printf "%s returns an endpoint that makes JSON-RPC requests to the %s service %s method." .EndpointInit .ServiceName .Method.Name | comment }}
-func (c *{{ .ClientStruct }}) {{ .EndpointInit }}() goa.Endpoint {
-{{- if not (isWebSocketEndpoint .) }}
+{{- end }}
+func (c *{{ .ClientStructDeclaration.Name }}) {{ .EndpointInit }}() goa.Endpoint {
 	var (
-	{{- if .RequestEncoder }}
-		encodeRequest  = {{ .RequestEncoder }}(c.encoder)
+	{{- if .RequestEncoderDeclaration }}
+		encodeRequest  = {{ .RequestEncoderDeclaration.Name }}(c.encoder)
 	{{- end }}
-	{{- if not (isSSEEndpoint .) }}
-		decodeResponse = {{ .ResponseDecoder }}(c.decoder, c.RestoreResponseBody)
+	{{- if and (not (isSSEEndpoint .)) (not .IsJSONRPCNotification) }}
+		decodeResponse = {{ .ResponseDecoderDeclaration.Name }}(c.decoder, c.RestoreResponseBody)
 	{{- end }}
 	)
-{{- end }}
 	{{- if $retry }}
 	endpoint := func(ctx context.Context, v any) (any, error) {
 	{{- else }}
 	return func(ctx context.Context, v any) (any, error) {
 	{{- end }}
-{{- if not (isWebSocketEndpoint .) }}
-		req, err := c.{{ .RequestInit.Name }}(ctx, {{ range .RequestInit.ClientArgs }}{{ .Ref }}, {{ end }})
+		req, err := c.{{ .RequestInit.Declaration.Name }}(ctx, {{ range .RequestInit.ClientArgs }}{{ .Ref }}, {{ end }})
 		if err != nil {
 			return nil, err
 		}
-	{{- if .RequestEncoder }}
+	{{- if .RequestEncoderDeclaration }}
+		{{- if .IsJSONRPCNotification }}
 		if err := encodeRequest(req, v); err != nil {
 			return nil, err
 		}
-	{{- end }}
-{{- end }}
-{{- if isWebSocketEndpoint . }}
-	{{- if and .ClientWebSocket.RecvName .ClientWebSocket.RecvTypeRef }}
-		// For WebSocket, pass the base decoder to the stream and decode inner results
-		decodeResponse := c.decoder
-	{{- end }}
-		
-		// Get direct WebSocket connection
-		ws, err := c.getConn(ctx)
+		{{- else }}
+		requestID, err := encodeRequest(req, v)
 		if err != nil {
 			return nil, err
 		}
-		
-		// Create context with cancellation for the stream
-		streamCtx, cancel := context.WithCancel(ctx)
-		
-		// Create the stream with direct WebSocket handling
-		stream := &{{ .ClientWebSocket.VarName }}{
-			ws:     ws,
-			ctx:    streamCtx,
-			cancel: cancel,
-			done:   make(chan struct{}),
-			config: c.streamConfig,
-			{{- if and .ClientWebSocket.RecvName .ClientWebSocket.RecvTypeRef }}
-			decoder: decodeResponse,
-			{{- end }}
-		}
-		
-		// Start background response handler
-		go stream.responseHandler()
-		
-		return stream, nil
-{{- else if isSSEEndpoint . }}
+		{{- end }}
+	{{- end }}
+{{- if isSSEEndpoint . }}
 		// For SSE endpoints, send JSON-RPC request and establish stream
 		resp, err := c.Doer.Do(req)
 		if err != nil {
@@ -66,31 +42,49 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}() goa.Endpoint {
 		}
 		
 		if resp.StatusCode != http.StatusOK {
-			body, _ := io.ReadAll(resp.Body)
-			resp.Body.Close()
+			body, readErr := io.ReadAll(resp.Body)
+			closeErr := resp.Body.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("{{ .ServiceName }}", "{{ .Method.Name }}", err)
+			}
 			return nil, goahttp.ErrInvalidResponse("{{ .ServiceName }}", "{{ .Method.Name }}", resp.StatusCode, string(body))
 		}
 		
 		contentType := resp.Header.Get("Content-Type")
-		if contentType != "" && !strings.HasPrefix(contentType, "text/event-stream") {
-			resp.Body.Close()
-			return nil, fmt.Errorf("unexpected content type: %s (expected text/event-stream)", contentType)
+		mediaType, _, parseErr := mime.ParseMediaType(contentType)
+		if parseErr != nil || mediaType != "text/event-stream" {
+			contentTypeErr := fmt.Errorf("unexpected content type: %s (expected text/event-stream)", contentType)
+			if err := resp.Body.Close(); err != nil {
+				return nil, errors.Join(contentTypeErr, goahttp.ErrDecodingError("{{ .ServiceName }}", "{{ .Method.Name }}", err))
+			}
+			return nil, contentTypeErr
 		}
 		
 		// Create the SSE client stream
-		stream := &{{ .Method.VarName }}ClientStream{
-			resp:    resp,
-			reader:  bufio.NewReader(resp.Body),
-			decoder: c.decoder,
+		return {{ .SSE.ClientInitDeclaration.Name }}(resp, c.decoder, requestID), nil
+{{- else if .IsJSONRPCNotification }}
+		resp, err := c.Doer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("{{ .ServiceName }}", "{{ .Method.Name }}", err)
 		}
-		
-		return stream, nil
+		if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+			body, readErr := io.ReadAll(resp.Body)
+			closeErr := resp.Body.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("{{ .ServiceName }}", "{{ .Method.Name }}", err)
+			}
+			return nil, goahttp.ErrInvalidResponse("{{ .ServiceName }}", "{{ .Method.Name }}", resp.StatusCode, string(body))
+		}
+		if err := resp.Body.Close(); err != nil {
+			return nil, goahttp.ErrDecodingError("{{ .ServiceName }}", "{{ .Method.Name }}", err)
+		}
+		return nil, nil
 {{- else }}
 		resp, err := c.Doer.Do(req)
 		if err != nil {
 			return nil, goahttp.ErrRequestError("{{ .ServiceName }}", "{{ .Method.Name }}", err)
 		}
-		return decodeResponse(resp)
+		return decodeResponse(resp, requestID)
 {{- end }}
 	}
 	{{- if $retry }}

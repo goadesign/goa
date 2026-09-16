@@ -164,6 +164,8 @@ type (
 		Schema *openapi.Schema `json:"schema,omitempty" yaml:"schema,omitempty"`
 		// Headers is a list of headers that are sent with the response.
 		Headers map[string]*Header `json:"headers,omitempty" yaml:"headers,omitempty"`
+		// Examples contains one response body example for each content type.
+		Examples map[string]any `json:"examples,omitempty" yaml:"examples,omitempty"`
 		// Ref references a global API response.
 		// This field is exclusive with the other fields of Response.
 		Ref string `json:"$ref,omitempty" yaml:"$ref,omitempty"`

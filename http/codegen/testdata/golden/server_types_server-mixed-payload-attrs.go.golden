@@ -49,23 +49,31 @@ func ValidateMethodARequestBody(body *MethodARequestBody) (err error) {
 		err = goa.MergeErrors(err, goa.MissingFieldError("object", "body"))
 	}
 	if body.Object != nil {
-		if err2 := ValidateBPayloadRequestBody(body.Object); err2 != nil {
+		if err2 := validateBPayloadRequestBody(body.Object, "body.object"); err2 != nil {
 			err = goa.MergeErrors(err, err2)
 		}
 	}
 	if body.DupObj != nil {
-		if err2 := ValidateBPayloadRequestBody(body.DupObj); err2 != nil {
+		if err2 := validateBPayloadRequestBody(body.DupObj, "body.dup_obj"); err2 != nil {
 			err = goa.MergeErrors(err, err2)
 		}
 	}
 	return
 }
 
-// ValidateBPayloadRequestBody runs the validations defined on
-// BPayloadRequestBody
+// ValidateBPayloadRequestBody runs the validations defined on BPayload
 func ValidateBPayloadRequestBody(body *BPayloadRequestBody) (err error) {
 	if body.Int == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("int", "body"))
+	}
+	return
+}
+
+// validateBPayloadRequestBody checks BPayload and reports errors using the
+// path supplied by its caller
+func validateBPayloadRequestBody(body *BPayloadRequestBody, path string) (err error) {
+	if body.Int == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("int", path))
 	}
 	return
 }

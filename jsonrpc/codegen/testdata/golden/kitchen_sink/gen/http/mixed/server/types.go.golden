@@ -8,8 +8,7 @@
 package server
 
 import (
-	mixed "kitchensink/mixed"
-
+	mixed "generated.local/gen/mixed"
 	goa "goa.design/goa/v3/pkg"
 )
 
@@ -24,8 +23,6 @@ type LookupRequestBody struct {
 // LookupResponseBody is the type of the "Mixed" service "lookup" endpoint HTTP
 // response body.
 type LookupResponseBody struct {
-	// Request ID
-	ID    string  `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
 	Value *string `form:"value,omitempty" json:"value,omitempty" xml:"value,omitempty"`
 }
 
@@ -33,7 +30,6 @@ type LookupResponseBody struct {
 // "lookup" endpoint of the "Mixed" service.
 func NewLookupResponseBody(res *mixed.LookupResult) *LookupResponseBody {
 	body := &LookupResponseBody{
-		ID:    res.ID,
 		Value: res.Value,
 	}
 	return body

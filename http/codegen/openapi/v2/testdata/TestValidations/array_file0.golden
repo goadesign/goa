@@ -7,11 +7,11 @@
   "definitions": {
     "Bar": {
       "example": {
-        "string": ""
+        "string": "item"
       },
       "properties": {
         "string": {
-          "example": "",
+          "example": "item",
           "maxLength": 42,
           "minLength": 0,
           "type": "string"
@@ -22,15 +22,22 @@
     },
     "Foobar": {
       "example": {
-        "bar": [],
+        "bar": [
+          {
+            "string": "item"
+          }
+        ],
         "foo": [
-          "Totam doloremque exercitationem voluptate.",
-          "Repellat perspiciatis voluptas et quia deleniti."
+          "item"
         ]
       },
       "properties": {
         "bar": {
-          "example": [],
+          "example": [
+            {
+              "string": "item"
+            }
+          ],
           "items": {
             "$ref": "#/definitions/Bar"
           },
@@ -40,11 +47,10 @@
         },
         "foo": {
           "example": [
-            "Totam doloremque exercitationem voluptate.",
-            "Repellat perspiciatis voluptas et quia deleniti."
+            "item"
           ],
           "items": {
-            "example": "Molestiae dolor eveniet omnis atque.",
+            "example": "item",
             "type": "string"
           },
           "maxItems": 42,

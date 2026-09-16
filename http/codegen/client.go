@@ -1,3 +1,5 @@
+// This file renders HTTP client calls and codecs per service; each file owns
+// the imports required by the service methods it contains.
 package codegen
 
 import (
@@ -9,62 +11,36 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
-// ClientFiles returns the generated HTTP client files.
-func ClientFiles(genpkg string, data *ServicesData) []*codegen.File {
+// clientFiles builds the HTTP client files read by Plan.Link.
+func clientFiles(data *ServicesData) []*codegen.File {
 	files := make([]*codegen.File, 0, len(data.Expressions.Services)*3) // preallocate for client files
 	for _, svc := range data.Expressions.Services {
-		files = append(files, clientFile(genpkg, svc, data))
-		if f := WebsocketClientFile(genpkg, svc, data); f != nil {
+		files = append(files, clientFile(svc, data))
+		if f := websocketClientFile(svc, data); f != nil {
 			files = append(files, f)
 		}
-		if f := sseClientFile(genpkg, svc, data); f != nil {
+		if f := sseClientFile(svc, data); f != nil {
 			files = append(files, f)
 		}
 	}
 	for _, svc := range data.Expressions.Services {
-		if f := ClientEncodeDecodeFile(genpkg, svc, data); f != nil {
+		if f := clientEncodeDecodeFile(svc, data); f != nil {
 			files = append(files, f)
 		}
 	}
 	return files
 }
 
-// ClientEncodeDecodeFile returns the file containing the HTTP client encoding
+// clientEncodeDecodeFile returns the file containing the HTTP client encoding
 // and decoding logic.
-func ClientEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
+func clientEncodeDecodeFile(svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
 	data := services.Get(svc.Name())
 	svcName := data.Service.PathName
 	path := filepath.Join(codegen.Gendir, services.dir(), svcName, "client", "encode_decode.go")
+	outputPackage := generatedFileOutputPackage(services, path)
+	data = serviceDataForOutput(data, services, outputPackage)
 	title := fmt.Sprintf("%s %s client encoders and decoders", svc.Name(), services.label())
-	imports := []*codegen.ImportSpec{
-		{Path: "bytes"},
-		{Path: "context"},
-		{Path: "encoding/json"},
-		{Path: "fmt"},
-		{Path: "io"},
-		{Path: "mime/multipart"},
-		{Path: "net/http"},
-		{Path: "net/url"},
-		{Path: "os"},
-		{Path: "strconv"},
-		{Path: "strings"},
-		{Path: "unicode/utf8"},
-		codegen.GoaImport(""),
-		codegen.GoaNamedImport("http", "goahttp"),
-		{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
-		{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
-	}
-	for _, e := range data.Endpoints {
-		if e.IsJSONRPC {
-			// JSON-RPC request encoders build the JSON-RPC envelope.
-			imports = append(imports,
-				&codegen.ImportSpec{Path: "github.com/google/uuid"},
-				codegen.GoaImport("jsonrpc"),
-			)
-			break
-		}
-	}
-	sections := []*codegen.SectionTemplate{codegen.Header(title, "client", imports)}
+	sections := []*codegen.SectionTemplate{plannedFileHeader(title, "client", path, services)}
 
 	for _, e := range data.Endpoints {
 		sections = append(sections, &codegen.SectionTemplate{
@@ -72,15 +48,15 @@ func ClientEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *
 			Source: httpTemplates.Read(requestBuilderT),
 			Data:   e,
 		})
-		if e.RequestEncoder != "" && (e.Payload.Ref != "" || e.IsJSONRPC) {
+		if e.RequestEncoderDeclaration != nil && (e.Payload.Ref != "" || e.IsJSONRPC) {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "request-encoder",
-				Source: httpTemplates.Read(requestEncoderT, clientTypeConversionP, clientMapConversionP, jsonrpcRequestEnvelopeP),
+				Source: httpTemplates.Read(requestEncoderT, clientTypeExpressionP, clientTypeConversionP, clientMapConversionP, jsonrpcRequestEnvelopeP),
 				FuncMap: map[string]any{
 					"typeConversionData": typeConversionData,
 					"mapConversionData":  mapConversionData,
 					"goTypeRef": func(dt expr.DataType) string {
-						return services.ServicesData.Get(svc.Name()).Scope.GoTypeRef(&expr.AttributeExpr{Type: dt})
+						return data.Scope.GoTypeRef(&expr.AttributeExpr{Type: dt})
 					},
 					"isBearer":    isBearer,
 					"aliasedType": fieldType,
@@ -94,7 +70,6 @@ func ClientEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *
 						}
 						return dt
 					},
-					"requestStructPkg": requestStructPkg,
 				},
 				Data: e,
 			})
@@ -112,9 +87,10 @@ func ClientEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *
 			Data:   e,
 			FuncMap: map[string]any{
 				"goTypeRef": func(dt expr.DataType) string {
-					return services.ServicesData.Get(svc.Name()).Scope.GoTypeRef(&expr.AttributeExpr{Type: dt})
+					return data.Scope.GoTypeRef(&expr.AttributeExpr{Type: dt})
 				},
-				"buildResponseData": buildResponseData,
+				"buildResponseData":       buildResponseData,
+				"buildViewedResponseData": buildViewedResponseData,
 			},
 		})
 		if e.Method.SkipRequestBodyEncodeDecode {
@@ -122,9 +98,6 @@ func ClientEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *
 				Name:   "build-stream-request",
 				Source: httpTemplates.Read(buildStreamRequestT),
 				Data:   e,
-				FuncMap: map[string]any{
-					"requestStructPkg": requestStructPkg,
-				},
 			})
 		}
 	}
@@ -139,28 +112,16 @@ func ClientEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *
 	return &codegen.File{Path: path, SectionTemplates: sections}
 }
 
-// clientFile returns the client HTTP transport file
-func clientFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
+// clientFile returns the client HTTP transport file.
+func clientFile(svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
 	data := services.Get(svc.Name())
 	svcName := data.Service.PathName
 	path := filepath.Join(codegen.Gendir, "http", svcName, "client", "client.go")
+	outputPackage := generatedFileOutputPackage(services, path)
+	data = serviceDataForOutput(data, services, outputPackage)
 	title := fmt.Sprintf("%s client HTTP transport", svc.Name())
 	sections := []*codegen.SectionTemplate{
-		codegen.Header(title, "client", []*codegen.ImportSpec{
-			{Path: "context"},
-			{Path: "fmt"},
-			{Path: "io"},
-			{Path: "mime/multipart"},
-			{Path: "net/http"},
-			{Path: "strconv"},
-			{Path: "strings"},
-			{Path: "time"},
-			{Path: "github.com/gorilla/websocket"},
-			codegen.GoaImport(""),
-			codegen.GoaNamedImport("http", "goahttp"),
-			{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
-			{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
-		}),
+		plannedFileHeader(title, "client", path, services),
 	}
 	sections = append(sections, &codegen.SectionTemplate{
 		Name:   "client-struct",
@@ -211,7 +172,7 @@ func clientFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData
 				FuncMap: map[string]any{
 					"isWebSocketEndpoint": IsWebSocketEndpoint,
 					"isSSEEndpoint":       IsSSEEndpoint,
-					"responseStructPkg":   responseStructPkg,
+					"isServerStreamKind":  isServerStreamKind,
 				},
 			})
 		}
@@ -262,6 +223,19 @@ func buildResponseData(data *ResponseData, serviceName string, method *service.M
 	}
 }
 
+// buildViewedResponseData selects the body type planned for one response view
+// while retaining the response's headers and cookies.
+func buildViewedResponseData(
+	data *ResponseData,
+	representation *ViewedRepresentationData,
+	serviceName string,
+	method *service.MethodData,
+) map[string]any {
+	selected := *data
+	selected.ClientBody = representation.ClientBody
+	return buildResponseData(&selected, serviceName, method)
+}
+
 func fieldType(ft expr.DataType) expr.DataType {
 	ut, isut := ft.(expr.UserType)
 	if isut {
@@ -281,18 +255,4 @@ func isBearer(schemes []*service.SchemeData) bool {
 		}
 	}
 	return false
-}
-
-func requestStructPkg(m *service.MethodData, def string) string {
-	if m.PayloadLoc != nil {
-		return m.PayloadLoc.PackageName()
-	}
-	return def
-}
-
-func responseStructPkg(m *service.MethodData, def string) string {
-	if m.ResultLoc != nil {
-		return m.ResultLoc.PackageName()
-	}
-	return def
 }

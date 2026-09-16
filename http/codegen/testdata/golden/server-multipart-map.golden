@@ -1,0 +1,19 @@
+import (
+	"mime/multipart"
+)
+
+// ServiceMultipartMapTypeMethodMultipartMapTypeDecoderFunc reads the multipart
+// request body for service "ServiceMultipartMapType" endpoint
+// "MethodMultipartMapType" into body.
+func ServiceMultipartMapTypeMethodMultipartMapTypeDecoderFunc(mr *multipart.Reader, body *map[string]int) error {
+	// Add multipart request decoder logic here
+	return nil
+}
+
+// ServiceMultipartMapTypeMethodMultipartMapTypeEncoderFunc implements the
+// multipart encoder for service "ServiceMultipartMapType" endpoint
+// "MethodMultipartMapType".
+func ServiceMultipartMapTypeMethodMultipartMapTypeEncoderFunc(mw *multipart.Writer, p map[string]int) error {
+	// Add multipart request encoder logic here
+	return nil
+}

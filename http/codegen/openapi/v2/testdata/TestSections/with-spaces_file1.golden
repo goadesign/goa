@@ -44,7 +44,7 @@ definitions:
                 type: string
                 example: ""
         example:
-            string: ""
+            string: item
     GoaFoobar:
         title: 'Mediatype identifier: application/vnd.goa.foobar; view=default'
         type: object
@@ -54,14 +54,12 @@ definitions:
                 items:
                     $ref: '#/definitions/Bar'
                 example:
-                    - string: ""
-                    - string: ""
+                    - string: item
             foo:
                 type: string
                 example: ""
         description: Test EndpointOKResponseBody result type (default view)
         example:
             bar:
-                - string: ""
-                - string: ""
+                - string: item
             foo: ""

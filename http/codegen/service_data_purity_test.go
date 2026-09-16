@@ -82,9 +82,9 @@ func TestAnalyzeLeavesDesignExpressionsUnchanged(t *testing.T) {
 				}
 			}
 
-			services := CreateHTTPServices(root)
+			plan := linkedHTTPPlanForRoot(t, root)
 			for _, svc := range root.API.HTTP.Services {
-				require.NotNil(t, services.Get(svc.Name()))
+				require.NotNil(t, plan.services.Get(svc.Name()))
 			}
 
 			for _, svc := range root.API.HTTP.Services {

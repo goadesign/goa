@@ -9,7 +9,7 @@ func EncodeMethodQueryArrayFloat32ValidateRequest(encoder func(*http.Request) go
 		}
 		values := req.URL.Query()
 		for _, value := range p.Q {
-			valueStr := strconv.FormatFloat(float64(value), 'f', -1, 32)
+			valueStr := strconv.FormatFloat(float64(value), 'g', -1, 32)
 			values.Add("q", valueStr)
 		}
 		req.URL.RawQuery = values.Encode()

@@ -1,0 +1,28 @@
+// StreamOptionalTextServerStream implements the
+// params.StreamOptionalTextServerStream interface using Server-Sent Events.
+type StreamOptionalTextServerStream struct {
+	// sseServerStream writes JSON-RPC messages as server-sent events.
+	sseServerStream
+}
+
+// Send streams instances of "OptionalTextEvent".
+func (s *StreamOptionalTextServerStream) Send(event *params.OptionalTextEvent) error {
+	return s.SendWithContext(context.Background(), event)
+}
+
+// SendWithContext streams instances of "OptionalTextEvent" with context.
+func (s *StreamOptionalTextServerStream) SendWithContext(ctx context.Context, event *params.OptionalTextEvent) error {
+	result := event
+
+	message := jsonrpc.MakeNotification(
+		"stream_optional_text",
+		[]*string{result.Data},
+	)
+	return s.sendSSEEvent(ctx, message, nil, nil, nil)
+}
+
+// Close does nothing because the HTTP response closes when the service method
+// returns.
+func (s *StreamOptionalTextServerStream) Close() error {
+	return nil
+}

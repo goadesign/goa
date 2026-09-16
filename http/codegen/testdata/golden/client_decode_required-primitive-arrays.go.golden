@@ -1,0 +1,48 @@
+// DecodeStoreResponse returns a decoder for responses returned by the
+// RequiredArrays Store endpoint. restoreBody controls whether the response
+// body should be restored after having been read.
+func DecodeStoreResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (result any, decodeErr error) {
+		responseBody := resp.Body
+		if restoreBody {
+			b, readErr := io.ReadAll(responseBody)
+			closeErr := responseBody.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("RequiredArrays", "Store", err)
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer func() {
+				if err := responseBody.Close(); err != nil {
+					decodeErr = errors.Join(decodeErr, goahttp.ErrDecodingError("RequiredArrays", "Store", err))
+				}
+			}()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				body StoreResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("RequiredArrays", "Store", err)
+			}
+			err = ValidateStoreResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("RequiredArrays", "Store", err)
+			}
+			res := NewStoreResultOK(&body)
+			return res, nil
+		default:
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("RequiredArrays", "Store", err)
+			}
+			return nil, goahttp.ErrInvalidResponse("RequiredArrays", "Store", resp.StatusCode, string(body))
+		}
+	}
+}

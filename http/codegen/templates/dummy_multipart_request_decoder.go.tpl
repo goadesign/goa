@@ -1,5 +1,5 @@
-{{ printf "%s implements the multipart decoder for service %q endpoint %q. The decoder must populate the argument p after encoding." .FuncName .ServiceName .MethodName | comment }}
-func {{ .FuncName }}(mr *multipart.Reader, p *{{ .Payload.Ref }}) error {
+{{ printf "%s reads the multipart request body for service %q endpoint %q into body." .FuncDeclaration.Name .ServiceName .MethodName | comment }}
+func {{ .FuncDeclaration.Name }}(mr *multipart.Reader, body *{{ .BodyType }}) error {
 	// Add multipart request decoder logic here
 	return nil
 }

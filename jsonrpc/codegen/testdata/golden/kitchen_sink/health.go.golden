@@ -2,8 +2,8 @@ package kitchensink
 
 import (
 	"context"
-	health "kitchensink/health"
 
+	health "generated.local/gen/health"
 	"goa.design/clue/log"
 )
 

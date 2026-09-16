@@ -28,6 +28,9 @@ func DecodeMethodClientStreamingRPCWithPayloadLegacyCompatRequest(ctx context.Co
 		default:
 			return nil, goa.MissingFieldError("initial_payload", "stream")
 		}
+		if err := ValidateMethodClientStreamingRPCWithPayloadLegacyCompatRequest(message); err != nil {
+			return nil, err
+		}
 	}
 	var payload int
 	{

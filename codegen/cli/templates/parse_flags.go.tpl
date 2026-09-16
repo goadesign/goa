@@ -5,7 +5,7 @@ var (
 		{{ .FullName }}Flags = flag.NewFlagSet("{{ .Name }}", flag.ExitOnError)
 		{{- $sub := . }}
 		{{- range .Flags }}
-		{{ .FullName }}Flag = {{ $sub.FullName }}Flags.String("{{ .Name }}", "{{ if .Default }}{{ .Default }}{{ else if .Required }}REQUIRED{{ end }}", {{ printf "%q" .Description }})
+		{{ .FullName }}Flag = {{ $sub.FullName }}Flags.String("{{ .Name }}", {{ if .HasDefault }}{{ printf "%q" .DefaultValue }}{{ else if .Required }}"REQUIRED"{{ else }}""{{ end }}, {{ printf "%q" .Description }})
 		{{- end }}
 		{{ end }}
 		{{- end }}

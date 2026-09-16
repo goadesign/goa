@@ -1,15 +1,14 @@
 func transform() {
 	target := &proto.Required{
-		RequiredString: source.RequiredString,
-		DefaultBool:    source.DefaultBool,
+		RequiredString: *source.RequiredString,
+	}
+	if source.DefaultBool != nil {
+		target.DefaultBool = *source.DefaultBool
 	}
 	if source.Integer != nil {
 		target.Integer = int(*source.Integer)
 	}
-	{
-		var zero bool
-		if target.DefaultBool == zero {
-			target.DefaultBool = true
-		}
+	if source.DefaultBool == nil {
+		target.DefaultBool = true
 	}
 }

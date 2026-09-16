@@ -4,15 +4,20 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	statuspb "google.golang.org/genproto/googleapis/rpc/status"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
+	"google.golang.org/grpc/test/bufconn"
 	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/emptypb"
 
 	goapb "goa.design/goa/v3/grpc/pb"
 	goa "goa.design/goa/v3/pkg"
@@ -92,6 +97,48 @@ func TestEncodeErrorStatusCodes(t *testing.T) {
 			assert.True(t, ok)
 		})
 	}
+}
+
+func TestInvalidLengthErrorFitsGRPCHeaders(t *testing.T) {
+	t.Parallel()
+
+	listener := bufconn.Listen(1 << 20)
+	server := grpc.NewServer(grpc.UnknownServiceHandler(func(any, grpc.ServerStream) error {
+		return EncodeError(goa.InvalidLengthError("payload", make([]byte, 1<<20), 1<<20, 1024, false))
+	}))
+	serveErr := make(chan error, 1)
+	go func() {
+		serveErr <- server.Serve(listener)
+	}()
+	conn, err := grpc.NewClient(
+		"passthrough:///bounded-validation-error",
+		grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) {
+			return listener.Dial()
+		}),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithMaxHeaderListSize(8*1024),
+	)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		require.NoError(t, conn.Close())
+		server.Stop()
+		serveResult := <-serveErr
+		if serveResult != nil {
+			require.ErrorIs(t, serveResult, grpc.ErrServerStopped)
+		}
+	})
+
+	err = conn.Invoke(
+		context.Background(),
+		"/test.Validation/Check",
+		&emptypb.Empty{},
+		&emptypb.Empty{},
+	)
+	require.Equal(t, codes.InvalidArgument, status.Code(err))
+	response, ok := DecodeError(err).(*goapb.ErrorResponse)
+	require.True(t, ok)
+	require.Equal(t, goa.InvalidLength, response.Name)
+	require.Equal(t, "length of payload must be at most 1024 but got 1048576", response.Msg)
 }
 
 func TestNewTransportError(t *testing.T) {

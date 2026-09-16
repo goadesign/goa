@@ -3,7 +3,7 @@
 {{ $m }} := make(map[{{ .KeyTypeRef }}]{{ .ElemTypeRef }}, len({{ .SourceVar }}))
 for key, val := range {{ .SourceVar }} {
     {{ transformAttribute .SourceKey .TargetKey "key" "tk" true .TransformAttrs -}}
-    {{ transformAttribute .SourceElem .TargetElem "val" (printf "tv%s" .LoopVar) true .TransformAttrs -}}
+    {{ .ElemTransform -}}
     {{ $m }}[tk] = {{ printf "tv%s" .LoopVar }}
 }
 {{ .TargetVar }} = &{{ $m }}
@@ -11,7 +11,7 @@ for key, val := range {{ .SourceVar }} {
 {{ .TargetVar }} {{ if .NewVar }}:={{ else }}={{ end }} make(map[{{ .KeyTypeRef }}]{{ .ElemTypeRef }}, len({{ .SourceVar }}))
 for key, val := range {{ .SourceVar }} {
     {{ transformAttribute .SourceKey .TargetKey "key" "tk" true .TransformAttrs -}}
-    {{ transformAttribute .SourceElem .TargetElem "val" (printf "tv%s" .LoopVar) true .TransformAttrs -}}
+    {{ .ElemTransform -}}
     {{ .TargetVar }}[tk] = {{ printf "tv%s" .LoopVar }}
 }
 {{- end -}}

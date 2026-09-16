@@ -55,7 +55,7 @@ func NewRT(vres *resultwithresulttypecollectionviews.RT) *RT {
 // NewViewedRT initializes viewed result type RT from result type RT using the
 // given view.
 func NewViewedRT(res *RT, view string) *resultwithresulttypecollectionviews.RT {
-	var vres *resultwithresulttypecollectionviews.RT
+	vres := &resultwithresulttypecollectionviews.RT{View: view}
 	switch view {
 	case "default", "":
 		p := newRTView(res)

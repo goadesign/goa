@@ -2,8 +2,8 @@ package kitchensink
 
 import (
 	"context"
-	feed "kitchensink/feed"
 
+	feed "generated.local/gen/feed"
 	"goa.design/clue/log"
 )
 
@@ -19,16 +19,11 @@ func NewFeed() feed.Service {
 // Watch implements watch.
 func (s *feedsrvc) Watch(ctx context.Context, p *feed.WatchPayload, stream feed.WatchServerStream) (err error) {
 	log.Printf(ctx, "feed.watch")
-	// Minimal example: emit one progress notification and one final response
-	{
-		// Progress notification (no ID)
-		notif := &feed.WatchResult{}
-		if err := stream.Send(ctx, notif); err != nil {
-			return err
-		}
-		// Final response
-		final := &feed.WatchResult{}
-		return stream.SendAndClose(ctx, final)
-	}
+	return
+}
+
+// Snapshot implements snapshot.
+func (s *feedsrvc) Snapshot(ctx context.Context, p *feed.SnapshotPayload) (res string, err error) {
+	log.Printf(ctx, "feed.snapshot")
 	return
 }

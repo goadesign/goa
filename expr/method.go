@@ -1,8 +1,11 @@
+// This file defines service methods and finalizes their payload, result,
+// streaming, error, security, and interceptor contracts.
 package expr
 
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"goa.design/goa/v3/eval"
 )
@@ -49,9 +52,8 @@ type (
 		// StreamingPayload is the payload sent across the stream.
 		StreamingPayload *AttributeExpr
 		// StreamingResult is the result sent across the stream when using SSE.
-		// When both Result and StreamingResult are defined with different types,
-		// the method supports content negotiation between standard HTTP responses
-		// (using Result) and SSE streams (using StreamingResult).
+		// When Result and StreamingResult are both defined, the method supports
+		// normal HTTP responses using Result and SSE streams using StreamingResult.
 		StreamingResult *AttributeExpr
 	}
 )
@@ -70,8 +72,8 @@ const (
 	BidirectionalStreamKind
 )
 
-// Error returns the error with the given name. It looks up recursively in the
-// endpoint then the service and finally the root expression.
+// Error returns the error with the given name declared by the method or its
+// service, if any.
 func (m *MethodExpr) Error(name string) *ErrorExpr {
 	for _, err := range m.Errors {
 		if err.Name == name {
@@ -143,14 +145,30 @@ func (m *MethodExpr) Validate() error {
 // validateRequirements validates the security requirements.
 func (m *MethodExpr) validateRequirements() *eval.ValidationErrors {
 	verr := new(eval.ValidationErrors)
+	if payload := AsObject(m.Payload.Type); payload != nil {
+		for _, field := range *payload {
+			if !isSecurityAttribute(field.Attribute.Meta) {
+				continue
+			}
+			if !isStringType(field.Attribute.Type) {
+				verr.Add(m, "security attribute %q must use String or a named String type", field.Name)
+			}
+			if _, custom := field.Attribute.Meta["struct:field:type"]; custom {
+				verr.Add(m, "security attribute %q cannot use struct:field:type because authorization functions receive strings", field.Name)
+			}
+			if m.Payload.HasDefaultValue(field.Name) {
+				verr.Add(m, "security attribute %q cannot have a default value because missing credentials must remain missing", field.Name)
+			}
+		}
+	}
 	var requirements []*SecurityExpr
 	switch {
 	case len(m.Requirements) > 0:
 		requirements = m.Requirements
 	case len(m.Service.Requirements) > 0:
 		requirements = m.Service.Requirements
-	case len(Root.API.Requirements) > 0:
-		requirements = Root.API.Requirements
+	case len(m.Service.design.API.Requirements) > 0:
+		requirements = m.Service.design.API.Requirements
 	}
 	var (
 		hasBasicAuth bool
@@ -241,32 +259,43 @@ func (m *MethodExpr) validateRequirements() *eval.ValidationErrors {
 	return verr
 }
 
+// isSecurityAttribute reports whether metadata marks a method payload field as
+// a username, password, token, or API key used by a security scheme.
+func isSecurityAttribute(meta MetaExpr) bool {
+	for name := range meta {
+		switch name {
+		case "security:username", "security:password", "security:bearer", "security:token", "security:accesstoken":
+			return true
+		}
+		if strings.HasPrefix(name, "security:apikey:") {
+			return true
+		}
+	}
+	return false
+}
+
+// isStringType reports whether a design type is String or a named String type.
+func isStringType(dt DataType) bool {
+	for {
+		switch actual := dt.(type) {
+		case Primitive:
+			return actual == String
+		case UserType:
+			dt = actual.Attribute().Type
+		default:
+			return false
+		}
+	}
+}
+
 // validateErrors validates the method errors.
 func (m *MethodExpr) validateErrors() *eval.ValidationErrors {
 	verr := new(eval.ValidationErrors)
-	for i, e := range m.Errors {
+	for _, e := range m.Errors {
 		if err := e.Validate(); err != nil {
 			var verrs *eval.ValidationErrors
 			if errors.As(err, &verrs) {
 				verr.Merge(verrs)
-			}
-		}
-		for j, e2 := range m.Errors {
-			// If an object type is used to define more than one errors validate the
-			// presence of struct:error:name meta in the object type.
-			if i != j && e.Type == e2.Type && IsObject(e.Type) {
-				var found bool
-				walkAttribute(e.AttributeExpr, func(_ string, att *AttributeExpr) error { // nolint: errcheck
-					if _, ok := att.Meta["struct:error:name"]; ok {
-						found = true
-						return fmt.Errorf("struct:error:name found: stop iteration")
-					}
-					return nil
-				})
-				if !found {
-					verr.Add(e, "type %q is used to define multiple errors and must identify the attribute containing the error name with ErrorName", e.Type.Name())
-					break
-				}
 			}
 		}
 	}
@@ -276,11 +305,19 @@ func (m *MethodExpr) validateErrors() *eval.ValidationErrors {
 // validateInterceptors validates the method interceptors.
 func (m *MethodExpr) validateInterceptors() *eval.ValidationErrors {
 	verr := new(eval.ValidationErrors)
-	m.ClientInterceptors = mergeInterceptors(m.ClientInterceptors, m.Service.ClientInterceptors, Root.API.ClientInterceptors)
+	m.ClientInterceptors = mergeInterceptors(
+		m.ClientInterceptors,
+		m.Service.ClientInterceptors,
+		m.Service.design.API.ClientInterceptors,
+	)
 	for _, i := range m.ClientInterceptors {
 		verr.Merge(i.validate(m))
 	}
-	m.ServerInterceptors = mergeInterceptors(m.ServerInterceptors, m.Service.ServerInterceptors, Root.API.ServerInterceptors)
+	m.ServerInterceptors = mergeInterceptors(
+		m.ServerInterceptors,
+		m.Service.ServerInterceptors,
+		m.Service.design.API.ServerInterceptors,
+	)
 	for _, i := range m.ServerInterceptors {
 		verr.Merge(i.validate(m))
 	}
@@ -400,6 +437,10 @@ func (m *MethodExpr) Finalize() {
 		}
 	}
 	for _, e := range m.Errors {
+		if _, authored := e.Type.(UserType); !authored {
+			e.finalizeMethodType(m)
+			continue
+		}
 		e.Finalize()
 	}
 
@@ -411,8 +452,8 @@ func (m *MethodExpr) Finalize() {
 	if len(m.Requirements) == 0 {
 		if len(m.Service.Requirements) > 0 {
 			m.Requirements = copyReqs(m.Service.Requirements)
-		} else if len(Root.API.Requirements) > 0 {
-			m.Requirements = copyReqs(Root.API.Requirements)
+		} else if len(m.Service.design.API.Requirements) > 0 {
+			m.Requirements = copyReqs(m.Service.design.API.Requirements)
 		}
 	}
 }
@@ -432,8 +473,8 @@ func (m *MethodExpr) IsResultStreaming() bool {
 	return m.Stream == ServerStreamKind || m.Stream == BidirectionalStreamKind
 }
 
-// HasMixedResults returns true if the method has both Result and StreamingResult
-// defined with different types, indicating support for content negotiation.
+// HasMixedResults returns true if the method defines Result and StreamingResult
+// separately so HTTP clients can choose a normal response or an SSE stream.
 func (m *MethodExpr) HasMixedResults() bool {
 	return m.Result != nil && m.StreamingResult != nil && m.Result != m.StreamingResult
 }

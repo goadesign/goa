@@ -1,8 +1,11 @@
 package expr
 
+import "goa.design/goa/v3/eval"
+
 type (
 	// GRPCExpr contains the API level gRPC specific expressions.
 	GRPCExpr struct {
+		eval.DSLFunc
 		// Services contains the gRPC services created by the DSL.
 		Services []*GRPCServiceExpr
 		// Errors lists the error gRPC error responses defined globally.

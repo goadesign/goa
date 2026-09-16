@@ -1,3 +1,5 @@
+// This file defines result types and views and records the original
+// declaration used when a result type is copied.
 package expr
 
 import (
@@ -29,6 +31,9 @@ type (
 		ContentType string
 		// Views list the supported views indexed by name.
 		Views []*ViewExpr
+		// origin is the earliest result type declaration copied to create this
+		// result type.
+		origin UserType
 	}
 
 	// ViewExpr defines which fields to render when building a response. The view
@@ -57,6 +62,7 @@ var (
 				Type:        errorResultType,
 				Description: "Error response result type",
 				Validation:  &ValidationExpr{Required: []string{"name", "id", "message", "temporary", "timeout", "fault"}},
+				finalized:   true,
 			},
 			TypeName: "error",
 		},
@@ -114,6 +120,13 @@ func NewResultTypeExpr(name, identifier string, fn func()) *ResultTypeExpr {
 	}
 }
 
+// IsErrorResult reports whether dataType is Goa's built-in service error type
+// or a generator copy made from it.
+func IsErrorResult(dataType DataType) bool {
+	userType, ok := dataType.(UserType)
+	return ok && userType.Origin() == ErrorResult
+}
+
 // CanonicalIdentifier returns the result type identifier sans suffix
 // which is what the DSL uses to store and lookup result types.
 func CanonicalIdentifier(identifier string) string {
@@ -137,7 +150,18 @@ func (rt *ResultTypeExpr) Dup(att *AttributeExpr) UserType {
 		UserTypeExpr: rt.UserTypeExpr.Dup(att).(*UserTypeExpr),
 		Identifier:   rt.Identifier,
 		Views:        rt.Views,
+		origin:       rt.Origin(),
 	}
+}
+
+// Origin returns the earliest result type declaration from which rt was
+// copied. Result types override their embedded user-type origin so later copies
+// still point to the original result declaration.
+func (rt *ResultTypeExpr) Origin() UserType {
+	if rt.origin != nil {
+		return rt.origin
+	}
+	return rt
 }
 
 // ID returns the identifier of the result type.
@@ -147,6 +171,13 @@ func (rt *ResultTypeExpr) ID() string {
 
 // Name returns the result type name.
 func (rt *ResultTypeExpr) Name() string { return rt.TypeName }
+
+// Rename changes the result type name and starts a new generated declaration
+// origin at rt.
+func (rt *ResultTypeExpr) Rename(name string) {
+	rt.UserTypeExpr.Rename(name)
+	rt.origin = nil
+}
 
 // View returns the view with the given name.
 func (rt *ResultTypeExpr) View(name string) *ViewExpr {
@@ -291,14 +322,8 @@ func projectSingle(rt *ResultTypeExpr, view string, seen map[string]UserType) (*
 	}
 
 	id := rt.projectIdentifier(view)
-	ut := &UserTypeExpr{
-		AttributeExpr: &AttributeExpr{
-			Description: desc,
-			Validation:  val,
-		},
-		TypeName: typeName,
-		UID:      id,
-	}
+	attribute := &AttributeExpr{Description: desc, Validation: val}
+	ut := projectedUserType(rt, typeName, id, attribute)
 	ut.Type = Dup(v.Type)
 	ut.UserExamples = v.UserExamples
 	projected := &ResultTypeExpr{
@@ -340,17 +365,14 @@ func projectCollection(rt *ResultTypeExpr, view string, seen map[string]UserType
 
 	// Build the projected collection with the results
 	id := rt.projectIdentifier(view)
+	attribute := &AttributeExpr{
+		Description:  rt.TypeName + " is the result type for an array of " + e.TypeName + " (" + view + " view)",
+		Type:         &Array{ElemType: &AttributeExpr{Type: pe}},
+		UserExamples: rt.UserExamples,
+	}
 	proj := &ResultTypeExpr{
-		Identifier: id,
-		UserTypeExpr: &UserTypeExpr{
-			AttributeExpr: &AttributeExpr{
-				Description:  rt.TypeName + " is the result type for an array of " + e.TypeName + " (" + view + " view)",
-				Type:         &Array{ElemType: &AttributeExpr{Type: pe}},
-				UserExamples: rt.UserExamples,
-			},
-			TypeName: pe.TypeName + "Collection",
-			UID:      id,
-		},
+		Identifier:   id,
+		UserTypeExpr: projectedUserType(rt, pe.TypeName+"Collection", id, attribute),
 		Views: []*ViewExpr{{
 			AttributeExpr: DupAtt(pe.View(DefaultView).AttributeExpr),
 			Name:          DefaultView,
@@ -365,6 +387,16 @@ func projectCollection(rt *ResultTypeExpr, view string, seen map[string]UserType
 
 	seen[hashTypeAndView(rt, view)] = proj
 	return proj, nil
+}
+
+// projectedUserType makes a synthesized result type use the same repeatable
+// example sequence as source. A view-specific type authored in the design keeps
+// its media-type-derived UID instead.
+func projectedUserType(source UserType, name, uid string, attribute *AttributeExpr) *UserTypeExpr {
+	if identity, ok := GeneratedUserTypeExampleIdentity(source); ok {
+		return NewGeneratedUserType(name, attribute, identity)
+	}
+	return &UserTypeExpr{AttributeExpr: attribute, TypeName: name, UID: uid}
 }
 
 // projectRecursive computes the projected attribute for the field described

@@ -1,0 +1,94 @@
+swagger: "2.0"
+info:
+    title: ""
+    version: 0.0.1
+host: localhost:80
+consumes:
+    - application/json
+    - application/xml
+    - application/gob
+produces:
+    - application/json
+    - application/xml
+    - application/gob
+paths:
+    /default:
+        get:
+            tags:
+                - storage
+            summary: list_default storage
+            operationId: storage#list_default
+            responses:
+                "200":
+                    description: OK response.
+                    schema:
+                        $ref: '#/definitions/StorageStoredBottleResponseCollection'
+            schemes:
+                - http
+    /tiny:
+        get:
+            tags:
+                - storage
+            summary: list_tiny storage
+            operationId: storage#list_tiny
+            responses:
+                "200":
+                    description: OK response.
+                    schema:
+                        $ref: '#/definitions/StorageStoredBottleResponseTinyCollection'
+            schemes:
+                - http
+definitions:
+    StorageStoredBottleResponseCollection:
+        title: 'Mediatype identifier: application/vnd.stored-bottle; type=collection; view=default'
+        type: array
+        items:
+            $ref: '#/definitions/StoredBottleResponse'
+        description: list_default_response_body is the result type for an array of StoredBottle (default view)
+        example:
+            - name: Blue's Cuvee
+              vintage: 2003
+            - name: Blue's Cuvee
+              vintage: 2003
+            - name: Blue's Cuvee
+              vintage: 2003
+    StorageStoredBottleResponseTinyCollection:
+        title: 'Mediatype identifier: application/vnd.stored-bottle; type=collection; view=tiny'
+        type: array
+        items:
+            $ref: '#/definitions/StoredBottleResponseTiny'
+        description: StorageStoredBottleResponseTinyCollection is the result type for an array of StoredBottleResponseTiny (default view)
+        example:
+            - name: Blue's Cuvee
+            - name: Blue's Cuvee
+            - name: Blue's Cuvee
+    StoredBottleResponse:
+        title: 'Mediatype identifier: application/vnd.stored-bottle; view=default'
+        type: object
+        properties:
+            name:
+                type: string
+                example: Blue's Cuvee
+            vintage:
+                type: integer
+                example: 2003
+                format: int32
+        description: StoredBottle result type (default view)
+        example:
+            name: Blue's Cuvee
+            vintage: 2003
+        required:
+            - name
+            - vintage
+    StoredBottleResponseTiny:
+        title: 'Mediatype identifier: application/vnd.stored-bottle; view=default'
+        type: object
+        properties:
+            name:
+                type: string
+                example: Blue's Cuvee
+        description: StoredBottle result type (tiny view) (default view)
+        example:
+            name: Blue's Cuvee
+        required:
+            - name

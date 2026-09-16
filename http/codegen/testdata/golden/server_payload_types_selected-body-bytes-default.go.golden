@@ -1,0 +1,13 @@
+// NewBytesPayload builds a SelectedBytesBodyDefault service Bytes endpoint
+// payload.
+func NewBytesPayload(body []byte) *selectedbytesbodydefault.BytesPayload {
+	res := &selectedbytesbodydefault.BytesPayload{}
+	if body != nil {
+		v := body
+		res.Value = v
+	} else {
+		res.Value = []byte("safe")
+	}
+
+	return res
+}

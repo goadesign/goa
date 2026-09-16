@@ -8,7 +8,7 @@ func main() {
 	{{ .Type }}PortF = flag.String("{{ .Type }}-port", "", "{{ .Name }} port (overrides host {{ .Name }} port specified in service design)")
 	{{- end }}
 	{{- range .Server.Variables }}
-	{{ .VarName }}F = flag.String({{ printf "%q" .Name }}, {{ printf "%q" .DefaultValue }}, "{{ .Description }}{{ if .Values }} (valid values: {{ join .Values ", " }}){{ end }}")
+	{{ .VarName }} = flag.String({{ printf "%q" .FlagName }}, {{ printf "%q" .DefaultValue }}, "{{ .Description }}{{ if .Values }} (valid values: {{ join .Values ", " }}){{ end }}")
 	{{- end }}
 		secureF = flag.Bool("secure", false, "Use secure scheme (https or grpcs)")
 		dbgF  = flag.Bool("debug", false, "Log request and response bodies")

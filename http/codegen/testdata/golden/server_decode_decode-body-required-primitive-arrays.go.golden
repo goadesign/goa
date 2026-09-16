@@ -1,0 +1,29 @@
+// DecodeStoreRequest returns a decoder for requests sent to the RequiredArrays
+// Store endpoint.
+func DecodeStoreRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*requiredarrays.StorePayload, error) {
+	return func(r *http.Request) (*requiredarrays.StorePayload, error) {
+		var payload *requiredarrays.StorePayload
+		var (
+			body StoreRequestBody
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return payload, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return payload, gerr
+			}
+			return payload, goa.DecodePayloadError(err.Error())
+		}
+		err = ValidateStoreRequestBody(&body)
+		if err != nil {
+			return payload, err
+		}
+		payload = NewStorePayload(&body)
+
+		return payload, nil
+	}
+}

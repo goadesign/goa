@@ -1,11 +1,8 @@
 package codegen
 
 import (
-	"go/doc"
-	"go/token"
-	"strings"
-
 	"goa.design/goa/v3/expr"
+	"goa.design/goa/v3/internal/codegenname"
 )
 
 // Goify makes a valid Go identifier out of any string. It does that by removing
@@ -14,57 +11,24 @@ import (
 // firstUpper is true the first character of the identifier is uppercase
 // otherwise it's lowercase.
 func Goify(str string, firstUpper bool) string {
-	// Optimize trivial case
-	if str == "" {
-		return ""
+	key := cacheKey{
+		input:      str,
+		firstUpper: firstUpper,
+		operation:  "goify",
 	}
-
-	// Remove optional suffix that defines corresponding transport specific
-	// name.
-	idx := strings.Index(str, ":")
-	if idx > 0 {
-		str = str[:idx]
-	}
-
-	str = CamelCase(str, firstUpper, true)
-	if str == "" {
-		// All characters are invalid. Produce a default value.
-		if firstUpper {
-			return "Val"
-		}
-		return "val"
-	}
-	return fixReservedGo(str)
+	return globalStringCache.getCached(key, func() string {
+		return codegenname.Goify(str, firstUpper)
+	})
 }
 
 // GoifyAtt honors any struct:field:name meta set on the attribute and calls
 // Goify with the tag value if present or the given name otherwise.
 func GoifyAtt(att *expr.AttributeExpr, name string, upper bool) string {
-	if tname, ok := att.Meta["struct:field:name"]; ok {
-		if len(tname) > 0 {
-			name = tname[0]
-		}
-	}
+	name = codegenname.AttributeName(name, att.Meta["struct:field:name"])
 	return Goify(name, upper)
 }
 
 // fixReservedGo appends an underscore on to Go reserved keywords.
 func fixReservedGo(w string) string {
-	if doc.IsPredeclared(w) || token.IsKeyword(w) || isPackage[w] {
-		w += "_"
-	}
-	return w
+	return codegenname.FixReserved(w)
 }
-
-var (
-	isPackage = map[string]bool{
-		// stdlib and goa packages used by generated code
-		"errors": true,
-		"fmt":    true,
-		"http":   true,
-		"json":   true,
-		"os":     true,
-		"url":    true,
-		"time":   true,
-	}
-)

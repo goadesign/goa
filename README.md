@@ -182,6 +182,17 @@ curl -X POST http://localhost:8000/jsonrpc \
   -d '{"jsonrpc":"2.0","method":"hello.say_hello","params":{"name":"world"},"id":"1"}'
 ```
 
+## Upgrading to v3.31.0
+
+v3.31.0 is a substantial generator upgrade that stays on the v3 module path
+and includes intentional breaking changes. Regenerate the complete generated
+tree and review changes to handwritten code and plugins. Some gRPC, JSON-RPC,
+and streaming contracts require coordinated client/server deployment.
+
+Read the [v3.31.0 upgrade guide](UPGRADING.md) before updating. It covers the
+exact installation commands, source and design migrations, deployment order,
+and rollback.
+
 ## Documentation
 
 Our documentation site at [goa.design](https://goa.design) provides comprehensive guides and references:

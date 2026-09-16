@@ -1,5 +1,5 @@
-{{ printf "%sUsage displays the usage of the %s command and its subcommands." .VarName .Name | comment }}
-func {{ .VarName }}Usage() {
+{{ printf "%s displays the usage of the %s command and its subcommands." .UsageDeclaration.Name .Name | comment }}
+func {{ .UsageDeclaration.Name }}() {
 	fmt.Fprintln(os.Stderr, `{{ printDescription .Description }}`)
 	fmt.Fprintf(os.Stderr, "Usage:\n    %s [globalflags] {{ .Name }} COMMAND [flags]\n\n", os.Args[0])
 	fmt.Fprintln(os.Stderr, "COMMAND:")
@@ -12,7 +12,7 @@ func {{ .VarName }}Usage() {
 }
 
 {{- range .Subcommands }}
-func {{ .FullName }}Usage() {
+func {{ .UsageDeclaration.Name }}() {
 	// Header with flags
 	fmt.Fprintf(os.Stderr, "%s [flags] {{ $.Name }} {{ .Name }}", os.Args[0])
 {{- range .Flags }}

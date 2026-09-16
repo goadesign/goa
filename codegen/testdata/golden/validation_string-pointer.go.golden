@@ -4,13 +4,9 @@ func Validate() (err error) {
 	}
 	if target.RequiredString != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("target.required_string", *target.RequiredString, "^[A-z].*[a-z]$"))
-	}
-	if target.RequiredString != nil {
 		if utf8.RuneCountInString(*target.RequiredString) < 1 {
 			err = goa.MergeErrors(err, goa.InvalidLengthError("target.required_string", *target.RequiredString, utf8.RuneCountInString(*target.RequiredString), 1, true))
 		}
-	}
-	if target.RequiredString != nil {
 		if utf8.RuneCountInString(*target.RequiredString) > 10 {
 			err = goa.MergeErrors(err, goa.InvalidLengthError("target.required_string", *target.RequiredString, utf8.RuneCountInString(*target.RequiredString), 10, false))
 		}

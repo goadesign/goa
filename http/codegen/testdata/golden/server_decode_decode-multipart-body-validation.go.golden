@@ -1,0 +1,29 @@
+// DecodeMethodMultipartValidationRequest returns a decoder for requests sent
+// to the ServiceMultipartValidation MethodMultipartValidation endpoint.
+func DecodeMethodMultipartValidationRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicemultipartvalidation.MethodMultipartValidationPayload, error) {
+	return func(r *http.Request) (*servicemultipartvalidation.MethodMultipartValidationPayload, error) {
+		var payload *servicemultipartvalidation.MethodMultipartValidationPayload
+		var (
+			body MethodMultipartValidationRequestBody
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return payload, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return payload, gerr
+			}
+			return payload, goa.DecodePayloadError(err.Error())
+		}
+		err = ValidateMethodMultipartValidationRequestBody(&body)
+		if err != nil {
+			return payload, err
+		}
+		payload = NewMethodMultipartValidationPayload(&body)
+
+		return payload, nil
+	}
+}

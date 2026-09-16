@@ -3,13 +3,26 @@
 func DecodeMethodMultipartUserTypeRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicemultipartusertype.MethodMultipartUserTypePayload, error) {
 	return func(r *http.Request) (*servicemultipartusertype.MethodMultipartUserTypePayload, error) {
 		var payload *servicemultipartusertype.MethodMultipartUserTypePayload
-		if err := decoder(r).Decode(&payload); err != nil {
+		var (
+			body MethodMultipartUserTypeRequestBody
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return payload, goa.MissingPayloadError()
+			}
 			var gerr *goa.ServiceError
 			if errors.As(err, &gerr) {
 				return payload, gerr
 			}
 			return payload, goa.DecodePayloadError(err.Error())
 		}
+		err = ValidateMethodMultipartUserTypeRequestBody(&body)
+		if err != nil {
+			return payload, err
+		}
+		payload = NewMethodMultipartUserTypePayload(&body)
 
 		return payload, nil
 	}

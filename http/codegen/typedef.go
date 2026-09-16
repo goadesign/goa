@@ -26,30 +26,27 @@ import (
 func goTypeDef(scope *codegen.NameScope, att *expr.AttributeExpr, ptr, useDefault bool) string {
 	ctx := codegen.NewAttributeContext(ptr, false, useDefault, "", scope)
 	ctx.UnionPointer = true
-	return goTypeDefForContext(scope, att, ctx)
+	return goTypeDefForContext(att, ctx)
 }
 
 // goTypeDefForContext recursively renders an HTTP body type using the same
 // field representation consulted by transport conversion and validation.
-func goTypeDefForContext(scope *codegen.NameScope, att *expr.AttributeExpr, ctx *codegen.AttributeContext) string {
+func goTypeDefForContext(att *expr.AttributeExpr, ctx *codegen.AttributeContext) string {
 	switch actual := att.Type.(type) {
 	case expr.Primitive:
-		if t, _ := codegen.GetMetaType(att); t != "" {
-			return t
-		}
-		return codegen.GoNativeTypeName(actual)
+		return ctx.Scope.Name(att, ctx.Pkg(att), ctx.Pointer, ctx.UseDefault)
 	case *expr.Array:
-		d := goTypeDefForContext(scope, actual.ElemType, ctx)
-		if expr.IsObject(actual.ElemType.Type) {
+		d := goTypeDefForContext(actual.ElemType, ctx)
+		if expr.IsObject(actual.ElemType.Type) || ctx.IsArrayElementPointer(actual) {
 			d = "*" + d
 		}
 		return "[]" + d
 	case *expr.Map:
-		keyDef := goTypeDefForContext(scope, actual.KeyType, ctx)
+		keyDef := goTypeDefForContext(actual.KeyType, ctx)
 		if expr.IsObject(actual.KeyType.Type) {
 			keyDef = "*" + keyDef
 		}
-		elemDef := goTypeDefForContext(scope, actual.ElemType, ctx)
+		elemDef := goTypeDefForContext(actual.ElemType, ctx)
 		if expr.IsObject(actual.ElemType.Type) {
 			elemDef = "*" + elemDef
 		}
@@ -66,9 +63,9 @@ func goTypeDefForContext(scope *codegen.NameScope, att *expr.AttributeExpr, ctx 
 				tags string
 			)
 			{
-				fn = codegen.GoifyAtt(at, name, true)
-				tdef = goTypeDefForContext(scope, at, ctx)
-				if ctx.IsFieldPointer(name, att) {
+				fn = codegen.GoifyAtt(at, elem, true)
+				tdef = goTypeDefForContext(at, ctx)
+				if ctx.IsFieldPointer(name, ma.AttributeExpr) {
 					tdef = "*" + tdef
 				}
 				if at.Description != "" {
@@ -93,7 +90,7 @@ func goTypeDefForContext(scope *codegen.NameScope, att *expr.AttributeExpr, ctx 
 		ss = append(ss, "}")
 		return strings.Join(ss, "\n")
 	case expr.UserType, *expr.Union:
-		return scope.GoTypeName(att)
+		return ctx.Scope.Name(att, ctx.Pkg(att), ctx.Pointer, ctx.UseDefault)
 	default:
 		panic(fmt.Sprintf("unknown data type %T", actual)) // bug
 	}
@@ -105,9 +102,7 @@ func attributeTags(att *expr.AttributeExpr, t string, optional bool) string {
 		return tags
 	}
 	var o string
-	// Always use omitempty for JSON-RPC ID attributes, even when required
-	// since it is part of a different top-level field in the transport
-	if optional || isJSONRPCID(att) {
+	if optional {
 		o = ",omitempty"
 	}
 	jsonName := t
@@ -117,13 +112,4 @@ func attributeTags(att *expr.AttributeExpr, t string, optional bool) string {
 		}
 	}
 	return fmt.Sprintf(" `form:\"%s%s\" json:\"%s%s\" xml:\"%s%s\"`", t, o, jsonName, o, t, o)
-}
-
-// isJSONRPCID checks if the attribute is marked as a JSON-RPC ID attribute
-func isJSONRPCID(att *expr.AttributeExpr) bool {
-	if att.Meta == nil {
-		return false
-	}
-	_, ok := att.Meta["jsonrpc:id"]
-	return ok
 }

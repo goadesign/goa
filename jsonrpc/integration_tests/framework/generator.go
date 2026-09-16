@@ -128,56 +128,41 @@ func (g *Generator) renderImplementation(impl *ImplementationData) error {
 // buildMethodData creates semantic data for a method.
 func (g *Generator) buildMethodData(info MethodInfo) *MethodData {
 	data := &MethodData{
-		Name:             info.Name(),
-		GoName:           goify(info.Name()),
-		Description:      g.getMethodDescription(info),
-		Info:             info,
-		IsNotification:   info.Modifier == ModifierNotify,
-		ReturnsError:     info.Modifier == ModifierError,
-		HasValidation:    info.Modifier == ModifierValidate,
-		HasFinalResponse: info.Modifier == ModifierFinal,
-		Transport:        info.Transport,
-		IsStreaming:      info.IsStreaming(),
+		Name:           info.Name(),
+		GoName:         goify(info.Name()),
+		Description:    g.getMethodDescription(info),
+		Info:           info,
+		IsNotification: info.Modifier == ModifierNotify && !info.IsStreaming(),
+		ReturnsError:   info.Modifier == ModifierError,
+		HasValidation:  info.Modifier == ModifierValidate,
+		Transport:      info.Transport,
+		IsStreaming:    info.IsStreaming(),
 	}
-	// Non-streaming payload
-	if info.Modifier != ModifierNotify && info.Action != ActionGenerate && (!info.HasStreamingPayload() || info.IsSSE()) {
+	if info.Action != ActionGenerate {
 		data.Payload = g.buildTypeSpec(info.Type, info.Modifier)
 	}
-	// Streaming
 	if info.IsStreaming() {
-		isBidi := info.IsWebSocket() && info.HasStreamingPayload() && info.HasStreamingResult()
-		if info.HasStreamingPayload() {
-			data.StreamingPayload = g.buildStreamingTypeSpec(info.Type, true, isBidi, info)
-			data.StreamKind = "payload"
-		}
-		if info.HasStreamingResult() {
-			data.Result = g.buildStreamingTypeSpec(info.Type, false, isBidi, info)
-			if data.StreamKind == "payload" {
-				data.StreamKind = "bidirectional"
-			} else {
-				data.StreamKind = "result"
-			}
-			if info.IsSSE() && info.Modifier == ModifierFinal && data.Result != nil {
-				data.Result.Fields = append(data.Result.Fields, FieldSpec{Position: len(data.Result.Fields) + 1, Name: "id", GoName: "ID", Type: &TypeSpec{Kind: "primitive", Primitive: "String"}, Description: "Response ID (for final response)", Required: false})
-			}
-		}
+		data.Result = g.buildStreamingTypeSpec(info.Type)
 	} else if info.Modifier != ModifierNotify && info.Modifier != ModifierError {
-		data.Result = g.buildTypeSpec(info.Type, "")
+		if info.Modifier == ModifierIDMap {
+			data.Result = g.buildTypeSpec(TypeString, "")
+		} else {
+			data.Result = g.buildTypeSpec(info.Type, "")
+		}
 	}
 	return data
 }
 
 // buildTypeSpec creates a TypeSpec based on the type string and modifier.
 func (g *Generator) buildTypeSpec(typeStr, modifier string) *TypeSpec {
-	// Special handling for id mapping: force object with value + id + request_id (strings)
+	// ID mapping wraps the input with the field populated from the request envelope.
 	if modifier == ModifierIDMap {
 		wrap := func(val *TypeSpec) *TypeSpec {
 			return &TypeSpec{
 				Kind: "object",
 				Fields: []FieldSpec{
 					{Position: 1, Name: "value", GoName: "Value", Type: val, Required: true},
-					{Position: 2, Name: "id", GoName: "ID", Type: &TypeSpec{Kind: "primitive", Primitive: "String"}},
-					{Position: 3, Name: "request_id", GoName: "RequestID", Type: &TypeSpec{Kind: "primitive", Primitive: "String"}},
+					{Position: 2, Name: "request_id", GoName: "RequestID", Type: &TypeSpec{Kind: "primitive", Primitive: "String"}, Required: true, JSONRPCID: true},
 				},
 			}
 		}
@@ -245,62 +230,9 @@ func (g *Generator) buildTypeSpec(typeStr, modifier string) *TypeSpec {
 	}
 }
 
-// buildStreamingTypeSpec creates a TypeSpec for streaming types
-func (g *Generator) buildStreamingTypeSpec(typeStr string, _ bool, isBidirectional bool, info MethodInfo) *TypeSpec {
-	// For WebSocket bidirectional methods, include mapping fields only when explicitly requested via idmap
-	if isBidirectional {
-		switch typeStr {
-		case TypeString:
-			if info.Modifier == ModifierIDMap {
-				return &TypeSpec{
-					Kind:    "object",
-					NeedsID: true,
-					Fields: []FieldSpec{
-						{Position: 1, Name: "id", GoName: "ID", Type: &TypeSpec{Kind: "primitive", Primitive: "String"}, Required: false, Description: "Business-level ID"},
-						{Position: 2, Name: "request_id", GoName: "RequestID", Type: &TypeSpec{Kind: "primitive", Primitive: "String"}, Required: false, Description: "Mapped JSON-RPC envelope ID"},
-						{Position: 3, Name: "value", GoName: "Value", Type: &TypeSpec{Kind: "primitive", Primitive: "String"}, Required: true, Description: "String value"},
-					},
-				}
-			}
-			// No id mapping: only value field
-			return &TypeSpec{Kind: "object", Fields: []FieldSpec{{Position: 1, Name: "value", GoName: "Value", Type: &TypeSpec{Kind: "primitive", Primitive: "String"}, Required: true}}}
-		case TypeArray:
-			if info.Modifier == ModifierIDMap {
-				return &TypeSpec{Kind: "object", NeedsID: true, Fields: []FieldSpec{
-					{Position: 1, Name: "id", GoName: "ID", Type: &TypeSpec{Kind: "primitive", Primitive: "String"}},
-					{Position: 2, Name: "request_id", GoName: "RequestID", Type: &TypeSpec{Kind: "primitive", Primitive: "String"}},
-					{Position: 3, Name: "items", GoName: "Items", Type: &TypeSpec{Kind: "array", ArrayElem: &TypeSpec{Kind: "primitive", Primitive: "String"}}, Required: true},
-				}}
-			}
-			return &TypeSpec{Kind: "object", Fields: []FieldSpec{{Position: 1, Name: "items", GoName: "Items", Type: &TypeSpec{Kind: "array", ArrayElem: &TypeSpec{Kind: "primitive", Primitive: "String"}}, Required: true}}}
-		case TypeObject:
-			if info.Modifier == ModifierIDMap {
-				return &TypeSpec{Kind: "object", NeedsID: true, Fields: []FieldSpec{
-					{Position: 1, Name: "id", GoName: "ID", Type: &TypeSpec{Kind: "primitive", Primitive: "String"}},
-					{Position: 2, Name: "request_id", GoName: "RequestID", Type: &TypeSpec{Kind: "primitive", Primitive: "String"}},
-					{Position: 3, Name: "field1", GoName: "Field1", Type: &TypeSpec{Kind: "primitive", Primitive: "String"}, Required: true},
-					{Position: 4, Name: "field2", GoName: "Field2", Type: &TypeSpec{Kind: "primitive", Primitive: "Int"}, Required: true},
-					{Position: 5, Name: "field3", GoName: "Field3", Type: &TypeSpec{Kind: "primitive", Primitive: "Boolean"}, Required: true},
-				}}
-			}
-			return &TypeSpec{Kind: "object", Fields: []FieldSpec{
-				{Position: 1, Name: "field1", GoName: "Field1", Type: &TypeSpec{Kind: "primitive", Primitive: "String"}, Required: true},
-				{Position: 2, Name: "field2", GoName: "Field2", Type: &TypeSpec{Kind: "primitive", Primitive: "Int"}, Required: true},
-				{Position: 3, Name: "field3", GoName: "Field3", Type: &TypeSpec{Kind: "primitive", Primitive: "Boolean"}, Required: true},
-			}}
-		default:
-			if info.Modifier == ModifierIDMap {
-				return &TypeSpec{Kind: "object", NeedsID: true, Fields: []FieldSpec{
-					{Position: 1, Name: "id", GoName: "ID", Type: &TypeSpec{Kind: "primitive", Primitive: "String"}},
-					{Position: 2, Name: "request_id", GoName: "RequestID", Type: &TypeSpec{Kind: "primitive", Primitive: "String"}},
-					{Position: 3, Name: "data", GoName: "Data", Type: &TypeSpec{Kind: "primitive", Primitive: "Any"}, Required: true},
-				}}
-			}
-			return &TypeSpec{Kind: "object", Fields: []FieldSpec{{Position: 1, Name: "data", GoName: "Data", Type: &TypeSpec{Kind: "primitive", Primitive: "Any"}, Required: true}}}
-		}
-	}
-
-	// For non-bidirectional streaming, wrap primitives in objects
+// buildStreamingTypeSpec creates the object sent in each SSE notification.
+func (g *Generator) buildStreamingTypeSpec(typeStr string) *TypeSpec {
+	// Wrap primitives so each notification has a named JSON field.
 	spec := g.buildTypeSpec(typeStr, "")
 	if spec.Kind == "primitive" {
 		return &TypeSpec{Kind: "object", Fields: []FieldSpec{{Position: 1, Name: "value", GoName: "Value", Type: spec, Required: true, Description: fmt.Sprintf("%s value", spec.Primitive)}}}
@@ -341,20 +273,18 @@ func (g *Generator) buildImplementationData(design *DesignData) *ImplementationD
 
 // buildMethodImplData creates implementation data for a method
 func (g *Generator) buildMethodImplData(method *MethodData, serviceName string) *MethodImplData {
-	data := &MethodImplData{MethodData: method, ServicePackage: serviceName, HasPayload: method.Payload != nil || method.StreamingPayload != nil, HasResult: method.Result != nil}
+	data := &MethodImplData{MethodData: method, ServicePackage: serviceName, HasPayload: method.Payload != nil, HasResult: method.Result != nil}
 	if method.Payload != nil {
 		if method.Payload.Kind == "primitive" {
 			data.PayloadRef = strings.ToLower(method.Payload.Primitive)
 		} else {
 			data.PayloadRef = fmt.Sprintf("*%s.%sPayload", serviceName, method.GoName)
 		}
-	} else if method.StreamingPayload != nil && data.StreamKind == "bidirectional" {
-		data.PayloadRef = fmt.Sprintf("*%s.%sPayload", serviceName, method.GoName)
 	}
 	if method.Result != nil {
-		if method.Result.Kind == "primitive" {
+		if !method.IsStreaming && method.Result.Kind == "primitive" {
 			data.ResultRef = strings.ToLower(method.Result.Primitive)
-		} else {
+		} else if !method.IsStreaming {
 			data.ResultRef = fmt.Sprintf("*%s.%sResult", serviceName, method.GoName)
 		}
 	}
@@ -368,14 +298,6 @@ func (g *Generator) buildMethodImplData(method *MethodData, serviceName string) 
 func (g *Generator) templateFuncs() template.FuncMap {
 	return template.FuncMap{
 		"goify": goify,
-		"hasStreamingMethod": func(methods []*MethodImplData) bool {
-			for _, m := range methods {
-				if m.IsStreaming {
-					return true
-				}
-			}
-			return false
-		},
 		"collectRequired": func(fields []FieldSpec) []string {
 			var required []string
 			for _, f := range fields {
@@ -393,9 +315,6 @@ func (g *Generator) getServiceName(info MethodInfo) string {
 	if info.IsSSE() {
 		return "testsse"
 	}
-	if info.IsWebSocket() {
-		return "testws"
-	}
 	return "test"
 }
 
@@ -404,8 +323,6 @@ func (g *Generator) getJSONRPCPath(serviceName string) string {
 	switch serviceName {
 	case "testsse":
 		return "/jsonrpc/sse"
-	case "testws":
-		return "/jsonrpc/ws"
 	default:
 		return "/jsonrpc"
 	}
@@ -487,9 +404,6 @@ func (g *Generator) parseServiceMethodPairs(serviceName string) []methodPair {
 				continue
 			}
 			name := fld.Names[0].Name
-			if name == "HandleStream" {
-				continue
-			}
 			goNames = append(goNames, name)
 		}
 		return false
@@ -540,7 +454,6 @@ func (g *Generator) filesImpl(impl *ImplementationData) []*codegen.File {
 			{Path: "time"},
 			{Path: "strings"},
 			{Path: "sort"},
-			{Path: "io"},
 			{Name: "goa", Path: "goa.design/goa/v3/pkg"},
 			{Name: service.ServicePackage, Path: fmt.Sprintf("testservice/gen/%s", service.ServicePackage)},
 		}
@@ -548,7 +461,7 @@ func (g *Generator) filesImpl(impl *ImplementationData) []*codegen.File {
 			codegen.Header(fmt.Sprintf("%s service implementation", service.Title), "testservice", imports),
 			{
 				Name:    "service-impl",
-				Source:  generatorTemplates.Read("impl/service", "method_signature", "error", "echo", "transform", "generate", "streaming_sse", "streaming_websocket", "notify", "validate"),
+				Source:  generatorTemplates.Read("impl/service", "method_signature", "error", "echo", "transform", "generate", "streaming_sse", "notify", "validate"),
 				FuncMap: g.templateFuncs(),
 				Data:    service,
 			},

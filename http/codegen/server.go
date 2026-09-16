@@ -1,3 +1,5 @@
+// This file renders HTTP server handlers and encoders per service; each file
+// receives imports derived only from the endpoint sections it contains.
 package codegen
 
 import (
@@ -11,20 +13,30 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
-// ServerFiles returns the generated HTTP server files.
-func ServerFiles(genpkg string, data *ServicesData) []*codegen.File {
+type (
+	// appendFSData gives the server file its chosen file helper names and path
+	// replacements.
+	appendFSData struct {
+		*ServiceData
+		// Mappings pairs each requested path with the embedded file path opened for it.
+		Mappings map[string]string
+	}
+)
+
+// serverFiles builds the HTTP server files read by Plan.Link.
+func serverFiles(data *ServicesData) []*codegen.File {
 	files := make([]*codegen.File, 0, len(data.Expressions.Services)*3)
 	for _, svc := range data.Expressions.Services {
-		files = append(files, serverFile(genpkg, svc, data))
-		if f := websocketServerFile(genpkg, svc, data); f != nil {
+		files = append(files, serverFile(svc, data))
+		if f := websocketServerFile(svc, data); f != nil {
 			files = append(files, f)
 		}
-		if f := sseServerFile(genpkg, svc, data); f != nil {
+		if f := sseServerFile(svc, data); f != nil {
 			files = append(files, f)
 		}
 	}
 	for _, svc := range data.Expressions.Services {
-		if f := ServerEncodeDecodeFile(genpkg, svc, data); f != nil {
+		if f := serverEncodeDecodeFile(svc, data); f != nil {
 			files = append(files, f)
 		}
 	}
@@ -32,10 +44,12 @@ func ServerFiles(genpkg string, data *ServicesData) []*codegen.File {
 }
 
 // serverFile returns the file implementing the HTTP server.
-func serverFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
+func serverFile(svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
 	data := services.Get(svc.Name())
 	svcName := data.Service.PathName
 	fpath := filepath.Join(codegen.Gendir, "http", svcName, "server", "server.go")
+	outputPackage := generatedFileOutputPackage(services, fpath)
+	data = serviceDataForOutput(data, services, outputPackage)
 	title := fmt.Sprintf("%s HTTP server", svc.Name())
 	funcs := map[string]any{
 		"join":                strings.Join,
@@ -48,23 +62,8 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData
 		"dir":                 path.Dir,
 		"isObject":            expr.IsObject,
 	}
-	imports := []*codegen.ImportSpec{
-		{Path: "bufio"},
-		{Path: "context"},
-		{Path: "fmt"},
-		{Path: "io"},
-		{Path: "mime/multipart"},
-		{Path: "net/http"},
-		{Path: "path"},
-		{Path: "strings"},
-		{Path: "github.com/gorilla/websocket"},
-		codegen.GoaImport(""),
-		codegen.GoaNamedImport("http", "goahttp"),
-		{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
-		{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
-	}
 	sections := []*codegen.SectionTemplate{
-		codegen.Header(title, "server", imports),
+		plannedFileHeader(title, "server", fpath, services),
 	}
 
 	sections = append(sections,
@@ -107,7 +106,12 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData
 				}
 			}
 		}
-		sections = append(sections, &codegen.SectionTemplate{Name: "append-fs", Source: httpTemplates.Read(appendFsT), FuncMap: funcs, Data: mappedFiles})
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:    "append-fs",
+			Source:  httpTemplates.Read(appendFsT),
+			FuncMap: funcs,
+			Data:    appendFSData{ServiceData: data, Mappings: mappedFiles},
+		})
 	}
 	for _, s := range data.FileServers {
 		sections = append(sections, &codegen.SectionTemplate{Name: "server-files", Source: httpTemplates.Read(fileServerT), FuncMap: funcs, Data: s})
@@ -116,30 +120,16 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData
 	return &codegen.File{Path: fpath, SectionTemplates: sections}
 }
 
-// ServerEncodeDecodeFile returns the file defining the HTTP server encoding and
+// serverEncodeDecodeFile returns the file defining the HTTP server encoding and
 // decoding logic.
-func ServerEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
+func serverEncodeDecodeFile(svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
 	data := services.Get(svc.Name())
 	svcName := data.Service.PathName
 	path := filepath.Join(codegen.Gendir, services.dir(), svcName, "server", "encode_decode.go")
+	outputPackage := generatedFileOutputPackage(services, path)
+	data = serviceDataForOutput(data, services, outputPackage)
 	title := fmt.Sprintf("%s %s server encoders and decoders", svc.Name(), services.label())
-	imports := []*codegen.ImportSpec{
-		{Path: "context"},
-		{Path: "errors"},
-		{Path: "fmt"},
-		{Path: "io"},
-		{Path: "net/http"},
-		{Path: "strconv"},
-		{Path: "strings"},
-		{Path: "encoding/json"},
-		{Path: "mime/multipart"},
-		{Path: "unicode/utf8"},
-		codegen.GoaImport(""),
-		codegen.GoaNamedImport("http", "goahttp"),
-		{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
-		{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
-	}
-	sections := []*codegen.SectionTemplate{codegen.Header(title, "server", imports)}
+	sections := []*codegen.SectionTemplate{plannedFileHeader(title, "server", path, services)}
 
 	for _, e := range data.Endpoints {
 		if e.Redirect == nil && !IsWebSocketEndpoint(e) && !e.IsJSONRPC {
@@ -199,7 +189,7 @@ func ServerEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *
 func transTmplFuncs(s *expr.HTTPServiceExpr, services *ServicesData) map[string]any {
 	return map[string]any{
 		"goTypeRef": func(dt expr.DataType) string {
-			return services.ServicesData.Get(s.Name()).Scope.GoTypeRef(&expr.AttributeExpr{Type: dt})
+			return services.Get(s.Name()).Scope.GoTypeRef(&expr.AttributeExpr{Type: dt})
 		},
 		"isAliased": func(dt expr.DataType) bool {
 			_, ok := dt.(expr.UserType)

@@ -1,3 +1,5 @@
+// This file binds reusable gRPC error-response policy to the concrete error
+// returned by each endpoint method.
 package expr
 
 import (
@@ -29,15 +31,15 @@ func (e *GRPCErrorExpr) Validate() *eval.ValidationErrors {
 	switch p := e.Response.Parent.(type) {
 	case *GRPCEndpointExpr:
 		if p.MethodExpr.Error(e.Name) == nil {
-			verr.Add(e, "Error %#v does not match an error defined in the method", e.Name)
+			verr.Add(e.Response, "Error %#v does not match an error defined in the method", e.Name)
 		}
 	case *GRPCServiceExpr:
 		if p.Error(e.Name) == nil {
-			verr.Add(e, "Error %#v does not match an error defined in the service", e.Name)
+			verr.Add(e.Response, "Error %#v does not match an error defined in the service", e.Name)
 		}
 	case *RootExpr:
-		if Root.Error(e.Name) == nil {
-			verr.Add(e, "Error %#v does not match an error defined in the API", e.Name)
+		if p.Error(e.Name) == nil {
+			verr.Add(e.Response, "Error %#v does not match an error defined in the API", e.Name)
 		}
 	}
 	return verr
@@ -45,17 +47,24 @@ func (e *GRPCErrorExpr) Validate() *eval.ValidationErrors {
 
 // Finalize looks up the corresponding method error expression.
 func (e *GRPCErrorExpr) Finalize(a *GRPCEndpointExpr) {
-	var ee *ErrorExpr
-	switch p := e.Response.Parent.(type) {
-	case *GRPCEndpointExpr:
-		ee = p.MethodExpr.Error(e.Name)
-	case *GRPCServiceExpr:
-		ee = p.Error(e.Name)
-	case *GRPCExpr:
-		ee = Root.Error(e.Name)
-	}
-	e.ErrorExpr = ee
+	e.ErrorExpr = a.MethodExpr.Error(e.Name)
 	e.Response.Finalize(a, e.AttributeExpr)
+}
+
+// mappedError returns the error declaration described by this reusable gRPC
+// response before it is copied to an endpoint.
+func (e *GRPCErrorExpr) mappedError(root *RootExpr) (*ErrorExpr, string) {
+	switch parent := e.Response.Parent.(type) {
+	case *GRPCEndpointExpr:
+		return parent.MethodExpr.Error(e.Name), "method"
+	case *GRPCServiceExpr:
+		return parent.Error(e.Name), "service"
+	case *GRPCExpr:
+		return root.Error(e.Name), "API"
+	case *RootExpr:
+		return parent.Error(e.Name), "API"
+	}
+	return nil, ""
 }
 
 // Dup creates a copy of the error expression.

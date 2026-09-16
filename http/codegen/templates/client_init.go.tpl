@@ -1,5 +1,5 @@
-{{ printf "New%s instantiates HTTP clients for all the %s service servers." .ClientStruct .Service.Name | comment }}
-func New{{ .ClientStruct }}(
+{{ printf "%s instantiates HTTP clients for all the %s service servers." .ClientInitDeclaration.Name .Service.Name | comment }}
+func {{ .ClientInitDeclaration.Name }}(
 	scheme string,
 	host string,
 	doer goahttp.Doer,
@@ -10,13 +10,13 @@ func New{{ .ClientStruct }}(
 	dialer goahttp.Dialer,
 	cfn *ConnConfigurer,
 	{{- end }}
-) *{{ .ClientStruct }} {
+) *{{ .ClientStructDeclaration.Name }} {
 {{- if hasWebSocket . }}
 	if cfn == nil {
 		cfn = &ConnConfigurer{}
 	}
 {{- end }}
-	return &{{ .ClientStruct }}{
+	return &{{ .ClientStructDeclaration.Name }}{
 		{{- range .Endpoints }}
 		{{ .Method.VarName }}Doer: doer,
 		{{- end }}

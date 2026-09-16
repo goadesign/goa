@@ -67,7 +67,7 @@ func NewMultipleViews(vres *streamingresultwithexplicitviewserviceviews.Multiple
 // NewViewedMultipleViews initializes viewed result type MultipleViews from
 // result type MultipleViews using the given view.
 func NewViewedMultipleViews(res *MultipleViews, view string) *streamingresultwithexplicitviewserviceviews.MultipleViews {
-	var vres *streamingresultwithexplicitviewserviceviews.MultipleViews
+	vres := &streamingresultwithexplicitviewserviceviews.MultipleViews{View: view}
 	switch view {
 	case "default", "":
 		p := newMultipleViewsView(res)

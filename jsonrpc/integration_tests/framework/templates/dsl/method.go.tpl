@@ -4,10 +4,7 @@ Method("{{ .Name }}", func() {
 {{- if .Payload }}
 	Payload({{ template "inline_type" .Payload }})
 {{- end }}
-{{- if .StreamingPayload }}
-	StreamingPayload({{ template "inline_type" .StreamingPayload }})
-{{- end }}
-{{- if and .Result .IsStreaming (or (eq .StreamKind "result") (eq .StreamKind "bidirectional")) }}
+{{- if and .Result .IsStreaming }}
 	StreamingResult({{ template "inline_type" .Result }})
 {{- else if and .Result (not .IsNotification) }}
 	Result({{ template "inline_type" .Result }})

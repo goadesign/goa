@@ -1,0 +1,25 @@
+// NewProtoWrappedCollectionItemCollection builds
+// *wrapped_collectionpb.WrappedCollectionItemCollection from
+// wrappedcollectionviews.WrappedCollectionItemCollectionView.
+func NewProtoWrappedCollectionItemCollection(result wrappedcollectionviews.WrappedCollectionItemCollectionView) *wrapped_collectionpb.WrappedCollectionItemCollection {
+	message := &wrapped_collectionpb.WrappedCollectionItemCollection{}
+	message.Field = make([]*wrapped_collectionpb.WrappedCollectionItem, len(result))
+	for i, val := range result {
+		message.Field[i] = &wrapped_collectionpb.WrappedCollectionItem{}
+		if val.Child != nil {
+			message.Field[i].Child = transformWrappedCollectionChildViewToProtoWrappedCollectionChild(val.Child)
+		}
+	}
+	return message
+}
+
+// transformWrappedCollectionChildViewToProtoWrappedCollectionChild builds a
+// value of type *wrapped_collectionpb.WrappedCollectionChild from a value of
+// type *wrappedcollectionviews.WrappedCollectionChildView.
+func transformWrappedCollectionChildViewToProtoWrappedCollectionChild(v *wrappedcollectionviews.WrappedCollectionChildView) *wrapped_collectionpb.WrappedCollectionChild {
+	res := &wrapped_collectionpb.WrappedCollectionChild{
+		Value: v.Value,
+	}
+
+	return res
+}

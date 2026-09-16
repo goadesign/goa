@@ -1,3 +1,5 @@
+// This file renders HTTP security designs through both OpenAPI versions and
+// verifies cookie API-key placement with run-owned example generation enabled.
 package codegen
 
 import (
@@ -36,7 +38,6 @@ func TestCookieAPIKeySecurity(t *testing.T) {
 
 	t.Run("openapi uses cookie security scheme", func(t *testing.T) {
 		root := expr.RunDSL(t, cookieAPIKeySecurityDSL)
-		openapi.Definitions = make(map[string]*openapi.Schema)
 
 		v2Files, err := openapiv2.Files(root, openapi.DefaultPath20)
 		require.NoError(t, err)
@@ -55,7 +56,6 @@ func TestCookieAPIKeySecurity(t *testing.T) {
 			require.Contains(t, (*swagger.Paths["/auth/profile"].Get.Security)[0], name)
 		}
 
-		openapi.Definitions = make(map[string]*openapi.Schema)
 		v3JSON := renderOpenAPIJSON(t, openapiv3.Files(root, openapi.Version30, openapi.DefaultPath30))
 		loader := openapi3.NewLoader()
 		doc, err := loader.LoadFromData(v3JSON)
@@ -76,9 +76,9 @@ func TestCookieAPIKeySecurity(t *testing.T) {
 
 	t.Run("http codegen does not duplicate cookie-backed auth fields", func(t *testing.T) {
 		root := expr.RunDSL(t, cookieAPIKeySecurityDSL)
-		services := CreateHTTPServices(root)
+		plan := linkedHTTPPlanForRoot(t, root)
 
-		serverTypes := typesFile("gen", root.API.HTTP.Services[0], true, services)
+		serverTypes := plan.ServerTypeFiles()[0]
 		var serverTypesBuf bytes.Buffer
 		for _, section := range serverTypes.SectionTemplates[1:] {
 			require.NoError(t, section.Write(&serverTypesBuf))
@@ -88,7 +88,7 @@ func TestCookieAPIKeySecurity(t *testing.T) {
 		require.NotContains(t, serverTypesCode, "browserSession *string, browserSession *string")
 		require.NotContains(t, serverTypesCode, "browserSession string, browserSession string")
 
-		serverFiles := ServerFiles("", services)
+		serverFiles := plan.ServerFiles()
 		require.Len(t, serverFiles, 2)
 		serverDecode := codegen.SectionCode(t, serverFiles[1].SectionTemplates[2])
 		require.Contains(t, serverDecode, `r.Cookie("__Host-ak_session")`)
@@ -96,7 +96,7 @@ func TestCookieAPIKeySecurity(t *testing.T) {
 		require.NotContains(t, serverDecode, "browserSession *string, browserSession *string")
 		require.NotContains(t, serverDecode, "browserSession string, browserSession string")
 
-		clientFiles := ClientFiles("", services)
+		clientFiles := plan.ClientFiles()
 		require.Len(t, clientFiles, 2)
 		clientEncode := codegen.SectionCode(t, clientFiles[1].SectionTemplates[2])
 		require.Contains(t, clientEncode, `req.AddCookie(&http.Cookie{`)

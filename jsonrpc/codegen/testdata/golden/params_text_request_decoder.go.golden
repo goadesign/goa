@@ -1,0 +1,33 @@
+// DecodeTextRequest returns a decoder for requests sent to the params text
+// endpoint.
+func DecodeTextRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request, *jsonrpc.RawRequest) (string, error) {
+	return func(r *http.Request, req *jsonrpc.RawRequest) (string, error) {
+		var payload string
+		param, paramErr := jsonrpc.SinglePositionalParam(req.Params)
+		if paramErr != nil {
+			return payload, goa.DecodePayloadError(paramErr.Error())
+		}
+		if bytes.Equal(bytes.TrimSpace(param), []byte("null")) {
+			return payload, goa.MissingPayloadError()
+		}
+		r.Body = io.NopCloser(bytes.NewReader(param))
+		var (
+			body string
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return payload, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return payload, gerr
+			}
+			return payload, goa.DecodePayloadError(err.Error())
+		}
+		payload = body
+
+		return payload, nil
+	}
+}

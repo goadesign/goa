@@ -1,0 +1,16 @@
+// ClientInterceptors defines the interface for all client-side interceptors.
+// Client interceptors execute after the payload is encoded and before the request
+// is sent to the server. The implementation is responsible for calling next to
+// complete the request.
+type ClientInterceptors interface {
+	JWTAuth(ctx context.Context, info JWTAuthInfo, next goa.Endpoint) (any, error)
+}
+
+// WrapGetInfoClientEndpoint wraps the GetInfo endpoint with the client
+// interceptors defined in the design.
+func WrapGetInfoClientEndpoint(endpoint goa.Endpoint, i ClientInterceptors) goa.Endpoint {
+	if i != nil {
+		endpoint = wrapClientGetInfoJWTAuth(endpoint, i)
+	}
+	return endpoint
+}

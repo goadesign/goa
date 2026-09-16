@@ -57,7 +57,7 @@ func (f *HTTPFileServerExpr) Finalize() {
 		if isAbs {
 			p = current
 		} else {
-			p = path.Join(Root.API.HTTP.Path, sp, current)
+			p = path.Join(f.Service.Root.Path, sp, current)
 		}
 		// Make sure request path starts with a "/" so codegen can rely on it.
 		if !strings.HasPrefix(p, "/") {

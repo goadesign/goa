@@ -1,0 +1,375 @@
+// WithEarlierSnapshotResponseBody is the type of the "values" service
+// "with_earlier_snapshot" endpoint HTTP response body.
+type WithEarlierSnapshotResponseBody struct {
+	Snapshot *SnapshotResponseBody `form:"snapshot,omitempty" json:"snapshot,omitempty" xml:"snapshot,omitempty"`
+	Edit     *EditResponseBody     `form:"edit,omitempty" json:"edit,omitempty" xml:"edit,omitempty"`
+}
+
+// WithEditOnlyResponseBody is the type of the "values" service
+// "with_edit_only" endpoint HTTP response body.
+type WithEditOnlyResponseBody struct {
+	Edit *EditResponseBody `form:"edit,omitempty" json:"edit,omitempty" xml:"edit,omitempty"`
+}
+
+// SnapshotResponseBody is used to define fields on response body types.
+type SnapshotResponseBody struct {
+	ID     *string              `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	Labels []*LabelResponseBody `form:"labels,omitempty" json:"labels,omitempty" xml:"labels,omitempty"`
+}
+
+// LabelResponseBody is used to define fields on response body types.
+type LabelResponseBody struct {
+	Value *string `form:"value,omitempty" json:"value,omitempty" xml:"value,omitempty"`
+}
+
+// EditResponseBody is used to define fields on response body types.
+type EditResponseBody struct {
+	Relationship *RelationshipResponseBody `form:"relationship,omitempty" json:"relationship,omitempty" xml:"relationship,omitempty"`
+}
+
+// NoEditResponseBody is used to define fields on response body types.
+type NoEditResponseBody struct {
+}
+
+// EditableResponseBody is used to define fields on response body types.
+type EditableResponseBody struct {
+	Snapshot *SnapshotResponseBody `form:"snapshot,omitempty" json:"snapshot,omitempty" xml:"snapshot,omitempty"`
+}
+
+// RelationshipResponseBody holds exactly one of its branch values.
+type RelationshipResponseBody struct {
+	kind     RelationshipResponseBodyKind
+	none     *NoEditResponseBody
+	editable *EditableResponseBody
+}
+
+// RelationshipResponseBodyKind records which RelationshipResponseBody branch is selected.
+type RelationshipResponseBodyKind string
+
+const (
+	// RelationshipResponseBodyKindNone identifies the none branch.
+	RelationshipResponseBodyKindNone RelationshipResponseBodyKind = "none"
+	// RelationshipResponseBodyKindEditable identifies the editable branch.
+	RelationshipResponseBodyKindEditable RelationshipResponseBodyKind = "editable"
+)
+
+// Kind returns the selected branch.
+func (u RelationshipResponseBody) Kind() RelationshipResponseBodyKind {
+	return u.kind
+}
+
+// NewRelationshipResponseBodyNone constructs RelationshipResponseBody with the none branch set.
+func NewRelationshipResponseBodyNone(v *NoEditResponseBody) RelationshipResponseBody {
+	return RelationshipResponseBody{
+		kind: RelationshipResponseBodyKindNone,
+		none: v,
+	}
+}
+
+// AsNone returns the value when the none branch is selected.
+func (u RelationshipResponseBody) AsNone() (_ *NoEditResponseBody, ok bool) {
+	if u.kind != RelationshipResponseBodyKindNone {
+		return
+	}
+	return u.none, true
+}
+
+// SetNone selects the none branch and stores v.
+func (u *RelationshipResponseBody) SetNone(v *NoEditResponseBody) {
+	*u = RelationshipResponseBody{
+		kind: RelationshipResponseBodyKindNone,
+		none: v,
+	}
+}
+
+// NewRelationshipResponseBodyEditable constructs RelationshipResponseBody with the editable branch set.
+func NewRelationshipResponseBodyEditable(v *EditableResponseBody) RelationshipResponseBody {
+	return RelationshipResponseBody{
+		kind:     RelationshipResponseBodyKindEditable,
+		editable: v,
+	}
+}
+
+// AsEditable returns the value when the editable branch is selected.
+func (u RelationshipResponseBody) AsEditable() (_ *EditableResponseBody, ok bool) {
+	if u.kind != RelationshipResponseBodyKindEditable {
+		return
+	}
+	return u.editable, true
+}
+
+// SetEditable selects the editable branch and stores v.
+func (u *RelationshipResponseBody) SetEditable(v *EditableResponseBody) {
+	*u = RelationshipResponseBody{
+		kind:     RelationshipResponseBodyKindEditable,
+		editable: v,
+	}
+}
+
+// Validate ensures exactly one valid branch is selected.
+func (u RelationshipResponseBody) Validate() error {
+	switch u.kind {
+	case "":
+		return goa.InvalidEnumValueError("type", "", []any{
+			string(RelationshipResponseBodyKindNone),
+			string(RelationshipResponseBodyKindEditable),
+		})
+	case RelationshipResponseBodyKindNone:
+		if u.none == nil {
+			return goa.MissingFieldError("value", "RelationshipResponseBody")
+		}
+		return nil
+	case RelationshipResponseBodyKindEditable:
+		if u.editable == nil {
+			return goa.MissingFieldError("value", "RelationshipResponseBody")
+		}
+		return nil
+	default:
+		return goa.InvalidEnumValueError("type", u.kind, []any{
+			string(RelationshipResponseBodyKindNone),
+			string(RelationshipResponseBodyKindEditable),
+		})
+	}
+}
+
+// MarshalJSON marshals the union into the canonical {type,value} JSON shape.
+func (u RelationshipResponseBody) MarshalJSON() ([]byte, error) {
+	if err := u.Validate(); err != nil {
+		return nil, err
+	}
+	var (
+		value any
+	)
+	switch u.kind {
+	case RelationshipResponseBodyKindNone:
+		value = u.none
+	case RelationshipResponseBodyKindEditable:
+		value = u.editable
+	default:
+		return nil, fmt.Errorf("unexpected RelationshipResponseBody kind %q", u.kind)
+	}
+	return json.Marshal(struct {
+		Type  string `json:"type"`
+		Value any    `json:"value"`
+	}{
+		Type:  string(u.kind),
+		Value: value,
+	})
+}
+
+// UnmarshalJSON unmarshals the union from the canonical {type,value} JSON shape.
+func (u *RelationshipResponseBody) UnmarshalJSON(data []byte) error {
+	var raw struct {
+		Type  string          `json:"type"`
+		Value json.RawMessage `json:"value"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	if len(raw.Value) == 0 {
+		return goa.MissingFieldError("value", "RelationshipResponseBody")
+	}
+	if bytes.Equal(bytes.TrimSpace(raw.Value), []byte("null")) {
+		return goa.InvalidFieldTypeError("value", nil, "non-null JSON value")
+	}
+	switch raw.Type {
+	case string(RelationshipResponseBodyKindNone):
+		var v *NoEditResponseBody
+		if err := json.Unmarshal(raw.Value, &v); err != nil {
+			return err
+		}
+		u.SetNone(v)
+	case string(RelationshipResponseBodyKindEditable):
+		var v *EditableResponseBody
+		if err := json.Unmarshal(raw.Value, &v); err != nil {
+			return err
+		}
+		u.SetEditable(v)
+	default:
+		if raw.Type == "" {
+			return goa.MissingFieldError("type", "RelationshipResponseBody")
+		}
+		return goa.InvalidEnumValueError("type", raw.Type, []any{
+			string(RelationshipResponseBodyKindNone),
+			string(RelationshipResponseBodyKindEditable),
+		})
+	}
+	return nil
+}
+
+// NewWithEarlierSnapshotWithEarlierSnapshotOK builds a "values" service
+// "with_earlier_snapshot" endpoint result from a HTTP "OK" response.
+func NewWithEarlierSnapshotWithEarlierSnapshotOK(body *WithEarlierSnapshotResponseBody) *values.WithEarlierSnapshot {
+	v := &values.WithEarlierSnapshot{}
+	v.Snapshot = unmarshalSnapshotResponseBodyToValuesSnapshot(body.Snapshot)
+	v.Edit = unmarshalEditResponseBodyToValuesEdit(body.Edit)
+
+	return v
+}
+
+// NewWithEditOnlyWithEditOnlyOK builds a "values" service "with_edit_only"
+// endpoint result from a HTTP "OK" response.
+func NewWithEditOnlyWithEditOnlyOK(body *WithEditOnlyResponseBody) *values.WithEditOnly {
+	v := &values.WithEditOnly{}
+	v.Edit = unmarshalEditResponseBodyToValuesEdit(body.Edit)
+
+	return v
+}
+
+// ValidateWithEarlierSnapshotResponseBody runs the validations defined on
+// WithEarlierSnapshotResponseBody
+func ValidateWithEarlierSnapshotResponseBody(body *WithEarlierSnapshotResponseBody) (err error) {
+	if body.Snapshot == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("snapshot", "body"))
+	}
+	if body.Edit == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("edit", "body"))
+	}
+	if body.Snapshot != nil {
+		if err2 := validateSnapshotResponseBody(body.Snapshot, "body.snapshot"); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	if body.Edit != nil {
+		if err2 := validateEditResponseBody(body.Edit, "body.edit"); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	return
+}
+
+// ValidateWithEditOnlyResponseBody runs the validations defined on
+// WithEditOnlyResponseBody
+func ValidateWithEditOnlyResponseBody(body *WithEditOnlyResponseBody) (err error) {
+	if body.Edit == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("edit", "body"))
+	}
+	if body.Edit != nil {
+		if err2 := validateEditResponseBody(body.Edit, "body.edit"); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	return
+}
+
+// ValidateSnapshotResponseBody runs the validations defined on Snapshot
+func ValidateSnapshotResponseBody(body *SnapshotResponseBody) (err error) {
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Labels == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("labels", "body"))
+	}
+	for _, e := range body.Labels {
+		if e != nil {
+			if err2 := validateLabelResponseBody(e, "body.labels[*]"); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	return
+}
+
+// validateSnapshotResponseBody checks Snapshot and reports errors using the
+// path supplied by its caller
+func validateSnapshotResponseBody(body *SnapshotResponseBody, path string) (err error) {
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", path))
+	}
+	if body.Labels == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("labels", path))
+	}
+	for _, e := range body.Labels {
+		if e != nil {
+			if err2 := validateLabelResponseBody(e, path+".labels[*]"); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	return
+}
+
+// ValidateLabelResponseBody runs the validations defined on Label
+func ValidateLabelResponseBody(body *LabelResponseBody) (err error) {
+	if body.Value == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("value", "body"))
+	}
+	return
+}
+
+// validateLabelResponseBody checks Label and reports errors using the path
+// supplied by its caller
+func validateLabelResponseBody(body *LabelResponseBody, path string) (err error) {
+	if body.Value == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("value", path))
+	}
+	return
+}
+
+// ValidateEditResponseBody runs the validations defined on Edit
+func ValidateEditResponseBody(body *EditResponseBody) (err error) {
+	if body.Relationship == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("relationship", "body"))
+	}
+	if body.Relationship != nil {
+		switch string(body.Relationship.Kind()) {
+		case "editable":
+			actual, _ := body.Relationship.AsEditable()
+			if actual != nil {
+				if err2 := validateEditableResponseBody(actual, "body.relationship.value"); err2 != nil {
+					err = goa.MergeErrors(err, err2)
+				}
+			}
+		}
+
+	}
+	return
+}
+
+// validateEditResponseBody checks Edit and reports errors using the path
+// supplied by its caller
+func validateEditResponseBody(body *EditResponseBody, path string) (err error) {
+	if body.Relationship == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("relationship", path))
+	}
+	if body.Relationship != nil {
+		switch string(body.Relationship.Kind()) {
+		case "editable":
+			actual, _ := body.Relationship.AsEditable()
+			if actual != nil {
+				if err2 := validateEditableResponseBody(actual, path+".relationship.value"); err2 != nil {
+					err = goa.MergeErrors(err, err2)
+				}
+			}
+		}
+
+	}
+	return
+}
+
+// ValidateEditableResponseBody runs the validations defined on Editable
+func ValidateEditableResponseBody(body *EditableResponseBody) (err error) {
+	if body.Snapshot == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("snapshot", "body"))
+	}
+	if body.Snapshot != nil {
+		if err2 := validateSnapshotResponseBody(body.Snapshot, "body.snapshot"); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	return
+}
+
+// validateEditableResponseBody checks Editable and reports errors using the
+// path supplied by its caller
+func validateEditableResponseBody(body *EditableResponseBody, path string) (err error) {
+	if body.Snapshot == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("snapshot", path))
+	}
+	if body.Snapshot != nil {
+		if err2 := validateSnapshotResponseBody(body.Snapshot, path+".snapshot"); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	return
+}

@@ -1,3 +1,5 @@
+// This file prepares, validates, and finalizes the gRPC transport contract for
+// one service method.
 package expr
 
 import (
@@ -118,7 +120,7 @@ func (e *GRPCEndpointExpr) Prepare() {
 			continue
 		}
 		// Lookup undefined GRPC errors in API.
-		for _, v := range Root.API.GRPC.Errors {
+		for _, v := range e.MethodExpr.Service.design.API.GRPC.Errors {
 			if me.Name == v.Name {
 				e.GRPCErrors = append(e.GRPCErrors, v.Dup())
 			}
@@ -138,7 +140,7 @@ func (e *GRPCEndpointExpr) Prepare() {
 			}
 		}
 		if !found {
-			for _, ae := range Root.API.GRPC.Errors {
+			for _, ae := range e.MethodExpr.Service.design.API.GRPC.Errors {
 				if se.Name == ae.Name {
 					e.GRPCErrors = append(e.GRPCErrors, ae.Dup())
 					break
@@ -170,6 +172,9 @@ func (e *GRPCEndpointExpr) Validate() error {
 	verr := new(eval.ValidationErrors)
 	if e.Name() == "" {
 		verr.Add(e, "Endpoint name cannot be empty")
+	}
+	if e.MethodExpr.HasMixedResults() {
+		verr.Add(e, "gRPC method %q cannot define both Result and StreamingResult because one gRPC call cannot return a separate result after its response stream", e.MethodExpr.Name)
 	}
 	verr.Merge(e.validateStreamCompat())
 
@@ -247,9 +252,35 @@ func (e *GRPCEndpointExpr) Validate() error {
 		// their fields must define field numbers, mirroring the payload and
 		// result checks above. Default ErrorResult errors travel in the gRPC
 		// status and need no tags.
-		if ee := e.MethodExpr.Error(er.Name); ee != nil && ee.Type != ErrorResult && IsObject(ee.Type) {
+		if ee := e.MethodExpr.Error(er.Name); ee != nil && !IsErrorResult(ee.Type) && IsObject(ee.Type) {
 			verr.Merge(validateRPCTags(AsObject(ee.Type), e))
 		}
+	}
+	verr.Merge(e.validateErrorMappings())
+	return verr
+}
+
+// validateErrorMappings ensures inherited gRPC response policy describes the
+// same concrete error value returned by the endpoint method.
+func (e *GRPCEndpointExpr) validateErrorMappings() *eval.ValidationErrors {
+	verr := new(eval.ValidationErrors)
+	for _, mapping := range e.GRPCErrors {
+		mapped, owner := mapping.mappedError(e.MethodExpr.Service.design)
+		method := e.MethodExpr.Error(mapping.Name)
+		if mapped == nil || method == nil || equivalentErrorAttributes(mapped.AttributeExpr, method.AttributeExpr) {
+			continue
+		}
+		verr.Add(
+			mapping.Response,
+			`gRPC error mapping %q inherited from the %s uses error type %q, but method %q of service %q uses %q; both definitions must define the same error attribute; %s`,
+			mapping.Name,
+			owner,
+			mapped.Type.Name(),
+			e.MethodExpr.Name,
+			e.MethodExpr.Service.Name,
+			method.Type.Name(),
+			errorAttributeDifference(mapped.AttributeExpr, method.AttributeExpr),
+		)
 	}
 	return verr
 }
@@ -545,6 +576,8 @@ func validateMetadata(metAtt *MappedAttributeExpr, serviceAtt *AttributeExpr, e 
 		for _, nat := range *AsObject(metAtt.Type) {
 			if a := serviceAtt.Find(nat.Name); a == nil {
 				verr.Add(e, "%s metadata attribute %q is not found in %s", metKind, nat.Name, serviceKind)
+			} else if !isMetadataEncodable(a.Type) {
+				verr.Add(e, "%s metadata attribute %q must be a primitive or an array of primitives, got %s", metKind, nat.Name, a.Type.Name())
 			}
 		}
 	} else {
@@ -602,7 +635,7 @@ func (e *GRPCEndpointExpr) streamCompatValue() (string, bool) {
 	if v, ok := e.Service.ServiceExpr.Meta.Last(streamCompatMetaKey); ok {
 		return v, true
 	}
-	if v, ok := Root.API.Meta.Last(streamCompatMetaKey); ok {
+	if v, ok := e.MethodExpr.Service.design.API.Meta.Last(streamCompatMetaKey); ok {
 		return v, true
 	}
 	return "", false

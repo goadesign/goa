@@ -1,0 +1,151 @@
+package client
+
+// EncodeWithPayloadRequest returns an encoder for requests sent to the
+// notifications with_payload server.
+func EncodeWithPayloadRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*notifications.WithPayloadPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("notifications", "with_payload", "*notifications.WithPayloadPayload", v)
+		}
+		b := NewWithPayloadRequestBody(p)
+		body := &jsonrpc.Request{
+			JSONRPC: "2.0",
+			Method:  "with_payload",
+			Params:  b,
+		}
+		// This method is a notification, so the envelope has no ID.
+		if err := encoder(req).Encode(&body); err != nil {
+			return goahttp.ErrEncodingError("notifications", "with_payload", err)
+		}
+		return nil
+	}
+}
+
+// EncodeWithoutPayloadRequest returns an encoder for requests sent to the
+// notifications service without_payload JSON-RPC method.
+func EncodeWithoutPayloadRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		body := &jsonrpc.Request{
+			JSONRPC: "2.0",
+			Method:  "without_payload",
+		}
+		if err := encoder(req).Encode(body); err != nil {
+			return goahttp.ErrEncodingError("notifications", "without_payload", err)
+		}
+		return nil
+	}
+}
+
+// EncodeOrdinaryVoidRequest returns an encoder for requests sent to the
+// notifications service ordinary_void JSON-RPC method. The encoder returns the
+// request ID written into the JSON-RPC message.
+func EncodeOrdinaryVoidRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) (string, error) {
+	return func(req *http.Request, v any) (string, error) {
+		requestID := uuid.New().String()
+		body := &jsonrpc.Request{
+			JSONRPC: "2.0",
+			Method:  "ordinary_void",
+			ID:      requestID,
+		}
+		if err := encoder(req).Encode(body); err != nil {
+			return "", goahttp.ErrEncodingError("notifications", "ordinary_void", err)
+		}
+		return requestID, nil
+	}
+}
+
+// EncodeRequiredIDRequest returns an encoder for requests sent to the
+// notifications service required_id JSON-RPC method. The encoder returns the
+// request ID written into the JSON-RPC message.
+func EncodeRequiredIDRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) (string, error) {
+	return func(req *http.Request, v any) (string, error) {
+		p, ok := v.(*notifications.RequiredIDPayload)
+		if !ok {
+			return "", goahttp.ErrInvalidType("notifications", "required_id", "*notifications.RequiredIDPayload", v)
+		}
+		b := NewRequiredIDRequestBody(p)
+		body := &jsonrpc.Request{
+			JSONRPC: "2.0",
+			Method:  "required_id",
+			Params:  b,
+		}
+		requestID := string(p.ID)
+		body.ID = requestID
+		if err := encoder(req).Encode(&body); err != nil {
+			return "", goahttp.ErrEncodingError("notifications", "required_id", err)
+		}
+		return requestID, nil
+	}
+}
+
+// EncodeOptionalIDRequest returns an encoder for requests sent to the
+// notifications service optional_id JSON-RPC method. The encoder returns the
+// request ID written into the JSON-RPC message.
+func EncodeOptionalIDRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) (string, error) {
+	return func(req *http.Request, v any) (string, error) {
+		p, ok := v.(*notifications.OptionalIDPayload)
+		if !ok {
+			return "", goahttp.ErrInvalidType("notifications", "optional_id", "*notifications.OptionalIDPayload", v)
+		}
+		body := &jsonrpc.Request{
+			JSONRPC: "2.0",
+			Method:  "optional_id",
+		}
+		var requestID string
+		if p.ID == nil {
+			requestID = uuid.New().String()
+		} else {
+			requestID = string(*p.ID)
+		}
+		body.ID = requestID
+		if err := encoder(req).Encode(&body); err != nil {
+			return "", goahttp.ErrEncodingError("notifications", "optional_id", err)
+		}
+		return requestID, nil
+	}
+}
+
+// EncodeDefaultedIDRequest returns an encoder for requests sent to the
+// notifications service defaulted_id JSON-RPC method. The encoder returns the
+// request ID written into the JSON-RPC message.
+func EncodeDefaultedIDRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) (string, error) {
+	return func(req *http.Request, v any) (string, error) {
+		p, ok := v.(*notifications.DefaultedIDPayload)
+		if !ok {
+			return "", goahttp.ErrInvalidType("notifications", "defaulted_id", "*notifications.DefaultedIDPayload", v)
+		}
+		body := &jsonrpc.Request{
+			JSONRPC: "2.0",
+			Method:  "defaulted_id",
+		}
+		requestID := string(p.ID)
+		body.ID = requestID
+		if err := encoder(req).Encode(&body); err != nil {
+			return "", goahttp.ErrEncodingError("notifications", "defaulted_id", err)
+		}
+		return requestID, nil
+	}
+}
+
+// EncodeValidatedIDRequest returns an encoder for requests sent to the
+// notifications service validated_id JSON-RPC method. The encoder returns the
+// request ID written into the JSON-RPC message.
+func EncodeValidatedIDRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) (string, error) {
+	return func(req *http.Request, v any) (string, error) {
+		p, ok := v.(*notifications.ValidatedIDPayload)
+		if !ok {
+			return "", goahttp.ErrInvalidType("notifications", "validated_id", "*notifications.ValidatedIDPayload", v)
+		}
+		body := &jsonrpc.Request{
+			JSONRPC: "2.0",
+			Method:  "validated_id",
+		}
+		requestID := string(p.ID)
+		body.ID = requestID
+		if err := encoder(req).Encode(&body); err != nil {
+			return "", goahttp.ErrEncodingError("notifications", "validated_id", err)
+		}
+		return requestID, nil
+	}
+}

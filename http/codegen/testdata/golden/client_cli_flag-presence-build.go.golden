@@ -1,0 +1,46 @@
+// BuildCheckPayload builds the payload for the FlagPresence check endpoint
+// from CLI flags.
+func BuildCheckPayload(flagPresenceCheckRequired *string, flagPresenceCheckOptional *string, flagPresenceCheckEmpty string, flagPresenceCheckDisabled string, flagPresenceCheckZero string) (*flagpresence.CheckPayload, error) {
+	var err error
+	var required string
+	{
+		if flagPresenceCheckRequired == nil {
+			return nil, fmt.Errorf("missing required flag --required")
+		}
+		required = *flagPresenceCheckRequired
+	}
+	var optional *string
+	{
+		if flagPresenceCheckOptional != nil {
+			optional = flagPresenceCheckOptional
+		}
+	}
+	var empty string
+	{
+		empty = flagPresenceCheckEmpty
+	}
+	var disabled bool
+	{
+		disabled, err = strconv.ParseBool(flagPresenceCheckDisabled)
+		if err != nil {
+			return nil, fmt.Errorf("invalid value for disabled, must be BOOL")
+		}
+	}
+	var zero int
+	{
+		var v int64
+		v, err = strconv.ParseInt(flagPresenceCheckZero, 10, strconv.IntSize)
+		zero = int(v)
+		if err != nil {
+			return nil, fmt.Errorf("invalid value for zero, must be INT")
+		}
+	}
+	v := &flagpresence.CheckPayload{}
+	v.Required = required
+	v.Optional = optional
+	v.Empty = empty
+	v.Disabled = disabled
+	v.Zero = zero
+
+	return v, nil
+}

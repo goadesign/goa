@@ -1,85 +1,89 @@
+// This file writes runnable HTTP servers and file-upload helpers with the
+// package names already chosen for this generation.
 package codegen
 
 import (
-	"os"
+	"maps"
 	"path"
 	"path/filepath"
-	"strings"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/example"
 	"goa.design/goa/v3/expr"
 )
 
-// ExampleServerFiles returns an example http service implementation.
-func ExampleServerFiles(genpkg string, data *ServicesData) []*codegen.File {
+type (
+	// exampleServerArgumentData contains one typed parameter accepted by a
+	// generated transport helper.
+	exampleServerArgumentData struct {
+		// Name is the parameter name used inside the helper.
+		Name string
+		// PkgName is the generated service package name.
+		PkgName string
+		// TypeName is the generated service or endpoint type name.
+		TypeName string
+		// Pointer is true when TypeName is an endpoint collection pointer.
+		Pointer bool
+	}
+
+	// exampleMultipartDecoderData describes the HTTP request body filled by one
+	// starter multipart decoder.
+	exampleMultipartDecoderData struct {
+		*MultipartData
+		// BodyType is the request body type as seen from the starter service
+		// package.
+		BodyType string
+	}
+)
+
+// exampleServerFiles builds each runnable HTTP server from copied server data.
+func exampleServerFiles(root *example.Root, data *ServicesData) []*codegen.File {
 	var fw []*codegen.File
-	for _, svr := range data.Root.API.Servers {
-		if m := ExampleServer(genpkg, data.Root, svr, data); m != nil {
+	for _, server := range root.Servers {
+		if m := exampleServer(server, data); m != nil {
 			fw = append(fw, m)
 		}
 	}
 	for _, svc := range data.Expressions.Services {
-		if f := dummyMultipartFile(genpkg, data.Root, svc, data); f != nil {
+		if f := dummyMultipartFile(svc, data); f != nil {
 			fw = append(fw, f)
 		}
 	}
 	return fw
 }
 
-// ExampleServer returns an example HTTP server implementation.
-func ExampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, services *ServicesData) *codegen.File {
-	svrdata := example.Servers.Get(svr, root)
-	fpath := filepath.Join("cmd", svrdata.Dir, "http.go")
-	specs := make([]*codegen.ImportSpec, 0, 12+2*len(root.API.HTTP.Services))
-	baseSpecs := []*codegen.ImportSpec{
-		{Path: "context"},
-		{Path: "net/http"},
-		{Path: "net/url"},
-		{Path: "os"},
-		{Path: "sync"},
-		{Path: "time"},
-		codegen.GoaNamedImport("http", "goahttp"),
-		{Path: "goa.design/clue/debug"},
-		{Path: "goa.design/clue/log"},
-		codegen.GoaImport("middleware"),
-		{Path: "github.com/gorilla/websocket"},
-	}
-	specs = append(specs, baseSpecs...)
-
-	scope := codegen.NewNameScope()
-	for _, svc := range root.API.HTTP.Services {
-		sd := services.Get(svc.Name())
-		svcName := sd.Service.PathName
-		specs = append(specs,
-			&codegen.ImportSpec{
-				Path: path.Join(genpkg, "http", svcName, "server"),
-				Name: scope.Unique(sd.Service.PkgName + "svr"),
-			},
-			&codegen.ImportSpec{
-				Path: path.Join(genpkg, svcName),
-				Name: scope.Unique(sd.Service.PkgName),
-			})
-	}
-
-	rootPath := example.RootPath(genpkg)
-	apiPkg := scope.Unique(strings.ToLower(codegen.Goify(services.Root.API.Name, false) + "api"))
-	specs = append(specs, &codegen.ImportSpec{Path: rootPath, Name: apiPkg})
-
+// exampleServer returns an example HTTP server implementation.
+func exampleServer(server *example.Data, services *ServicesData) *codegen.File {
+	genpkg := services.GenPkg()
+	fpath := filepath.Join("cmd", server.Dir, "http.go")
+	outputPackage := path.Join(path.Dir(genpkg), "cmd", server.Dir)
+	rootPath := path.Dir(genpkg)
+	var apiPkg string
 	var svcdata []*ServiceData
-	for _, svc := range svr.Services {
+	for _, svc := range server.Services {
 		if data := services.Get(svc); data != nil {
-			svcdata = append(svcdata, data)
+			copy := exampleServiceDataForOutput(data, services, outputPackage)
+			copy.ServerPkgName = services.PackageImport(
+				outputPackage,
+				path.Join(genpkg, "http", data.Service.PathName, "server"),
+			).Name
+			svcdata = append(svcdata, copy)
+			for _, endpoint := range data.Endpoints {
+				if endpoint.MultipartRequestDecoder != nil {
+					apiPkg = services.PackageImport(outputPackage, rootPath).Name
+				}
+			}
 		}
 	}
 
 	sections := []*codegen.SectionTemplate{
-		codegen.Header("", "main", specs),
+		plannedFileHeader("", "main", fpath, services),
 		{
 			Name:   "server-http-start",
 			Source: httpTemplates.Read(serverStartT),
 			Data: map[string]any{
-				"Services": svcdata,
+				"Services":    svcdata,
+				"HandlerArgs": exampleServerArguments(server, svcdata, nil),
 				// JSONRPCServices must always be set (typed nil when
 				// absent) so the template functions receive a valid
 				// []*ServiceData value. The JSON-RPC generator
@@ -126,48 +130,217 @@ func ExampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, ser
 	return &codegen.File{Path: fpath, SectionTemplates: sections, SkipExist: true}
 }
 
+// combinedExampleServerFiles builds runnable server files that mount both the
+// JSON-RPC services and the ordinary HTTP services from one design. The caller
+// may edit every returned file without changing either input plan.
+func combinedExampleServerFiles(root *example.Root, jsonrpc, application *ServicesData) []*codegen.File {
+	files := make([]*codegen.File, 0, len(root.Servers))
+	for _, server := range root.Servers {
+		file := combinedExampleServer(server, jsonrpc, application)
+		if file != nil {
+			files = append(files, file)
+		}
+	}
+	if application != nil {
+		for _, service := range application.Expressions.Services {
+			if file := dummyMultipartFile(service, application); file != nil {
+				files = append(files, cloneGeneratedFile(file))
+			}
+		}
+	}
+	return files
+}
+
+// combinedExampleServer builds one main-package file for a configured server.
+// It reads service membership from server and writes separate HTTP and
+// JSON-RPC lists because the code that writes main initializes them differently.
+func combinedExampleServer(server *example.Data, jsonrpc, application *ServicesData) *codegen.File {
+	outputPackage := path.Join(path.Dir(jsonrpc.GenPkg()), "cmd", server.Dir)
+	var ordinaryServices []*ServiceData
+	var apiPkg string
+	if application != nil {
+		for _, name := range server.Services {
+			data := application.Get(name)
+			if data == nil {
+				continue
+			}
+			copy := exampleServiceDataForOutput(data, application, outputPackage)
+			copy.ServerPkgName = application.PackageImport(
+				outputPackage,
+				path.Join(application.GenPkg(), "http", data.Service.PathName, "server"),
+			).Name
+			ordinaryServices = append(ordinaryServices, copy)
+			for _, endpoint := range data.Endpoints {
+				if endpoint.MultipartRequestDecoder != nil {
+					apiPkg = jsonrpc.PackageImport(outputPackage, path.Dir(jsonrpc.GenPkg())).Name
+				}
+			}
+		}
+	}
+	var jsonrpcServices []*ServiceData
+	for _, name := range server.Services {
+		data := jsonrpc.Get(name)
+		if data == nil {
+			continue
+		}
+		copy := exampleServiceDataForOutput(data, jsonrpc, outputPackage)
+		copy.ServerPkgName = jsonrpc.PackageImport(
+			outputPackage,
+			path.Join(jsonrpc.GenPkg(), "jsonrpc", data.Service.PathName, "server"),
+		).Name
+		jsonrpcServices = append(jsonrpcServices, copy)
+	}
+	if len(ordinaryServices) == 0 && len(jsonrpcServices) == 0 {
+		return nil
+	}
+	data := map[string]any{
+		"Services":        ordinaryServices,
+		"JSONRPCServices": jsonrpcServices,
+		"HandlerArgs":     exampleServerArguments(server, ordinaryServices, jsonrpcServices),
+	}
+	filePath := filepath.Join("cmd", server.Dir, "http.go")
+	sections := []*codegen.SectionTemplate{
+		plannedFileHeader("", "main", filePath, jsonrpc),
+		{Name: "server-http-start", Source: httpTemplates.Read(serverStartT), Data: data},
+		{Name: "server-http-encoding", Source: httpTemplates.Read(serverEncodingT)},
+		{Name: "server-http-mux", Source: httpTemplates.Read(serverMuxT)},
+		{
+			Name:   "server-http-init",
+			Source: httpTemplates.Read(serverConfigureT),
+			Data: map[string]any{
+				"Services":        ordinaryServices,
+				"JSONRPCServices": jsonrpcServices,
+				"APIPkg":          apiPkg,
+			},
+			FuncMap: map[string]any{"needDialer": NeedDialer, "hasWebSocket": HasWebSocket},
+		},
+		{Name: "server-http-middleware", Source: httpTemplates.Read(serverMiddlewareT)},
+		{Name: "server-http-end", Source: httpTemplates.Read(serverEndT), Data: data},
+		{Name: "server-http-errorhandler", Source: httpTemplates.Read(serverErrorHandlerT)},
+	}
+	return &codegen.File{
+		Path:             filePath,
+		SectionTemplates: sections,
+		SkipExist:        true,
+	}
+}
+
+// exampleServerArguments adds generated Go names and types to the ordered
+// service values copied by the shared example plan.
+func exampleServerArguments(
+	server *example.Data,
+	ordinary, jsonrpc []*ServiceData,
+) []*exampleServerArgumentData {
+	services := make(map[string]*ServiceData, len(ordinary)+len(jsonrpc))
+	for _, service := range ordinary {
+		services[service.Service.Name] = service
+	}
+	for _, service := range jsonrpc {
+		services[service.Service.Name] = service
+	}
+	planned := server.HandlerArgs(example.TransportHTTP)
+	arguments := make([]*exampleServerArgumentData, len(planned))
+	for index, argument := range planned {
+		service := services[argument.Service].Service
+		data := &exampleServerArgumentData{
+			PkgName: service.PkgName,
+		}
+		if argument.Endpoint {
+			data.Name = service.VarName + "Endpoints"
+			data.TypeName = service.EndpointsDeclaration.Name()
+			data.Pointer = true
+		} else {
+			data.Name = service.VarName + "Svc"
+			data.TypeName = service.ServiceDeclaration.Name()
+		}
+		arguments[index] = data
+	}
+	return arguments
+}
+
+// cloneGeneratedFile copies a generated file and its section records so the
+// caller may change the copy without changing the source plan.
+func cloneGeneratedFile(source *codegen.File) *codegen.File {
+	if source == nil {
+		return nil
+	}
+	clone := *source
+	clone.SectionTemplates = make([]*codegen.SectionTemplate, len(source.SectionTemplates))
+	for index, section := range source.SectionTemplates {
+		sectionClone := *section
+		sectionClone.FuncMap = maps.Clone(section.FuncMap)
+		sectionClone.Data = cloneRenderData(section.Data)
+		clone.SectionTemplates[index] = &sectionClone
+	}
+	return &clone
+}
+
+// cloneJSONRPCCodecFile copies an encoder and decoder file and replaces each
+// HTTP endpoint value with the smaller value read by JSON-RPC code.
+func cloneJSONRPCCodecFile(source *codegen.File) *codegen.File {
+	if source == nil {
+		return nil
+	}
+	clone := *source
+	clone.SectionTemplates = make([]*codegen.SectionTemplate, len(source.SectionTemplates))
+	for index, section := range source.SectionTemplates {
+		sectionCopy := *section
+		sectionCopy.FuncMap = maps.Clone(section.FuncMap)
+		if endpoint, ok := section.Data.(*EndpointData); ok {
+			switch section.Name {
+			case "response-decoder":
+				data := copyJSONRPCEndpoint(endpoint)
+				sectionCopy.Data = &data
+			case "request-builder", "request-encoder", "request-decoder":
+				sectionCopy.Data = copyJSONRPCRequestCodec(endpoint)
+			default:
+				panic("JSON-RPC codec contains an unsupported endpoint section " + section.Name)
+			}
+		} else if helper, ok := section.Data.(*codegen.TransformFunctionData); ok {
+			if section.Name != "client-transform-helper" && section.Name != "server-transform-helper" {
+				panic("JSON-RPC codec contains a transform helper in unsupported section " + section.Name)
+			}
+			sectionCopy.Data = copyJSONRPCTransformFunction(helper)
+		} else {
+			sectionCopy.Data = cloneRenderData(section.Data)
+		}
+		clone.SectionTemplates[index] = &sectionCopy
+	}
+	return &clone
+}
+
 // dummyMultipartFile returns a dummy implementation of the multipart decoders
 // and encoders.
-func dummyMultipartFile(genpkg string, root *expr.RootExpr, svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
+func dummyMultipartFile(svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
+	genpkg := services.GenPkg()
 	mpath := "multipart.go"
-	if _, err := os.Stat(mpath); !os.IsNotExist(err) {
-		return nil // file already exists, skip it.
-	}
+	outputPackage := path.Dir(genpkg)
 	var (
-		sections []*codegen.SectionTemplate
-		mustGen  bool
-
-		scope = codegen.NewNameScope()
+		sections    []*codegen.SectionTemplate
+		decoderData = make(map[*MultipartData]*exampleMultipartDecoderData)
+		mustGen     bool
 	)
-	// determine the unique API package name different from the service names
-	for _, httpSvc := range root.API.HTTP.Services {
-		s := services.Get(httpSvc.Name())
-		if s == nil {
-			panic("unknown http service, " + httpSvc.Name()) // bug
-		}
-		if s.Service == nil {
-			panic("unknown service, " + httpSvc.Name()) // bug
-		}
-		scope.Unique(s.Service.PkgName)
-	}
 	{
-		specs := make([]*codegen.ImportSpec, 0, 2)
-		specs = append(specs, &codegen.ImportSpec{Path: "mime/multipart"})
 		data := services.Get(svc.Name())
-		specs = append(specs, &codegen.ImportSpec{
-			Path: path.Join(genpkg, data.Service.PathName),
-			Name: scope.Unique(data.Service.PkgName, "svc"),
-		})
+		for _, endpoint := range data.Endpoints {
+			if endpoint.MultipartRequestDecoder == nil {
+				continue
+			}
+			decoderData[endpoint.MultipartRequestDecoder] = &exampleMultipartDecoderData{
+				MultipartData: endpoint.MultipartRequestDecoder,
+				BodyType:      exampleMultipartBodyType(svc, endpoint, services, outputPackage),
+			}
+		}
 
-		apiPkg := example.APIPkg(root, scope)
-		sections = []*codegen.SectionTemplate{codegen.Header("", apiPkg, specs)}
+		apiPkg := examplePackageImportName(services.Root)
+		sections = []*codegen.SectionTemplate{plannedFileHeader("", apiPkg, mpath, services)}
 		for _, e := range data.Endpoints {
 			if e.MultipartRequestDecoder != nil {
 				mustGen = true
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:   "dummy-multipart-request-decoder",
 					Source: httpTemplates.Read(dummyMultipartRequestDecoderT),
-					Data:   e.MultipartRequestDecoder,
+					Data:   decoderData[e.MultipartRequestDecoder],
 				})
 			}
 			if e.MultipartRequestEncoder != nil {
@@ -188,4 +361,32 @@ func dummyMultipartFile(genpkg string, root *expr.RootExpr, svc *expr.HTTPServic
 		SectionTemplates: sections,
 		SkipExist:        true,
 	}
+}
+
+// exampleMultipartBodyType returns the request body type visible from the
+// starter service package.
+func exampleMultipartBodyType(svc *expr.HTTPServiceExpr, endpoint *EndpointData, services *ServicesData, outputPackage string) string {
+	serverBody := endpoint.Payload.Request.ServerBody
+	service := services.Get(svc.Name())
+	serverPath := path.Join(services.GenPkg(), "http", service.Service.PathName, "server")
+	serverImport := services.PackageImport(outputPackage, serverPath)
+	if serverBody.Declaration != nil {
+		return serverImport.Name + "." + serverBody.Declaration.Name()
+	}
+	body := serverBody.attribute
+	usesServerType := false
+	collectUserTypes(body.Type, func(expr.UserType) {
+		usesServerType = true
+	})
+	if usesServerType {
+		resolver := &wireAttributeScope{
+			catalog:         service.serverWireTypes,
+			base:            codegen.NewAttributeScope(service.serverWireTypes.scope),
+			pkg:             serverImport.Name,
+			policy:          jsonBodyPolicy(true, true, true, ""),
+			exactOccurrence: true,
+		}
+		return resolver.Name(body, serverImport.Name, true, false)
+	}
+	return serverBody.VarName
 }

@@ -1,7 +1,7 @@
 func transform() {
 	target := &proto.ResultTypeCollection{}
 	if source.Collection != nil {
-		target.Collection = &proto.ResultTypeCollection{}
+		target.Collection = &proto.ResultTypeCollection2{}
 		target.Collection.Field = make([]*proto.ResultType, len(source.Collection))
 		for i, val := range source.Collection {
 			target.Collection.Field[i] = &proto.ResultType{}

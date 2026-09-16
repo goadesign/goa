@@ -17,16 +17,16 @@ paths:
                   in: header
                   schema:
                     type: integer
-                    example: 5490475434297746524
+                    example: 1
                     format: int64
-                  example: 8568805688952666114
+                  example: 1
                 - name: bar
                   in: header
                   schema:
                     type: integer
-                    example: 1475422799873681639
+                    example: 2
                     format: int64
-                  example: 8380651525843655561
+                  example: 2
             responses:
                 "204":
                     description: No Content response.

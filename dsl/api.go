@@ -1,3 +1,5 @@
+// This file defines the API-level DSL, including immutable configuration for
+// the example streams created separately by each generation run.
 package dsl
 
 import (
@@ -157,8 +159,9 @@ func License(fn func()) {
 //
 // Randomizer must appear in an API expression.
 //
-// Randomizer takes a single argument which is an implementation of
-// expr.Randomizer.
+// Randomizer takes a single argument which is an immutable
+// expr.RandomizerFactory. The factory creates a fresh value stream for each
+// code generation run.
 //
 // The default randomizer uses the API name as the seed, to get consistent
 // random examples.
@@ -166,7 +169,7 @@ func License(fn func()) {
 // Example:
 //
 //	var _ = API("divider", func() {
-//	    Randomizer(expr.NewFakerRandomizer("different seed"))
+//	    Randomizer(expr.NewFakerRandomizerFactory("different seed"))
 //	})
 //
 // There's also a deterministic randomizer which will only generate one example
@@ -175,11 +178,15 @@ func License(fn func()) {
 // Example:
 //
 //	var _ = API("divider", func() {
-//	    Randomizer(expr.NewDeterministicRandomizer())
+//	    Randomizer(expr.NewDeterministicRandomizerFactory())
 //	})
-func Randomizer(randomizer expr.Randomizer) {
+func Randomizer(factory expr.RandomizerFactory) {
 	if s, ok := eval.Current().(*expr.APIExpr); ok {
-		s.ExampleGenerator = &expr.ExampleGenerator{Randomizer: randomizer}
+		if factory == nil {
+			eval.ReportError("Randomizer requires a non-nil randomizer factory")
+			return
+		}
+		s.RandomizerFactory = factory
 		return
 	}
 	eval.IncompatibleDSL()

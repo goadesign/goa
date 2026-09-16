@@ -12,9 +12,9 @@ service ServiceServerStreamingRPC {
 }
 
 message MethodServerStreamingRPCRequest {
-	sint32 field = 1;
+	optional sint32 field = 1;
 }
 
 message MethodServerStreamingRPCResponse {
-	string field = 1;
+	optional string field = 1;
 }

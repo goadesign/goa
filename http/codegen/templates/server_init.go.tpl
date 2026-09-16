@@ -1,6 +1,6 @@
-{{ printf "%s instantiates HTTP handlers for all the %s service endpoints using the provided encoder and decoder. The handlers are mounted on the given mux using the HTTP verb and path defined in the design. errhandler is called whenever a response fails to be encoded. formatter is used to format errors returned by the service methods prior to encoding. Both errhandler and formatter are optional and can be nil." .ServerInit .Service.Name | comment }}
-func {{ .ServerInit }}(
-	e *{{ .Service.PkgName }}.Endpoints,
+{{ printf "%s instantiates HTTP handlers for all the %s service endpoints using the provided encoder and decoder. The handlers are mounted on the given mux using the HTTP verb and path defined in the design. errhandler is called whenever a response fails to be encoded. formatter is used to format errors returned by the service methods prior to encoding. Both errhandler and formatter are optional and can be nil." .ServerInitDeclaration.Name .Service.Name | comment }}
+func {{ .ServerInitDeclaration.Name }}(
+	e *{{ .Service.PkgName }}.{{ .Service.EndpointsDeclaration.Name }},
 	mux goahttp.Muxer,
 	decoder func(*http.Request) goahttp.Decoder,
 	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
@@ -8,20 +8,20 @@ func {{ .ServerInit }}(
 	formatter func(ctx context.Context, err error) goahttp.Statuser,
 	{{- if hasWebSocket . }}
 	upgrader goahttp.Upgrader,
-	configurer *ConnConfigurer,
+	configurer *{{ .ServerConnConfigurerDeclaration.Name }},
 	{{- end }}
 	{{- range .Endpoints }}
 		{{- if .MultipartRequestDecoder }}
-	{{ .MultipartRequestDecoder.VarName }} {{ .MultipartRequestDecoder.FuncName }},
+	{{ .MultipartRequestDecoder.VarName }} {{ .MultipartRequestDecoder.FuncDeclaration.Name }},
 		{{- end }}
 	{{- end }}
 	{{- range .FileServers }}
 	{{ .ArgName }} http.FileSystem,
 	{{- end }}
-) *{{ .ServerStruct }} {
+) *{{ .ServerStructDeclaration.Name }} {
 {{- if hasWebSocket . }}
 	if configurer == nil {
-		configurer = &ConnConfigurer{}
+		configurer = &{{ .ServerConnConfigurerDeclaration.Name }}{}
 	}
 {{- end }}
 	{{- range .FileServers }}
@@ -32,10 +32,10 @@ func {{ .ServerInit }}(
 		{{- if not .IsDir }}
 			{{- $prefix = dir $prefix }}
 		{{- end }}
-		{{ .ArgName }} = appendPrefix({{ .ArgName }}, "{{ $prefix }}")
+		{{ .ArgName }} = {{ $.AppendPrefixDeclaration.Name }}({{ .ArgName }}, "{{ $prefix }}")
 	{{- end }}
-	return &{{ .ServerStruct }}{
-		Mounts: []*{{ .MountPointStruct }}{
+	return &{{ .ServerStructDeclaration.Name }}{
+		Mounts: []*{{ .MountPointStructDeclaration.Name }}{
 			{{- range $e := .Endpoints }}
 				{{- range $e.Routes }}
 			{"{{ $e.Method.VarName }}", "{{ .Verb }}", "{{ .Path }}"},
@@ -45,6 +45,11 @@ func {{ .ServerInit }}(
 				{{- $filepath := .FilePath }}
 				{{- range .RequestPaths }}
 			{"Serve {{ $filepath }}", "GET", "{{ . }}"},
+				{{- end }}
+			{{- end }}
+			{{- range .ServerMounts }}
+				{{- range .MountPoints }}
+			{ {{ printf "%q" .Method }}, {{ printf "%q" .Verb }}, {{ printf "%q" .Pattern }} },
 				{{- end }}
 			{{- end }}
 		},

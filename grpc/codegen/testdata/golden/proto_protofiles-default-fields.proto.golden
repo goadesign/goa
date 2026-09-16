@@ -12,16 +12,16 @@ service DefaultFields {
 }
 
 message MethodRequest {
-	sint64 req = 1;
+	optional sint64 req = 1;
 	optional sint64 opt = 2;
 	optional sint64 def0 = 3;
 	optional sint64 def1 = 4;
 	optional sint64 def2 = 5;
-	string reqs = 6;
+	optional string reqs = 6;
 	optional string opts = 7;
 	optional string defs = 8;
 	optional string defe = 9;
-	double rat = 10;
+	optional double rat = 10;
 	optional double flt = 11;
 	optional double flt0 = 12;
 	optional double flt1 = 13;

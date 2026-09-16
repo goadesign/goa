@@ -1,3 +1,5 @@
+// This file renders complete OpenAPI 3.0 and 3.2 documents from prepared HTTP
+// designs and compares output produced with run-owned example state.
 package openapiv3_test
 
 import (
@@ -32,9 +34,11 @@ func TestFiles(t *testing.T) {
 		{"file-service-swagger", testdata.FileServiceSwaggerDSL},
 		{"file-service-wildcard", testdata.FileServiceWildcardDSL},
 		{"valid", testdata.SimpleDSL},
+		{"bytes-example", testdata.BytesExampleDSL},
 		{"multiple-services", testdata.MultipleServicesDSL},
 		{"multiple-views", testdata.MultipleViewsDSL},
 		{"explicit-view", testdata.ExplicitViewDSL},
+		{"released-response-collection-names", testdata.ReleasedResponseCollectionNamesDSL},
 		{"security", testdata.SecurityDSL},
 		{"bearer-security", testdata.BearerSecurityDSL},
 		{"server-host-with-variables", testdata.ServerHostWithVariablesDSL},
@@ -67,6 +71,7 @@ func TestFiles(t *testing.T) {
 		{"array", testdata.ArrayValidationDSL},
 		// Error examples
 		{"error-examples", testdata.ErrorExamplesDSL},
+		{"shared-error-description", testdata.SharedErrorDescriptionDSL},
 		// Streaming endpoints: OpenAPI 3.2 constructs must not leak into
 		// 3.0 documents.
 		{"sse-string", testdata.SSEStringDSL},
@@ -78,8 +83,6 @@ func TestFiles(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			// Reset global variables
-			openapi.Definitions = make(map[string]*openapi.Schema)
 			root := expr.RunDSL(t, c.DSL)
 			oFiles := openapiv3.Files(root, openapi.Version30, openapi.DefaultPath30)
 			for i, o := range oFiles {
@@ -123,6 +126,7 @@ func TestFilesV32(t *testing.T) {
 		DSL  func()
 	}{
 		{"valid", testdata.SimpleDSL},
+		{"bytes-example", testdata.BytesExampleDSL},
 		{"v3.2-meta", testdata.OpenAPIV32MetaDSL},
 		{"with-tags", testdata.WithTagsDSL},
 		{"server-host-with-variables", testdata.ServerHostWithVariablesDSL},
@@ -134,11 +138,10 @@ func TestFilesV32(t *testing.T) {
 		{"sse-mixed-results", testdata.MixedResultsDSL},
 		{"websocket", testdata.StreamingResultDSL},
 		{"alias-type", testdata.AliasTypeDSL},
+		{"shared-error-description", testdata.SharedErrorDescriptionDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			// Reset global variables
-			openapi.Definitions = make(map[string]*openapi.Schema)
 			root := expr.RunDSL(t, c.DSL)
 			oFiles := openapiv3.Files(root, openapi.Version32, openapi.DefaultPath32)
 			wantPaths := []string{
@@ -178,6 +181,68 @@ func TestFilesV32(t *testing.T) {
 						testutil.AssertString(t, golden, buf.String())
 					}
 				})
+			}
+		})
+	}
+}
+
+// TestAuthoredExampleFixturesIgnoreRandomizer verifies that golden designs
+// which do not test generated examples describe every displayed value.
+func TestAuthoredExampleFixturesIgnoreRandomizer(t *testing.T) {
+	cases := []struct {
+		Name    string
+		DSL     func()
+		Version openapi.Version
+	}{
+		{"alias-type", testdata.AliasTypeDSL, openapi.Version30},
+		{"array", testdata.ArrayValidationDSL, openapi.Version30},
+		{"headers", testdata.HeadersDSL, openapi.Version30},
+		{"not-generate-host", testdata.NotGenerateHostDSL, openapi.Version30},
+		{"not-generate-server", testdata.NotGenerateServerDSL, openapi.Version30},
+		{"path-with-wildcards", testdata.PathWithWildcardDSL, openapi.Version30},
+		{"path-with-multiple-wildcards", testdata.PathWithMultipleWildcardDSL, openapi.Version30},
+		{"path-with-multiple-explicit-wildcards", testdata.PathWithMultipleExplicitWildcardDSL, openapi.Version30},
+		{"sse-all-fields", testdata.SSEAllFieldsDSL, openapi.Version32},
+		{"sse-data-field", testdata.SSEDataFieldDSL, openapi.Version32},
+		{"sse-mixed-results", testdata.MixedResultsDSL, openapi.Version32},
+		{"sse-object", testdata.SSEObjectDSL, openapi.Version32},
+		{"sse-request-id", testdata.SSERequestIDDSL, openapi.Version32},
+		{"sse-string", testdata.SSEStringDSL, openapi.Version32},
+		{"type-extension", testdata.TypeExtensionDSL, openapi.Version30},
+		{"websocket", testdata.StreamingResultDSL, openapi.Version32},
+		{"with-any", testdata.WithAnyDSL, openapi.Version30},
+		{"with-map", testdata.WithMapDSL, openapi.Version30},
+		{"with-spaces", testdata.WithSpacesDSL, openapi.Version30},
+		{"with-tags", testdata.WithTagsDSL, openapi.Version32},
+	}
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			firstRoot := expr.RunDSL(t, c.DSL)
+			first := openapiv3.NewWithValues(
+				firstRoot,
+				c.Version,
+				expr.NewExampleGenerator(expr.NewFakerRandomizerFactory("first")),
+				openapi.Values{},
+			)
+			firstJSON, err := json.Marshal(first)
+			if err != nil {
+				t.Fatalf("failed to encode first document: %s", err)
+			}
+
+			secondRoot := expr.RunDSL(t, c.DSL)
+			second := openapiv3.NewWithValues(
+				secondRoot,
+				c.Version,
+				expr.NewExampleGenerator(expr.NewFakerRandomizerFactory("second")),
+				openapi.Values{},
+			)
+			secondJSON, err := json.Marshal(second)
+			if err != nil {
+				t.Fatalf("failed to encode second document: %s", err)
+			}
+
+			if !bytes.Equal(firstJSON, secondJSON) {
+				t.Error("OpenAPI examples changed with the randomizer")
 			}
 		})
 	}

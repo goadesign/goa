@@ -6,13 +6,6 @@ import (
 	"time"
 )
 
-// Sequence action types for streaming scenarios
-const (
-	SequenceActionSend    = "send"
-	SequenceActionReceive = "receive"
-	SequenceActionClose   = "close"
-)
-
 // Scenario represents a test scenario loaded from YAML
 type Scenario struct {
 	Name        string    `yaml:"name"`
@@ -79,14 +72,14 @@ type Settings struct {
 type MethodInfo struct {
 	Action    string // echo, transform, generate, etc.
 	Type      string // string, array, object, etc.
-	Modifier  string // notify, error, validate, final
-	Transport string // sse, ws (extracted from method suffix)
+	Modifier  string // notify, error, validate, or idmap
+	Transport string // sse when the method sends server-sent events
 	GRPC      bool   // whether to emit GRPC endpoint (method name starts with grpc_)
 }
 
 // ParseMethod parses a method name into its components.
-// Format: action_type[_modifier][_transport]
-// Examples: echo_string, stream_object_final_sse, broadcast_string_ws
+// Format: action_type[_modifier][_sse]
+// Examples: echo_string, stream_object_sse
 // Returns error if the method name is invalid.
 func ParseMethod(method string) (MethodInfo, error) {
 	// Check for grpc_ prefix convention
@@ -98,7 +91,7 @@ func ParseMethod(method string) (MethodInfo, error) {
 
 	parts := strings.Split(method, "_")
 	if len(parts) < 2 {
-		return MethodInfo{}, fmt.Errorf("invalid method name %q: must have format action_type[_modifier][_transport]", method)
+		return MethodInfo{}, fmt.Errorf("invalid method name %q: must have format action_type[_modifier][_sse]", method)
 	}
 
 	info := MethodInfo{
@@ -110,7 +103,7 @@ func ParseMethod(method string) (MethodInfo, error) {
 	// Check if last part is a transport
 	if len(parts) > 2 {
 		lastPart := parts[len(parts)-1]
-		if lastPart == "sse" || lastPart == "ws" {
+		if lastPart == "sse" {
 			info.Transport = lastPart
 			parts = parts[:len(parts)-1] // Remove transport from parts
 		}
@@ -119,7 +112,7 @@ func ParseMethod(method string) (MethodInfo, error) {
 	// Validate action
 	validActions := map[string]bool{
 		ActionEcho: true, ActionTransform: true, ActionGenerate: true,
-		ActionStream: true, ActionCollect: true, ActionBroadcast: true,
+		ActionStream: true,
 	}
 	if !validActions[info.Action] {
 		return MethodInfo{}, fmt.Errorf("invalid action %q in method %q: must be one of: %s",
@@ -141,12 +134,15 @@ func ParseMethod(method string) (MethodInfo, error) {
 		info.Modifier = parts[2]
 		// Validate modifier
 		validModifiers := map[string]bool{
-			ModifierNotify: true, ModifierError: true, ModifierValidate: true, ModifierFinal: true, ModifierIDMap: true,
+			ModifierNotify: true, ModifierError: true, ModifierValidate: true, ModifierIDMap: true,
 		}
 		if !validModifiers[info.Modifier] {
 			return MethodInfo{}, fmt.Errorf("invalid modifier %q in method %q: must be one of: %s",
 				info.Modifier, method, strings.Join(getMapKeys(validModifiers), ", "))
 		}
+	}
+	if info.Action == ActionStream && !info.IsSSE() {
+		return MethodInfo{}, fmt.Errorf("streaming method %q must end with _sse", method)
 	}
 
 	return info, nil
@@ -178,41 +174,9 @@ func (info MethodInfo) IsSSE() bool {
 	return info.Transport == "sse"
 }
 
-// IsWebSocket returns true if this method uses WebSocket transport
-func (info MethodInfo) IsWebSocket() bool {
-	return info.Transport == "ws"
-}
-
 // IsStreaming returns true if this method involves streaming
 func (info MethodInfo) IsStreaming() bool {
-	return info.IsSSE() || info.IsWebSocket() || info.Action == ActionStream || info.Action == ActionCollect || info.Action == ActionBroadcast
-}
-
-// HasStreamingResult returns true if this method streams results
-func (info MethodInfo) HasStreamingResult() bool {
-	if info.IsSSE() {
-		return true // SSE always streams results
-	}
-	if info.IsWebSocket() {
-		// WebSocket methods can stream results based on action
-		return info.Action == ActionStream || info.Action == ActionBroadcast ||
-			info.Action == ActionEcho || info.Action == ActionTransform || info.Action == ActionGenerate ||
-			info.Action == ActionCollect
-	}
-	return false
-}
-
-// HasStreamingPayload returns true if this method streams payload
-func (info MethodInfo) HasStreamingPayload() bool {
-	if info.IsSSE() {
-		return false // SSE doesn't support streaming payload
-	}
-	if info.IsWebSocket() {
-		// All WebSocket methods have streaming payload for bidirectional support
-		// This allows them to receive requests and send responses/notifications
-		return true
-	}
-	return false
+	return info.IsSSE()
 }
 
 // GetMethod returns the effective JSON-RPC method name to use on the wire.

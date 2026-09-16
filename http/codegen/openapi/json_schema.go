@@ -1,12 +1,13 @@
+// This file defines the JSON schema values shared by the OpenAPI generators.
+// It also converts Goa examples into the fields visible in those schemas.
 package openapi
 
 import (
+	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"reflect"
 	"strconv"
 
-	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
 )
 
@@ -108,26 +109,6 @@ const (
 // SchemaRef is the JSON Schema draft 2020-12 meta-schema identifier.
 const SchemaRef = "https://json-schema.org/draft/2020-12/schema"
 
-var (
-	// Definitions contains the generated JSON schema definitions
-	Definitions map[string]*Schema
-
-	// definitionNames records the definition name assigned to result type
-	// expressions returned as-is by expr.Project (the design expression when
-	// it is already projected onto the requested view). The historical
-	// implementation renamed those expressions in place which made later
-	// references resolve to the first assigned name; the registry preserves
-	// that behavior while keeping the design expression tree read-only for
-	// the generators. Entries are keyed by expression instance so stale
-	// entries from previous generations cannot collide with new designs.
-	definitionNames = make(map[*expr.ResultTypeExpr]string)
-)
-
-// Initialize the global variables
-func init() {
-	Definitions = make(map[string]*Schema)
-}
-
 // NewSchema instantiates a new JSON schema.
 func NewSchema() *Schema {
 	js := Schema{
@@ -144,313 +125,6 @@ func (s *Schema) JSON() ([]byte, error) {
 		s.Schema = SchemaRef
 	}
 	return json.Marshal(s)
-}
-
-// APISchema produces the API JSON hyper schema.
-func APISchema(api *expr.APIExpr, r *expr.RootExpr) *Schema {
-	for _, res := range r.API.HTTP.Services {
-		GenerateServiceDefinition(api, res)
-	}
-	href := string(api.Servers[0].Hosts[0].URIs[0])
-	links := []*Link{
-		{
-			Href: href,
-			Rel:  "self",
-		},
-		{
-			Href:   "/schema",
-			Method: "GET",
-			Rel:    "self",
-			TargetSchema: &Schema{
-				Schema:               SchemaRef,
-				AdditionalProperties: true,
-			},
-		},
-	}
-	s := Schema{
-		ID:          fmt.Sprintf("%s/schema", href),
-		Title:       api.Title,
-		Description: api.Description,
-		Type:        Object,
-		Defs:        Definitions,
-		Properties:  propertiesFromDefs(Definitions, "#/$defs/"),
-		Links:       links,
-	}
-	return &s
-}
-
-// GenerateServiceDefinition produces the JSON schema corresponding to the given
-// service. It stores the results in Definitions.
-func GenerateServiceDefinition(api *expr.APIExpr, res *expr.HTTPServiceExpr) {
-	s := NewSchema()
-	s.Description = res.Description()
-	s.Type = Object
-	s.Title = res.Name()
-	Definitions[res.Name()] = s
-	for _, a := range res.HTTPEndpoints {
-		var requestSchema *Schema
-		if a.MethodExpr.Payload.Type != expr.Empty {
-			requestSchema = AttributeTypeSchema(api, a.MethodExpr.Payload)
-			requestSchema.Description = a.Name() + " payload"
-		}
-		var targetSchema *Schema
-		var identifier string
-		for _, resp := range a.Responses {
-			dt := resp.Body.Type
-			if mt := dt.(*expr.ResultTypeExpr); mt != nil {
-				if identifier == "" {
-					identifier = mt.Identifier
-				} else {
-					identifier = ""
-				}
-				switch {
-				case targetSchema == nil:
-					targetSchema = TypeSchemaWithPrefix(api, mt, a.Name())
-				case targetSchema.AnyOf == nil:
-					firstSchema := targetSchema
-					targetSchema = NewSchema()
-					targetSchema.AnyOf = []*Schema{firstSchema, TypeSchemaWithPrefix(api, mt, a.Name())}
-				default:
-					targetSchema.AnyOf = append(targetSchema.AnyOf, TypeSchemaWithPrefix(api, mt, a.Name()))
-				}
-			}
-		}
-		for i, r := range a.Routes {
-			for j, href := range toSchemaHrefs(r) {
-				link := Link{
-					Title:        a.Name(),
-					Rel:          a.Name(),
-					Href:         href,
-					Method:       r.Method,
-					Schema:       requestSchema,
-					TargetSchema: targetSchema,
-					ResultType:   identifier,
-				}
-				if i == 0 && j == 0 {
-					if ca := a.Service.CanonicalEndpoint(); ca != nil {
-						if ca.Name() == a.Name() {
-							link.Rel = "self"
-						}
-					}
-				}
-				s.Links = append(s.Links, &link)
-			}
-		}
-	}
-}
-
-// ResultTypeRef produces the JSON reference to the media type definition with
-// the given view.
-func ResultTypeRef(api *expr.APIExpr, mt *expr.ResultTypeExpr, view string) string {
-	return ResultTypeRefWithPrefix(api, mt, view, "")
-}
-
-// ResultTypeRefWithPrefix produces the JSON reference to the media type definition with
-// the given view and adds the provided prefix to the type name
-func ResultTypeRefWithPrefix(api *expr.APIExpr, mt *expr.ResultTypeExpr, view, prefix string) string {
-	projected, err := expr.Project(mt, view)
-	if err != nil {
-		panic(fmt.Sprintf("failed to project media type %#v: %s", mt.Identifier, err)) // bug
-	}
-	var metaName string
-	if n, ok := mt.Meta["openapi:typename"]; ok {
-		metaName = codegen.Goify(n[0], true)
-	}
-	name := projected.TypeName
-	if metaName != "" {
-		name = metaName
-	}
-	if assigned, ok := definitionNames[projected]; ok {
-		// expr.Project returned the design expression itself and a
-		// definition name was already assigned to it: keep referencing it.
-		name = assigned
-	} else {
-		if _, ok := Definitions[name]; !ok {
-			name = codegen.Goify(prefix, true) + codegen.Goify(name, true)
-			if metaName != "" {
-				name = metaName
-			}
-		}
-		if projected == mt {
-			// expr.Project returns its input when the result type is
-			// already projected onto the requested view. Record the
-			// assigned name instead of renaming the design expression in
-			// place: the design tree is read-only for the generators.
-			definitionNames[projected] = name
-		}
-	}
-	if _, ok := Definitions[name]; !ok {
-		GenerateResultTypeDefinition(api, renamedResultType(projected, name), expr.DefaultView)
-	}
-	return fmt.Sprintf("#/$defs/%s", name)
-}
-
-// TypeRef produces the JSON reference to the type definition.
-func TypeRef(api *expr.APIExpr, ut *expr.UserTypeExpr) string {
-	return TypeRefWithPrefix(api, ut, "")
-}
-
-// TypeRefWithPrefix produces the JSON reference to the type definition and adds the provided prefix
-// to the type name
-func TypeRefWithPrefix(api *expr.APIExpr, ut *expr.UserTypeExpr, prefix string) string {
-	typeName := ut.TypeName
-	if prefix != "" {
-		typeName = codegen.Goify(prefix, true) + codegen.Goify(ut.TypeName, true)
-	}
-	if n, ok := ut.Meta["openapi:typename"]; ok {
-		typeName = codegen.Goify(n[0], true)
-	}
-	if _, ok := Definitions[typeName]; !ok {
-		GenerateTypeDefinitionWithName(api, ut, typeName)
-	}
-	return fmt.Sprintf("#/$defs/%s", typeName)
-}
-
-// GenerateResultTypeDefinition produces the JSON schema corresponding to the
-// given media type and given view.
-func GenerateResultTypeDefinition(api *expr.APIExpr, mt *expr.ResultTypeExpr, view string) {
-	if _, ok := Definitions[mt.TypeName]; ok {
-		return
-	}
-	s := NewSchema()
-	s.Title = fmt.Sprintf("Mediatype identifier: %s", mt.Identifier)
-	Definitions[mt.TypeName] = s
-	buildResultTypeSchema(api, mt, view, s)
-}
-
-// GenerateTypeDefinition produces the JSON schema corresponding to the given
-// type.
-func GenerateTypeDefinition(api *expr.APIExpr, ut *expr.UserTypeExpr) {
-	GenerateTypeDefinitionWithName(api, ut, ut.TypeName)
-}
-
-// GenerateTypeDefinitionWithName produces the JSON schema corresponding to the given
-// type with provided type name.
-func GenerateTypeDefinitionWithName(api *expr.APIExpr, ut *expr.UserTypeExpr, typeName string) {
-	if _, ok := Definitions[typeName]; ok {
-		return
-	}
-	s := NewSchema()
-
-	s.Title = typeName
-	Definitions[typeName] = s
-	buildAttributeSchema(api, s, ut.AttributeExpr, api.ExampleGenerator.Rebased(ut.ID()))
-}
-
-// TypeSchema produces the JSON schema corresponding to the given data type.
-func TypeSchema(api *expr.APIExpr, t expr.DataType) *Schema {
-	return TypeSchemaWithPrefix(api, t, "")
-}
-
-// TypeSchemaWithPrefix produces the JSON schema corresponding to the given data type
-// and adds the provided prefix to the type name
-func TypeSchemaWithPrefix(api *expr.APIExpr, t expr.DataType, prefix string) *Schema {
-	return typeSchemaWithGen(api, t, prefix, api.ExampleGenerator)
-}
-
-// typeSchemaWithGen builds the JSON schema for t drawing example values from
-// gen. Child schemas derive their example streams from their position (object
-// property name, array index, map entry, union member) so every example in
-// the schema is anchored to the design element it illustrates.
-func typeSchemaWithGen(api *expr.APIExpr, t expr.DataType, prefix string, gen *expr.ExampleGenerator) *Schema {
-	s := NewSchema()
-	switch actual := t.(type) {
-	case expr.Primitive:
-		s.Type = Type(actual.Name())
-		switch actual.Kind() {
-		case expr.AnyKind:
-			// A schema without a type matches any data type.
-			// See https://swagger.io/docs/specification/data-models/data-types/#any.
-			s.Type = Type("")
-		case expr.IntKind, expr.Int64Kind,
-			expr.UIntKind, expr.UInt64Kind:
-			// Use int64 format for IntKind and UIntKind because the OpenAPI
-			// generator produced int32 by default.
-			s.Type = Type("integer")
-			s.Format = "int64"
-		case expr.Int32Kind, expr.UInt32Kind:
-			s.Type = Type("integer")
-			s.Format = "int32"
-		case expr.Float32Kind:
-			s.Type = Type("number")
-			s.Format = "float"
-		case expr.Float64Kind:
-			s.Type = Type("number")
-			s.Format = "double"
-		case expr.BytesKind:
-			s.Type = Type("string")
-			s.Format = "byte"
-		}
-	case *expr.Array:
-		s.Type = Array
-		s.Items = NewSchema()
-		buildAttributeSchema(api, s.Items, actual.ElemType, gen.Derived("0"))
-	case *expr.Object:
-		s.Type = Object
-		for _, nat := range *actual {
-			if !MustGenerate(nat.Attribute.Meta) {
-				continue
-			}
-			prop := NewSchema()
-			buildAttributeSchema(api, prop, nat.Attribute, gen.Derived(nat.Name))
-			s.Properties[nat.Name] = prop
-		}
-	case *expr.Map:
-		s.Type = Object
-		if actual.KeyType.Type == expr.String && actual.ElemType.Type != expr.Any {
-			// Use free-form objects when elements are of type "Any"
-			additionalProperties := NewSchema()
-			s.AdditionalProperties = buildAttributeSchema(api, additionalProperties, actual.ElemType, gen.Derived("val0"))
-		} else {
-			s.AdditionalProperties = true
-		}
-	case *expr.Union:
-		// Each branch owns both its discriminator literal and value schema so
-		// clients cannot combine one branch tag with another branch value.
-		typeKey := actual.GetTypeKey()
-		valueKey := actual.GetValueKey()
-
-		s.Type = Object
-		for _, val := range actual.Values {
-			valueSchema := typeSchemaWithGen(api, val.Attribute.Type, prefix, gen.Derived(val.Name))
-			initAttributeValidation(valueSchema, val.Attribute)
-			s.AnyOf = append(s.AnyOf, &Schema{
-				Type: Object,
-				Properties: map[string]*Schema{
-					typeKey: {
-						Type: String,
-						Enum: []any{val.Name},
-					},
-					valueKey: valueSchema,
-				},
-				Required: []string{typeKey, valueKey},
-			})
-		}
-	case *expr.UserTypeExpr:
-		if expr.IsAlias(actual) {
-			s = typeSchemaWithGen(api, actual.Attribute().Type, prefix, gen.Rebased(actual.ID()))
-			initAttributeValidation(s, actual.Attribute())
-			break
-		}
-		s.Ref = TypeRefWithPrefix(api, actual, prefix)
-	case *expr.ResultTypeExpr:
-		// Use "default" view by default
-		s.Ref = ResultTypeRefWithPrefix(api, actual, expr.DefaultView, prefix)
-	}
-	return s
-}
-
-// AttributeTypeSchema produces the JSON schema corresponding to the given attribute.
-func AttributeTypeSchema(api *expr.APIExpr, at *expr.AttributeExpr) *Schema {
-	return AttributeTypeSchemaWithPrefix(api, at, "")
-}
-
-// AttributeTypeSchemaWithPrefix produces the JSON schema corresponding to the given attribute
-// and adds the provided prefix to the type name
-func AttributeTypeSchemaWithPrefix(api *expr.APIExpr, at *expr.AttributeExpr, prefix string) *Schema {
-	s := TypeSchemaWithPrefix(api, at.Type, prefix)
-	initAttributeValidation(s, at)
-	return s
 }
 
 // ToString returns the string representation of the given type.
@@ -514,38 +188,75 @@ func (s *Schema) MarshalYAML() (any, error) {
 	return MarshalYAML((*_Schema)(s), s.Extensions)
 }
 
-// Dup creates a shallow clone of the given schema.
+// Dup returns an independent copy of the schema. Callers may change any nested
+// schema, collection, example, default, or extension without changing s.
 func (s *Schema) Dup() *Schema {
 	js := Schema{
-		ID:                   s.ID,
-		Description:          s.Description,
-		Schema:               s.Schema,
-		Type:                 s.Type,
-		DefaultValue:         s.DefaultValue,
-		Title:                s.Title,
-		Media:                s.Media,
-		ReadOnly:             s.ReadOnly,
-		PathStart:            s.PathStart,
-		Links:                s.Links,
-		Ref:                  s.Ref,
-		Enum:                 s.Enum,
-		Format:               s.Format,
-		Pattern:              s.Pattern,
-		Minimum:              s.Minimum,
-		Maximum:              s.Maximum,
-		MinLength:            s.MinLength,
-		MaxLength:            s.MaxLength,
-		MinItems:             s.MinItems,
-		MaxItems:             s.MaxItems,
-		Required:             s.Required,
-		AdditionalProperties: s.AdditionalProperties,
-		ContentMediaType:     s.ContentMediaType,
+		Schema:           s.Schema,
+		ID:               s.ID,
+		Title:            s.Title,
+		Type:             s.Type,
+		Description:      s.Description,
+		DefaultValue:     duplicateJSONValue(s.DefaultValue),
+		Example:          duplicateJSONValue(s.Example),
+		ReadOnly:         s.ReadOnly,
+		PathStart:        s.PathStart,
+		Ref:              s.Ref,
+		Format:           s.Format,
+		Pattern:          s.Pattern,
+		ExclusiveMinimum: duplicatePointer(s.ExclusiveMinimum),
+		Minimum:          duplicatePointer(s.Minimum),
+		ExclusiveMaximum: duplicatePointer(s.ExclusiveMaximum),
+		Maximum:          duplicatePointer(s.Maximum),
+		MinLength:        duplicatePointer(s.MinLength),
+		MaxLength:        duplicatePointer(s.MaxLength),
+		MinItems:         duplicatePointer(s.MinItems),
+		MaxItems:         duplicatePointer(s.MaxItems),
+		Required:         append([]string(nil), s.Required...),
+		ContentMediaType: s.ContentMediaType,
+	}
+	if s.Media != nil {
+		media := *s.Media
+		js.Media = &media
+	}
+	if s.Links != nil {
+		js.Links = make([]*Link, len(s.Links))
+		for index, link := range s.Links {
+			copy := *link
+			if link.Schema != nil {
+				copy.Schema = link.Schema.Dup()
+			}
+			if link.TargetSchema != nil {
+				copy.TargetSchema = link.TargetSchema.Dup()
+			}
+			js.Links[index] = &copy
+		}
+	}
+	if s.Enum != nil {
+		js.Enum = make([]any, len(s.Enum))
+		for index, value := range s.Enum {
+			js.Enum[index] = duplicateJSONValue(value)
+		}
+	}
+	if additional, ok := s.AdditionalProperties.(*Schema); ok {
+		js.AdditionalProperties = additional.Dup()
+	} else {
+		js.AdditionalProperties = duplicateJSONValue(s.AdditionalProperties)
+	}
+	if s.Extensions != nil {
+		js.Extensions = make(map[string]any, len(s.Extensions))
+		for name, value := range s.Extensions {
+			js.Extensions[name] = duplicateJSONValue(value)
+		}
 	}
 	if s.ContentSchema != nil {
 		js.ContentSchema = s.ContentSchema.Dup()
 	}
-	for n, p := range s.Properties {
-		js.Properties[n] = p.Dup()
+	if s.Properties != nil {
+		js.Properties = make(map[string]*Schema, len(s.Properties))
+		for name, property := range s.Properties {
+			js.Properties[name] = property.Dup()
+		}
 	}
 	if s.Items != nil {
 		js.Items = s.Items.Dup()
@@ -556,138 +267,13 @@ func (s *Schema) Dup() *Schema {
 			js.AnyOf[i] = branch.Dup()
 		}
 	}
-	for n, d := range s.Defs {
-		js.Defs[n] = d.Dup()
+	if s.Defs != nil {
+		js.Defs = make(map[string]*Schema, len(s.Defs))
+		for name, definition := range s.Defs {
+			js.Defs[name] = definition.Dup()
+		}
 	}
 	return &js
-}
-
-// buildAttributeSchema initializes the given JSON schema that corresponds to
-// the given attribute, drawing example values from gen.
-func buildAttributeSchema(api *expr.APIExpr, s *Schema, at *expr.AttributeExpr, gen *expr.ExampleGenerator) *Schema {
-	s.Merge(typeSchemaWithGen(api, at.Type, "", gen))
-	if s.Ref != "" {
-		// Ref is exclusive with other fields
-		return s
-	}
-	s.DefaultValue = ToStringMap(at.DefaultValue)
-	if at.Description != "" {
-		s.Description = at.Description
-	}
-	s.Example = ProjectExample(at, at.Example(gen))
-	s.Extensions = ExtensionsFromExpr(at.Meta)
-	if ap := AdditionalPropertiesFromExpr(at.Meta); ap != nil {
-		s.AdditionalProperties = ap
-	}
-	initAttributeValidation(s, at)
-
-	return s
-}
-
-// initAttributeValidation initializes validation rules for an attribute.
-func initAttributeValidation(s *Schema, at *expr.AttributeExpr) {
-	val := at.Validation
-	if val == nil {
-		return
-	}
-	s.Enum = val.Values
-	if val.Format != "" {
-		s.Format = string(val.Format)
-	}
-	s.Pattern = val.Pattern
-	if val.ExclusiveMinimum != nil {
-		s.ExclusiveMinimum = val.ExclusiveMinimum
-	}
-	if val.Minimum != nil {
-		s.Minimum = val.Minimum
-	}
-	if val.ExclusiveMaximum != nil {
-		s.ExclusiveMaximum = val.ExclusiveMaximum
-	}
-	if val.Maximum != nil {
-		s.Maximum = val.Maximum
-	}
-	if val.MinLength != nil {
-		if _, ok := at.Type.(*expr.Array); ok {
-			s.MinItems = val.MinLength
-		} else {
-			s.MinLength = val.MinLength
-		}
-	}
-	if val.MaxLength != nil {
-		if _, ok := at.Type.(*expr.Array); ok {
-			s.MaxItems = val.MaxLength
-		} else {
-			s.MaxLength = val.MaxLength
-		}
-	}
-	for _, v := range val.Required {
-		if a := at.Find(v); a != nil {
-			if !MustGenerate(a.Meta) {
-				continue
-			}
-		}
-		s.Required = append(s.Required, v)
-	}
-}
-
-// renamedResultType returns rt carrying the given type name. When the name
-// already matches it returns rt unchanged, otherwise it returns a shallow
-// copy sharing the attribute, views and identifier so the schema definition
-// is registered under the assigned name without renaming the (possibly design
-// owned) expression in place.
-func renamedResultType(rt *expr.ResultTypeExpr, name string) *expr.ResultTypeExpr {
-	if rt.TypeName == name {
-		return rt
-	}
-	ut := *rt.UserTypeExpr
-	ut.TypeName = name
-	dup := *rt
-	dup.UserTypeExpr = &ut
-	return &dup
-}
-
-// toSchemaHrefs produces hrefs that replace the path wildcards with JSON
-// schema references when appropriate.
-func toSchemaHrefs(r *expr.RouteExpr) []string {
-	paths := r.FullPaths()
-	res := make([]string, len(paths))
-	for i, path := range paths {
-		params := expr.ExtractHTTPWildcards(path)
-		args := make([]any, len(params))
-		for j, p := range params {
-			args[j] = fmt.Sprintf("/{%s}", p)
-		}
-		tmpl := expr.HTTPWildcardRegex.ReplaceAllLiteralString(path, "%s")
-		res[i] = fmt.Sprintf(tmpl, args...)
-	}
-	return res
-}
-
-// propertiesFromDefs creates a Properties map referencing the given definitions
-// under the given path.
-func propertiesFromDefs(definitions map[string]*Schema, path string) map[string]*Schema {
-	res := make(map[string]*Schema, len(definitions))
-	for n := range definitions {
-		if n == "identity" {
-			continue
-		}
-		s := NewSchema()
-		s.Ref = path + n
-		res[n] = s
-	}
-	return res
-}
-
-// buildResultTypeSchema initializes s as the JSON schema representing mt for the
-// given view.
-func buildResultTypeSchema(api *expr.APIExpr, mt *expr.ResultTypeExpr, view string, s *Schema) {
-	s.Media = &Media{Type: mt.Identifier}
-	projected, err := expr.Project(mt, view)
-	if err != nil {
-		panic(fmt.Sprintf("failed to project media type %#v: %s", mt.Identifier, err)) // bug
-	}
-	buildAttributeSchema(api, s, projected.AttributeExpr, api.ExampleGenerator.Rebased(projected.ID()))
 }
 
 // MustGenerate returns true if the meta indicates that a OpenAPI specification should be
@@ -714,6 +300,11 @@ func AdditionalPropertiesFromExpr(meta expr.MetaExpr) any {
 
 func projectExample(t expr.DataType, val any) any {
 	switch actual := t.(type) {
+	case expr.Primitive:
+		if actual.Kind() == expr.BytesKind {
+			return base64.StdEncoding.EncodeToString(reflect.ValueOf(val).Bytes())
+		}
+		return ToStringMap(val)
 	case *expr.UserTypeExpr:
 		return ProjectExample(actual.Attribute(), val)
 	case *expr.ResultTypeExpr:
@@ -727,6 +318,75 @@ func projectExample(t expr.DataType, val any) any {
 	default:
 		return ToStringMap(val)
 	}
+}
+
+// duplicateJSONValue copies the maps, slices, arrays, pointers, and interface
+// values accepted by JSON fields while preserving their concrete Go types.
+func duplicateJSONValue(value any) any {
+	if value == nil {
+		return nil
+	}
+	return duplicateJSONReflectValue(reflect.ValueOf(value)).Interface()
+}
+
+// duplicateJSONReflectValue recursively copies one reflected JSON value.
+func duplicateJSONReflectValue(value reflect.Value) reflect.Value {
+	switch value.Kind() {
+	case reflect.Interface:
+		if value.IsNil() {
+			return reflect.Zero(value.Type())
+		}
+		copy := duplicateJSONReflectValue(value.Elem())
+		result := reflect.New(value.Type()).Elem()
+		result.Set(copy)
+		return result
+	case reflect.Pointer:
+		if value.IsNil() {
+			return reflect.Zero(value.Type())
+		}
+		copy := reflect.New(value.Type().Elem())
+		copy.Elem().Set(duplicateJSONReflectValue(value.Elem()))
+		return copy
+	case reflect.Map:
+		if value.IsNil() {
+			return reflect.Zero(value.Type())
+		}
+		copy := reflect.MakeMapWithSize(value.Type(), value.Len())
+		iterator := value.MapRange()
+		for iterator.Next() {
+			copy.SetMapIndex(
+				duplicateJSONReflectValue(iterator.Key()),
+				duplicateJSONReflectValue(iterator.Value()),
+			)
+		}
+		return copy
+	case reflect.Slice:
+		if value.IsNil() {
+			return reflect.Zero(value.Type())
+		}
+		copy := reflect.MakeSlice(value.Type(), value.Len(), value.Cap())
+		for index := range value.Len() {
+			copy.Index(index).Set(duplicateJSONReflectValue(value.Index(index)))
+		}
+		return copy
+	case reflect.Array:
+		copy := reflect.New(value.Type()).Elem()
+		for index := range value.Len() {
+			copy.Index(index).Set(duplicateJSONReflectValue(value.Index(index)))
+		}
+		return copy
+	default:
+		return value
+	}
+}
+
+// duplicatePointer copies one scalar schema limit while preserving nil.
+func duplicatePointer[T any](value *T) *T {
+	if value == nil {
+		return nil
+	}
+	copy := *value
+	return &copy
 }
 
 func projectObjectExample(obj *expr.Object, val any) any {

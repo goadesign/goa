@@ -1,0 +1,78 @@
+// This schema records the Go names produced by Goa's supported protobuf tools.
+syntax = "proto3";
+
+package goa.names.v1;
+
+option go_package = "goa.design/goa/v3/grpc/codegen/testdata/protocnames;protocnames";
+
+enum http_2_status {
+  HTTP_2_STATUS_UNSPECIFIED = 0;
+  HTTP2_OK = 1;
+  URL_2_READY = 2;
+}
+
+message api2_http_request {
+  string api_url = 1;
+  string api2_url = 2;
+  string url2_id = 3;
+  string dns_2_server = 4;
+  string x509_cert = 5;
+  string type = 6;
+  string func = 7;
+  string var = 8;
+  string range = 9;
+  string reset = 10;
+  string string = 11;
+  string proto_message = 12;
+  string descriptor = 13;
+  string marshal = 14;
+  string unmarshal = 15;
+  string extension_range_array = 16;
+  string extension_map = 17;
+  string get_api_url = 18;
+  string message_ = 19;
+  string service_ = 20;
+
+  oneof result_2_kind {
+    string http_2xx = 21;
+    nested_api2 api_url_value = 22;
+    bytes package_ = 23;
+  }
+
+  message nested_api2 {
+    enum state_2 {
+      STATE_2_UNSPECIFIED = 0;
+      DNS2_READY = 1;
+      URL_2_READY = 2;
+    }
+
+    state_2 state = 1;
+  }
+}
+
+message wrapper_conflict {
+  message _BranchValue {
+  }
+
+  string choice_value = 1;
+
+  oneof choiceValue {
+    _BranchValue branchValue = 2;
+    string reset = 3;
+  }
+}
+
+message Explicit_HTTP2_Name {
+  string Explicit_Field2_Name = 1;
+}
+
+message stream_reply {
+  http_2_status status = 1;
+}
+
+service api2_http_service {
+  rpc get_url2(api2_http_request) returns (stream_reply);
+  rpc watch_dns2(api2_http_request) returns (stream stream_reply);
+  rpc upload_api2(stream api2_http_request) returns (stream_reply);
+  rpc sync_x509(stream api2_http_request) returns (stream stream_reply);
+}

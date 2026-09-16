@@ -1,0 +1,209 @@
+package server
+
+// NewWithPayloadHandler creates a JSON-RPC handler which calls the
+// "notifications" service "with_payload" endpoint.
+func NewWithPayloadHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+) func(context.Context, *http.Request, *jsonrpc.RawRequest, http.ResponseWriter) error {
+	decodeParams := DecodeWithPayloadRequest(mux, decoder)
+	return func(ctx context.Context, r *http.Request, req *jsonrpc.RawRequest, w http.ResponseWriter) error {
+		ctx = context.WithValue(ctx, goa.MethodKey, "with_payload")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "notifications")
+		// A declared notification reports failures without writing an HTTP response.
+		outputWriter := &noOutputResponseWriter{header: make(http.Header)}
+		params, err := decodeParams(r, req)
+		if err != nil {
+			errhandler(ctx, outputWriter, fmt.Errorf("failed to decode parameters: %w", err))
+			return nil
+		}
+		_, err = endpoint(ctx, params)
+		if err != nil {
+			errhandler(ctx, outputWriter, fmt.Errorf("endpoint error: %w", err))
+			return nil
+		}
+		// A declared notification receives no response.
+		return nil
+	}
+}
+
+// NewWithoutPayloadHandler creates a JSON-RPC handler which calls the
+// "notifications" service "without_payload" endpoint.
+func NewWithoutPayloadHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+) func(context.Context, *http.Request, *jsonrpc.RawRequest, http.ResponseWriter) error {
+	return func(ctx context.Context, r *http.Request, req *jsonrpc.RawRequest, w http.ResponseWriter) error {
+		ctx = context.WithValue(ctx, goa.MethodKey, "without_payload")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "notifications")
+		// A declared notification reports failures without writing an HTTP response.
+		outputWriter := &noOutputResponseWriter{header: make(http.Header)}
+		_, err := endpoint(ctx, nil)
+		if err != nil {
+			errhandler(ctx, outputWriter, fmt.Errorf("endpoint error: %w", err))
+			return nil
+		}
+		// A declared notification receives no response.
+		return nil
+	}
+}
+
+// NewOrdinaryVoidHandler creates a JSON-RPC handler which calls the
+// "notifications" service "ordinary_void" endpoint.
+func NewOrdinaryVoidHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+) func(context.Context, *http.Request, *jsonrpc.RawRequest, http.ResponseWriter) error {
+	return func(ctx context.Context, r *http.Request, req *jsonrpc.RawRequest, w http.ResponseWriter) error {
+		ctx = context.WithValue(ctx, goa.MethodKey, "ordinary_void")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "notifications")
+		_, err := endpoint(ctx, nil)
+		if err != nil {
+			encodeJSONRPCError(ctx, w, req, jsonrpc.InternalError, err.Error(), nil, encoder, errhandler)
+			return nil
+		}
+		// A method with no result returns a JSON null result.
+		response := jsonrpc.MakeSuccessResponse(req.ID, nil)
+		if err := encoder(ctx, w).Encode(response); err != nil {
+			errhandler(ctx, w, fmt.Errorf("failed to encode JSON-RPC response: %w", err))
+		}
+		return nil
+	}
+}
+
+// NewRequiredIDHandler creates a JSON-RPC handler which calls the
+// "notifications" service "required_id" endpoint.
+func NewRequiredIDHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+) func(context.Context, *http.Request, *jsonrpc.RawRequest, http.ResponseWriter) error {
+	decodeParams := DecodeRequiredIDRequest(mux, decoder)
+	return func(ctx context.Context, r *http.Request, req *jsonrpc.RawRequest, w http.ResponseWriter) error {
+		ctx = context.WithValue(ctx, goa.MethodKey, "required_id")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "notifications")
+		params, err := decodeParams(r, req)
+		if err != nil {
+			encodeJSONRPCError(ctx, w, req, jsonrpc.InvalidParams, err.Error(), nil, encoder, errhandler)
+			return nil
+		}
+		_, err = endpoint(ctx, params)
+		if err != nil {
+			encodeJSONRPCError(ctx, w, req, jsonrpc.InternalError, err.Error(), nil, encoder, errhandler)
+			return nil
+		}
+		// A method with no result returns a JSON null result.
+		response := jsonrpc.MakeSuccessResponse(req.ID, nil)
+		if err := encoder(ctx, w).Encode(response); err != nil {
+			errhandler(ctx, w, fmt.Errorf("failed to encode JSON-RPC response: %w", err))
+		}
+		return nil
+	}
+}
+
+// NewOptionalIDHandler creates a JSON-RPC handler which calls the
+// "notifications" service "optional_id" endpoint.
+func NewOptionalIDHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+) func(context.Context, *http.Request, *jsonrpc.RawRequest, http.ResponseWriter) error {
+	decodeParams := DecodeOptionalIDRequest(mux, decoder)
+	return func(ctx context.Context, r *http.Request, req *jsonrpc.RawRequest, w http.ResponseWriter) error {
+		ctx = context.WithValue(ctx, goa.MethodKey, "optional_id")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "notifications")
+		params, err := decodeParams(r, req)
+		if err != nil {
+			encodeJSONRPCError(ctx, w, req, jsonrpc.InvalidParams, err.Error(), nil, encoder, errhandler)
+			return nil
+		}
+		_, err = endpoint(ctx, params)
+		if err != nil {
+			encodeJSONRPCError(ctx, w, req, jsonrpc.InternalError, err.Error(), nil, encoder, errhandler)
+			return nil
+		}
+		// A method with no result returns a JSON null result.
+		response := jsonrpc.MakeSuccessResponse(req.ID, nil)
+		if err := encoder(ctx, w).Encode(response); err != nil {
+			errhandler(ctx, w, fmt.Errorf("failed to encode JSON-RPC response: %w", err))
+		}
+		return nil
+	}
+}
+
+// NewDefaultedIDHandler creates a JSON-RPC handler which calls the
+// "notifications" service "defaulted_id" endpoint.
+func NewDefaultedIDHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+) func(context.Context, *http.Request, *jsonrpc.RawRequest, http.ResponseWriter) error {
+	decodeParams := DecodeDefaultedIDRequest(mux, decoder)
+	return func(ctx context.Context, r *http.Request, req *jsonrpc.RawRequest, w http.ResponseWriter) error {
+		ctx = context.WithValue(ctx, goa.MethodKey, "defaulted_id")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "notifications")
+		params, err := decodeParams(r, req)
+		if err != nil {
+			encodeJSONRPCError(ctx, w, req, jsonrpc.InvalidParams, err.Error(), nil, encoder, errhandler)
+			return nil
+		}
+		_, err = endpoint(ctx, params)
+		if err != nil {
+			encodeJSONRPCError(ctx, w, req, jsonrpc.InternalError, err.Error(), nil, encoder, errhandler)
+			return nil
+		}
+		// A method with no result returns a JSON null result.
+		response := jsonrpc.MakeSuccessResponse(req.ID, nil)
+		if err := encoder(ctx, w).Encode(response); err != nil {
+			errhandler(ctx, w, fmt.Errorf("failed to encode JSON-RPC response: %w", err))
+		}
+		return nil
+	}
+}
+
+// NewValidatedIDHandler creates a JSON-RPC handler which calls the
+// "notifications" service "validated_id" endpoint.
+func NewValidatedIDHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+) func(context.Context, *http.Request, *jsonrpc.RawRequest, http.ResponseWriter) error {
+	decodeParams := DecodeValidatedIDRequest(mux, decoder)
+	return func(ctx context.Context, r *http.Request, req *jsonrpc.RawRequest, w http.ResponseWriter) error {
+		ctx = context.WithValue(ctx, goa.MethodKey, "validated_id")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "notifications")
+		params, err := decodeParams(r, req)
+		if err != nil {
+			encodeJSONRPCError(ctx, w, req, jsonrpc.InvalidParams, err.Error(), nil, encoder, errhandler)
+			return nil
+		}
+		_, err = endpoint(ctx, params)
+		if err != nil {
+			encodeJSONRPCError(ctx, w, req, jsonrpc.InternalError, err.Error(), nil, encoder, errhandler)
+			return nil
+		}
+		// A method with no result returns a JSON null result.
+		response := jsonrpc.MakeSuccessResponse(req.ID, nil)
+		if err := encoder(ctx, w).Encode(response); err != nil {
+			errhandler(ctx, w, fmt.Errorf("failed to encode JSON-RPC response: %w", err))
+		}
+		return nil
+	}
+}

@@ -9,7 +9,7 @@
 {{- end }}
 {{- if .HasMixedResults }}
 {{- $unaryResultType := .ResultRef }}
-func (c *{{ .ClientVarName }}) {{ .VarName }}(ctx context.Context{{ if .PayloadRef }}, p {{ .PayloadRef }}{{ end }}{{ if .MethodData.SkipRequestBodyEncodeDecode}}, req io.ReadCloser{{ end }}) ({{ if $unaryResultType }}res {{ $unaryResultType }}, {{ end }}{{ if .MethodData.SkipResponseBodyEncodeDecode }}resp io.ReadCloser, {{ end }}err error) {
+func (c *{{ .ClientDeclaration.Name }}) {{ .VarName }}(ctx context.Context{{ if .PayloadRef }}, p {{ .PayloadRef }}{{ end }}{{ if .MethodData.SkipRequestBodyEncodeDecode}}, req io.ReadCloser{{ end }}) ({{ if $unaryResultType }}res {{ $unaryResultType }}, {{ end }}{{ if .MethodData.SkipResponseBodyEncodeDecode }}resp io.ReadCloser, {{ end }}err error) {
 	{{- if or $unaryResultType .MethodData.SkipResponseBodyEncodeDecode }}
 	var ires any
 	{{- end }}
@@ -30,7 +30,7 @@ func (c *{{ .ClientVarName }}) {{ .VarName }}(ctx context.Context{{ if .PayloadR
 }
 
 {{ printf "%sStream calls the %q endpoint of the %q service with server streaming enabled." .VarName .Name .ServiceName | comment }}
-func (c *{{ .ClientVarName }}) {{ .VarName }}Stream(ctx context.Context{{ if .PayloadRef }}, p {{ .PayloadRef }}{{ end }}{{ if .MethodData.SkipRequestBodyEncodeDecode}}, req io.ReadCloser{{ end }}) (res {{ .ClientStream.Interface }}, err error) {
+func (c *{{ .ClientDeclaration.Name }}) {{ .VarName }}Stream(ctx context.Context{{ if .PayloadRef }}, p {{ .PayloadRef }}{{ end }}{{ if .MethodData.SkipRequestBodyEncodeDecode}}, req io.ReadCloser{{ end }}) (res {{ .ClientStream.Interface }}, err error) {
 	var ires any
 	ires, err = c.{{ .StreamEndpointField }}(ctx, {{ if .MethodData.SkipRequestBodyEncodeDecode }}&{{ .RequestStruct }}{ {{ if .PayloadRef }}Payload: p, {{ end }}Body: req }{{ else if .PayloadRef }}p{{ else }}nil{{ end }})
 	if err != nil {
@@ -44,7 +44,7 @@ func (c *{{ .ClientVarName }}) {{ .VarName }}Stream(ctx context.Context{{ if .Pa
 	{{- /* When a client stream exists, always return it from the client method. */ -}}
 	{{- $resultType = .ClientStream.Interface }}
 {{- end }}
-func (c *{{ .ClientVarName }}) {{ .VarName }}(ctx context.Context{{ if .PayloadRef }}, p {{ .PayloadRef }}{{ end }}{{ if .MethodData.SkipRequestBodyEncodeDecode}}, req io.ReadCloser{{ end }}) ({{ if $resultType }}res {{ $resultType }}, {{ end }}{{ if .MethodData.SkipResponseBodyEncodeDecode }}resp io.ReadCloser, {{ end }}err error) {
+func (c *{{ .ClientDeclaration.Name }}) {{ .VarName }}(ctx context.Context{{ if .PayloadRef }}, p {{ .PayloadRef }}{{ end }}{{ if .MethodData.SkipRequestBodyEncodeDecode}}, req io.ReadCloser{{ end }}) ({{ if $resultType }}res {{ $resultType }}, {{ end }}{{ if .MethodData.SkipResponseBodyEncodeDecode }}resp io.ReadCloser, {{ end }}err error) {
 	{{- if or $resultType .MethodData.SkipResponseBodyEncodeDecode }}
 	var ires any
 	{{- end }}

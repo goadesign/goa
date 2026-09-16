@@ -1,8 +1,13 @@
+// This file renders service declarations and groups declarations with explicit
+// package locations into the generated Go package and file where each one is
+// written.
 package service
 
 import (
 	"fmt"
+	"path"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -10,52 +15,133 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
-// Files returns the generated files for the given service as well as a map
-// indexing user type names by custom path as defined by the "struct:pkg:path"
-// metadata. The map is built over each invocation of Files to avoid duplicate
-// type definitions.
-func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, userTypePkgs map[string][]string) []*codegen.File {
-	svc := services.Get(service.Name)
+type (
+	// serviceTypeSectionPhase identifies the stable group containing a service
+	// type-file section. Type declarations must precede methods defined on them.
+	serviceTypeSectionPhase uint8
+
+	// serviceTypeSection retains the explicit ordering facts for one section in
+	// service.go instead of encoding its group in a decorated string key.
+	serviceTypeSection struct {
+		phase   serviceTypeSectionPhase
+		name    string
+		section *codegen.SectionTemplate
+	}
+)
+
+const (
+	serviceTypeDefinitionPhase serviceTypeSectionPhase = iota
+	serviceErrorImplementationPhase
+)
+
+// Files renders every service file described by plans. Each plan must be
+// linked so every renderer reads the declarations copied before their names
+// were chosen instead of rebuilding service analysis from the expression root.
+func Files(plans ...*Plan) ([]*codegen.File, error) {
+	var files []*codegen.File
+	if len(plans) == 0 {
+		return files, nil
+	}
+	generation := plans[0].generation
+	ownedRoots := make(map[*expr.RootExpr]struct{})
+	for _, candidate := range generation.Roots() {
+		if root, ok := candidate.(*expr.RootExpr); ok {
+			ownedRoots[root] = struct{}{}
+		}
+	}
+	for _, plan := range plans[1:] {
+		if plan.generation != generation {
+			return nil, fmt.Errorf("service plans belong to different generations")
+		}
+	}
+	if len(plans) != len(ownedRoots) {
+		return nil, fmt.Errorf("service rendering requires all %d planned roots, got %d", len(ownedRoots), len(plans))
+	}
+	seenRoots := make(map[*expr.RootExpr]struct{}, len(plans))
+	for _, plan := range plans {
+		if _, owned := ownedRoots[plan.facts.root]; !owned {
+			return nil, rootMembershipError(plan.facts.root)
+		}
+		if _, exists := seenRoots[plan.facts.root]; exists {
+			return nil, fmt.Errorf("service root %p is rendered more than once", plan.facts.root)
+		}
+		seenRoots[plan.facts.root] = struct{}{}
+	}
+	analyses := make([]*ServicesData, len(plans))
+	for index, plan := range plans {
+		analyses[index] = plan.Services()
+		for _, facts := range plan.facts.services {
+			files = append(files, serviceFiles(plan, facts)...)
+		}
+	}
+	generatedFiles, err := generatedPackageFiles(analyses)
+	if err != nil {
+		return nil, err
+	}
+	files = append(files, generatedFiles...)
+	for _, plan := range plans {
+		for _, facts := range plan.facts.services {
+			files = append(files,
+				endpointFile(plan, facts),
+				clientFile(plan, facts),
+			)
+			if file := viewsFile(plan, facts); file != nil {
+				files = append(files, file)
+			}
+		}
+	}
+	conversionFiles, err := externalConversionFiles(plans)
+	if err != nil {
+		return nil, err
+	}
+	files = append(files, convertFiles(conversionFiles)...)
+	return files, nil
+}
+
+// serviceFiles renders the declarations and helpers owned exclusively by one
+// service package. Relocated declarations and all union definitions are
+// emitted later by generatedPackageFiles.
+func serviceFiles(plan *Plan, facts *serviceFacts) []*codegen.File {
+	services := plan.Services()
+	svc := services.Get(facts.name)
 	svcName := svc.PathName
 	svcPath := filepath.Join(codegen.Gendir, svcName, "service.go")
 	seen := make(map[string]struct{})
-	typeDefSections := make(map[string]map[string]*codegen.SectionTemplate)
-	typesByPath := make(map[string][]string)
+	typeSections := make([]serviceTypeSection, 0)
 	svcSections := make([]*codegen.SectionTemplate, 0, 10)
 
-	addTypeDefSection := func(path, name string, section *codegen.SectionTemplate) {
-		if typeDefSections[path] == nil {
-			typeDefSections[path] = make(map[string]*codegen.SectionTemplate)
-		}
-		typeDefSections[path][name] = section
-		typesByPath[path] = append(typesByPath[path], name)
+	addTypeDefSection := func(name string, section *codegen.SectionTemplate) {
+		typeSections = append(typeSections, serviceTypeSection{
+			phase:   serviceTypeDefinitionPhase,
+			name:    name,
+			section: section,
+		})
 		seen[name] = struct{}{}
 	}
 
-	for _, m := range svc.Methods {
-		payloadPath := pathWithDefault(m.PayloadLoc, svcPath)
-		resultPath := pathWithDefault(m.ResultLoc, svcPath)
-		if m.PayloadDef != "" {
+	for i, m := range svc.Methods {
+		method := facts.orderedMethods[i]
+		if m.PayloadLoc == nil && m.PayloadDef != "" {
 			if _, ok := seen[m.Payload]; !ok {
-				addTypeDefSection(payloadPath, m.Payload, &codegen.SectionTemplate{
+				addTypeDefSection(m.Payload, &codegen.SectionTemplate{
 					Name:   "service-payload",
 					Source: serviceTemplates.Read(payloadT),
 					Data:   m,
 				})
 			}
 		}
-		if m.StreamingPayloadDef != "" {
+		if method.streamingPayload != nil && method.streamingPayload.location == nil && m.StreamingPayloadDef != "" {
 			if _, ok := seen[m.StreamingPayload]; !ok {
-				addTypeDefSection(payloadPath, m.StreamingPayload, &codegen.SectionTemplate{
+				addTypeDefSection(m.StreamingPayload, &codegen.SectionTemplate{
 					Name:   "service-streaming-payload",
 					Source: serviceTemplates.Read(streamingPayloadT),
 					Data:   m,
 				})
 			}
 		}
-		if m.ResultDef != "" {
+		if m.ResultLoc == nil && m.ResultDef != "" {
 			if _, ok := seen[m.Result]; !ok {
-				addTypeDefSection(resultPath, m.Result, &codegen.SectionTemplate{
+				addTypeDefSection(m.Result, &codegen.SectionTemplate{
 					Name:   "service-result",
 					Source: serviceTemplates.Read(resultT),
 					Data:   m,
@@ -63,9 +149,9 @@ func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, use
 			}
 		}
 		// Generate streaming result type if different from result
-		if m.StreamingResultDef != "" && m.StreamingResult != m.Result {
+		if method.streamingResult != nil && method.streamingResult.location == nil && m.StreamingResultDef != "" && m.StreamingResult != m.Result {
 			if _, ok := seen[m.StreamingResult]; !ok {
-				addTypeDefSection(resultPath, m.StreamingResult, &codegen.SectionTemplate{
+				addTypeDefSection(m.StreamingResult, &codegen.SectionTemplate{
 					Name:   "service-streaming-result",
 					Source: serviceTemplates.Read(resultT),
 					Data: map[string]any{
@@ -78,52 +164,41 @@ func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, use
 		}
 	}
 	for _, ut := range svc.userTypes {
-		if _, ok := seen[ut.VarName]; !ok {
-			addTypeDefSection(pathWithDefault(ut.Loc, svcPath), ut.VarName, &codegen.SectionTemplate{
-				Name:   "service-user-type",
-				Source: serviceTemplates.Read(userTypeT),
-				Data:   ut,
-			})
+		if ut.Loc == nil {
+			if _, ok := seen[ut.VarName]; !ok {
+				addTypeDefSection(ut.VarName, &codegen.SectionTemplate{
+					Name:   "service-user-type",
+					Source: serviceTemplates.Read(userTypeT),
+					Data:   ut,
+				})
+			}
 		}
-	}
-	for _, u := range svc.unions {
-		addTypeDefSection(pathWithDefault(u.Loc, svcPath), "~union:"+u.Name, &codegen.SectionTemplate{
-			Name:   "service-union-type",
-			Source: serviceTemplates.Read(unionTypeT),
-			Data:   u,
-		})
 	}
 
-	var errorTypes []*UserTypeData
 	seenErrs := make(map[string]struct{})
 	for _, et := range svc.errorTypes {
-		if et.Type == expr.ErrorResult {
+		if et.IsServiceError || et.Loc != nil {
 			continue
 		}
-		if _, ok := seenErrs[et.Name]; !ok {
-			seenErrs[et.Name] = struct{}{}
-			if _, ok := seen[et.Name]; !ok {
-				addTypeDefSection(pathWithDefault(et.Loc, svcPath), et.Name, &codegen.SectionTemplate{
+		if _, ok := seenErrs[et.VarName]; !ok {
+			seenErrs[et.VarName] = struct{}{}
+			if _, ok := seen[et.VarName]; !ok {
+				addTypeDefSection(et.VarName, &codegen.SectionTemplate{
 					Name:   "error-user-type",
 					Source: serviceTemplates.Read(userTypeT),
 					Data:   et,
 				})
 			}
-			errorTypes = append(errorTypes, et)
+			typeSections = append(typeSections, serviceTypeSection{
+				phase: serviceErrorImplementationPhase,
+				name:  et.VarName,
+				section: &codegen.SectionTemplate{
+					Name:   "service-error",
+					Source: serviceTemplates.Read(errorT),
+					Data:   et,
+				},
+			})
 		}
-	}
-
-	for _, et := range errorTypes {
-		// Don't override the section created for the error type
-		// declaration, make sure the key does not clash with existing
-		// type names, make it generated last.
-		key := "|" + et.Name
-		addTypeDefSection(pathWithDefault(et.Loc, svcPath), key, &codegen.SectionTemplate{
-			Name:    "service-error",
-			Source:  serviceTemplates.Read(errorT),
-			FuncMap: map[string]any{"errorName": errorName},
-			Data:    et,
-		})
 	}
 	for _, er := range svc.errorInits {
 		svcSections = append(svcSections, &codegen.SectionTemplate{
@@ -167,280 +242,186 @@ func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, use
 		})
 	}
 
-	imports := []*codegen.ImportSpec{
-		codegen.SimpleImport("context"),
-		codegen.SimpleImport("io"),
-		codegen.GoaImport(""),
-		codegen.GoaImport("security"),
-		codegen.NewImport(svc.ViewsPkg, genpkg+"/"+svcName+"/views"),
-	}
-	if len(svc.unions) > 0 {
-		imports = append(imports,
-			codegen.SimpleImport("bytes"),
-			codegen.SimpleImport("encoding/json"),
-			codegen.SimpleImport("fmt"),
-		)
-	}
-	header := codegen.Header(service.Name+" service", svc.PkgName, imports)
+	header := codegen.Header(facts.name+" service", svc.PkgName, facts.imports.service.Imports())
 	def := &codegen.SectionTemplate{
 		Name:   "service",
 		Source: serviceTemplates.Read(serviceT),
 		Data:   svc,
 		FuncMap: map[string]any{
-			"hasJSONRPCStreaming": hasJSONRPCStreaming,
-			"isJSONRPCWebSocket":  hasJSONRPCWebSocket,
-			"streamInterfaceFor":  streamInterfaceFor,
-			"dedupeByResult":      dedupeByResult,
+			"streamInterfaceFor": streamInterfaceFor,
 		},
 	}
 
-	// service.go
-	var sections []*codegen.SectionTemplate
-	{
-		names := make([]string, len(typeDefSections[svcPath]))
-		i := 0
-		for n := range typeDefSections[svcPath] {
-			names[i] = n
-			i++
+	sort.Slice(typeSections, func(i, j int) bool {
+		if typeSections[i].phase != typeSections[j].phase {
+			return typeSections[i].phase < typeSections[j].phase
 		}
-		sections = make([]*codegen.SectionTemplate, 0, 2+len(names)+len(svcSections))
-		sections = append(sections, header, def)
-		sort.Strings(names)
-		for _, n := range names {
-			sections = append(sections, typeDefSections[svcPath][n])
-		}
-		sections = append(sections, svcSections...)
+		return typeSections[i].name < typeSections[j].name
+	})
+	sections := make([]*codegen.SectionTemplate, 0, 2+len(typeSections)+len(svcSections))
+	sections = append(sections, header, def)
+	for _, record := range typeSections {
+		sections = append(sections, record.section)
 	}
-	files := []*codegen.File{{Path: svcPath, SectionTemplates: sections}}
+	sections = append(sections, svcSections...)
+	interceptors := interceptorsFiles(plan, facts)
+	files := make([]*codegen.File, 1, 1+len(interceptors))
+	files[0] = &codegen.File{Path: svcPath, SectionTemplates: sections}
+	return append(files, interceptors...)
+}
 
-	// service and client interceptors
-	files = append(files, InterceptorsFiles(genpkg, service, services)...)
-
-	// user types
-	paths := make([]string, len(typeDefSections))
-	i := 0
-	for p := range typesByPath {
-		paths[i] = p
-		i++
+// generatedPackageFiles renders each relocated user type in its configured
+// file and one sorted unions.go for every package that owns unions.
+func generatedPackageFiles(analyses []*ServicesData) ([]*codegen.File, error) {
+	packages, err := aggregateGeneratedPackages(analyses)
+	if err != nil {
+		return nil, err
 	}
-	sort.Strings(paths)
-	for _, p := range paths {
-		if p == svcPath {
-			continue
+	if len(packages) == 0 {
+		return nil, nil
+	}
+	packageOwners := make([]*codegen.GeneratedPackage, 0, len(packages))
+	for owner := range packages {
+		packageOwners = append(packageOwners, owner)
+	}
+	slices.SortFunc(packageOwners, func(left, right *codegen.GeneratedPackage) int {
+		return strings.Compare(left.ImportPath(), right.ImportPath())
+	})
+
+	var files []*codegen.File
+	for _, owner := range packageOwners {
+		packagePath := owner.ImportPath()
+		packageName := strings.ToLower(codegen.Goify(path.Base(packagePath), false))
+		generatedPackage := packages[owner]
+		typesByFile := make(map[string][]*generatedTypeData)
+		for _, generatedType := range generatedPackage.types {
+			filePath := filepath.Join(owner.OutputDirectory(), filepath.Base(generatedType.location.FilePath))
+			typesByFile[filePath] = append(typesByFile[filePath], generatedType)
 		}
-		var secs []*codegen.SectionTemplate
-		hasUnion := false
-		ts := typesByPath[p]
-		sort.Strings(ts)
-		for _, name := range ts {
-			if strings.HasPrefix(name, "~union:") {
-				hasUnion = true
+		filePaths := make([]string, 0, len(typesByFile))
+		for filePath := range typesByFile {
+			filePaths = append(filePaths, filePath)
+		}
+		sort.Strings(filePaths)
+		for _, filePath := range filePaths {
+			generatedTypes := typesByFile[filePath]
+			sort.Slice(generatedTypes, func(i, j int) bool {
+				return generatedTypes[i].declaration.Name() < generatedTypes[j].declaration.Name()
+			})
+			var imports []*codegen.ImportSpec
+			for _, generatedType := range generatedTypes {
+				imports = appendImportSpecs(imports, generatedType.imports)
 			}
-			hasName := false
-			for _, n := range userTypePkgs[p] {
-				if hasName = n == name; hasName {
-					break
+			sections := []*codegen.SectionTemplate{
+				codegen.Header("User types", packageName, imports),
+			}
+			for _, generatedType := range generatedTypes {
+				sections = append(sections, generatedType.section)
+				if generatedType.error != nil {
+					sections = append(sections, generatedType.error)
 				}
 			}
-			if hasName {
-				continue
+			files = append(files, &codegen.File{Path: filePath, SectionTemplates: sections})
+		}
+
+		if len(generatedPackage.unions) > 0 {
+			unions := make([]*UnionTypeData, 0, len(generatedPackage.unions))
+			for _, union := range generatedPackage.unions {
+				unions = append(unions, union)
 			}
-			userTypePkgs[p] = append(userTypePkgs[p], name)
-			secs = append(secs, typeDefSections[p][name])
-		}
-		if len(secs) == 0 {
-			continue
-		}
-		fullRelPath := filepath.Join(codegen.Gendir, p)
-		dir, _ := filepath.Split(fullRelPath)
-		imports := []*codegen.ImportSpec{
-			codegen.SimpleImport("fmt"),
-			codegen.GoaImport(""),
-		}
-		if hasUnion {
-			imports = append(imports,
-				codegen.SimpleImport("bytes"),
-				codegen.SimpleImport("encoding/json"),
-			)
-		}
-		h := codegen.Header("User types", codegen.Goify(filepath.Base(dir), false), imports)
-		sections := append([]*codegen.SectionTemplate{h}, secs...)
-		files = append(files, &codegen.File{Path: fullRelPath, SectionTemplates: sections})
-	}
-
-	return files
-}
-
-// dedupeByResult returns a slice of methods where only a single representative
-// per unique ResultRef is kept (first occurrence wins). Methods without a
-// ResultRef are ignored.
-func dedupeByResult(ms []*MethodData) []*MethodData {
-	seen := make(map[string]struct{})
-	out := make([]*MethodData, 0, len(ms))
-	for _, m := range ms {
-		key := m.Result
-		if key == "" {
-			key = m.StreamingResult
-		}
-		if key == "" {
-			continue
-		}
-		if _, ok := seen[key]; ok {
-			continue
-		}
-		seen[key] = struct{}{}
-		out = append(out, m)
-	}
-	return out
-}
-
-// SetUserTypeImports sets the import paths for user types declared in custom
-// packages with the Meta key "struct:pkg:path".
-func SetUserTypeImports(genpkg string, d *Data) {
-	d.UserTypeImports = userTypeImports(genpkg, d)
-}
-
-// AddServiceDataMetaTypeImports adds all imports defined by struct:field:type
-// metadata for the service data.
-func AddServiceDataMetaTypeImports(header *codegen.SectionTemplate, d *Data) {
-	codegen.AddImport(header, d.metaTypeImports...)
-}
-
-// AddUserTypeImports adds the imports for user types declared in custom
-// packages with the Meta key "struct:pkg:path".
-func AddUserTypeImports(header *codegen.SectionTemplate, d *Data) {
-	codegen.AddImport(header, d.UserTypeImports...)
-}
-
-func metaTypeImports(svcExpr *expr.ServiceExpr, svcData *Data) []*codegen.ImportSpec {
-	seen := make(map[codegen.ImportSpec]struct{})
-	var imports []*codegen.ImportSpec
-	for _, m := range svcExpr.Methods {
-		imports = appendUniqueImport(imports, seen, codegen.GetMetaTypeImports(m.Payload)...)
-		imports = appendUniqueImport(imports, seen, codegen.GetMetaTypeImports(m.StreamingPayload)...)
-		imports = appendUniqueImport(imports, seen, codegen.GetMetaTypeImports(m.Result)...)
-	}
-	for _, ut := range svcData.userTypes {
-		imports = appendUniqueImport(imports, seen, codegen.GetMetaTypeImports(ut.Type.Attribute())...)
-	}
-	for _, et := range svcData.errorTypes {
-		imports = appendUniqueImport(imports, seen, codegen.GetMetaTypeImports(et.Type.Attribute())...)
-	}
-	for _, t := range svcData.viewedResultTypes {
-		imports = appendUniqueImport(imports, seen, codegen.GetMetaTypeImports(t.Type.Attribute())...)
-	}
-	for _, t := range svcData.projectedTypes {
-		imports = appendUniqueImport(imports, seen, codegen.GetMetaTypeImports(t.Type.Attribute())...)
-	}
-	return imports
-}
-
-func userTypeImports(genpkg string, d *Data) []*codegen.ImportSpec {
-	importsByPath := make(map[string]*codegen.ImportSpec)
-
-	initLoc := func(loc *codegen.Location) {
-		if loc == nil {
-			return
-		}
-		importsByPath[loc.FilePath] = &codegen.ImportSpec{Name: loc.PackageName(), Path: genpkg + "/" + loc.RelImportPath}
-	}
-
-	// Process method-specific locations
-	for _, m := range d.Methods {
-		initLoc(m.PayloadLoc)
-		initLoc(m.ResultLoc)
-		for _, l := range m.ErrorLocs {
-			initLoc(l)
-		}
-	}
-
-	// Process service-level types once (not per method)
-	for _, ut := range d.userTypes {
-		initLoc(ut.Loc)
-	}
-	for _, et := range d.errorTypes {
-		initLoc(et.Loc)
-	}
-
-	imports := make([]*codegen.ImportSpec, 0, len(importsByPath))
-	for _, imp := range importsByPath { // Order does not matter, imports are sorted during formatting.
-		imports = append(imports, imp)
-	}
-	return imports
-}
-
-func appendUniqueImport(imports []*codegen.ImportSpec, seen map[codegen.ImportSpec]struct{}, specs ...*codegen.ImportSpec) []*codegen.ImportSpec {
-	for _, spec := range specs {
-		if _, ok := seen[*spec]; ok {
-			continue
-		}
-		seen[*spec] = struct{}{}
-		imports = append(imports, spec)
-	}
-	return imports
-}
-
-func errorName(et *UserTypeData) string {
-	obj := expr.AsObject(et.Type)
-	if obj != nil {
-		for _, att := range *obj {
-			if _, ok := att.Attribute.Meta["struct:error:name"]; ok {
-				return fmt.Sprintf("e.%s", codegen.GoifyAtt(att.Attribute, att.Name, true))
+			sort.Slice(unions, func(i, j int) bool {
+				return unions[i].Name < unions[j].Name
+			})
+			sections := []*codegen.SectionTemplate{
+				codegen.Header("Union types", packageName, generatedPackage.unionImports),
 			}
+			for _, union := range unions {
+				sections = append(sections, &codegen.SectionTemplate{
+					Name:   "service-union-type",
+					Source: serviceTemplates.Read(unionTypeT),
+					Data:   union,
+				})
+			}
+			files = append(files, &codegen.File{
+				Path:             filepath.Join(owner.OutputDirectory(), "unions.go"),
+				SectionTemplates: sections,
+			})
 		}
 	}
-	// if error type is a custom user type and used by at most one error, then
-	// error Finalize should have added "struct:error:name" to the user type
-	// attribute's meta.
-	if v, ok := et.Type.Attribute().Meta["struct:error:name"]; ok {
-		return fmt.Sprintf("%q", v[0])
-	}
-	return fmt.Sprintf("%q", et.Name)
+	return files, nil
 }
 
-// hasJSONRPCStreaming returns true if the service has a JSON-RPC streaming
-// endpoint (WebSocket or SSE).
-func hasJSONRPCStreaming(sd *Data) bool {
-	for _, m := range sd.Methods {
-		if m.IsJSONRPC && m.ServerStream != nil {
-			return true
+// aggregateGeneratedPackages selects one render section for each generated
+// package declaration across all analyzed roots without changing generation
+// state.
+func aggregateGeneratedPackages(analyses []*ServicesData) (map[*codegen.GeneratedPackage]*generatedPackageData, error) {
+	packages := make(map[*codegen.GeneratedPackage]*generatedPackageData)
+	for _, services := range analyses {
+		for owner, analyzedPackage := range services.packages {
+			generatedPackage, ok := packages[owner]
+			if !ok {
+				generatedPackage = &generatedPackageData{
+					types:  make(map[*codegen.TypeDeclaration]*generatedTypeData),
+					unions: make(map[*codegen.UnionDeclaration]*UnionTypeData),
+				}
+				packages[owner] = generatedPackage
+			}
+			for declaration, generatedType := range analyzedPackage.types {
+				if _, exists := generatedPackage.types[declaration]; exists {
+					return nil, fmt.Errorf(
+						"generated type declaration %q was assigned to more than one service plan",
+						declaration.Name(),
+					)
+				}
+				generatedPackage.types[declaration] = generatedType
+			}
+			for declaration, union := range analyzedPackage.unions {
+				if _, exists := generatedPackage.unions[declaration]; exists {
+					return nil, fmt.Errorf(
+						"generated union declaration %q was assigned to more than one service plan",
+						union.Name,
+					)
+				}
+				generatedPackage.unions[declaration] = union
+			}
+			generatedPackage.unionImports = appendImportSpecs(generatedPackage.unionImports, analyzedPackage.unionImports)
 		}
 	}
-	return false
+	return packages, nil
 }
 
-// hasJSONRPCWebSocket returns true if the service has a JSON-RPC streaming
-// endpoint that uses the WebSocket transport.
-func hasJSONRPCWebSocket(sd *Data) bool {
-	for _, m := range sd.Methods {
-		if m.IsJSONRPCWebSocket {
-			return true
-		}
+// appendImportSpecs merges exact file contributions by complete package path
+// and returns them in deterministic path order.
+func appendImportSpecs(existing, added []*codegen.ImportSpec) []*codegen.ImportSpec {
+	byPath := make(map[string]*codegen.ImportSpec, len(existing)+len(added))
+	for _, spec := range existing {
+		byPath[spec.Path] = spec
 	}
-	return false
+	for _, spec := range added {
+		byPath[spec.Path] = spec
+	}
+	paths := make([]string, 0, len(byPath))
+	for importPath := range byPath {
+		paths = append(paths, importPath)
+	}
+	sort.Strings(paths)
+	result := make([]*codegen.ImportSpec, len(paths))
+	for index, importPath := range paths {
+		result[index] = byPath[importPath]
+	}
+	return result
 }
 
 // streamInterfaceFor builds the data to generate the client and server stream
 // interfaces for the given endpoint.
 func streamInterfaceFor(typ string, m *MethodData, stream *StreamData) map[string]any {
 	return map[string]any{
-		"Type":               typ,
-		"Endpoint":           m.Name,
-		"Stream":             stream,
-		"MethodVarName":      m.VarName,
-		"IsJSONRPC":          m.IsJSONRPC,
-		"IsJSONRPCSSE":       m.IsJSONRPCSSE && typ == "server",
-		"IsJSONRPCWebSocket": m.IsJSONRPCWebSocket,
+		"Type":     typ,
+		"Endpoint": m.Name,
+		"Stream":   stream,
 		// If a view is explicitly set (ViewName is not empty) in the Result
 		// expression, we can use that view to render the result type instead
 		// of iterating through the list of views defined in the result type.
 		"IsViewedResult": m.ViewedResult != nil && m.ViewedResult.ViewName == "",
 	}
-}
-
-func pathWithDefault(loc *codegen.Location, def string) string {
-	if loc == nil {
-		return def
-	}
-	return loc.FilePath
 }

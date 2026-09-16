@@ -13,9 +13,9 @@
           "200": {
             "content": {
               "text/event-stream": {
-                "example": "Adipisci necessitatibus enim voluptas asperiores corporis.",
+                "example": "event",
                 "schema": {
-                  "example": "Adipisci necessitatibus enim voluptas asperiores corporis.",
+                  "example": "event",
                   "type": "string"
                 }
               }

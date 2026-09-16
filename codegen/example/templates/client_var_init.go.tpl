@@ -10,24 +10,17 @@ var (
 			switch *hostF {
 		{{- range $h := .Server.Hosts }}
 			case {{ printf "%q" $h.Name }}:
-				addr = {{ printf "%q" ($h.DefaultURL $.Server.DefaultTransport.Type) }}
+			addr = {{ printf "%q" ($h.DefaultURL $.Server.DefaultTransport.Type) }}
 			{{- range $h.Variables }}
 				{{- if .Values }}
-					var {{ .VarName }}Seen bool
-					{
-						for _, v := range []string{ {{ range $v := .Values }}"{{ $v }}",{{ end }} } {
-							if v == *{{ .VarName }}F {
-								{{ .VarName }}Seen = true
-								break
-							}
-						}
-					}
-					if !{{ .VarName }}Seen {
-						fmt.Fprintf(os.Stderr, "invalid value for URL '{{ .Name }}' variable: %q (valid values: {{ join .Values "," }})\n", *{{ .VarName }}F)
+					switch *{{ .VarName }} {
+					case {{ range $index, $value := .Values }}{{ if $index }}, {{ end }}{{ printf "%q" $value }}{{ end }}:
+					default:
+						fmt.Fprintf(os.Stderr, "invalid value for URL '{{ .Name }}' variable: %q (valid values: {{ join .Values "," }})\n", *{{ .VarName }})
 						os.Exit(1)
 					}
 				{{- end }}
-				addr = strings.ReplaceAll(addr, "{{ printf "{%s}" .Name }}", *{{ .VarName }}F)
+				addr = strings.ReplaceAll(addr, "{{ printf "{%s}" .Name }}", *{{ .VarName }})
 			{{- end }}
 		{{- end }}
 			default:

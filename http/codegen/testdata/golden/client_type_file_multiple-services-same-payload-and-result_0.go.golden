@@ -76,7 +76,7 @@ func ValidateListResponseBody(body *ListResponseBody) (err error) {
 }
 
 // ValidateListSomethingWentWrongResponseBody runs the validations defined on
-// list_something_went_wrong_response_body
+// ListSomethingWentWrongResponseBody
 func ValidateListSomethingWentWrongResponseBody(body *ListSomethingWentWrongResponseBody) (err error) {
 	if body.Name == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))

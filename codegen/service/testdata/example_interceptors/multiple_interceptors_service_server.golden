@@ -8,10 +8,9 @@ package interceptors
 
 import (
 	"context"
-	"fmt"
 	"goa.design/clue/log"
+	multipleinterceptorsservice "goa.design/goa/example/multiple_interceptors_service"
 	goa "goa.design/goa/v3/pkg"
-	multipleinterceptorsservice "multiple_interceptors_service"
 )
 
 // MultipleInterceptorsServiceServerInterceptors implements the server interceptor for the MultipleInterceptorsService service.
@@ -22,7 +21,7 @@ type MultipleInterceptorsServiceServerInterceptors struct {
 func NewMultipleInterceptorsServiceServerInterceptors() *MultipleInterceptorsServiceServerInterceptors {
 	return &MultipleInterceptorsServiceServerInterceptors{}
 }
-func (i *MultipleInterceptorsServiceServerInterceptors) Test(ctx context.Context, info *interceptors.TestInfo, next goa.Endpoint) (any, error) {
+func (i *MultipleInterceptorsServiceServerInterceptors) Test(ctx context.Context, info multipleinterceptorsservice.TestInfo, next goa.Endpoint) (any, error) {
 	log.Printf(ctx, "[Test] Processing request: %v", info.RawPayload())
 	resp, err := next(ctx, info.RawPayload())
 	if err != nil {
@@ -32,7 +31,7 @@ func (i *MultipleInterceptorsServiceServerInterceptors) Test(ctx context.Context
 	log.Printf(ctx, "[Test] Response: %v", resp)
 	return resp, nil
 }
-func (i *MultipleInterceptorsServiceServerInterceptors) Test3(ctx context.Context, info *interceptors.Test3Info, next goa.Endpoint) (any, error) {
+func (i *MultipleInterceptorsServiceServerInterceptors) Test3(ctx context.Context, info multipleinterceptorsservice.Test3Info, next goa.Endpoint) (any, error) {
 	log.Printf(ctx, "[Test3] Processing request: %v", info.RawPayload())
 	resp, err := next(ctx, info.RawPayload())
 	if err != nil {

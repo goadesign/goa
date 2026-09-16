@@ -1,0 +1,21 @@
+// UsertypeResponseTinyCollection is the type of the
+// "StreamingPayloadResultCollectionWithExplicitViewService" service
+// "StreamingPayloadResultCollectionWithExplicitViewMethod" endpoint HTTP
+// response body.
+type UsertypeResponseTinyCollection []*UsertypeResponseTiny
+
+// NewUsertypeResponseTinyCollection builds the HTTP response body from the
+// result of the "StreamingPayloadResultCollectionWithExplicitViewMethod"
+// endpoint of the "StreamingPayloadResultCollectionWithExplicitViewService"
+// service.
+func NewUsertypeResponseTinyCollection(res streamingpayloadresultcollectionwithexplicitviewserviceviews.UsertypeCollectionView) UsertypeResponseTinyCollection {
+	body := make([]*UsertypeResponseTiny, len(res))
+	for i, val := range res {
+		if val == nil {
+			body[i] = nil
+			continue
+		}
+		body[i] = marshalStreamingpayloadresultcollectionwithexplicitviewserviceviewsUsertypeViewToUsertypeResponseTiny(val)
+	}
+	return body
+}

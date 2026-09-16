@@ -1,5 +1,5 @@
-// {{ .ClientVarName }} is the {{ printf "%q" .Name }} service client.
-type {{ .ClientVarName }} struct {
+// {{ .ClientDeclaration.Name }} is the {{ printf "%q" .Name }} service client.
+type {{ .ClientDeclaration.Name }} struct {
 {{- range .Methods}}
 	{{ .EndpointField }} goa.Endpoint
 	{{- if .HasMixedResults }}

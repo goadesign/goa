@@ -1,0 +1,13 @@
+// NewMethodExplicitBodyPrimitiveResultDefaultViewResulttypedefaultviewOK
+// builds a "ServiceExplicitBodyPrimitiveResultDefaultView" service
+// "MethodExplicitBodyPrimitiveResultDefaultView" endpoint result from a HTTP
+// "OK" response.
+func NewMethodExplicitBodyPrimitiveResultDefaultViewResulttypedefaultviewOK(body string, b *string) *serviceexplicitbodyprimitiveresultdefaultviewviews.ResulttypedefaultviewView {
+	v := body
+	res := &serviceexplicitbodyprimitiveresultdefaultviewviews.ResulttypedefaultviewView{
+		A: &v,
+	}
+	res.B = b
+
+	return res
+}

@@ -1,10 +1,10 @@
 // BuildMethodCookieCustomNamePayload builds the payload for the
 // ServiceCookieCustomName MethodCookieCustomName endpoint from CLI flags.
-func BuildMethodCookieCustomNamePayload(serviceCookieCustomNameMethodCookieCustomNameC2 string) (*servicecookiecustomname.MethodCookieCustomNamePayload, error) {
+func BuildMethodCookieCustomNamePayload(serviceCookieCustomNameMethodCookieCustomNameC2 *string) (*servicecookiecustomname.MethodCookieCustomNamePayload, error) {
 	var c2 *string
 	{
-		if serviceCookieCustomNameMethodCookieCustomNameC2 != "" {
-			c2 = &serviceCookieCustomNameMethodCookieCustomNameC2
+		if serviceCookieCustomNameMethodCookieCustomNameC2 != nil {
+			c2 = serviceCookieCustomNameMethodCookieCustomNameC2
 		}
 	}
 	v := &servicecookiecustomname.MethodCookieCustomNamePayload{}

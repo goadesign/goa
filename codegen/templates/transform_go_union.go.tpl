@@ -4,19 +4,26 @@ switch string({{ .SourceVar }}.Kind()) {
 {{- range .Cases }}
 case {{ printf "%q" .CaseName }}:
 	actual, _ := {{ $.SourceVar }}.As{{ .SourceFieldName }}()
+	{{- if .SourceNilable }}
+	var {{ $.TempVarName }} {{ .TargetCastType }}
+	if actual != nil {
+	{{- if .UseHelper }}
+		{{ $.TempVarName }} = {{ .HelperName }}(actual)
+	{{- else }}
+		{{ transformAttribute .SourceAttr .TargetAttr "actual" $.TempVarName false $.TransformAttrs -}}
+	{{- end }}
+	}
+	{{- else }}
 	{{- if .UseHelper }}
 	{{ $.TempVarName }} := {{ .HelperName }}(actual)
 	{{- else }}
 	{{ transformAttribute .SourceAttr .TargetAttr "actual" $.TempVarName true $.TransformAttrs -}}
 	{{- end }}
+	{{- end }}
 	{{- if $.NewVar }}
 	var u {{ $.ValueTypeRef }}
 	u.Set{{ .TargetFieldName }}(({{ .TargetCastType }})({{ $.TempVarName }}))
-	{{- if $.TargetIsPointer }}
 	{{ $.TargetVar }} = &u
-	{{- else }}
-	{{ $.TargetVar }} = u
-	{{- end }}
 	{{- else }}
 	u := {{ $.TargetVar }}
 	u.Set{{ .TargetFieldName }}(({{ .TargetCastType }})({{ $.TempVarName }}))

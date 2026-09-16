@@ -1,0 +1,53 @@
+// WatchServerStream implements the viewed.WatchServerStream interface using
+// Server-Sent Events.
+type WatchServerStream struct {
+	// sseServerStream writes JSON-RPC messages as server-sent events.
+	sseServerStream
+	// view is the result view used to encode later stream values.
+	view string
+	// sentView is the result view used by the first event. Later sends must use
+	// the same view.
+	sentView string
+}
+
+// SetView selects the result view used by later stream values.
+func (s *WatchServerStream) SetView(view string) {
+	s.view = view
+}
+
+// Send streams instances of "ViewedGolden".
+func (s *WatchServerStream) Send(event *viewed.ViewedGolden) error {
+	return s.SendWithContext(context.Background(), event)
+}
+
+// SendWithContext streams instances of "ViewedGolden" with context.
+func (s *WatchServerStream) SendWithContext(ctx context.Context, event *viewed.ViewedGolden) error {
+	result := event
+	view := s.view
+	if view == "" {
+		view = "default"
+	}
+	if s.sentView != "" && view != s.sentView {
+		return goa.InvalidEnumValueError("view", view, []any{s.sentView})
+	}
+	body, err := encodeWatchResult(result, view)
+	if err != nil {
+		return err
+	}
+	s.sentView = view
+	var eventID *string
+	valueID := string(result.EventID)
+	eventID = &valueID
+
+	message := jsonrpc.MakeNotification(
+		"watch",
+		body,
+	)
+	return s.sendSSEEvent(ctx, message, eventID, nil, nil)
+}
+
+// Close does nothing because the HTTP response closes when the service method
+// returns.
+func (s *WatchServerStream) Close() error {
+	return nil
+}

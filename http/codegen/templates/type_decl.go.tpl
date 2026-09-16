@@ -1,2 +1,2 @@
 {{ comment .Description }}
-type {{ .VarName }} {{ .Def }}
+type {{ .Declaration.Name }} {{ .Def }}

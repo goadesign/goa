@@ -3,12 +3,12 @@
     "schemas": {
       "SSEDataFieldMethodResponseBody": {
         "example": {
-          "data": "Ipsum voluptatem quaerat quo et non sed.",
+          "data": "event",
           "flag": true
         },
         "properties": {
           "data": {
-            "example": "Ipsum voluptatem quaerat quo et non sed.",
+            "example": "event",
             "type": "string"
           },
           "flag": {
@@ -36,13 +36,10 @@
                 "itemSchema": {
                   "properties": {
                     "data": {
-                      "example": "Quos qui dolore voluptas.",
+                      "example": "event",
                       "type": "string"
                     }
                   },
-                  "required": [
-                    "data"
-                  ],
                   "type": "object"
                 }
               }

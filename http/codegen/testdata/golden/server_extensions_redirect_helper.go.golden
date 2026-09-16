@@ -1,0 +1,5 @@
+// MountOldHTML configures the mux to serve GET request made to "/old".
+func MountOldHTML(mux goahttp.Muxer, h http.Handler) {
+	h = First(Second(h))
+	mux.Handle("GET", "/old", h.ServeHTTP)
+}

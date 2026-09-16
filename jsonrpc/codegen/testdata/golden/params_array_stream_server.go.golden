@@ -1,0 +1,29 @@
+// StreamArrayServerStream implements the params.StreamArrayServerStream
+// interface using Server-Sent Events.
+type StreamArrayServerStream struct {
+	// sseServerStream writes JSON-RPC messages as server-sent events.
+	sseServerStream
+}
+
+// Send streams instances of "[]string".
+func (s *StreamArrayServerStream) Send(event []string) error {
+	return s.SendWithContext(context.Background(), event)
+}
+
+// SendWithContext streams instances of "[]string" with context.
+func (s *StreamArrayServerStream) SendWithContext(ctx context.Context, event []string) error {
+	result := event
+	body := result
+
+	message := jsonrpc.MakeNotification(
+		"stream_array",
+		body,
+	)
+	return s.sendSSEEvent(ctx, message, nil, nil, nil)
+}
+
+// Close does nothing because the HTTP response closes when the service method
+// returns.
+func (s *StreamArrayServerStream) Close() error {
+	return nil
+}

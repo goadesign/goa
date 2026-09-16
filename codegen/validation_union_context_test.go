@@ -11,6 +11,14 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
+type (
+	// sumTypeTestScope reports that a union is stored directly as a Go value. The
+	// test checks that generated validation uses this information.
+	sumTypeTestScope struct {
+		Attributor
+	}
+)
+
 func TestUnionValidationPreservesValueContextForRequiredOnlyObjectBranches(t *testing.T) {
 	root := RunDSL(t, requiredObjectUnionDSL)
 	scope := NewNameScope()
@@ -69,6 +77,32 @@ func TestUnionValidationUsesGeneratedFieldRepresentation(t *testing.T) {
 	require.Contains(t, marshalCode, `if target.Required.Kind() == "" {`)
 	require.NotContains(t, marshalCode, "if target.Required != nil {")
 	require.Contains(t, marshalCode, "if target.Optional != nil {")
+}
+
+func TestUnionValidationUsesCustomSumTypeResolver(t *testing.T) {
+	union := &expr.Union{
+		TypeName: "Scope",
+		Values: []*expr.NamedAttributeExpr{
+			{Name: "name", Attribute: &expr.AttributeExpr{Type: expr.String}},
+		},
+	}
+	attribute := &expr.AttributeExpr{
+		Type: &expr.Object{
+			{Name: "scope", Attribute: &expr.AttributeExpr{Type: union}},
+		},
+		Validation: &expr.ValidationExpr{Required: []string{"scope"}},
+	}
+	context := NewAttributeContext(false, false, true, "", NewNameScope())
+	context.Scope = &sumTypeTestScope{Attributor: context.Scope}
+
+	generated := ValidationCode(attribute, nil, context, true, false, false, "target")
+
+	require.Contains(t, generated, `if target.Scope.Kind() == "" {`)
+	require.NotContains(t, generated, "if target.Scope == nil {")
+}
+
+func (*sumTypeTestScope) IsSumType() bool {
+	return true
 }
 
 // requiredObjectUnionDSL defines a OneOf with required-only object branches so

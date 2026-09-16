@@ -1,0 +1,80 @@
+// NewProtoMethodServerStreamingUserTypeRPCResponse builds
+// *service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse
+// from *serviceserverstreamingusertyperpcviews.ResultTypeView.
+func NewProtoMethodServerStreamingUserTypeRPCResponse(result *serviceserverstreamingusertyperpcviews.ResultTypeView) *service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse {
+	message := &service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse{
+		DoubleField: result.DoubleField,
+	}
+	intField := int32(*result.IntField)
+	message.IntField = &intField
+	return message
+}
+
+// NewProtoMethodServerStreamingUserTypeRPCResponseTiny builds
+// *service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse
+// from *serviceserverstreamingusertyperpcviews.ResultTypeView.
+func NewProtoMethodServerStreamingUserTypeRPCResponseTiny(result *serviceserverstreamingusertyperpcviews.ResultTypeView) *service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse {
+	message := &service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse{}
+	intField := int32(*result.IntField)
+	message.IntField = &intField
+	return message
+}
+
+// EncodeMethodServerStreamingUserTypeRPCResponse encodes responses from the
+// "ServiceServerStreamingUserTypeRPC" service
+// "MethodServerStreamingUserTypeRPC" endpoint.
+func EncodeMethodServerStreamingUserTypeRPCResponse(ctx context.Context, v any, hdr, trlr *metadata.MD) (any, error) {
+	vres, ok := v.(*serviceserverstreamingusertyperpcviews.ResultType)
+	if !ok {
+		return nil, goagrpc.ErrInvalidType("ServiceServerStreamingUserTypeRPC", "MethodServerStreamingUserTypeRPC", "*serviceserverstreamingusertyperpcviews.ResultType", v)
+	}
+	result := vres.Projected
+	var resp *service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse
+	switch vres.View {
+	case "tiny":
+		resp = NewProtoMethodServerStreamingUserTypeRPCResponseTiny(result)
+	case "default", "":
+		resp = NewProtoMethodServerStreamingUserTypeRPCResponse(result)
+	default:
+		return nil, goa.InvalidEnumValueError("view", vres.View, []any{"tiny", "default"})
+	}
+	(*hdr).Append("goa-view", vres.View)
+	return resp, nil
+}
+
+// Send streams instances of
+// "service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse"
+// to the "MethodServerStreamingUserTypeRPC" endpoint gRPC stream.
+func (s *MethodServerStreamingUserTypeRPCServerStream) Send(res *serviceserverstreamingusertyperpc.ResultType) error {
+	view := s.view
+	if view == "" {
+		view = "default"
+	}
+	if s.sentView != "" && view != s.sentView {
+		return goa.InvalidEnumValueError("view", view, []any{s.sentView})
+	}
+	vres := serviceserverstreamingusertyperpc.NewViewedResultType(res, view)
+	var v *service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse
+	switch view {
+	case "tiny":
+		v = NewProtoMethodServerStreamingUserTypeRPCResponseTiny(vres.Projected)
+	case "default", "":
+		v = NewProtoMethodServerStreamingUserTypeRPCResponse(vres.Projected)
+	default:
+		return goa.InvalidEnumValueError("view", view, []any{"tiny", "default"})
+	}
+	if s.sentView == "" {
+		if err := s.stream.SetHeader(metadata.Pairs("goa-view", view)); err != nil {
+			return err
+		}
+		s.sentView = view
+	}
+	return s.stream.Send(v)
+}
+
+// SendWithContext streams instances of
+// "service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse"
+// to the "MethodServerStreamingUserTypeRPC" endpoint gRPC stream with context.
+func (s *MethodServerStreamingUserTypeRPCServerStream) SendWithContext(ctx context.Context, res *serviceserverstreamingusertyperpc.ResultType) error {
+	return s.Send(res)
+}

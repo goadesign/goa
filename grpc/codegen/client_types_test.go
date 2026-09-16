@@ -1,15 +1,181 @@
+// This file checks the generated client and server conversion functions.
 package codegen
 
 import (
 	"bytes"
-	"goa.design/goa/v3/codegen/testutil"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/codegen/testutil"
+	"goa.design/goa/v3/dsl"
 	"goa.design/goa/v3/grpc/codegen/testdata"
 )
+
+// TestTypeFilesShareRepeatedConversions checks that two endpoints using the
+// same payload call one conversion function in each generated package.
+func TestTypeFilesShareRepeatedConversions(t *testing.T) {
+	root := RunGRPCDSL(t, testdata.PayloadWithMultipleUseTypesDSL)
+	services := CreateGRPCServices(root)
+	client := codegen.SectionsCode(t, clientTypeFiles(services)[0].SectionTemplates[1:])
+	server := codegen.SectionsCode(t, serverTypeFiles(services)[0].SectionTemplates[1:])
+
+	require.Equal(t, 1, strings.Count(client, "func NewProtoDupePayload("))
+	require.Equal(t, 1, strings.Count(server, "func NewDupePayload("))
+	require.NotContains(t, server, "func NewMethodPayloadDuplicateAPayload(")
+	require.NotContains(t, server, "func NewMethodPayloadDuplicateBPayload(")
+}
+
+// TestTypeFilesShareRepeatedValidations checks that two endpoints using the
+// same protobuf message and validation rules emit one validator per package.
+func TestTypeFilesShareRepeatedValidations(t *testing.T) {
+	root := RunGRPCDSL(t, testdata.PayloadWithMultipleUseTypesDSL)
+	services := CreateGRPCServices(root)
+	client := codegen.SectionsCode(t, clientTypeFiles(services)[0].SectionTemplates[1:])
+	server := codegen.SectionsCode(t, serverTypeFiles(services)[0].SectionTemplates[1:])
+
+	require.Equal(t, 1, strings.Count(client, "func ValidateDupePayload("))
+	require.Equal(t, 1, strings.Count(server, "func ValidateDupePayload("))
+	require.NotContains(t, client, "func ValidateDupePayload2(")
+	require.NotContains(t, server, "func ValidateDupePayload2(")
+}
+
+// TestRepeatedWrapperValidationUsesAuthoredRules checks that protobuf arrays
+// keep length checks without inventing a missing-field check they cannot prove.
+func TestRepeatedWrapperValidationUsesAuthoredRules(t *testing.T) {
+	withoutLength := CreateGRPCServices(RunGRPCDSL(t, testdata.PayloadWithNestedTypesDSL))
+	withoutLengthCode := codegen.SectionsCode(t, serverTypeFiles(withoutLength)[0].SectionTemplates[1:])
+	require.NotContains(t, withoutLengthCode, "func ValidateArrayOfString(")
+	require.NotContains(t, withoutLengthCode, `MissingFieldError("field"`)
+	require.Contains(t, withoutLengthCode, "var tv []string")
+	require.Contains(t, withoutLengthCode, "if val != nil {")
+	require.Less(t,
+		strings.Index(withoutLengthCode, "if val != nil {"),
+		strings.Index(withoutLengthCode, "len(val.Field)"),
+	)
+
+	withLength := CreateGRPCServices(RunGRPCDSL(t, testdata.ElemValidationDSL))
+	withLengthCode := codegen.SectionsCode(t, serverTypeFiles(withLength)[0].SectionTemplates[1:])
+	require.Contains(t, withLengthCode, "func validatetest_20_api_ServiceElemValidation_ArrayOfString_At_val(")
+	require.Contains(t, withLengthCode, `InvalidLengthError("val.field"`)
+	require.NotContains(t, withLengthCode, `MissingFieldError("field", "val")`)
+}
+
+// TestCLIConversionsShareTypePair checks that command-line payload builders
+// for the same protobuf message and Goa type keep the same conversion plan.
+func TestCLIConversionsShareTypePair(t *testing.T) {
+	root := RunGRPCDSL(t, testdata.PayloadWithMultipleUseTypesDSL)
+	services := CreateGRPCServices(root)
+	grpcService := root.API.GRPC.Services[0]
+	first := services.symbols[grpcService].endpoints[grpcService.GRPCEndpoints[0]].cliPayload
+	second := services.symbols[grpcService].endpoints[grpcService.GRPCEndpoints[1]].cliPayload
+
+	require.Same(t, first, second)
+}
+
+// TestRequestMetadataKeepsDistinctConversions checks that the same Goa type
+// gets separate constructors when endpoint metadata produces different
+// protobuf messages and different function arguments.
+func TestRequestMetadataKeepsDistinctConversions(t *testing.T) {
+	root := RunGRPCDSL(t, func() {
+		payload := dsl.Type("SharedPayload", func() {
+			dsl.Field(1, "value", dsl.String)
+			dsl.Field(2, "token", dsl.String)
+		})
+		dsl.Service("MetadataConversions", func() {
+			dsl.Method("Plain", func() {
+				dsl.Payload(payload)
+				dsl.GRPC(func() {})
+			})
+			dsl.Method("WithMetadata", func() {
+				dsl.Payload(payload)
+				dsl.GRPC(func() {
+					dsl.Metadata(func() {
+						dsl.Attribute("token")
+					})
+				})
+			})
+		})
+	})
+	services := CreateGRPCServices(root)
+	grpcService := root.API.GRPC.Services[0]
+	plain := services.symbols[grpcService].endpoints[grpcService.GRPCEndpoints[0]].serverInits[grpcInitKey{role: grpcRequestInit}]
+	metadata := services.symbols[grpcService].endpoints[grpcService.GRPCEndpoints[1]].serverInits[grpcInitKey{role: grpcRequestInit}]
+
+	require.NotSame(t, plain, metadata)
+	require.NotSame(t, plain.declaration, metadata.declaration)
+}
+
+// TestOneUseConversionsKeepReleasedNames checks that conversions used by one
+// method keep the names generated by released Goa versions.
+func TestOneUseConversionsKeepReleasedNames(t *testing.T) {
+	root := RunGRPCDSL(t, testdata.PayloadWithMixedAttributesDSL)
+	services := CreateGRPCServices(root)
+	server := codegen.SectionsCode(t, serverTypeFiles(services)[0].SectionTemplates[1:])
+
+	require.Contains(t, server, "func NewUnaryMethodPayload(")
+	require.Contains(t, server, "func NewStreamingMethodStreamingRequestAPayload(")
+	require.NotContains(t, server, "func NewAPayloadFromProto")
+}
+
+// TestReleasedConversionNameCollisionsUseDeclaredNames checks that two old
+// names which become equal get stable suffixes in definitions and calls.
+func TestReleasedConversionNameCollisionsUseDeclaredNames(t *testing.T) {
+	root := RunGRPCDSL(t, func() {
+		first := dsl.Type("FirstPayload", func() {
+			dsl.Field(1, "first", dsl.String)
+		})
+		second := dsl.Type("SecondPayload", func() {
+			dsl.Field(1, "second", dsl.String)
+		})
+		dsl.Service("CollidingConversions", func() {
+			dsl.Method("foo-bar", func() {
+				dsl.Payload(first)
+				dsl.GRPC(func() {})
+			})
+			dsl.Method("foo_bar", func() {
+				dsl.Payload(second)
+				dsl.GRPC(func() {})
+			})
+		})
+	})
+	services := CreateGRPCServices(root)
+	serverTypes := codegen.SectionsCode(t, serverTypeFiles(services)[0].SectionTemplates[1:])
+	server := codegen.SectionsCode(t, serverFiles(services)[1].Section("request-decoder"))
+
+	require.Equal(t, 1, strings.Count(serverTypes, "func NewFooBarPayload("))
+	require.Equal(t, 1, strings.Count(serverTypes, "func NewFooBarPayload2("))
+	require.Contains(t, server, "NewFooBarPayload(")
+	require.Contains(t, server, "NewFooBarPayload2(")
+}
+
+// TestLegacyMetadataConversionKeepsReleasedName checks that legacy request
+// metadata conversion keeps its released method-specific name.
+func TestLegacyMetadataConversionKeepsReleasedName(t *testing.T) {
+	root := RunGRPCDSL(t, testdata.BidirectionalStreamingRPCWithPayloadLegacyCompatDSL)
+	services := CreateGRPCServices(root)
+	server := codegen.SectionsCode(t, serverTypeFiles(services)[0].SectionTemplates[1:])
+
+	require.Contains(t, server, "func NewMethodBidirectionalStreamingRPCWithPayloadLegacyCompatPayloadFromMetadata(")
+}
+
+// TestTransformHelperNamesDescribeNestedTypes checks that each helper name
+// identifies the nested value it converts and its direction.
+func TestTransformHelperNamesDescribeNestedTypes(t *testing.T) {
+	root := RunGRPCDSL(t, testdata.PayloadWithNestedTypesDSL)
+	services := CreateGRPCServices(root)
+	client := codegen.SectionsCode(t, clientTypeFiles(services)[0].SectionTemplates[1:])
+	server := codegen.SectionsCode(t, serverTypeFiles(services)[0].SectionTemplates[1:])
+
+	require.Contains(t, client, "func transformAParamsToProtoAParams(")
+	require.Contains(t, client, "func transformBParamsToProtoBParams(")
+	require.Contains(t, server, "func transformProtoAParamsToAParams(")
+	require.Contains(t, server, "func transformProtoBParamsToBParams(")
+	require.NotRegexp(t, `func transform\w+\d+\(`, client)
+	require.NotRegexp(t, `func transform\w+\d+\(`, server)
+}
 
 func TestClientTypeFiles(t *testing.T) {
 	cases := []struct {
@@ -26,12 +192,15 @@ func TestClientTypeFiles(t *testing.T) {
 		{"client-struct-meta-type", testdata.StructMetaTypeDSL},
 		{"client-struct-field-name-meta-type", testdata.StructFieldNameMetaTypeDSL},
 		{"client-default-fields", testdata.DefaultFieldsDSL},
+		{"client-result-with-views", testdata.MessageResultTypeWithViewsDSL},
+		{"client-result-with-explicit-view", testdata.MessageResultTypeWithExplicitViewDSL},
+		{"client-streaming-result-with-views", testdata.ServerStreamingResultWithViewsDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := RunGRPCDSL(t, c.DSL)
 			services := CreateGRPCServices(root)
-			fs := ClientTypeFiles("", services)
+			fs := clientTypeFiles(services)
 			require.Len(t, fs, 1)
 			var buf bytes.Buffer
 			for _, s := range fs[0].SectionTemplates[1:] {

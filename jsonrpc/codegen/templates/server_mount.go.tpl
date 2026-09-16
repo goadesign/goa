@@ -1,26 +1,24 @@
-{{ printf "%s configures the mux to serve the JSON-RPC %s service methods." .MountServer .Service.Name | comment }}
-func {{ .MountServer }}(mux goahttp.Muxer, h *{{ .ServerStruct }}) {
+{{ printf "%s configures the mux to serve the JSON-RPC %s service methods." .MountServerDeclaration.Name .Service.Name | comment }}
+func {{ .MountServerDeclaration.Name }}(mux goahttp.Muxer, h *{{ .ServerStructDeclaration.Name }}) {
 {{- if .HasMixed }}
-	// Mixed transports: mount unified handler that negotiates HTTP vs SSE by Accept header
+	// ServeHTTP chooses ordinary JSON-RPC handling or server-sent events.
 	{{- range (index .Endpoints 0).Routes }}
 	mux.Handle("{{ .Verb }}", "{{ .Path }}", h.ServeHTTP)
 	{{- end }}
 {{- else if .HasSSE }}
-	// SSE only: mount SSE handler
-	{{- range .Endpoints }}
-		{{- range .Routes }}
+	// This server handles every method through server-sent events.
+	{{- range (index .Endpoints 0).Routes }}
 	mux.Handle("{{ .Verb }}", "{{ .Path }}", h.handleSSE)
-		{{- end }}
 	{{- end }}
 {{- else }}
-	// HTTP only
+	// This server handles ordinary JSON-RPC request bodies.
 	{{- range (index .Endpoints 0).Routes }}
 	mux.Handle("{{ .Verb }}", "{{ .Path }}", h.ServeHTTP)
 	{{- end }}
 {{- end }}
 }
 
-{{ printf "%s configures the mux to serve the JSON-RPC %s service methods." .MountServer .Service.Name | comment }}
-func (s *{{ .ServerStruct }}) {{ .MountServer }}(mux goahttp.Muxer) {
-	{{ .MountServer }}(mux, s)
+{{ printf "%s configures the mux to serve the JSON-RPC %s service methods." .MountServerDeclaration.Name .Service.Name | comment }}
+func (s *{{ .ServerStructDeclaration.Name }}) {{ .MountServerDeclaration.Name }}(mux goahttp.Muxer) {
+	{{ .MountServerDeclaration.Name }}(mux, s)
 }

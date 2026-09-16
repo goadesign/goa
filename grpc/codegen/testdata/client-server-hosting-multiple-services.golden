@@ -1,19 +1,41 @@
 import (
+	"context"
+	"errors"
+	"flag"
 	"fmt"
-	cli "grpc/cli/single_host"
-	"os"
+	"io"
 
-	goa "goa.design/goa/v3/pkg"
+	cli "generated.local/gen/grpc/cli/single_host"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-func doGRPC(_, host string, _ int, _ bool) (goa.Endpoint, any, error) {
+func doGRPC(ctx context.Context, _ string, host string, _ int, _ bool, stdout io.Writer) (err error) {
 	conn, err := grpc.NewClient(host, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "could not connect to gRPC server at %s: %v\n", host, err)
+		return fmt.Errorf("connect to gRPC server at %s: %w", host, err)
 	}
-	return cli.ParseEndpoint(
+	defer func() {
+		err = errors.Join(err, conn.Close())
+	}()
+	endpoint, payload, err := cli.ParseEndpoint(
 		conn,
 	)
+	if err != nil {
+		return fmt.Errorf("parse endpoint: %w", err)
+	}
+
+	switch flag.Arg(0) {
+	case "service":
+		switch flag.Arg(1) {
+		case "method":
+			return writeEndpointResult(ctx, stdout, endpoint, payload)
+		}
+	case "another-service":
+		switch flag.Arg(1) {
+		case "method":
+			return writeEndpointResult(ctx, stdout, endpoint, payload)
+		}
+	}
+	panic("parsed gRPC command has no generated result writer")
 }

@@ -1,0 +1,130 @@
+func main() {
+	var (
+		hostF = flag.String("host", "localhost", "Server host (valid values: localhost)")
+		addrF = flag.String("url", "", "URL to service host")
+
+		verboseF = flag.Bool("verbose", false, "Print request and response details")
+		vF       = flag.Bool("v", false, "Print request and response details")
+		timeoutF = flag.Int("timeout", 30, "Maximum number of seconds to wait for response")
+	)
+	flag.Usage = usage
+	flag.Parse()
+
+	var (
+		addr    string
+		timeout int
+		debug   bool
+	)
+	{
+		addr = *addrF
+		if addr == "" {
+			switch *hostF {
+			case "localhost":
+				addr = "grpc://localhost:8080"
+			default:
+				fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: localhost)\n", *hostF)
+				os.Exit(1)
+			}
+		}
+		timeout = *timeoutF
+		debug = *verboseF || *vF
+	}
+
+	var (
+		scheme string
+		host   string
+	)
+	{
+		u, err := url.Parse(addr)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "invalid URL %#v: %s\n", addr, err)
+			os.Exit(1)
+		}
+		scheme = u.Scheme
+		host = u.Host
+	}
+
+	var (
+		err error
+	)
+	{
+		switch scheme {
+		case "grpc", "grpcs":
+			err = doGRPC(context.Background(), scheme, host, timeout, debug, os.Stdout)
+		default:
+			fmt.Fprintf(os.Stderr, "invalid scheme: %q (valid schemes: grpc)\n", scheme)
+			os.Exit(1)
+		}
+	}
+	if err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			os.Exit(0)
+		}
+		fmt.Fprintln(os.Stderr, err.Error())
+		fmt.Fprintln(os.Stderr, "run '"+os.Args[0]+" --help' for detailed usage.")
+		os.Exit(1)
+	}
+
+}
+
+// writeStreamResults writes each server result until the server ends the stream.
+func writeStreamResults[T any](ctx context.Context, stdout io.Writer, recv func(context.Context) (T, error)) error {
+	for {
+		data, err := recv(ctx)
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			return fmt.Errorf("receive result: %w", err)
+		}
+		if err := writeJSON(stdout, data); err != nil {
+			return err
+		}
+	}
+}
+
+// writeJSON writes one indented JSON value followed by a newline.
+func writeJSON(stdout io.Writer, data any) error {
+	if data == nil {
+		return nil
+	}
+	encoded, err := json.MarshalIndent(data, "", "    ")
+	if err != nil {
+		return fmt.Errorf("encode result: %w", err)
+	}
+	if _, err := fmt.Fprintln(stdout, string(encoded)); err != nil {
+		return fmt.Errorf("write result: %w", err)
+	}
+	return nil
+}
+
+func usage() {
+	usageCommands := []string{
+		"events watch",
+	}
+	fmt.Fprintf(os.Stderr, `%s is a command line client for the test api API.
+
+Usage:
+    %s [-host HOST][-url URL][-timeout SECONDS][-verbose|-v] SERVICE ENDPOINT [flags]
+
+    -host HOST:  server host (localhost). valid values: localhost
+    -url URL:    specify service URL overriding host URL (grpc://localhost:8080)
+    -timeout:    maximum number of seconds to wait for response (30)
+    -verbose|-v: print request and response details (false)
+
+Commands:
+%s
+Additional help:
+    %s SERVICE [ENDPOINT] --help
+
+Example:
+%s
+`, os.Args[0], os.Args[0], indent(strings.Join(usageCommands, "\n")), os.Args[0], indent(grpcUsageExamples()))
+}
+
+func indent(s string) string {
+	if s == "" {
+		return ""
+	}
+	return "    " + strings.ReplaceAll(s, "\n", "\n    ")
+}

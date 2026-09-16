@@ -1,22 +1,28 @@
 // BuildMethodBodyQueryPathObjectPayload builds the payload for the
 // ServiceBodyQueryPathObject MethodBodyQueryPathObject endpoint from CLI flags.
-func BuildMethodBodyQueryPathObjectPayload(serviceBodyQueryPathObjectMethodBodyQueryPathObjectBody string, serviceBodyQueryPathObjectMethodBodyQueryPathObjectC2 string, serviceBodyQueryPathObjectMethodBodyQueryPathObjectB string) (*servicebodyquerypathobject.MethodBodyQueryPathObjectPayload, error) {
+func BuildMethodBodyQueryPathObjectPayload(serviceBodyQueryPathObjectMethodBodyQueryPathObjectBody *string, serviceBodyQueryPathObjectMethodBodyQueryPathObjectC2 *string, serviceBodyQueryPathObjectMethodBodyQueryPathObjectB *string) (*servicebodyquerypathobject.MethodBodyQueryPathObjectPayload, error) {
 	var err error
 	var body MethodBodyQueryPathObjectRequestBody
 	{
-		err = json.Unmarshal([]byte(serviceBodyQueryPathObjectMethodBodyQueryPathObjectBody), &body)
+		if serviceBodyQueryPathObjectMethodBodyQueryPathObjectBody == nil {
+			return nil, fmt.Errorf("missing required flag --body")
+		}
+		err = json.Unmarshal([]byte(*serviceBodyQueryPathObjectMethodBodyQueryPathObjectBody), &body)
 		if err != nil {
-			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"a\": \"Hic at eveniet porro sit nisi.\"\n   }'")
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"a\": \"Dolor rerum.\"\n   }'")
 		}
 	}
 	var c2 string
 	{
-		c2 = serviceBodyQueryPathObjectMethodBodyQueryPathObjectC2
+		if serviceBodyQueryPathObjectMethodBodyQueryPathObjectC2 == nil {
+			return nil, fmt.Errorf("missing required flag --c2")
+		}
+		c2 = *serviceBodyQueryPathObjectMethodBodyQueryPathObjectC2
 	}
 	var b *string
 	{
-		if serviceBodyQueryPathObjectMethodBodyQueryPathObjectB != "" {
-			b = &serviceBodyQueryPathObjectMethodBodyQueryPathObjectB
+		if serviceBodyQueryPathObjectMethodBodyQueryPathObjectB != nil {
+			b = serviceBodyQueryPathObjectMethodBodyQueryPathObjectB
 		}
 	}
 	v := &servicebodyquerypathobject.MethodBodyQueryPathObjectPayload{

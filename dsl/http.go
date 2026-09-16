@@ -154,7 +154,13 @@ func HTTP(fns ...func()) {
 	}
 	switch actual := eval.Current().(type) {
 	case *expr.APIExpr:
-		eval.Execute(fn, expr.Root)
+		previous := actual.HTTP.DSLFunc
+		actual.HTTP.DSLFunc = func() {
+			if previous != nil {
+				previous()
+			}
+			eval.Execute(fn, expr.Root)
+		}
 	case *expr.ServiceExpr:
 		res := expr.Root.API.HTTP.ServiceFor(actual, expr.Root.API.HTTP)
 		res.DSLFunc = fn
@@ -369,11 +375,13 @@ func route(method, path string) *expr.RouteExpr {
 // Header must appear in the API HTTP or JSONRPC expression (to define request
 // headers common to all the API endpoints), a service HTTP or JSONRPC
 // expression (to define request headers common to all the service endpoints) a
-// specific method HTTP or JSONRPC expression (to define request headers) or a
-// Response expression (to define the response headers). Header may also appear
+// specific method HTTP or JSONRPC expression (to define request headers) or an
+// HTTP Response expression (to define response headers). Header may also appear
 // in a method GRPC expression (to define headers sent in message metadata), or
 // in a Response expression (to define headers sent in result metadata). Finally
-// Header may also appear in a Headers expression.
+// Header may also appear in a Headers expression. A JSONRPC Response cannot map
+// a result or error field to an HTTP header because one HTTP response may carry
+// several JSON-RPC messages.
 //
 // Header accepts the same arguments as the Attribute function. The header name
 // may define a mapping between the attribute name and the HTTP header name when
@@ -415,8 +423,10 @@ func Header(name string, args ...any) {
 // Cookie must appear in the API HTTP or JSONRPC expression (to define request
 // cookies common to all the API endpoints), a service HTTP or JSONRPC
 // expression (to define request cookies common to all the service endpoints) a
-// specific method HTTP or JSONRPC expression (to define request cookies) or a
-// Response expression (to define the response cookies).
+// specific method HTTP or JSONRPC expression (to define request cookies) or an
+// HTTP Response expression (to define response cookies). A JSONRPC Response
+// cannot map a result or error field to an HTTP cookie because one HTTP
+// response may carry several JSON-RPC messages.
 //
 // Cookie accepts the same arguments as the Attribute function. The cookie name
 // may define a mapping between the attribute name and the cookie name. The
@@ -487,8 +497,7 @@ func Cookie(name string, args ...any) {
 //	    })
 //	})
 func CookieMaxAge(n int) {
-	_, ok := eval.Current().(*expr.HTTPResponseExpr)
-	if !ok {
+	if httpResponse(eval.Current()) == nil {
 		eval.IncompatibleDSL()
 		return
 	}
@@ -515,8 +524,7 @@ func CookieMaxAge(n int) {
 //	    })
 //	})
 func CookieDomain(d string) {
-	_, ok := eval.Current().(*expr.HTTPResponseExpr)
-	if !ok {
+	if httpResponse(eval.Current()) == nil {
 		eval.IncompatibleDSL()
 		return
 	}
@@ -543,8 +551,7 @@ func CookieDomain(d string) {
 //	    })
 //	})
 func CookiePath(p string) {
-	_, ok := eval.Current().(*expr.HTTPResponseExpr)
-	if !ok {
+	if httpResponse(eval.Current()) == nil {
 		eval.IncompatibleDSL()
 		return
 	}
@@ -570,8 +577,7 @@ func CookiePath(p string) {
 //	    })
 //	})
 func CookieSecure() {
-	_, ok := eval.Current().(*expr.HTTPResponseExpr)
-	if !ok {
+	if httpResponse(eval.Current()) == nil {
 		eval.IncompatibleDSL()
 		return
 	}
@@ -597,8 +603,7 @@ func CookieSecure() {
 //	    })
 //	})
 func CookieHTTPOnly() {
-	_, ok := eval.Current().(*expr.HTTPResponseExpr)
-	if !ok {
+	if httpResponse(eval.Current()) == nil {
 		eval.IncompatibleDSL()
 		return
 	}
@@ -625,8 +630,7 @@ func CookieHTTPOnly() {
 //	    })
 //	})
 func CookieSameSite(s expr.CookieSameSiteValue) {
-	_, ok := eval.Current().(*expr.HTTPResponseExpr)
-	if !ok {
+	if httpResponse(eval.Current()) == nil {
 		eval.IncompatibleDSL()
 		return
 	}
@@ -783,6 +787,8 @@ func MapParams(args ...any) {
 // MIME multipart encoding as defined in RFC 2046.
 //
 // MultipartRequest must appear in a HTTP endpoint expression.
+// At least one payload value must remain in the request body after path,
+// query, header, and cookie mappings are applied.
 //
 // goa generates a custom encoder that writes the payload for requests made to
 // HTTP endpoints that use MultipartRequest. The generated encoder accept a
@@ -790,11 +796,11 @@ func MapParams(args ...any) {
 // multipart content. The user provided function accepts a multipart writer
 // and a reference to the payload and is responsible for encoding the payload.
 // goa also generates a custom decoder that reads back the multipart content
-// into the payload struct. The generated decoder also accepts a user provided
-// function that takes a multipart reader and a reference to the payload struct
-// as parameter. The user provided decoder is responsible for decoding the
-// multipart content into the payload. The example command generates a default
-// implementation for the user decoder and encoder.
+// into the generated HTTP request body. The generated decoder accepts a user
+// provided function that takes a multipart reader and a reference to that body
+// as parameters. Goa validates the decoded body before it builds the service
+// payload. The example command generates a default implementation for the user
+// decoder and encoder.
 func MultipartRequest() {
 	e, ok := eval.Current().(*expr.HTTPEndpointExpr)
 	if !ok {
@@ -932,7 +938,9 @@ func Body(args ...any) {
 		}
 		kind = "Request"
 	case *expr.HTTPErrorExpr:
-		ref = e.AttributeExpr
+		if e.ErrorExpr != nil {
+			ref = e.AttributeExpr
+		}
 		setter = func(att *expr.AttributeExpr) {
 			if e.Response == nil {
 				e.Response = &expr.HTTPResponseExpr{}
@@ -979,7 +987,7 @@ func Body(args ...any) {
 			eval.ReportError("%s type does not have an attribute named %#v", kind, a)
 			return
 		}
-		attr = expr.DupAtt(attr)
+		attr = expr.DupAttForDSL(attr)
 		attr.AddMeta("origin:attribute", a)
 		if rt, ok := attr.Type.(*expr.ResultTypeExpr); ok && expr.IsArray(rt.Type) {
 			// If the attribute type is a result type collection add the type to the
@@ -1092,8 +1100,8 @@ func CanonicalMethod(name string) {
 //	    })
 //	})
 func Tag(name, value string) {
-	res, ok := eval.Current().(*expr.HTTPResponseExpr)
-	if !ok {
+	res := httpResponse(eval.Current())
+	if res == nil {
 		eval.IncompatibleDSL()
 		return
 	}
@@ -1118,6 +1126,8 @@ func ContentType(typ string) {
 		actual.ContentType = typ // deprecated
 	case *expr.HTTPResponseExpr:
 		actual.ContentType = typ
+	case *expr.HTTPErrorExpr:
+		actual.Response.ContentType = typ
 	default:
 		eval.IncompatibleDSL()
 	}
@@ -1147,6 +1157,11 @@ func headers(exp eval.Expression) *expr.MappedAttributeExpr {
 			e.Headers = expr.NewEmptyMappedAttributeExpr()
 		}
 		return e.Headers
+	case *expr.HTTPErrorExpr:
+		if e.Response.Headers == nil {
+			e.Response.Headers = expr.NewEmptyMappedAttributeExpr()
+		}
+		return e.Response.Headers
 	case *expr.MappedAttributeExpr:
 		return e
 	default:
@@ -1178,6 +1193,11 @@ func cookies(exp eval.Expression) *expr.MappedAttributeExpr {
 			e.Cookies = expr.NewEmptyMappedAttributeExpr()
 		}
 		return e.Cookies
+	case *expr.HTTPErrorExpr:
+		if e.Response.Cookies == nil {
+			e.Response.Cookies = expr.NewEmptyMappedAttributeExpr()
+		}
+		return e.Response.Cookies
 	case *expr.MappedAttributeExpr:
 		return e
 	default:
@@ -1215,6 +1235,20 @@ func params(exp eval.Expression) *expr.MappedAttributeExpr {
 // cookieAttribute initialize the current attribute metadata with the details of
 // a HTTP cookie attribute for use by the HTTP code generator.
 func cookieAttribute(name, value string) {
-	c := eval.Current().(*expr.HTTPResponseExpr).Cookies
+	c := httpResponse(eval.Current()).Cookies
 	c.AddMeta("cookie:"+name, value)
+}
+
+// httpResponse returns the response changed by HTTP response DSL. Error
+// callbacks describe their nested response while success callbacks use the
+// response directly.
+func httpResponse(current eval.Expression) *expr.HTTPResponseExpr {
+	switch actual := current.(type) {
+	case *expr.HTTPResponseExpr:
+		return actual
+	case *expr.HTTPErrorExpr:
+		return actual.Response
+	default:
+		return nil
+	}
 }

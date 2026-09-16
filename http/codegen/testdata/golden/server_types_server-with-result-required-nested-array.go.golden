@@ -1,0 +1,34 @@
+// MethodResultRequiredNestedArrayResponseBody is the type of the
+// "ServiceResultRequiredNestedArray" service "MethodResultRequiredNestedArray"
+// endpoint HTTP response body.
+type MethodResultRequiredNestedArrayResponseBody struct {
+	Items [][]*NestedElemResponseBody `form:"items" json:"items" xml:"items"`
+}
+
+// NestedElemResponseBody is used to define fields on response body types.
+type NestedElemResponseBody struct {
+	A *string `form:"a,omitempty" json:"a,omitempty" xml:"a,omitempty"`
+}
+
+// NewMethodResultRequiredNestedArrayResponseBody builds the HTTP response body
+// from the result of the "MethodResultRequiredNestedArray" endpoint of the
+// "ServiceResultRequiredNestedArray" service.
+func NewMethodResultRequiredNestedArrayResponseBody(res *serviceresultrequirednestedarrayviews.GoaRequiredNestedArrayView) *MethodResultRequiredNestedArrayResponseBody {
+	body := &MethodResultRequiredNestedArrayResponseBody{}
+	if res.Items != nil {
+		body.Items = make([][]*NestedElemResponseBody, len(res.Items))
+		for i, val := range res.Items {
+			body.Items[i] = make([]*NestedElemResponseBody, len(val))
+			for j, val := range val {
+				if val == nil {
+					body.Items[i][j] = nil
+					continue
+				}
+				body.Items[i][j] = marshalServiceresultrequirednestedarrayviewsNestedElemViewToNestedElemResponseBody(val)
+			}
+		}
+	} else {
+		body.Items = [][]*NestedElemResponseBody{}
+	}
+	return body
+}

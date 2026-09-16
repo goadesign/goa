@@ -1,10 +1,13 @@
 // BuildMethodQueryStringValidatePayload builds the payload for the
 // ServiceQueryStringValidate MethodQueryStringValidate endpoint from CLI flags.
-func BuildMethodQueryStringValidatePayload(serviceQueryStringValidateMethodQueryStringValidateQ string) (*servicequerystringvalidate.MethodQueryStringValidatePayload, error) {
+func BuildMethodQueryStringValidatePayload(serviceQueryStringValidateMethodQueryStringValidateQ *string) (*servicequerystringvalidate.MethodQueryStringValidatePayload, error) {
 	var err error
 	var q string
 	{
-		q = serviceQueryStringValidateMethodQueryStringValidateQ
+		if serviceQueryStringValidateMethodQueryStringValidateQ == nil {
+			return nil, fmt.Errorf("missing required flag --q")
+		}
+		q = *serviceQueryStringValidateMethodQueryStringValidateQ
 		if !(q == "val") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("q", q, []any{"val"}))
 		}

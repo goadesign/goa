@@ -1,0 +1,25 @@
+package testapi
+
+import (
+	"context"
+	"goa.design/clue/log"
+	mixedresultswithviewsendpoint "goa.design/goa/example/mixed_results_with_views_endpoint"
+)
+
+// MixedResultsWithViewsEndpoint service example implementation.
+// The example methods log the requests and return zero values.
+type mixedResultsWithViewsEndpointsrvc struct{}
+
+// NewMixedResultsWithViewsEndpoint returns the MixedResultsWithViewsEndpoint
+// service implementation.
+func NewMixedResultsWithViewsEndpoint() mixedresultswithviewsendpoint.Service {
+	return &mixedResultsWithViewsEndpointsrvc{}
+}
+
+// MixedResultsWithViewsMethod implements MixedResultsWithViewsMethod.
+func (s *mixedResultsWithViewsEndpointsrvc) MixedResultsWithViewsMethod(ctx context.Context, stream mixedresultswithviewsendpoint.MixedResultsWithViewsMethodServerStream) (res *mixedresultswithviewsendpoint.MixedResult, view string, err error) {
+	res = &mixedresultswithviewsendpoint.MixedResult{}
+	view = "default"
+	log.Printf(ctx, "mixedResultsWithViewsEndpoint.MixedResultsWithViewsMethod")
+	return
+}

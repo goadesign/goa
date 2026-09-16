@@ -4,7 +4,7 @@ func DecodeMethodBodyUserValidateRequest(mux goahttp.Muxer, decoder func(*http.R
 	return func(r *http.Request) (*servicebodyuservalidate.PayloadType, error) {
 		var payload *servicebodyuservalidate.PayloadType
 		var (
-			body string
+			body *string
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -19,9 +19,11 @@ func DecodeMethodBodyUserValidateRequest(mux goahttp.Muxer, decoder func(*http.R
 				return payload, goa.DecodePayloadError(err.Error())
 			}
 		}
-		err = goa.MergeErrors(err, goa.ValidatePattern("body", body, "apattern"))
-		if err != nil {
-			return payload, err
+		if body != nil {
+			err = goa.MergeErrors(err, goa.ValidatePattern("body", *body, "apattern"))
+			if err != nil {
+				return payload, err
+			}
 		}
 		payload = NewMethodBodyUserValidatePayloadType(body)
 

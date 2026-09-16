@@ -14,7 +14,6 @@ import (
 )
 
 func TestServerHandler(t *testing.T) {
-	const genpkg = "gen"
 	cases := []struct {
 		Name string
 		DSL  func()
@@ -26,8 +25,8 @@ func TestServerHandler(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := expr.RunDSL(t, c.DSL)
-			services := CreateHTTPServices(root)
-			fs := ServerFiles(genpkg, services)
+			plan := linkedHTTPPlanForRoot(t, root)
+			fs := plan.ServerFiles()
 			sections := codegentest.Sections(fs, "server.go", "server-handler")
 			require.Greater(t, len(sections), 0)
 			code := codegen.SectionCode(t, sections[0])

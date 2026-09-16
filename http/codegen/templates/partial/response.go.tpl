@@ -7,7 +7,7 @@
 			{{- range $.ViewedResult.Views }}
 	case {{ printf "%q" .Name }}{{ if eq .Name "default" }}, ""{{ end }}:
 		{{- $vsb := (viewedServerBody $.ServerBody .Name) }}
-		body = {{ $vsb.Init.Name }}({{ range $vsb.Init.ServerArgs }}{{ .Ref }}, {{ end }})
+		body = {{ $vsb.Init.Declaration.Name }}({{ range $vsb.Init.ServerArgs }}{{ .Ref }}, {{ end }})
 			{{- end }}
 	}
 		{{- else if (index .ServerBody 0).Init }}
@@ -17,7 +17,7 @@
 		body = formatter(ctx, {{ (index (index .ServerBody 0).Init.ServerArgs 0).Ref }})
 	} else {
 			{{- end }}
-	body {{ if not .ErrorHeader}}:{{ end }}= {{ (index .ServerBody 0).Init.Name }}({{ range (index .ServerBody 0).Init.ServerArgs }}{{ .Ref }}, {{ end }})
+	body {{ if not .ErrorHeader}}:{{ end }}= {{ (index .ServerBody 0).Init.Declaration.Name }}({{ range (index .ServerBody 0).Init.ServerArgs }}{{ .Ref }}, {{ end }})
 			{{- if .ErrorHeader }}
 	}
 			{{- end }}

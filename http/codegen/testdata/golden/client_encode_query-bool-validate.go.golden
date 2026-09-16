@@ -7,7 +7,7 @@ func EncodeMethodQueryBoolValidateRequest(encoder func(*http.Request) goahttp.En
 			return goahttp.ErrInvalidType("ServiceQueryBoolValidate", "MethodQueryBoolValidate", "*servicequeryboolvalidate.MethodQueryBoolValidatePayload", v)
 		}
 		values := req.URL.Query()
-		values.Add("q", fmt.Sprintf("%v", p.Q))
+		values.Add("q", strconv.FormatBool(p.Q))
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}

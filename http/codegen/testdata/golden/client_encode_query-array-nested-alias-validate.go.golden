@@ -8,7 +8,7 @@ func EncodeMethodARequest(encoder func(*http.Request) goahttp.Encoder) func(*htt
 		}
 		values := req.URL.Query()
 		for _, value := range p.Array {
-			valueStr := strconv.FormatFloat(float64(value), 'f', -1, 64)
+			valueStr := strconv.FormatFloat(float64(value), 'g', -1, 64)
 			values.Add("array", valueStr)
 		}
 		req.URL.RawQuery = values.Encode()

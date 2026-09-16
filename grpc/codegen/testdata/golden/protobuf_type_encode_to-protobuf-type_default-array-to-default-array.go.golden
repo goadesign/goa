@@ -6,7 +6,4 @@ func transform() {
 			target.StringArray[i] = val
 		}
 	}
-	if source.StringArray == nil {
-		target.StringArray = []string{"foo", "bar"}
-	}
 }

@@ -7,25 +7,19 @@
 
 package client
 
-import (
-	mixed "kitchensink/mixed"
-
-	goa "goa.design/goa/v3/pkg"
-)
+import mixed "generated.local/gen/mixed"
 
 // LookupRequestBody is the type of the "Mixed" service "lookup" endpoint HTTP
 // request body.
 type LookupRequestBody struct {
 	// Request ID
-	ID  string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	ID  string `form:"id" json:"id" xml:"id"`
 	Key string `form:"key" json:"key" xml:"key"`
 }
 
 // LookupResponseBody is the type of the "Mixed" service "lookup" endpoint HTTP
 // response body.
 type LookupResponseBody struct {
-	// Request ID
-	ID    *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
 	Value *string `form:"value,omitempty" json:"value,omitempty" xml:"value,omitempty"`
 }
 
@@ -43,17 +37,8 @@ func NewLookupRequestBody(p *mixed.LookupPayload) *LookupRequestBody {
 // HTTP "OK" response.
 func NewLookupResultOK(body *LookupResponseBody) *mixed.LookupResult {
 	v := &mixed.LookupResult{
-		ID:    *body.ID,
 		Value: body.Value,
 	}
 
 	return v
-}
-
-// ValidateLookupResponseBody runs the validations defined on LookupResponseBody
-func ValidateLookupResponseBody(body *LookupResponseBody) (err error) {
-	if body.ID == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
-	}
-	return
 }

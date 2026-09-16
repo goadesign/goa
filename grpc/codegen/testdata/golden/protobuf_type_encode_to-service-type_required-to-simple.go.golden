@@ -1,8 +1,8 @@
 func transform() {
 	target := &proto.Simple{
-		RequiredString: source.RequiredString,
-		DefaultBool:    source.DefaultBool,
+		RequiredString: *source.RequiredString,
+		DefaultBool:    *source.DefaultBool,
 	}
-	integer := int(source.Integer)
+	integer := int(*source.Integer)
 	target.Integer = &integer
 }

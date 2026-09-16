@@ -1,3 +1,5 @@
+// This file renders HTTP request and response types per service and transport
+// side, using imports attached to that exact generated type file.
 package codegen
 
 import (
@@ -7,20 +9,20 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
-// ServerTypeFiles returns the HTTP transport type files.
-func ServerTypeFiles(genpkg string, data *ServicesData) []*codegen.File {
+// serverTypeFiles builds the server request and response types read by Plan.Link.
+func serverTypeFiles(data *ServicesData) []*codegen.File {
 	fw := make([]*codegen.File, len(data.Expressions.Services))
 	for i, svc := range data.Expressions.Services {
-		fw[i] = typesFile(genpkg, svc, true, data)
+		fw[i] = typesFile(svc, true, data)
 	}
 	return fw
 }
 
-// ClientTypeFiles returns the HTTP transport client types files.
-func ClientTypeFiles(genpkg string, data *ServicesData) []*codegen.File {
+// clientTypeFiles builds the client request and response types read by Plan.Link.
+func clientTypeFiles(data *ServicesData) []*codegen.File {
 	fw := make([]*codegen.File, len(data.Expressions.Services))
 	for i, svc := range data.Expressions.Services {
-		fw[i] = typesFile(genpkg, svc, false, data)
+		fw[i] = typesFile(svc, false, data)
 	}
 	return fw
 }
@@ -49,7 +51,7 @@ func ClientTypeFiles(genpkg string, data *ServicesData) []*codegen.File {
 //
 //   - Response body fields (if the body is a struct) and header variables hold
 //     pointers when not required and have no default value.
-func typesFile(genpkg string, svc *expr.HTTPServiceExpr, svr bool, services *ServicesData) *codegen.File {
+func typesFile(svc *expr.HTTPServiceExpr, svr bool, services *ServicesData) *codegen.File {
 	var (
 		data    = services.Get(svc.Name())
 		svcName = data.Service.PathName
@@ -79,22 +81,10 @@ func typesFile(genpkg string, svc *expr.HTTPServiceExpr, svr bool, services *Ser
 		bodyInitT = clientBodyInitT
 	}
 	path := filepath.Join(codegen.Gendir, services.dir(), svcName, side, "types.go")
-	imports := []*codegen.ImportSpec{
-		{Path: "encoding/json"},
-		{Path: "fmt"},
-		{Path: "unicode/utf8"},
-		{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
-	}
-	if len(data.UnionTypes) > 0 {
-		imports = append(imports, &codegen.ImportSpec{Path: "bytes"})
-	}
-	views := &codegen.ImportSpec{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg}
-	if svr {
-		imports = append(imports, codegen.GoaImport(""), views)
-	} else {
-		imports = append(imports, views, codegen.GoaImport(""))
-	}
-	header := codegen.Header(svc.Name()+" "+services.label()+" "+side+" types", side, imports)
+	outputPackage := generatedFileOutputPackage(services, path)
+	data = serviceDataForOutput(data, services, outputPackage)
+	unionTypes := data.wireTypes(svr).unionTypes()
+	header := plannedFileHeader(svc.Name()+" "+services.label()+" "+side+" types", side, path, services)
 
 	var (
 		initData       []*InitData
@@ -102,46 +92,43 @@ func typesFile(genpkg string, svc *expr.HTTPServiceExpr, svr bool, services *Ser
 
 		sections = []*codegen.SectionTemplate{header}
 
-		// seen tracks the body types already emitted in this file. Server
-		// types are deduplicated by type name because distinct
-		// endpoint-scoped composite wrappers may share a structural
-		// reference, client types by reference because structurally
-		// identical types are decoded interchangeably.
-		seen          = make(map[string]struct{})
+		// seen records each generated type declaration already written to this
+		// file. Two declarations may have similar Go type text, so the declaration
+		// itself decides whether another definition is needed.
+		seen          = make(map[*wireTypeRecord]struct{})
 		seenInits     = make(map[string]struct{})
-		seenValidated = make(map[string]struct{})
+		seenValidated = make(map[*wireTypeRecord]struct{})
 	)
-	key := func(td *TypeData) string {
-		if svr {
-			return td.Name
-		}
-		return td.Ref
-	}
 	// addDecl emits the type declaration section if the type has a
 	// definition.
 	addDecl := func(name string, td *TypeData) {
-		if td.Def != "" {
+		if td.declaration == nil || td.Def == "" {
+			return
+		}
+		if _, ok := seen[td.declaration]; ok {
+			return
+		}
+		seen[td.declaration] = struct{}{}
+		declaration := td.declaration.data
+		if declaration != nil {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   name,
 				Source: httpTemplates.Read(typeDeclT),
-				Data:   td,
+				Data:   declaration,
 			})
 		}
 	}
-	// addValidated records the type for validation method generation. Client
-	// types are deduplicated by name; server types rely on the body type
-	// dedup performed by the callers.
+	// addValidated records each validation helper declared in this generated
+	// package once.
 	addValidated := func(td *TypeData) {
-		if td.ValidateDef == "" {
+		if td.declaration == nil || td.ValidateDef == "" {
 			return
 		}
-		if !svr {
-			if _, ok := seenValidated[td.Name]; ok {
-				return
-			}
-			seenValidated[td.Name] = struct{}{}
+		if _, ok := seenValidated[td.declaration]; ok {
+			return
 		}
-		validatedTypes = append(validatedTypes, td)
+		seenValidated[td.declaration] = struct{}{}
+		validatedTypes = append(validatedTypes, td.declaration.data)
 	}
 
 	// request body types
@@ -150,7 +137,7 @@ func typesFile(genpkg string, svc *expr.HTTPServiceExpr, svr bool, services *Ser
 		var body, wsPayload *TypeData
 		if svr {
 			body = adata.Payload.Request.ServerBody
-			if adata.ServerWebSocket != nil && !adata.IsJSONRPC {
+			if adata.ServerWebSocket != nil {
 				wsPayload = adata.ServerWebSocket.Payload
 			}
 		} else {
@@ -162,12 +149,6 @@ func typesFile(genpkg string, svc *expr.HTTPServiceExpr, svr bool, services *Ser
 		for i, td := range []*TypeData{body, wsPayload} {
 			if td == nil {
 				continue
-			}
-			if !svr {
-				if _, ok := seen[td.Ref]; ok {
-					continue
-				}
-				seen[td.Ref] = struct{}{}
 			}
 			name := requestBodySection
 			if i == 1 {
@@ -194,21 +175,49 @@ func typesFile(genpkg string, svc *expr.HTTPServiceExpr, svr bool, services *Ser
 			bodies := resp.ServerBody
 			if !svr {
 				bodies = nil
-				if resp.ClientBody != nil {
+				if len(resp.ViewedRepresentations) > 0 {
+					for _, representation := range resp.ViewedRepresentations {
+						bodies = append(bodies, representation.ClientBody)
+					}
+				} else if resp.ClientBody != nil {
 					bodies = []*TypeData{resp.ClientBody}
 				}
 			}
 			for _, td := range bodies {
-				if _, ok := seen[key(td)]; ok {
+				if td == nil {
 					continue
 				}
-				seen[key(td)] = struct{}{}
 				addDecl(responseBodySection, td)
 				if td.Init != nil {
-					initData = append(initData, td.Init)
+					if _, ok := seenInits[td.Init.Name]; !ok {
+						seenInits[td.Init.Name] = struct{}{}
+						initData = append(initData, td.Init)
+					}
 				}
 				addValidated(td)
 			}
+		}
+		if !adata.HasMixedResults || adata.SSE == nil || adata.SSE.Response == nil {
+			continue
+		}
+		var bodies []*TypeData
+		if svr {
+			bodies = adata.SSE.Response.ServerBody
+		} else if adata.SSE.Response.ClientBody != nil {
+			bodies = []*TypeData{adata.SSE.Response.ClientBody}
+		}
+		for _, td := range bodies {
+			if td == nil {
+				continue
+			}
+			addDecl(responseBodySection, td)
+			if td.Init != nil {
+				if _, ok := seenInits[td.Init.Name]; !ok {
+					seenInits[td.Init.Name] = struct{}{}
+					initData = append(initData, td.Init)
+				}
+			}
+			addValidated(td)
 		}
 	}
 
@@ -225,18 +234,12 @@ func typesFile(genpkg string, svc *expr.HTTPServiceExpr, svr bool, services *Ser
 					}
 				}
 				for _, td := range bodies {
-					if _, ok := seen[key(td)]; ok {
-						continue
-					}
-					// Server error body types without a definition are not
-					// marked as emitted: their endpoint-scoped constructors
-					// and validations are collected for every occurrence.
-					if !svr || td.Def != "" {
-						seen[key(td)] = struct{}{}
-					}
 					addDecl(errorBodySection, td)
 					if td.Init != nil {
-						initData = append(initData, td.Init)
+						if _, ok := seenInits[td.Init.Name]; !ok {
+							seenInits[td.Init.Name] = struct{}{}
+							initData = append(initData, td.Init)
+						}
 					}
 					addValidated(td)
 				}
@@ -250,18 +253,12 @@ func typesFile(genpkg string, svc *expr.HTTPServiceExpr, svr bool, services *Ser
 		atts = data.ClientBodyAttributeTypes
 	}
 	for _, td := range atts {
-		if !svr {
-			if _, ok := seen[td.Ref]; ok {
-				continue
-			}
-			seen[td.Ref] = struct{}{}
-		}
 		addDecl(attributeSection, td)
 		addValidated(td)
 	}
 
 	// union sum types
-	for _, u := range data.UnionTypes {
+	for _, u := range unionTypes {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   unionSection,
 			Source: httpTemplates.Read(unionTypeT),
@@ -295,10 +292,16 @@ func typesFile(genpkg string, svc *expr.HTTPServiceExpr, svr bool, services *Ser
 		seenResultInits := make(map[string]struct{})
 		for _, adata := range data.Endpoints {
 			for _, resp := range adata.Result.Responses {
-				if init := resp.ResultInit; init != nil {
-					if _, ok := seenResultInits[init.Name]; !ok {
-						seenResultInits[init.Name] = struct{}{}
-						sections = append(sections, resultInitSection("client-result-init", init))
+				inits := []*InitData{resp.ResultInit}
+				for _, representation := range resp.ViewedRepresentations {
+					inits = append(inits, representation.ResultInit)
+				}
+				for _, init := range inits {
+					if init != nil {
+						if _, ok := seenResultInits[init.Name]; !ok {
+							seenResultInits[init.Name] = struct{}{}
+							sections = append(sections, resultInitSection("client-result-init", init))
+						}
 					}
 				}
 			}
@@ -369,6 +372,7 @@ func fieldCode(init *InitData, typ string) string {
 			FieldName:    arg.FieldName,
 			FieldPointer: arg.FieldPointer,
 			FieldType:    arg.FieldType,
+			FieldTypeRef: arg.ServiceTypeRef,
 		}
 	}
 	// We can ignore the transform helpers as there won't be any generated

@@ -1,3 +1,4 @@
+// This file verifies generated gRPC command-line client examples.
 package codegen
 
 import (
@@ -7,9 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"goa.design/goa/v3/codegen"
-	"goa.design/goa/v3/codegen/example"
 	ctestdata "goa.design/goa/v3/codegen/example/testdata"
-	"goa.design/goa/v3/codegen/service"
 	"goa.design/goa/v3/codegen/testutil"
 	"goa.design/goa/v3/grpc/codegen/testdata"
 )
@@ -20,23 +19,28 @@ func TestExampleCLIFiles(t *testing.T) {
 		DSL     func()
 		PkgPath string
 	}{
-		{"no-server", ctestdata.NoServerDSL, ""},
-		{"server-hosting-service-subset", ctestdata.ServerHostingServiceSubsetDSL, ""},
-		{"server-hosting-multiple-services", ctestdata.ServerHostingMultipleServicesDSL, ""},
+		{"no-server", ctestdata.NoServerDSL, "generated.local/gen"},
+		{"server-hosting-service-subset", ctestdata.ServerHostingServiceSubsetDSL, "generated.local/gen"},
+		{"server-hosting-multiple-services", ctestdata.ServerHostingMultipleServicesDSL, "generated.local/gen"},
 		{"no-server-pkgpath", ctestdata.NoServerDSL, "my/pkg/path"},
 		{"server-hosting-service-subset-pkgpath", ctestdata.ServerHostingServiceSubsetDSL, "my/pkg/path"},
 		{"server-hosting-multiple-services-pkgpath", ctestdata.ServerHostingMultipleServicesDSL, "my/pkg/path"},
-		{"interceptors", testdata.InterceptorsDSL, ""},
+		{"interceptors", testdata.InterceptorsDSL, "generated.local/gen"},
+		{"server-streaming", testdata.ServerStreamingRPCDSL, "generated.local/gen"},
+		{"client-streaming", testdata.ClientStreamingRPCDSL, "generated.local/gen"},
+		{"bidirectional-streaming", testdata.BidirectionalStreamingRPCDSL, "generated.local/gen"},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			// reset global variable
-			example.Servers = make(example.ServersData)
 			root := codegen.RunDSL(t, c.DSL)
-			services := NewServicesData(service.NewServicesData(root))
-			fs := ExampleCLIFiles(c.PkgPath, services)
+			examples := createExamplePlan(root, c.PkgPath)
+			fs := examples.CLIFiles()
 			require.Greater(t, len(fs), 0)
 			require.Greater(t, len(fs[0].SectionTemplates), 0)
+			header := sectionCode(t, fs[0].SectionTemplates[0])
+			for _, absent := range []string{`"os"`, `"time"`, `goa "goa.design/goa/v3/pkg"`, `goagrpc "goa.design/goa/v3/grpc"`} {
+				require.NotContains(t, header, absent)
+			}
 			var buf bytes.Buffer
 			for _, s := range fs[0].SectionTemplates {
 				require.NoError(t, s.Write(&buf))

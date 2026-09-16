@@ -9,6 +9,9 @@ func DecodeMethodServerStreamingRPCRequest(ctx context.Context, v any, md metada
 		if message, ok = v.(*service_server_streaming_rpcpb.MethodServerStreamingRPCRequest); !ok {
 			return nil, goagrpc.ErrInvalidType("ServiceServerStreamingRPC", "MethodServerStreamingRPC", "*service_server_streaming_rpcpb.MethodServerStreamingRPCRequest", v)
 		}
+		if err := ValidateMethodServerStreamingRPCRequest(message); err != nil {
+			return nil, err
+		}
 	}
 	var payload int
 	{

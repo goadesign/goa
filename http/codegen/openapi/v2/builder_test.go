@@ -1,3 +1,5 @@
+// This file verifies OpenAPI v2 construction from evaluated HTTP endpoint
+// designs, including request and response example ownership.
 package openapiv2
 
 import (
@@ -8,8 +10,35 @@ import (
 	"goa.design/goa/v3/codegen"
 	dsl "goa.design/goa/v3/dsl"
 	"goa.design/goa/v3/expr"
+	"goa.design/goa/v3/http/codegen/openapi"
 	"gopkg.in/yaml.v3"
 )
+
+func TestNewV2WithValues(t *testing.T) {
+	root := codegen.RunDSL(t, localizedValuesDSL)
+	service := root.Service("messages")
+	method := service.Method("show")
+	values := (openapi.Values{}).
+		WithTitle(root.API, "Localized API").
+		WithDescription(root.API, "Localized API description").
+		WithDescription(service, "Localized service description").
+		WithDescription(method, "Localized method description")
+
+	spec, err := NewV2WithValues(
+		root,
+		root.API.Servers[0].Hosts[0],
+		expr.NewExampleGenerator(root.API.RandomizerFactory),
+		values,
+	)
+	require.NoError(t, err)
+	require.Equal(t, "Localized API", spec.Info.Title)
+	require.Equal(t, "Localized API description", spec.Info.Description)
+	operation := spec.Paths["/messages"].(*Path).Get
+	require.Equal(t, "Localized method description", operation.Description)
+	require.Contains(t, operation.Tags, "messages")
+	require.Equal(t, "Original API", root.API.Title)
+	require.Equal(t, "Original method description", method.Description)
+}
 
 func TestBuildPathFromFileServer(t *testing.T) {
 	cases := []struct {
@@ -36,7 +65,7 @@ func TestBuildPathFromFileServer(t *testing.T) {
 			}
 			root := &expr.RootExpr{
 				API: &expr.APIExpr{
-					ExampleGenerator: expr.NewRandom("test"),
+					RandomizerFactory: expr.NewFakerRandomizerFactory("test"),
 				},
 			}
 			fs := &expr.HTTPFileServerExpr{
@@ -47,7 +76,7 @@ func TestBuildPathFromFileServer(t *testing.T) {
 				},
 				RequestPaths: []string{tc.path},
 			}
-			buildPathFromFileServer(s, root, fs)
+			buildPathFromFileServer(s, root, fs, newSchemaBuilder(openapi.Values{}), expr.NewExampleGenerator(root.API.RandomizerFactory), openapi.Values{})
 			for actual := range s.Paths {
 				if actual != tc.expected {
 					t.Errorf("got %#v, expected %#v", actual, tc.expected)
@@ -193,6 +222,19 @@ func TestOperationSecurityMarshal(t *testing.T) {
 	}
 }
 
+func TestSecurityDefinitionsIncludeVisibleOperationsOnly(t *testing.T) {
+	root := codegen.RunDSL(t, visibleSecuritySchemesDSL)
+	spec, err := NewV2(root, root.API.Servers[0].Hosts[0])
+	require.NoError(t, err)
+
+	visible := root.Service("visible").Method("read").Requirements[0].Schemes[0].Hash()
+	hiddenMethod := root.Service("mixed").Method("hidden").Requirements[0].Schemes[0].Hash()
+	hiddenService := root.Service("hidden").Method("read").Requirements[0].Schemes[0].Hash()
+	require.Contains(t, spec.SecurityDefinitions, visible)
+	require.NotContains(t, spec.SecurityDefinitions, hiddenMethod)
+	require.NotContains(t, spec.SecurityDefinitions, hiddenService)
+}
+
 var noSecurityOverridesAPISecurityDSL = func() {
 	var JWTAuth = dsl.JWTSecurity("jwt")
 
@@ -214,6 +256,66 @@ var noSecurityOverridesAPISecurityDSL = func() {
 			dsl.NoSecurity()
 			dsl.HTTP(func() {
 				dsl.GET("/public")
+			})
+		})
+	})
+}
+
+var localizedValuesDSL = func() {
+	dsl.API("messages", func() {
+		dsl.Title("Original API")
+		dsl.Description("Original API description")
+	})
+	dsl.Service("messages", func() {
+		dsl.Description("Original service description")
+		dsl.Method("show", func() {
+			dsl.Description("Original method description")
+			dsl.HTTP(func() {
+				dsl.GET("/messages")
+			})
+		})
+	})
+}
+
+var visibleSecuritySchemesDSL = func() {
+	var (
+		VisibleAuth       = dsl.JWTSecurity("visible_auth")
+		HiddenMethodAuth  = dsl.JWTSecurity("hidden_method_auth")
+		HiddenServiceAuth = dsl.JWTSecurity("hidden_service_auth")
+	)
+
+	dsl.Service("visible", func() {
+		dsl.Method("read", func() {
+			dsl.Security(VisibleAuth)
+			dsl.Payload(func() {
+				dsl.Token("token", dsl.String)
+			})
+			dsl.HTTP(func() {
+				dsl.GET("/visible")
+			})
+		})
+	})
+	dsl.Service("mixed", func() {
+		dsl.Method("hidden", func() {
+			dsl.Meta("openapi:generate", "false")
+			dsl.Security(HiddenMethodAuth)
+			dsl.Payload(func() {
+				dsl.Token("token", dsl.String)
+			})
+			dsl.HTTP(func() {
+				dsl.GET("/hidden-method")
+			})
+		})
+	})
+	dsl.Service("hidden", func() {
+		dsl.Meta("openapi:generate", "false")
+		dsl.Method("read", func() {
+			dsl.Security(HiddenServiceAuth)
+			dsl.Payload(func() {
+				dsl.Token("token", dsl.String)
+			})
+			dsl.HTTP(func() {
+				dsl.GET("/hidden-service")
 			})
 		})
 	})
@@ -322,13 +424,17 @@ func TestBuildPathFromExpr(t *testing.T) {
 					Meta:             expr.MetaExpr{},
 				},
 			}
+			route.Endpoint.MethodExpr.Name = "method"
+			route.Endpoint.Service.ServiceExpr.Name = "service"
+			route.Endpoint.MethodExpr.Service = route.Endpoint.Service.ServiceExpr
 
 			if tc.deprecated {
 				route.Endpoint.Meta["openapi:deprecated"] = []string{"true"}
 			}
 
 			basePath := "/"
-			buildPathFromExpr(s, root, h, route, basePath)
+			generator := expr.NewExampleGenerator(expr.NewFakerRandomizerFactory("test"))
+			buildPathFromExpr(s, root, h, route, basePath, newSchemaBuilder(openapi.Values{}), generator, openapi.Values{})
 			for _, path := range s.Paths {
 				actual := path.(*Path).Post
 				if len(actual.Consumes) != len(tc.expected.Consumes) {

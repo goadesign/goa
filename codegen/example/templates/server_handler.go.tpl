@@ -10,20 +10,13 @@
 			addr := {{ printf "%q" $u.URL }}
 			{{- range $h.Variables }}
 				{{- if .Values }}
-					var {{ .VarName }}Seen bool
-					{
-						for _, v := range []string{ {{ range $v := .Values }}"{{ $v }}",{{ end }} } {
-							if v == *{{ .VarName }}F {
-								{{ .VarName }}Seen = true
-								break
-							}
-						}
-					}
-					if !{{ .VarName }}Seen {
-						log.Fatal(ctx, fmt.Errorf("invalid value for URL '{{ .Name }}' variable: %q (valid values: {{ join .Values "," }})\n", *{{ .VarName }}F))
+					switch *{{ .VarName }} {
+					case {{ range $index, $value := .Values }}{{ if $index }}, {{ end }}{{ printf "%q" $value }}{{ end }}:
+					default:
+						log.Fatal(ctx, fmt.Errorf("invalid value for URL '{{ .Name }}' variable: %q (valid values: {{ join .Values "," }})\n", *{{ .VarName }}))
 					}
 				{{- end }}
-				addr = strings.ReplaceAll(addr, "{{ printf "{%s}" .Name }}", *{{ .VarName }}F)
+				addr = strings.ReplaceAll(addr, "{{ printf "{%s}" .Name }}", *{{ .VarName }})
 			{{- end }}
 			u, err := url.Parse(addr)
 			if err != nil {
@@ -44,7 +37,7 @@
 			} else if u.Port() == "" {
 				u.Host = net.JoinHostPort(u.Host, "{{ $u.Port }}")
 			}
-			handle{{ toUpper $u.Transport.Name }}Server(ctx, u{{- range $u.HandlerArgs }}{{- if .Endpoint }}, {{ .Endpoint }}{{- end }}{{- if .Service }}, {{ .Service }}{{- end }}{{- end }}, &wg, errc, *dbgF)
+			handle{{ toUpper $u.Transport.Name }}Server(ctx, u{{- range $u.HandlerArgs }}, {{ .Variable }}{{- end }}, &wg, errc, *dbgF)
 		}
 		{{- end }}
 	{{ end }}

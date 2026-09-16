@@ -2,8 +2,8 @@ package kitchensink
 
 import (
 	"context"
-	calc "kitchensink/calc"
 
+	calc "generated.local/gen/calc"
 	"goa.design/clue/log"
 )
 

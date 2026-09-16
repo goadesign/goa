@@ -11,8 +11,6 @@ import (
 	"net/url"
 	"strings"
 	"time"
-
-	"github.com/gorilla/websocket"
 )
 
 // JSONRPCRequest represents a JSON-RPC 2.0 request
@@ -21,7 +19,6 @@ type JSONRPCRequest struct {
 	Method  string  `json:"method"`
 	Params  any     `json:"params,omitempty"`
 	ID      any     `json:"id,omitempty"`
-	HasID   bool    `json:"-"` // true if the id key must be included even if null
 }
 
 // Default values
@@ -29,7 +26,6 @@ const (
 	DefaultHTTPTimeout = 10 * time.Second
 	DefaultJSONRPCPath = "/jsonrpc"
 	DefaultSSEPath     = "/jsonrpc/sse"
-	DefaultWSPath      = "/jsonrpc/ws"
 )
 
 // ClientConfig holds client configuration
@@ -40,14 +36,10 @@ type ClientConfig struct {
 	JSONRPCPath string
 	// SSEPath is the path for SSE endpoint
 	SSEPath string
-	// WSPath is the path for WebSocket endpoint
-	WSPath string
 	// Headers are additional headers to send with requests
 	Headers map[string]string
 	// HTTPClient allows using a custom HTTP client
 	HTTPClient *http.Client
-	// WSDialer allows using a custom WebSocket dialer
-	WSDialer *websocket.Dialer
 }
 
 // DefaultConfig returns default client configuration
@@ -56,7 +48,6 @@ func DefaultConfig() *ClientConfig {
 		HTTPTimeout: DefaultHTTPTimeout,
 		JSONRPCPath: DefaultJSONRPCPath,
 		SSEPath:     DefaultSSEPath,
-		WSPath:      DefaultWSPath,
 		Headers:     make(map[string]string),
 	}
 }
@@ -66,8 +57,6 @@ type Client struct {
 	baseURL    *url.URL
 	config     *ClientConfig
 	httpClient *http.Client
-	wsDialer   *websocket.Dialer
-	wsConn     *websocket.Conn
 }
 
 // NewClient creates a new JSON-RPC client
@@ -89,25 +78,10 @@ func NewClient(baseURL string, config *ClientConfig) (*Client, error) {
 		}
 	}
 
-	// Create WebSocket dialer if not provided
-	wsDialer := config.WSDialer
-	if wsDialer == nil {
-		// Do not use proxies from environment variables for integration tests.
-		// A developer shell may have HTTP(S)_PROXY set, which breaks localhost
-		// WebSocket upgrades and causes "websocket: bad handshake" failures.
-		//
-		// Gorilla uses ProxyFromEnvironment in websocket.DefaultDialer; setting
-		// Proxy to nil disables proxy use entirely.
-		defaultDialer := *websocket.DefaultDialer
-		defaultDialer.Proxy = nil
-		wsDialer = &defaultDialer
-	}
-
 	return &Client{
 		baseURL:    u,
 		config:     config,
 		httpClient: httpClient,
-		wsDialer:   wsDialer,
 	}, nil
 }
 
@@ -318,166 +292,4 @@ func (c *Client) parseSSEEvents(r io.Reader) ([]json.RawMessage, error) {
 	}
 
 	return events, scanner.Err()
-}
-
-// ConnectWebSocket establishes a WebSocket connection
-func (c *Client) ConnectWebSocket(ctx context.Context) error {
-	// Build WebSocket URL
-	wsURL := *c.baseURL
-	wsURL.Path = c.config.WSPath
-
-	// Convert scheme
-	switch wsURL.Scheme {
-	case "http":
-		wsURL.Scheme = "ws"
-	case "https":
-		wsURL.Scheme = "wss"
-	default:
-		// Keep as is (might already be ws/wss)
-	}
-
-	// Set headers
-	headers := http.Header{}
-	for k, v := range c.config.Headers {
-		headers.Set(k, v)
-	}
-
-	conn, resp, err := c.wsDialer.DialContext(ctx, wsURL.String(), headers)
-	if err != nil {
-		if resp != nil {
-			if resp.Body == nil {
-				return fmt.Errorf("websocket dial failed (status %d): %w", resp.StatusCode, err)
-			}
-			body, readErr := io.ReadAll(resp.Body)
-			_ = resp.Body.Close()
-			if readErr != nil {
-				return fmt.Errorf("websocket dial failed (status %d): %w", resp.StatusCode, err)
-			}
-			return fmt.Errorf("websocket dial failed (status %d): %w: %s", resp.StatusCode, err, string(body))
-		}
-		return fmt.Errorf("websocket dial failed: %w", err)
-	}
-	if resp != nil && resp.Body != nil {
-		defer resp.Body.Close() //nolint:errcheck
-	}
-
-	c.wsConn = conn
-	return nil
-}
-
-// SendWebSocket sends a JSON-RPC request over WebSocket
-func (c *Client) SendWebSocket(ctx context.Context, req JSONRPCRequest) error {
-	if c.wsConn == nil {
-		return fmt.Errorf("websocket not connected")
-	}
-
-	// Build JSON-RPC request envelope
-	envelope := map[string]any{}
-	// Allow tests to omit the method by passing "-" (treated as missing field)
-	if req.Method != "-" && req.Method != "" {
-		envelope["method"] = req.Method
-	}
-
-	// Add jsonrpc field if provided, or default to "2.0"
-	if req.JSONRPC != nil {
-		if *req.JSONRPC != "" {
-			envelope["jsonrpc"] = *req.JSONRPC
-		}
-		// If JSONRPC is explicitly set to empty string, omit the field
-	} else {
-		// Default behavior: include "jsonrpc": "2.0"
-		envelope["jsonrpc"] = "2.0"
-	}
-
-	if req.Params != nil {
-		envelope["params"] = req.Params
-	}
-	// Preserve explicit id presence, even if null
-	if req.HasID {
-		envelope["id"] = req.ID
-	} else if req.ID != nil {
-		envelope["id"] = req.ID
-	}
-
-	data, err := json.Marshal(envelope)
-	if err != nil {
-		return fmt.Errorf("failed to marshal request: %w", err)
-	}
-
-	// Set write deadline from context
-	if deadline, ok := ctx.Deadline(); ok {
-		if err := c.wsConn.SetWriteDeadline(deadline); err != nil {
-			return fmt.Errorf("failed to set write deadline: %w", err)
-		}
-	}
-
-	return c.wsConn.WriteMessage(websocket.TextMessage, data)
-}
-
-// ReceiveWebSocket receives a message from WebSocket
-func (c *Client) ReceiveWebSocket(ctx context.Context) (json.RawMessage, error) {
-	if c.wsConn == nil {
-		return nil, fmt.Errorf("websocket not connected")
-	}
-
-	// Set read deadline from context
-	if deadline, ok := ctx.Deadline(); ok {
-		if err := c.wsConn.SetReadDeadline(deadline); err != nil {
-			return nil, fmt.Errorf("failed to set read deadline: %w", err)
-		}
-	}
-
-	messageType, data, err := c.wsConn.ReadMessage()
-	if err != nil {
-		// Retry once on abnormal closure to tolerate immediate server close after response
-		if websocket.IsUnexpectedCloseError(err, websocket.CloseAbnormalClosure) || strings.Contains(err.Error(), "unexpected EOF") {
-			// Briefly wait and retry a single read within the same deadline window
-			time.Sleep(10 * time.Millisecond)
-			messageType, data, err = c.wsConn.ReadMessage()
-		}
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if messageType != websocket.TextMessage {
-		return nil, fmt.Errorf("unexpected message type: %d", messageType)
-	}
-
-	return json.RawMessage(data), nil
-}
-
-// CloseWebSocket closes the WebSocket connection gracefully
-func (c *Client) CloseWebSocket() error {
-	if c.wsConn == nil {
-		return nil
-	}
-
-	// Send close message
-	deadline := time.Now().Add(5 * time.Second)
-	closeMsg := websocket.FormatCloseMessage(websocket.CloseNormalClosure, "")
-	err := c.wsConn.WriteControl(websocket.CloseMessage, closeMsg, deadline)
-
-	// Always close the connection
-	closeErr := c.wsConn.Close()
-	c.wsConn = nil
-
-	// Ignore "broken pipe" errors on close - the server may have already closed
-	if err != nil && strings.Contains(err.Error(), "broken pipe") {
-		err = nil
-	}
-	if closeErr != nil && strings.Contains(closeErr.Error(), "broken pipe") {
-		closeErr = nil
-	}
-
-	// Return the first error
-	if err != nil {
-		return err
-	}
-	return closeErr
-}
-
-// IsConnected returns true if WebSocket is connected
-func (c *Client) IsConnected() bool {
-	return c.wsConn != nil
 }

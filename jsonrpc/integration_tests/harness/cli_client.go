@@ -49,8 +49,7 @@ func NewCLIClient(workDir, serverURL string) (*CLIClient, error) {
 func (c *CLIClient) CallMethod(ctx context.Context, service, method string, payload any) (json.RawMessage, error) {
 	// Convert method name from snake_case to kebab-case for CLI
 	cliMethod := strings.ReplaceAll(method, "_", "-")
-	
-	
+
 	// Build command arguments - use go run to execute the CLI
 	// URL must come before service and method for proper flag parsing
 	args := []string{
@@ -85,7 +84,7 @@ func (c *CLIClient) CallMethod(ctx context.Context, service, method string, payl
 		}
 	}
 	// If payload is nil, don't add any body argument - let the CLI handle it
-	
+
 	// Create command with all args
 	cmd = exec.CommandContext(ctx, "go", args...)
 	cmd.Dir = c.cliPath
@@ -111,7 +110,7 @@ func (c *CLIClient) CallMethod(ctx context.Context, service, method string, payl
 	// Parse verbose output from stderr to get the raw JSON-RPC response
 	verboseOutput := stderr.String()
 	lines := strings.Split(verboseOutput, "\n")
-	
+
 	// Find the JSON-RPC response - it's the last line starting with {
 	for i := len(lines) - 1; i >= 0; i-- {
 		line := strings.TrimSpace(lines[i])
@@ -123,7 +122,7 @@ func (c *CLIClient) CallMethod(ctx context.Context, service, method string, payl
 					Message string `json:"message"`
 				} `json:"error"`
 			}
-			
+
 			if err := json.Unmarshal([]byte(line), &resp); err == nil && resp.Result != nil {
 				return resp.Result, nil
 			}
@@ -165,17 +164,16 @@ func (c *CLIClient) CallJSONRPC(ctx context.Context, request map[string]any) (js
 
 // CanHandle returns true if the CLI can handle this method
 func (c *CLIClient) CanHandle(method string, params any) bool {
-	// CLI can handle HTTP methods but not streaming
-	// Check if it's a streaming method by looking for WebSocket or SSE in the method name
-	if strings.Contains(method, "_ws") || strings.Contains(method, "_sse") {
+	// CLI can handle unary HTTP methods but not SSE streams.
+	if strings.Contains(method, "_sse") {
 		return false
 	}
-	
+
 	// CLI doesn't handle notification methods (no response expected)
 	if strings.Contains(method, "_notify") {
 		return false
 	}
-	
+
 	// CLI can handle methods with payloads
 	return true
 }

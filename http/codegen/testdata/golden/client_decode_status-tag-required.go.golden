@@ -1,0 +1,78 @@
+// DecodeMethodStatusTagRequiredResponse returns a decoder for responses
+// returned by the ServiceStatusTagRequired MethodStatusTagRequired endpoint.
+// restoreBody controls whether the response body should be restored after
+// having been read.
+func DecodeMethodStatusTagRequiredResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (result any, decodeErr error) {
+		responseBody := resp.Body
+		if restoreBody {
+			b, readErr := io.ReadAll(responseBody)
+			closeErr := responseBody.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("ServiceStatusTagRequired", "MethodStatusTagRequired", err)
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer func() {
+				if err := responseBody.Close(); err != nil {
+					decodeErr = errors.Join(decodeErr, goahttp.ErrDecodingError("ServiceStatusTagRequired", "MethodStatusTagRequired", err))
+				}
+			}()
+		}
+		switch resp.StatusCode {
+		case http.StatusCreated:
+			var (
+				body MethodStatusTagRequiredCreatedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("ServiceStatusTagRequired", "MethodStatusTagRequired", err)
+			}
+			err = ValidateMethodStatusTagRequiredCreatedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("ServiceStatusTagRequired", "MethodStatusTagRequired", err)
+			}
+			p := NewMethodStatusTagRequiredStatusTagResultCreated(&body)
+			tmp := "created"
+			p.Outcome = &tmp
+			view := "default"
+			vres := &servicestatustagrequiredviews.StatusTagResult{Projected: p, View: view}
+			if err = servicestatustagrequiredviews.ValidateStatusTagResult(vres); err != nil {
+				return nil, goahttp.ErrValidationError("ServiceStatusTagRequired", "MethodStatusTagRequired", err)
+			}
+			res := servicestatustagrequired.NewStatusTagResult(vres)
+			return res, nil
+		case http.StatusOK:
+			var (
+				body MethodStatusTagRequiredOKResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("ServiceStatusTagRequired", "MethodStatusTagRequired", err)
+			}
+			err = ValidateMethodStatusTagRequiredOKResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("ServiceStatusTagRequired", "MethodStatusTagRequired", err)
+			}
+			p := NewMethodStatusTagRequiredStatusTagResultOK(&body)
+			view := "default"
+			vres := &servicestatustagrequiredviews.StatusTagResult{Projected: p, View: view}
+			if err = servicestatustagrequiredviews.ValidateStatusTagResult(vres); err != nil {
+				return nil, goahttp.ErrValidationError("ServiceStatusTagRequired", "MethodStatusTagRequired", err)
+			}
+			res := servicestatustagrequired.NewStatusTagResult(vres)
+			return res, nil
+		default:
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("ServiceStatusTagRequired", "MethodStatusTagRequired", err)
+			}
+			return nil, goahttp.ErrInvalidResponse("ServiceStatusTagRequired", "MethodStatusTagRequired", resp.StatusCode, string(body))
+		}
+	}
+}

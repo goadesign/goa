@@ -1,0 +1,13 @@
+// NewDefaultTextPayload builds a defaults service default_text endpoint
+// payload.
+func NewDefaultTextPayload(body *string) *defaults.DefaultTextPayload {
+	res := &defaults.DefaultTextPayload{}
+	if body != nil {
+		v := defaults.Mode(*body)
+		res.Value = v
+	} else {
+		res.Value = "safe"
+	}
+
+	return res
+}

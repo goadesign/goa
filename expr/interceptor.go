@@ -119,12 +119,12 @@ func (i *InterceptorExpr) validate(m *MethodExpr) *eval.ValidationErrors {
 		if !m.IsResultStreaming() {
 			verr.Add(m, "interceptor %q cannot be applied because the method result is not streaming", i.Name)
 		} else {
-			if !IsObject(m.Result.Type) {
+			if !IsObject(m.StreamingResult.Type) {
 				verr.Add(m, "interceptor %q cannot be applied because the method result is not an object", i.Name)
 			} else {
-				result := DupAtt(m.Result)
-				if m.Result.Bases != nil {
-					for _, base := range m.Result.Bases {
+				result := DupAtt(m.StreamingResult)
+				if m.StreamingResult.Bases != nil {
+					for _, base := range m.StreamingResult.Bases {
 						if ut, ok := base.(UserType); ok {
 							result.Merge(ut.Attribute())
 						}

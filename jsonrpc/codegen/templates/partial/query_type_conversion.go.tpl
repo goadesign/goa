@@ -1,6 +1,6 @@
-	{{- if eq .Type.Name "bytes" }}
+	{{- if eq .TypeName "bytes" }}
 		{{ .VarName }} = []byte({{.VarName}}Raw)
-	{{- else if eq .Type.Name "int" }}
+	{{- else if eq .TypeName "int" }}
 		v, err2 := strconv.ParseInt({{ .VarName }}Raw, 10, strconv.IntSize)
 		if err2 != nil {
 			err = goa.MergeErrors(err, goa.InvalidFieldTypeError({{ printf "%q" .Name }}, {{ .VarName}}Raw, "integer"))
@@ -11,7 +11,7 @@
 		{{- else }}
 		{{ .VarName }} = {{ if .TypeRef }}{{ .TypeRef }}{{ else }}int{{ end }}(v)
 		{{- end }}
-	{{- else if eq .Type.Name "int32" }}
+	{{- else if eq .TypeName "int32" }}
 		v, err2 := strconv.ParseInt({{ .VarName }}Raw, 10, 32)
 		if err2 != nil {
 			err = goa.MergeErrors(err, goa.InvalidFieldTypeError({{ printf "%q" .Name }}, {{ .VarName}}Raw, "integer"))
@@ -22,13 +22,13 @@
 		{{- else }}
 		{{ .VarName }} = {{ if .TypeRef }}{{ .TypeRef }}{{ else }}int32{{ end }}(v)
 		{{- end }}
-	{{- else if eq .Type.Name "int64" }}
+	{{- else if eq .TypeName "int64" }}
 		v, err2 := strconv.ParseInt({{ .VarName }}Raw, 10, 64)
 		if err2 != nil {
 			err = goa.MergeErrors(err, goa.InvalidFieldTypeError({{ printf "%q" .Name }}, {{ .VarName}}Raw, "integer"))
 		}
 		{{ if and (ne .TypeRef nil) (and (ne .TypeRef "int64") (ne .TypeRef "*int64")) }}{{ .VarName }} = ({{.TypeRef}})({{ if .Pointer }}&{{ end }}v){{ else }}{{ .VarName }} = {{ if .Pointer }}&{{ end }}v{{ end }}
-	{{- else if eq .Type.Name "uint" }}
+	{{- else if eq .TypeName "uint" }}
 		v, err2 := strconv.ParseUint({{ .VarName }}Raw, 10, strconv.IntSize)
 		if err2 != nil {
 			err = goa.MergeErrors(err, goa.InvalidFieldTypeError({{ printf "%q" .Name }}, {{ .VarName}}Raw, "unsigned integer"))
@@ -39,7 +39,7 @@
 		{{- else }}
 		{{ .VarName }} = {{ if .TypeRef }}{{ .TypeRef }}{{ else }}uint{{ end }}(v)
 		{{- end }}
-	{{- else if eq .Type.Name "uint32" }}
+	{{- else if eq .TypeName "uint32" }}
 		v, err2 := strconv.ParseUint({{ .VarName }}Raw, 10, 32)
 		if err2 != nil {
 			err = goa.MergeErrors(err, goa.InvalidFieldTypeError({{ printf "%q" .Name }}, {{ .VarName}}Raw, "unsigned integer"))
@@ -50,13 +50,13 @@
 		{{- else }}
 		{{ .VarName }} = {{ if .TypeRef }}{{ .TypeRef }}{{ else }}uint32{{ end }}(v)
 		{{- end }}
-	{{- else if eq .Type.Name "uint64" }}
+	{{- else if eq .TypeName "uint64" }}
 		v, err2 := strconv.ParseUint({{ .VarName }}Raw, 10, 64)
 		if err2 != nil {
 			err = goa.MergeErrors(err, goa.InvalidFieldTypeError({{ printf "%q" .Name }}, {{ .VarName}}Raw, "unsigned integer"))
 		}
 		{{ if and (ne .TypeRef nil) (and (ne .TypeRef "uint64") (ne .TypeRef "*uint64")) }}{{ .VarName }} = ({{.TypeRef}})({{ if .Pointer }}&{{ end }}v){{ else }}{{ .VarName }} = {{ if .Pointer }}&{{ end }}v{{ end }}
-	{{- else if eq .Type.Name "float32" }}
+	{{- else if eq .TypeName "float32" }}
 		v, err2 := strconv.ParseFloat({{ .VarName }}Raw, 32)
 		if err2 != nil {
 			err = goa.MergeErrors(err, goa.InvalidFieldTypeError({{ printf "%q" .Name }}, {{ .VarName}}Raw, "float"))
@@ -67,18 +67,18 @@
 		{{- else }}
 		{{ .VarName }} = {{ if .TypeRef }}{{ .TypeRef }}{{ else }}float32{{ end }}(v)
 		{{- end }}
-	{{- else if eq .Type.Name "float64" }}
+	{{- else if eq .TypeName "float64" }}
 		v, err2 := strconv.ParseFloat({{ .VarName }}Raw, 64)
 		if err2 != nil {
 			err = goa.MergeErrors(err, goa.InvalidFieldTypeError({{ printf "%q" .Name }}, {{ .VarName}}Raw, "float"))
 		}
 		{{ if and (ne .TypeRef nil) (and (ne .TypeRef "float64") (ne .TypeRef "*float64")) }}{{ .VarName }} = ({{.TypeRef}})({{ if .Pointer }}&{{ end }}v){{ else }}{{ .VarName }} = {{ if .Pointer }}&{{ end }}v{{ end }}
-	{{- else if eq .Type.Name "boolean" }}
+	{{- else if eq .TypeName "boolean" }}
 		v, err2 := strconv.ParseBool({{ .VarName }}Raw)
 		if err2 != nil {
 			err = goa.MergeErrors(err, goa.InvalidFieldTypeError({{ printf "%q" .Name }}, {{ .VarName}}Raw, "boolean"))
 		}
 		{{ if and (ne .TypeRef nil) (and (ne .TypeRef "bool") (ne .TypeRef "*bool")) }}{{ .VarName }} = ({{.TypeRef}})({{ if .Pointer }}&{{ end }}v){{ else }}{{ .VarName }} = {{ if .Pointer }}&{{ end }}v{{ end }}
 	{{- else }}
-		// unsupported type {{ .Type.Name }} for var {{ .VarName }}
+		// The Goa design must use bytes, a number, or a boolean for this HTTP response value.
 	{{- end }}

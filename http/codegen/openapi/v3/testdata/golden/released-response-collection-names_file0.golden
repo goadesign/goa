@@ -1,0 +1,175 @@
+{
+  "components": {
+    "schemas": {
+      "StoredBottleResponse": {
+        "description": "StoredBottle result type (default view)",
+        "example": {
+          "name": "Blue's Cuvee",
+          "vintage": 2003
+        },
+        "properties": {
+          "name": {
+            "example": "Blue's Cuvee",
+            "type": "string"
+          },
+          "vintage": {
+            "example": 2003,
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "vintage"
+        ],
+        "type": "object"
+      },
+      "StoredBottleResponseCollection": {
+        "description": "list_default_response_body is the result type for an array of StoredBottle (default view)",
+        "example": [
+          {
+            "name": "Blue's Cuvee",
+            "vintage": 2003
+          },
+          {
+            "name": "Blue's Cuvee",
+            "vintage": 2003
+          },
+          {
+            "name": "Blue's Cuvee",
+            "vintage": 2003
+          }
+        ],
+        "items": {
+          "$ref": "#/components/schemas/StoredBottleResponse"
+        },
+        "type": "array"
+      },
+      "StoredBottleResponseTiny": {
+        "description": "StoredBottle result type (tiny view)",
+        "example": {
+          "name": "Blue's Cuvee"
+        },
+        "properties": {
+          "name": {
+            "example": "Blue's Cuvee",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "StoredBottleResponseTinyCollection": {
+        "description": "list_tiny_response_body is the result type for an array of StoredBottle (tiny view)",
+        "example": [
+          {
+            "name": "Blue's Cuvee"
+          },
+          {
+            "name": "Blue's Cuvee"
+          },
+          {
+            "name": "Blue's Cuvee"
+          },
+          {
+            "name": "Blue's Cuvee"
+          }
+        ],
+        "items": {
+          "$ref": "#/components/schemas/StoredBottleResponseTiny"
+        },
+        "type": "array"
+      }
+    }
+  },
+  "info": {
+    "title": "Goa API",
+    "version": "0.0.1"
+  },
+  "openapi": "3.0.3",
+  "paths": {
+    "/default": {
+      "get": {
+        "operationId": "storage#list_default",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": [
+                  {
+                    "name": "Blue's Cuvee",
+                    "vintage": 2003
+                  },
+                  {
+                    "name": "Blue's Cuvee",
+                    "vintage": 2003
+                  },
+                  {
+                    "name": "Blue's Cuvee",
+                    "vintage": 2003
+                  }
+                ],
+                "schema": {
+                  "$ref": "#/components/schemas/StoredBottleResponseCollection"
+                }
+              }
+            },
+            "description": "OK response."
+          }
+        },
+        "summary": "list_default storage",
+        "tags": [
+          "storage"
+        ]
+      }
+    },
+    "/tiny": {
+      "get": {
+        "operationId": "storage#list_tiny",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": [
+                  {
+                    "name": "Blue's Cuvee"
+                  },
+                  {
+                    "name": "Blue's Cuvee"
+                  },
+                  {
+                    "name": "Blue's Cuvee"
+                  },
+                  {
+                    "name": "Blue's Cuvee"
+                  }
+                ],
+                "schema": {
+                  "$ref": "#/components/schemas/StoredBottleResponseTinyCollection"
+                }
+              }
+            },
+            "description": "OK response."
+          }
+        },
+        "summary": "list_tiny storage",
+        "tags": [
+          "storage"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "description": "Default server for test api",
+      "url": "http://localhost:80"
+    }
+  ],
+  "tags": [
+    {
+      "name": "storage"
+    }
+  ]
+}

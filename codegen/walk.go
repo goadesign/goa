@@ -1,3 +1,5 @@
+// Attribute walkers visit Goa design types once per source declaration while
+// preserving the concrete dynamic type supplied to callbacks.
 package codegen
 
 import "goa.design/goa/v3/expr"
@@ -10,13 +12,13 @@ type MappedAttributeWalker func(name, elem string, required bool, a *expr.Attrib
 // Walk traverses the data structure recursively and calls the given function
 // once on each attribute starting with a.
 func Walk(a *expr.AttributeExpr, walker func(*expr.AttributeExpr) error) error {
-	return walk(a, walker, make(map[string]bool))
+	return walk(a, walker, make(map[expr.UserType]struct{}))
 }
 
 // WalkType traverses the data structure recursively and calls the given function
 // once on each attribute starting with the user type attribute.
 func WalkType(u expr.UserType, walker func(*expr.AttributeExpr) error) error {
-	return walk(u.Attribute(), walker, map[string]bool{u.ID(): true})
+	return walk(u.Attribute(), walker, map[expr.UserType]struct{}{u.Origin(): {}})
 }
 
 // WalkMappedAttr iterates over the mapped attributes. It calls the given
@@ -35,15 +37,16 @@ func WalkMappedAttr(ma *expr.MappedAttributeExpr, it MappedAttributeWalker) erro
 
 // Recursive implementation of the Walk methods. Takes care of avoiding infinite
 // recursions by keeping track of types that have already been walked.
-func walk(at *expr.AttributeExpr, walker func(*expr.AttributeExpr) error, seen map[string]bool) error {
+func walk(at *expr.AttributeExpr, walker func(*expr.AttributeExpr) error, seen map[expr.UserType]struct{}) error {
 	if err := walker(at); err != nil {
 		return err
 	}
 	walkUt := func(ut expr.UserType) error {
-		if _, ok := seen[ut.ID()]; ok {
+		origin := ut.Origin()
+		if _, ok := seen[origin]; ok {
 			return nil
 		}
-		seen[ut.ID()] = true
+		seen[origin] = struct{}{}
 		return walk(ut.Attribute(), walker, seen)
 	}
 	switch actual := at.Type.(type) {
@@ -71,7 +74,7 @@ func walk(at *expr.AttributeExpr, walker func(*expr.AttributeExpr) error, seen m
 	case *expr.UserTypeExpr:
 		return walkUt(actual)
 	case *expr.ResultTypeExpr:
-		return walkUt(actual.UserTypeExpr)
+		return walkUt(actual)
 	default:
 		panic("unknown attribute type") // bug
 	}

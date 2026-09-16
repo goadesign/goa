@@ -83,6 +83,7 @@ func TestEncode(t *testing.T) {
 
 		{"empty-server-response", testdata.EmptyServerResponseDSL},
 		{"empty-server-response-with-tags", testdata.EmptyServerResponseWithTagsDSL},
+		{"default-response-before-tags", testdata.ResultDefaultResponseBeforeTagsDSL},
 
 		{"skip-response-body-encode-decode", testdata.ResponseEncoderSkipResponseBodyEncodeDecodeDSL},
 
@@ -92,8 +93,8 @@ func TestEncode(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := expr.RunDSL(t, c.DSL)
-			services := CreateHTTPServices(root)
-			fs := ServerFiles("", services)
+			plan := linkedHTTPPlanForRoot(t, root)
+			fs := plan.ServerFiles()
 			require.Len(t, fs, 2)
 			sections := fs[1].SectionTemplates
 			require.Greater(t, len(sections), 1)
@@ -117,8 +118,8 @@ func TestEncodeMarshallingAndUnmarshalling(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := expr.RunDSL(t, c.DSL)
-			services := CreateHTTPServices(root)
-			fs := ServerFiles("", services)
+			plan := linkedHTTPPlanForRoot(t, root)
+			fs := plan.ServerFiles()
 			require.Len(t, fs, 2)
 			sections := fs[1].SectionTemplates
 			totalSectionsExpected := c.SectionsOffset + c.SectionCount

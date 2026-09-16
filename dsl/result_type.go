@@ -529,7 +529,7 @@ func buildView(name string, mt *expr.ResultTypeExpr, at *expr.AttributeExpr) (*e
 		n := nat.Name
 		cat := nat.Attribute
 		if existing := mt.Find(n); existing != nil {
-			dup := expr.DupAtt(existing)
+			dup := expr.DupAttForDSL(existing)
 			if v, ok := cat.Meta.Last(expr.ViewMetaKey); ok {
 				dup.AddMeta("view", v)
 			}

@@ -1,13 +1,10 @@
 func transform() {
-	target := &proto.CompositeWithCustomField{}
-	if source.RequiredString != nil {
-		target.RequiredString = *source.RequiredString
+	target := &proto.CompositeWithCustomField{
+		RequiredString: source.RequiredString,
 	}
 	if source.DefaultInt != nil {
-		target.DefaultInt = int32(*source.DefaultInt)
-	}
-	if source.DefaultInt == nil {
-		target.DefaultInt = 100
+		defaultInt := int32(*source.DefaultInt)
+		target.DefaultInt = &defaultInt
 	}
 	if source.Type != nil {
 		target.Type = svcProtoSimpleToProtoSimple(source.Type)

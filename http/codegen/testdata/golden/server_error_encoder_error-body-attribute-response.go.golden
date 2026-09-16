@@ -1,0 +1,24 @@
+// EncodeMethodErrorBodyAttributeResponseError returns an encoder for errors
+// returned by the MethodErrorBodyAttributeResponse
+// ServiceErrorBodyAttributeResponse endpoint.
+func EncodeMethodErrorBodyAttributeResponseError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+	encodeError := goahttp.ErrorEncoder(encoder, formatter)
+	return func(ctx context.Context, w http.ResponseWriter, v error) error {
+		var en goa.GoaErrorNamer
+		if !errors.As(v, &en) {
+			return encodeError(ctx, w, v)
+		}
+		switch en.GoaErrorName() {
+		case "selected":
+			var res *serviceerrorbodyattributeresponse.SelectedError
+			errors.As(v, &res)
+			enc := encoder(ctx, w)
+			body := res.Detail
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusBadRequest)
+			return enc.Encode(body)
+		default:
+			return encodeError(ctx, w, v)
+		}
+	}
+}

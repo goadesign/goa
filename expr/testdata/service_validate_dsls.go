@@ -65,3 +65,17 @@ var ServiceErrorDSL = func() {
 		Method("Method", func() {})
 	})
 }
+
+var InvalidSharedErrorNamesDSL = func() {
+	var SharedError = Type("SharedError", func() {
+		Attribute("message", String)
+	})
+	Service("First", func() {
+		Error("first_error", SharedError)
+		Method("Run", func() {})
+	})
+	Service("Second", func() {
+		Error("second_error", SharedError)
+		Method("Run", func() {})
+	})
+}

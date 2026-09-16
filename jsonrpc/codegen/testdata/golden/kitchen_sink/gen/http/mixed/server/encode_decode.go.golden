@@ -11,9 +11,9 @@ import (
 	"context"
 	"errors"
 	"io"
-	mixed "kitchensink/mixed"
 	"net/http"
 
+	mixed "generated.local/gen/mixed"
 	goahttp "goa.design/goa/v3/http"
 	goa "goa.design/goa/v3/pkg"
 )

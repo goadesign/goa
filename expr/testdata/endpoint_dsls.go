@@ -1,3 +1,5 @@
+// This file defines reusable endpoint designs that exercise HTTP and gRPC
+// preparation, validation, inheritance, streaming, and metadata behavior.
 package testdata
 
 import (
@@ -460,6 +462,20 @@ var EndpointPayloadMissingRequired = func() {
 	})
 }
 
+var EndpointMultipartWithoutBody = func() {
+	Service("Service", func() {
+		Method("Method", func() {
+			Payload(func() {
+				Attribute("id", String)
+			})
+			HTTP(func() {
+				POST("/{id}")
+				MultipartRequest()
+			})
+		})
+	})
+}
+
 var StreamingEndpointRequestBody = func() {
 	var PT = Type("Payload", func() {
 		Attribute("foo", String)
@@ -625,6 +641,35 @@ var GRPCEndpointWithAnyType = func() {
 	})
 }
 
+var GRPCEndpointWithMixedResults = func() {
+	Service("Service", func() {
+		Method("Method", func() {
+			Result(String)
+			StreamingResult(Int)
+			GRPC(func() {})
+		})
+	})
+}
+
+var GRPCEndpointWithMatchingMixedResults = func() {
+	Service("Service", func() {
+		Method("Method", func() {
+			Result(String)
+			StreamingResult(String)
+			GRPC(func() {})
+		})
+	})
+}
+
+var GRPCEndpointWithStreamingResult = func() {
+	Service("Service", func() {
+		Method("Method", func() {
+			StreamingResult(String)
+			GRPC(func() {})
+		})
+	})
+}
+
 var GRPCEndpointWithUntaggedFields = func() {
 	var Req = Type("Req", func() {
 		Attribute("req_not_field", String)
@@ -707,6 +752,46 @@ var GRPCEndpointWithExtendedTypes = func() {
 					})
 					Message(func() {
 						Attribute("id")
+					})
+				})
+			})
+		})
+	})
+}
+
+var GRPCEndpointWithCompositeMetadata = func() {
+	objectValue := Type("MetadataObject", func() {
+		Attribute("name", String)
+	})
+	Service("Service", func() {
+		Method("Method", func() {
+			Payload(func() {
+				Attribute("object", objectValue)
+				Attribute("mapping", MapOf(String, String))
+				OneOf("choice", func() {
+					Attribute("text", String)
+					Attribute("count", Int)
+				})
+			})
+			Result(func() {
+				Attribute("object", objectValue)
+				Attribute("mapping", MapOf(String, String))
+				OneOf("choice", func() {
+					Attribute("text", String)
+					Attribute("count", Int)
+				})
+			})
+			GRPC(func() {
+				Metadata(func() {
+					Attribute("object")
+					Attribute("mapping")
+					Attribute("choice")
+				})
+				Response(func() {
+					Headers(func() { Attribute("object") })
+					Trailers(func() {
+						Attribute("mapping")
+						Attribute("choice")
 					})
 				})
 			})

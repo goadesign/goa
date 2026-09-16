@@ -1,0 +1,30 @@
+// NewUnionPayload builds a SelectedBodyDefaults service Union endpoint payload.
+func NewUnionPayload(body *SelectedDefaultValueRequestBody) *selectedbodydefaults.UnionPayload {
+	res := &selectedbodydefaults.UnionPayload{}
+	if body != nil {
+		var v *selectedbodydefaults.SelectedDefaultValue
+		switch string(body.Kind()) {
+		case "name":
+			actual, _ := body.AsName()
+			obj := selectedbodydefaults.SelectedDefaultValueBranchName(actual)
+
+			var u selectedbodydefaults.SelectedDefaultValue
+			u.SetName((selectedbodydefaults.SelectedDefaultValueBranchName)(obj))
+			v = &u
+		case "inactive":
+			actual, _ := body.AsInactive()
+			var obj *selectedbodydefaults.SelectedDefaultEmpty
+			if actual != nil {
+				obj = unmarshalSelectedDefaultEmptyRequestBodyToSelectedbodydefaultsSelectedDefaultEmpty(actual)
+			}
+			var u selectedbodydefaults.SelectedDefaultValue
+			u.SetInactive((*selectedbodydefaults.SelectedDefaultEmpty)(obj))
+			v = &u
+		}
+		res.Value = *v
+	} else {
+		res.Value = selectedbodydefaults.NewSelectedDefaultValueInactive(&selectedbodydefaults.SelectedDefaultEmpty{})
+	}
+
+	return res
+}

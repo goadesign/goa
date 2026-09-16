@@ -1,6 +1,6 @@
-{{ printf "%s lists the %s service endpoint HTTP handlers." .ServerStruct .Service.Name | comment }}
-type {{ .ServerStruct }} struct {
-	Mounts []*{{ .MountPointStruct }}
+{{ printf "%s lists the %s service endpoint HTTP handlers." .ServerStructDeclaration.Name .Service.Name | comment }}
+type {{ .ServerStructDeclaration.Name }} struct {
+	Mounts []*{{ .MountPointStructDeclaration.Name }}
 	{{- range .Endpoints }}
 	{{ .Method.VarName }} http.Handler
 	{{- end }}

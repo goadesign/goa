@@ -14,7 +14,7 @@
 		{{- range .Cookies }}
 			{{ .VarName }} {{ .TypeRef }}
 		{{- end }}
-		{{- if and .MustValidate (or (not .ServerBody) .Multipart) }}
+		{{- if and .MustValidate (not .ServerBody) }}
 			err error
 		{{- end }}
 		{{- if .Cookies }}
@@ -225,7 +225,38 @@ qp := r.URL.Query()
 {{- end }}
 
 {{- range .Headers }}
-	{{- if and (or (eq .Type.Name "string") (eq .Type.Name "any")) .Required }}
+	{{- if .PreserveEmpty }}
+		{{ .VarName }}Values, {{ .VarName }}Present := r.Header["{{ .CanonicalName }}"]
+		{{- if .Required }}
+		if !{{ .VarName }}Present || len({{ .VarName }}Values) == 0 {
+			err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "header"))
+		} else {
+			for _, character := range {{ .VarName }}Values[0] {
+				if character == 0 || character == '\r' || character == '\n' {
+					err = goa.MergeErrors(err, goa.InvalidPatternError("{{ .Name }}", {{ .VarName }}Values[0], "[^\\x00\\r\\n]*"))
+					break
+				}
+			}
+			value := {{ if .IsAliased }}{{ .ValueTypeRef }}({{ end }}{{ .VarName }}Values[0]{{ if .IsAliased }}){{ end }}
+			{{ .VarName }} = {{ if .Pointer }}&{{ end }}value
+		}
+		{{- else }}
+		if {{ .VarName }}Present && len({{ .VarName }}Values) > 0 {
+			for _, character := range {{ .VarName }}Values[0] {
+				if character == 0 || character == '\r' || character == '\n' {
+					err = goa.MergeErrors(err, goa.InvalidPatternError("{{ .Name }}", {{ .VarName }}Values[0], "[^\\x00\\r\\n]*"))
+					break
+				}
+			}
+			value := {{ if .IsAliased }}{{ .ValueTypeRef }}({{ end }}{{ .VarName }}Values[0]{{ if .IsAliased }}){{ end }}
+			{{ .VarName }} = {{ if .Pointer }}&{{ end }}value
+		}{{ if .HasDefault }} else {
+			{{ .VarName }} = {{ if .IsAliased }}{{ .ValueTypeRef }}({{ end }}{{ printf "%q" .DefaultValue }}{{ if .IsAliased }}){{ end }}
+		}
+		{{- end }}
+		{{- end }}
+
+	{{- else if and (or (eq .Type.Name "string") (eq .Type.Name "any")) .Required }}
 		{{ .VarName }} = r.Header.Get("{{ .HTTPName }}")
 		if {{ .VarName }} == "" {
 			err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "header"))

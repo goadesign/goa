@@ -1,3 +1,22 @@
+// cliStringFlag keeps an omitted command-line flag distinct from an explicitly empty flag.
+type cliStringFlag struct {
+	value *string
+}
+
+// String returns the flag text shown by the standard flag package.
+func (f *cliStringFlag) String() string {
+	if f.value == nil {
+		return ""
+	}
+	return *f.value
+}
+
+// Set records that the user supplied the flag, even when value is empty.
+func (f *cliStringFlag) Set(value string) error {
+	f.value = &value
+	return nil
+}
+
 // ParseEndpoint returns the endpoint and payload as specified on the command
 // line.
 func ParseEndpoint(
@@ -11,15 +30,18 @@ func ParseEndpoint(
 		serviceMultiRequired1Flags = flag.NewFlagSet("service-multi-required1", flag.ContinueOnError)
 
 		serviceMultiRequired1MethodMultiRequiredPayloadFlags    = flag.NewFlagSet("method-multi-required-payload", flag.ExitOnError)
-		serviceMultiRequired1MethodMultiRequiredPayloadBodyFlag = serviceMultiRequired1MethodMultiRequiredPayloadFlags.String("body", "REQUIRED", "")
+		serviceMultiRequired1MethodMultiRequiredPayloadBodyFlag = new(cliStringFlag)
 
 		serviceMultiRequired2Flags = flag.NewFlagSet("service-multi-required2", flag.ContinueOnError)
 
 		serviceMultiRequired2MethodMultiRequiredNoPayloadFlags = flag.NewFlagSet("method-multi-required-no-payload", flag.ExitOnError)
 
 		serviceMultiRequired2MethodMultiRequiredPayloadFlags = flag.NewFlagSet("method-multi-required-payload", flag.ExitOnError)
-		serviceMultiRequired2MethodMultiRequiredPayloadAFlag = serviceMultiRequired2MethodMultiRequiredPayloadFlags.String("a", "REQUIRED", "")
+		serviceMultiRequired2MethodMultiRequiredPayloadAFlag = new(cliStringFlag)
 	)
+	serviceMultiRequired1MethodMultiRequiredPayloadFlags.Var(serviceMultiRequired1MethodMultiRequiredPayloadBodyFlag, "body", "")
+	serviceMultiRequired2MethodMultiRequiredPayloadFlags.Var(serviceMultiRequired2MethodMultiRequiredPayloadAFlag, "a", "")
+
 	serviceMultiRequired1Flags.Usage = serviceMultiRequired1Usage
 	serviceMultiRequired1MethodMultiRequiredPayloadFlags.Usage = serviceMultiRequired1MethodMultiRequiredPayloadUsage
 
@@ -103,7 +125,7 @@ func ParseEndpoint(
 			switch epn {
 			case "method-multi-required-payload":
 				endpoint = c.MethodMultiRequiredPayload()
-				data, err = servicemultirequired1c.BuildMethodMultiRequiredPayloadPayload(*serviceMultiRequired1MethodMultiRequiredPayloadBodyFlag)
+				data, err = servicemultirequired1c.BuildMethodMultiRequiredPayloadPayload(serviceMultiRequired1MethodMultiRequiredPayloadBodyFlag.value)
 			}
 		case "service-multi-required2":
 			c := servicemultirequired2c.NewClient(scheme, host, doer, enc, dec, restore)
@@ -112,7 +134,7 @@ func ParseEndpoint(
 				endpoint = c.MethodMultiRequiredNoPayload()
 			case "method-multi-required-payload":
 				endpoint = c.MethodMultiRequiredPayload()
-				data, err = servicemultirequired2c.BuildMethodMultiRequiredPayloadPayload(*serviceMultiRequired2MethodMultiRequiredPayloadAFlag)
+				data, err = servicemultirequired2c.BuildMethodMultiRequiredPayloadPayload(serviceMultiRequired2MethodMultiRequiredPayloadAFlag.value)
 			}
 		}
 	}

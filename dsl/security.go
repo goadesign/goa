@@ -401,6 +401,7 @@ func NoSecurity() {
 //
 // The generated code produced by goa uses the value of the corresponding
 // payload field to compute the basic authentication Authorization header value.
+// The attribute must use String or a named String type and cannot have a default.
 //
 // Username must appear in Payload or Type.
 //
@@ -438,6 +439,7 @@ func UsernameField(tag any, name string, args ...any) {
 //
 // The generated code produced by goa uses the value of the corresponding
 // payload field to compute the basic authentication Authorization header value.
+// The attribute must use String or a named String type and cannot have a default.
 //
 // Password must appear in Payload or Type.
 //
@@ -476,6 +478,7 @@ func PasswordField(tag any, name string, args ...any) {
 //
 // The generated code produced by goa uses the value of the corresponding
 // payload field to set the API key value.
+// The attribute must use String or a named String type and cannot have a default.
 //
 // APIKey must appear in Payload or Type.
 //
@@ -527,6 +530,7 @@ func APIKeyField(tag any, scheme, name string, args ...any) {
 //
 // The generated code produced by goa uses the value of the corresponding
 // payload field to initialize the Authorization header.
+// The attribute must use String or a named String type and cannot have a default.
 //
 // AccessToken must appear in Payload or Type.
 //
@@ -565,6 +569,7 @@ func AccessTokenField(tag any, name string, args ...any) {
 //
 // The generated code produced by goa uses the value of the corresponding
 // payload field to initialize the Authorization header.
+// The attribute must use String or a named String type and cannot have a default.
 //
 // Example:
 //
@@ -604,6 +609,7 @@ func BearerTokenField(tag any, name string, args ...any) {
 //
 // The generated code produced by goa uses the value of the corresponding
 // payload field to initialize the Authorization header.
+// The attribute must use String or a named String type and cannot have a default.
 //
 // Example:
 //

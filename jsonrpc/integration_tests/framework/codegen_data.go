@@ -44,9 +44,8 @@ type MethodData struct {
 	Info MethodInfo
 
 	// Type information
-	Payload          *TypeSpec // Initial payload (if any)
-	StreamingPayload *TypeSpec // Streaming payload (if any)
-	Result           *TypeSpec // Result - can be regular or streaming
+	Payload *TypeSpec // Request payload, if any
+	Result  *TypeSpec // Unary result or streamed event
 
 	// Behavior flags
 	IsNotification bool // No response expected
@@ -55,11 +54,8 @@ type MethodData struct {
 
 	// Streaming information
 	IsStreaming bool
-	StreamKind  string // "payload", "result", "bidirectional"
-	Transport   string // "http", "sse", "ws"
+	Transport   string // "http" or "sse"
 
-	// For SSE with final response
-	HasFinalResponse bool
 }
 
 // TypeSpec describes a type semantically
@@ -79,9 +75,6 @@ type TypeSpec struct {
 	// For maps
 	MapKey   *TypeSpec
 	MapValue *TypeSpec
-
-	// Whether this type needs ID field (for bidirectional WebSocket)
-	NeedsID bool
 }
 
 // FieldSpec describes a field in an object
@@ -92,6 +85,8 @@ type FieldSpec struct {
 	Type        *TypeSpec
 	Description string
 	Required    bool
+	// JSONRPCID reports whether the field receives the JSON-RPC request ID.
+	JSONRPCID bool
 }
 
 // ImplementationData holds the semantic data for generating service implementations
@@ -130,34 +125,9 @@ type MethodImplData struct {
 	StreamInterface string
 }
 
-// ActionBehavior describes how a method should behave based on its action
-type ActionBehavior struct {
-	// Action type (echo, transform, generate, collect, stream, broadcast)
-	Action string
-	// Type being operated on (string, array, object, map)
-	Type string
-	// Additional context (e.g., for streaming methods)
-	Context map[string]any
-}
-
 // Helper methods
 
 // IsSSE returns true if this method uses SSE transport
 func (m *MethodData) IsSSE() bool {
 	return m.Transport == "sse"
-}
-
-// IsWebSocket returns true if this method uses WebSocket transport
-func (m *MethodData) IsWebSocket() bool {
-	return m.Transport == "ws"
-}
-
-// IsBidirectional returns true if this is a bidirectional streaming method
-func (m *MethodData) IsBidirectional() bool {
-	return m.StreamKind == "bidirectional"
-}
-
-// NeedsStreamingService returns true if this method requires a separate streaming service
-func (m *MethodData) NeedsStreamingService() bool {
-	return m.IsStreaming && (m.IsSSE() || m.IsWebSocket())
 }

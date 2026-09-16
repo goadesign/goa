@@ -32,7 +32,7 @@ func TestClientEndpointInit(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			root := RunGRPCDSL(t, c.DSL)
 			services := CreateGRPCServices(root)
-			fs := ClientFiles("", services)
+			fs := clientFiles(services)
 			require.Len(t, fs, 2)
 			sections := fs[0].Section("client-endpoint-init")
 			if len(sections) == 0 {
@@ -59,12 +59,13 @@ func TestRequestEncoder(t *testing.T) {
 		{"request-encoder-payload-with-metadata", testdata.MessageWithMetadataDSL},
 		{"request-encoder-payload-with-validate", testdata.MessageWithValidateDSL},
 		{"request-encoder-payload-with-security-attributes", testdata.MessageWithSecurityAttrsDSL},
+		{"request-encoder-named-security-metadata", testdata.NamedSecurityMetadataDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := RunGRPCDSL(t, c.DSL)
 			services := CreateGRPCServices(root)
-			fs := ClientFiles("", services)
+			fs := clientFiles(services)
 			require.Len(t, fs, 2)
 			sections := fs[1].Section("request-encoder")
 			require.NotEmpty(t, sections)
@@ -95,7 +96,7 @@ func TestResponseDecoder(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			root := RunGRPCDSL(t, c.DSL)
 			services := CreateGRPCServices(root)
-			fs := ClientFiles("", services)
+			fs := clientFiles(services)
 			require.Len(t, fs, 2)
 			sections := fs[1].Section("response-decoder")
 			require.NotEmpty(t, sections)

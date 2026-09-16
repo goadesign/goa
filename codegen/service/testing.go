@@ -1,3 +1,5 @@
+// This file evaluates isolated service DSL fixtures. Generation construction,
+// rather than the fixture, performs the final raw-method normalization step.
 package service
 
 import (
@@ -5,7 +7,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/eval"
 	"goa.design/goa/v3/expr"
 )
@@ -24,14 +25,12 @@ func initDSL(t *testing.T) *expr.RootExpr {
 	return root
 }
 
-// runDSL returns the DSL root resulting from running the given DSL. The root
-// is normalized like the production Generate flow does before the generators
-// read the design.
+// runDSL evaluates the given DSL and returns its root. Test generation helpers
+// normalize the root when they construct the generation.
 func runDSL(t *testing.T, dsl func()) *expr.RootExpr {
 	root := initDSL(t)
 	require.True(t, eval.Execute(dsl, nil))
 	require.NoError(t, eval.RunDSL())
-	codegen.NormalizeRoot(root)
 	return root
 }
 

@@ -1,3 +1,22 @@
+// cliStringFlag keeps an omitted command-line flag distinct from an explicitly empty flag.
+type cliStringFlag struct {
+	value *string
+}
+
+// String returns the flag text shown by the standard flag package.
+func (f *cliStringFlag) String() string {
+	if f.value == nil {
+		return ""
+	}
+	return *f.value
+}
+
+// Set records that the user supplied the flag, even when value is empty.
+func (f *cliStringFlag) Set(value string) error {
+	f.value = &value
+	return nil
+}
+
 // ParseEndpoint returns the endpoint and payload as specified on the command
 // line.
 func ParseEndpoint(
@@ -11,8 +30,10 @@ func ParseEndpoint(
 		skipRequestBodyEncodeDecodeFlags = flag.NewFlagSet("skip-request-body-encode-decode", flag.ContinueOnError)
 
 		skipRequestBodyEncodeDecodeSkipRequestBodyEncodeDecodeMethodFlags      = flag.NewFlagSet("skip-request-body-encode-decode-method", flag.ExitOnError)
-		skipRequestBodyEncodeDecodeSkipRequestBodyEncodeDecodeMethodStreamFlag = skipRequestBodyEncodeDecodeSkipRequestBodyEncodeDecodeMethodFlags.String("stream", "REQUIRED", "path to file containing the streamed request body")
+		skipRequestBodyEncodeDecodeSkipRequestBodyEncodeDecodeMethodStreamFlag = new(cliStringFlag)
 	)
+	skipRequestBodyEncodeDecodeSkipRequestBodyEncodeDecodeMethodFlags.Var(skipRequestBodyEncodeDecodeSkipRequestBodyEncodeDecodeMethodStreamFlag, "stream", "path to file containing the streamed request body")
+
 	skipRequestBodyEncodeDecodeFlags.Usage = skipRequestBodyEncodeDecodeUsage
 	skipRequestBodyEncodeDecodeSkipRequestBodyEncodeDecodeMethodFlags.Usage = skipRequestBodyEncodeDecodeSkipRequestBodyEncodeDecodeMethodUsage
 
@@ -80,7 +101,13 @@ func ParseEndpoint(
 			switch epn {
 			case "skip-request-body-encode-decode-method":
 				endpoint = c.SkipRequestBodyEncodeDecodeMethod()
-				data, err = skiprequestbodyencodedecodec.BuildSkipRequestBodyEncodeDecodeMethodStreamPayload(*skipRequestBodyEncodeDecodeSkipRequestBodyEncodeDecodeMethodStreamFlag)
+				if err == nil {
+					if skipRequestBodyEncodeDecodeSkipRequestBodyEncodeDecodeMethodStreamFlag.value == nil {
+						err = fmt.Errorf("missing required flag --stream")
+					} else {
+						data, err = skiprequestbodyencodedecodec.BuildSkipRequestBodyEncodeDecodeMethodStreamPayload(*skipRequestBodyEncodeDecodeSkipRequestBodyEncodeDecodeMethodStreamFlag.value)
+					}
+				}
 			}
 		}
 	}

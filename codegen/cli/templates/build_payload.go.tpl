@@ -1,5 +1,5 @@
 {{ printf "%s builds the payload for the %s %s endpoint from CLI flags." .Name .ServiceName .MethodName | comment }}
-func {{ .Name }}({{ range .FormalParams }}{{ . }} string, {{ end }}) ({{ .ResultType }}, error) {
+func {{ .Name }}({{ range $index, $param := .FormalParams }}{{ $param }} {{ formalParamType $ $index }}, {{ end }}) ({{ .ResultType }}, error) {
 {{- if .CheckErr }}
 	var err error
 {{- end }}
@@ -12,6 +12,13 @@ func {{ .Name }}({{ range .FormalParams }}{{ . }} string, {{ end }}) ({{ .Result
 	{{- end }}
 {{- end }}
 {{- with .PayloadInit }}
+	{{- if .OptionalBody }}
+		res := &{{ .ReturnTypeName }}{}
+		if body != nil {
+			{{ .Code }}
+			res.{{ .ReturnTypeAttribute }} = {{ if .ReturnTypeAttributePointer }}&{{ else if .ReturnTypeAttributeUnion }}*{{ end }}v
+		}
+	{{- else }}
 	{{- if .Code }}
 		{{ .Code }}
 		{{- if .ReturnTypeAttribute }}
@@ -24,6 +31,10 @@ func {{ .Name }}({{ range .FormalParams }}{{ . }} string, {{ end }}) ({{ .Result
 		{{- if not .Code }}
 		{{ if .ReturnTypeAttribute }}res{{ else }}v{{ end }} := &{{ .ReturnTypeName }}{}
 		{{- end }}
+		{{ fieldCode . }}
+	{{- end }}
+	{{- end }}
+	{{- if and .OptionalBody .ReturnIsStruct }}
 		{{ fieldCode . }}
 	{{- end }}
 	return {{ if .ReturnTypeAttribute }}res{{ else }}v{{ end }}, nil

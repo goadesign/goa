@@ -1,3 +1,5 @@
+// This file verifies that import discovery follows complete attribute shapes
+// while keeping independent user declarations distinct during cycle checks.
 package codegen
 
 import (
@@ -168,5 +170,44 @@ func TestGetMetaTypeImports(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// TestGetMetaTypeImportsKeepsIndependentDeclarationsWithOneID verifies
+// semantic IDs do not collapse imports from exact in-memory declarations.
+func TestGetMetaTypeImportsKeepsIndependentDeclarationsWithOneID(t *testing.T) {
+	first := &expr.UserTypeExpr{
+		TypeName: "First",
+		UID:      "shared-semantic-id",
+		AttributeExpr: &expr.AttributeExpr{
+			Type: expr.String,
+			Meta: expr.MetaExpr{
+				"struct:field:type": {"First", "example.com/first"},
+			},
+		},
+	}
+	second := &expr.UserTypeExpr{
+		TypeName: "Second",
+		UID:      "shared-semantic-id",
+		AttributeExpr: &expr.AttributeExpr{
+			Type: expr.String,
+			Meta: expr.MetaExpr{
+				"struct:field:type": {"Second", "example.com/second"},
+			},
+		},
+	}
+	object := expr.Object{
+		&expr.NamedAttributeExpr{Name: "first", Attribute: &expr.AttributeExpr{Type: first}},
+		&expr.NamedAttributeExpr{Name: "second", Attribute: &expr.AttributeExpr{Type: second}},
+	}
+
+	imports := GetMetaTypeImports(&expr.AttributeExpr{Type: &object})
+	paths := make([]string, len(imports))
+	for i, spec := range imports {
+		paths[i] = spec.Path
+	}
+	sort.Strings(paths)
+	if want := []string{"example.com/first", "example.com/second"}; !reflect.DeepEqual(paths, want) {
+		t.Errorf("want %+v, got %+v", want, paths)
 	}
 }

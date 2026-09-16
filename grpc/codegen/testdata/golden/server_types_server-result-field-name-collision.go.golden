@@ -1,0 +1,8 @@
+// NewProtoShowResponse builds *result_field_name_collisionpb.ShowResponse from
+// *resultfieldnamecollision.ToolResult.
+func NewProtoShowResponse(result *resultfieldnamecollision.ToolResult) *result_field_name_collisionpb.ShowResponse {
+	message := &result_field_name_collisionpb.ShowResponse{}
+	result2 := string(result.Result)
+	message.Result = &result2
+	return message
+}

@@ -1,23 +1,28 @@
-{{ if and .IsJSONRPC (not .Payload.Ref) }}{{ printf "%s returns an encoder for requests sent to the %s service %s JSON-RPC method." .RequestEncoder .ServiceName .Method.Name | comment }}{{ else }}{{ printf "%s returns an encoder for requests sent to the %s %s server." .RequestEncoder .ServiceName .Method.Name | comment }}{{ end }}
-func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
-	return func(req *http.Request, v any) error {
+{{- $returnsID := and .IsJSONRPC (not .IsJSONRPCNotification) }}
+{{- $omitSelectedBody := .Payload.Request.BodyFieldCanBeAbsent }}
+{{- if .IsJSONRPC }}
+	{{- $omitSelectedBody = and $omitSelectedBody .Payload.Request.Params.OmitAbsent }}
+{{- end }}
+{{ if $returnsID }}{{ printf "%s returns an encoder for requests sent to the %s service %s JSON-RPC method. The encoder returns the request ID written into the JSON-RPC message." .RequestEncoderDeclaration.Name .ServiceName .Method.Name | comment }}{{ else if and .IsJSONRPC (not .Payload.Ref) }}{{ printf "%s returns an encoder for requests sent to the %s service %s JSON-RPC method." .RequestEncoderDeclaration.Name .ServiceName .Method.Name | comment }}{{ else }}{{ printf "%s returns an encoder for requests sent to the %s %s server." .RequestEncoderDeclaration.Name .ServiceName .Method.Name | comment }}{{ end }}
+func {{ .RequestEncoderDeclaration.Name }}(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) {{ if $returnsID }}(string, error){{ else }}error{{ end }} {
+	return func(req *http.Request, v any) {{ if $returnsID }}(string, error){{ else }}error{{ end }} {
 {{- if and .IsJSONRPC (not .Payload.Ref) }}
 		{{- template "partial_jsonrpc_request_envelope" . }}
 		if err := encoder(req).Encode(body); err != nil {
-			return goahttp.ErrEncodingError("{{ .ServiceName }}", "{{ .Method.Name }}", err)
+			return {{ if $returnsID }}"", {{ end }}goahttp.ErrEncodingError("{{ .ServiceName }}", "{{ .Method.Name }}", err)
 		}
-		return nil
+		return {{ if $returnsID }}requestID, {{ end }}nil
 {{- else }}
 		{{- if .Method.SkipRequestBodyEncodeDecode }}
-		data, ok := v.(*{{ requestStructPkg .Method .ServicePkgName }}.{{ .Method.RequestStruct }})
+		data, ok := v.(*{{ .ServicePkgName }}.{{ .Method.RequestStruct }})
 		if !ok {
-			return goahttp.ErrInvalidType("{{ .ServiceName }}", "{{ .Method.Name }}", "*{{ requestStructPkg .Method .ServicePkgName }}.{{ .Method.RequestStruct }}", v)
+			return {{ if $returnsID }}"", {{ end }}goahttp.ErrInvalidType("{{ .ServiceName }}", "{{ .Method.Name }}", "*{{ .ServicePkgName }}.{{ .Method.RequestStruct }}", v)
 		}
 		p := data.Payload
 		{{- else }}
 		p, ok := v.({{ .Payload.Ref }})
 		if !ok {
-			return goahttp.ErrInvalidType("{{ .ServiceName }}", "{{ .Method.Name }}", "{{ .Payload.Ref }}", v)
+			return {{ if $returnsID }}"", {{ end }}goahttp.ErrInvalidType("{{ .ServiceName }}", "{{ .Method.Name }}", "{{ .Payload.Ref }}", v)
 		}
 		{{- end }}
 	{{- range .Payload.Request.Headers }}
@@ -28,6 +33,13 @@ func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*ht
 			{
 			{{- end }}
 			head := {{ if .FieldPointer }}*{{ end }}p.{{ .FieldName }}
+			{{- if .PreserveEmpty }}
+			for _, character := range head {
+				if character == 0 || character == '\r' || character == '\n' {
+					return {{ if $returnsID }}"", {{ end }}goahttp.ErrValidationError("{{ $.ServiceName }}", "{{ $.Method.Name }}", goa.InvalidPatternError("{{ .Name }}", string(head), "[^\\x00\\r\\n]*"))
+				}
+			}
+			{{- end }}
 			{{- if (and (eq .HTTPName "Authorization") (isBearer $.HeaderSchemes)) }}
 		if !strings.Contains(head, " ") {
 			req.Header.Set({{ printf "%q" .HTTPName }}, "Bearer "+head)
@@ -126,13 +138,11 @@ func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*ht
 			{{- if .FieldPointer }}
 		if p.{{ .FieldName }} != nil {
 			{{- end }}
-		values.Add("{{ .HTTPName }}",
-			{{- if or (eq .Type.Name "bytes") (and (isAlias .FieldType) (eq (underlyingType .FieldType).Name "string")) }} string(
-			{{- else if not (eq .Type.Name "string") }} fmt.Sprintf("%v",
+			{{- $target := printf "p.%s" .FieldName }}
+			{{- if .FieldPointer }}
+				{{- $target = printf "*p.%s" .FieldName }}
 			{{- end }}
-			{{- if .FieldPointer }}*{{ end }}p.{{ .FieldName }}
-			{{- if or (eq .Type.Name "bytes") (not (eq .Type.Name "string")) (and (isAlias .FieldType) (eq (underlyingType .FieldType).Name "string")) }})
-			{{- end }})
+		values.Add("{{ .HTTPName }}", {{ template "partial_client_type_expression" (typeConversionData .Type .FieldType "" $target) }})
 			{{- if .FieldPointer }}
 		}
 			{{- end }}
@@ -152,11 +162,36 @@ func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*ht
 	{{- end }}
 	{{- if .MultipartRequestEncoder }}
 		if err := encoder(req).Encode(p); err != nil {
-			return goahttp.ErrEncodingError("{{ .ServiceName }}", "{{ .Method.Name }}", err)
+			return {{ if $returnsID }}"", {{ end }}goahttp.ErrEncodingError("{{ .ServiceName }}", "{{ .Method.Name }}", err)
 		}
 	{{- else if .Payload.Request.ClientBody }}
+		{{- if and .IsJSONRPC $omitSelectedBody }}
+		{{- template "partial_jsonrpc_request_envelope" . }}
+		if {{ if .Payload.Request.BodyIsUnion }}p.{{ .Payload.Request.PayloadAttr }}.Kind() != ""{{ else }}p.{{ .Payload.Request.PayloadAttr }} != nil{{ end }} {
+			{{- if .Payload.Request.ClientBody.Init }}
+			b := {{ .Payload.Request.ClientBody.Init.Declaration.Name }}({{ range .Payload.Request.ClientBody.Init.ClientArgs }}{{ if .FieldPointer }}&{{ end }}{{ .VarName }}, {{ end }})
+			{{- else }}
+			b := {{ if .Payload.Request.BodyFieldPointer }}*{{ end }}p.{{ .Payload.Request.PayloadAttr }}
+			{{- end }}
+			body.Params = b
+		}
+		if err := encoder(req).Encode(&body); err != nil {
+			return {{ if $returnsID }}"", {{ end }}goahttp.ErrEncodingError("{{ .ServiceName }}", "{{ .Method.Name }}", err)
+		}
+		{{- else if $omitSelectedBody }}
+		if {{ if .Payload.Request.BodyIsUnion }}p.{{ .Payload.Request.PayloadAttr }}.Kind() != ""{{ else }}p.{{ .Payload.Request.PayloadAttr }} != nil{{ end }} {
+			{{- if .Payload.Request.ClientBody.Init }}
+			body := {{ .Payload.Request.ClientBody.Init.Declaration.Name }}({{ range .Payload.Request.ClientBody.Init.ClientArgs }}{{ if .FieldPointer }}&{{ end }}{{ .VarName }}, {{ end }})
+			{{- else }}
+			body := {{ if .Payload.Request.BodyFieldPointer }}*{{ end }}p.{{ .Payload.Request.PayloadAttr }}
+			{{- end }}
+		if err := encoder(req).Encode(&body); err != nil {
+			return {{ if $returnsID }}"", {{ end }}goahttp.ErrEncodingError("{{ .ServiceName }}", "{{ .Method.Name }}", err)
+		}
+		}
+		{{- else }}
 		{{- if .Payload.Request.ClientBody.Init }}
-		{{ if .IsJSONRPC }}b{{ else }}body{{ end }} := {{ .Payload.Request.ClientBody.Init.Name }}({{ range .Payload.Request.ClientBody.Init.ClientArgs }}{{ if .FieldPointer }}&{{ end }}{{ .VarName }}, {{ end }})
+		{{ if .IsJSONRPC }}b{{ else }}body{{ end }} := {{ .Payload.Request.ClientBody.Init.Declaration.Name }}({{ range .Payload.Request.ClientBody.Init.ClientArgs }}{{ if .FieldPointer }}&{{ end }}{{ .VarName }}, {{ end }})
 		{{- else }}
 		{{ if .IsJSONRPC }}b{{ else }}body{{ end }} := p{{ if .Payload.Request.PayloadAttr }}.{{ .Payload.Request.PayloadAttr }}{{ end }}
 		{{- end }}
@@ -164,25 +199,37 @@ func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*ht
 		{{- template "partial_jsonrpc_request_envelope" . }}
 		{{- end }}
 		if err := encoder(req).Encode(&body); err != nil {
-			return goahttp.ErrEncodingError("{{ .ServiceName }}", "{{ .Method.Name }}", err)
+			return {{ if $returnsID }}"", {{ end }}goahttp.ErrEncodingError("{{ .ServiceName }}", "{{ .Method.Name }}", err)
+		}
+		{{- end }}
+	{{- else if .IsJSONRPC }}
+		{{- template "partial_jsonrpc_request_envelope" . }}
+		if err := encoder(req).Encode(&body); err != nil {
+			return {{ if $returnsID }}"", {{ end }}goahttp.ErrEncodingError("{{ .ServiceName }}", "{{ .Method.Name }}", err)
 		}
 	{{- end }}
 	{{- if .BasicScheme }}{{ with .BasicScheme }}
-		{{- if not .UsernameRequired }}
+		{{- if .UsernamePointer }}
+		var user string
 		if p.{{ .UsernameField }} != nil {
-		{{- end }}
-		{{- if not .PasswordRequired }}
-		if p.{{ .PasswordField }} != nil {
-		{{- end }}
-		req.SetBasicAuth({{ if .UsernamePointer }}*{{ end }}p.{{ .UsernameField }}, {{ if .PasswordPointer }}*{{ end }}p.{{ .PasswordField }})
-		{{- if not .UsernameRequired }}
+			user = string(*p.{{ .UsernameField }})
 		}
 		{{- end }}
-		{{- if not .PasswordRequired }}
+		{{- if .PasswordPointer }}
+		var pass string
+		if p.{{ .PasswordField }} != nil {
+			pass = string(*p.{{ .PasswordField }})
+		}
+		{{- end }}
+		{{- if and .UsernamePointer .PasswordPointer }}
+		if p.{{ .UsernameField }} != nil || p.{{ .PasswordField }} != nil {
+		{{- end }}
+		req.SetBasicAuth({{ if .UsernamePointer }}user{{ else }}string(p.{{ .UsernameField }}){{ end }}, {{ if .PasswordPointer }}pass{{ else }}string(p.{{ .PasswordField }}){{ end }})
+		{{- if and .UsernamePointer .PasswordPointer }}
 		}
 		{{- end }}
 	{{- end }}{{ end }}
-		return nil
+		return {{ if $returnsID }}requestID, {{ end }}nil
 {{- end }}
 	}
 }

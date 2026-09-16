@@ -1,0 +1,24 @@
+// DecodeMethodClientStreamingRPCWithMetadataOnlyPayloadRequest decodes
+// requests sent to "ServiceClientStreamingRPCWithMetadataOnlyPayload" service
+// "MethodClientStreamingRPCWithMetadataOnlyPayload" endpoint.
+func DecodeMethodClientStreamingRPCWithMetadataOnlyPayloadRequest(ctx context.Context, v any, md metadata.MD) (any, error) {
+	var (
+		token string
+		err   error
+	)
+	{
+		if vals := md.Get("token"); len(vals) == 0 {
+			err = goa.MergeErrors(err, goa.MissingFieldError("token", "metadata"))
+		} else {
+			token = vals[0]
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	var payload *serviceclientstreamingrpcwithmetadataonlypayload.MethodClientStreamingRPCWithMetadataOnlyPayloadPayload
+	{
+		payload = NewMethodClientStreamingRPCWithMetadataOnlyPayloadPayload(token)
+	}
+	return payload, nil
+}

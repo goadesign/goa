@@ -4,8 +4,8 @@
       "SSEObjectMethodResponseBody": {
         "example": {
           "flag": true,
-          "id": "Aspernatur dolorem velit tenetur.",
-          "value": 3199557017606053400
+          "id": "event",
+          "value": 1
         },
         "properties": {
           "flag": {
@@ -13,11 +13,11 @@
             "type": "boolean"
           },
           "id": {
-            "example": "Aspernatur dolorem velit tenetur.",
+            "example": "event",
             "type": "string"
           },
           "value": {
-            "example": 3199557017606053400,
+            "example": 1,
             "format": "int64",
             "type": "integer"
           }
@@ -45,21 +45,21 @@
                       "contentMediaType": "application/json",
                       "contentSchema": {
                         "example": {
-                          "flag": false,
-                          "id": "Consequuntur dolores eos voluptatem.",
-                          "value": 7986166745691455000
+                          "flag": true,
+                          "id": "event",
+                          "value": 1
                         },
                         "properties": {
                           "flag": {
-                            "example": false,
+                            "example": true,
                             "type": "boolean"
                           },
                           "id": {
-                            "example": "Consequuntur dolores eos voluptatem.",
+                            "example": "event",
                             "type": "string"
                           },
                           "value": {
-                            "example": 7986166745691455000,
+                            "example": 1,
                             "format": "int64",
                             "type": "integer"
                           }

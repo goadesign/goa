@@ -1,6 +1,45 @@
 package expr
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
+
+func TestUserTypeOrigin(t *testing.T) {
+	original := &UserTypeExpr{
+		AttributeExpr: &AttributeExpr{Type: String},
+		TypeName:      "Value",
+	}
+	copy := original.Dup(DupAtt(original.Attribute())).(*UserTypeExpr)
+	copyOfCopy := copy.Dup(DupAtt(copy.Attribute())).(*UserTypeExpr)
+	require.Same(t, original, original.Origin())
+	require.Same(t, original, copy.Origin())
+	require.Same(t, original, copyOfCopy.Origin())
+
+	copy.Rename("RenamedValue")
+	renamedCopy := copy.Dup(DupAtt(copy.Attribute())).(*UserTypeExpr)
+	require.Same(t, copy, copy.Origin())
+	require.Same(t, copy, renamedCopy.Origin())
+	require.Same(t, original, copyOfCopy.Origin())
+}
+
+func TestIndependentUserTypesHaveDistinctOrigins(t *testing.T) {
+	first := &UserTypeExpr{AttributeExpr: &AttributeExpr{Type: String}, TypeName: "Value"}
+	second := &UserTypeExpr{AttributeExpr: &AttributeExpr{Type: String}, TypeName: "Value"}
+	require.NotSame(t, first.Origin(), second.Origin())
+}
+
+func TestResultTypeOriginPreservesDynamicType(t *testing.T) {
+	original := NewResultTypeExpr("Value", "application/vnd.value", nil)
+	copy := original.Dup(DupAtt(original.Attribute())).(*ResultTypeExpr)
+	require.Same(t, original, copy.Origin())
+
+	copy.Rename("RenamedValue")
+	renamedCopy := copy.Dup(DupAtt(copy.Attribute())).(*ResultTypeExpr)
+	require.Same(t, copy, copy.Origin())
+	require.Same(t, copy, renamedCopy.Origin())
+}
 
 func TestUserTypeExprName(t *testing.T) {
 	var (

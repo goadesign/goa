@@ -1,17 +1,17 @@
-{{- if mustInitServices .Services }}
+{{- if .HasServices }}
 
 	{{ comment "Initialize the services." }}
 	var (
 	{{- range .Services }}
-		{{- if .Methods }}
-		{{ .VarName }}Svc {{ .PkgName }}.Service
+		{{- if .HasMethods }}
+		{{ .ServiceVar }} {{ .PkgName }}.{{ .ServiceDeclaration.Name }}
 		{{- end }}
 	{{- end }}
 	)
 	{
 	{{- range .Services }}
-		{{- if .Methods }}
-		{{ .VarName }}Svc = {{ $.APIPkg }}.New{{ .StructName }}()
+		{{- if .HasMethods }}
+		{{ .ServiceVar }} = {{ $.APIPkg }}.{{ .ExampleConstructorDeclaration.Name }}()
 		{{- end }}
 	{{- end }}
 	}

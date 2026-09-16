@@ -1,44 +1,37 @@
 func transform() {
 	target := &proto.WithDefaults{
-		Int:            int(source.Int),
-		RawJSON:        json.RawMessage(source.RawJson),
-		RequiredInt:    int(source.RequiredInt),
-		String:         source.String_,
-		RequiredString: source.RequiredString,
+		RequiredInt:    int(*source.RequiredInt),
+		RequiredString: *source.RequiredString,
 		Bytes:          source.Bytes_,
 		RequiredBytes:  source.RequiredBytes,
-		Any:            source.Any,
-		RequiredAny:    source.RequiredAny,
+		RequiredAny:    *source.RequiredAny,
 	}
-	{
-		var zero int
-		if target.Int == zero {
-			target.Int = 100
-		}
+	if source.Int != nil {
+		target.Int = int(*source.Int)
 	}
-	{
-		var zero json.RawMessage
-		if target.RawJSON == zero {
-			target.RawJSON = json.RawMessage{0x66, 0x6f, 0x6f}
-		}
+	if source.RawJson != nil {
+		target.RawJSON = json.RawMessage(*source.RawJson)
 	}
-	{
-		var zero string
-		if target.String == zero {
-			target.String = "foo"
-		}
+	if source.String_ != nil {
+		target.String = *source.String_
 	}
-	{
-		var zero []byte
-		if target.Bytes == zero {
-			target.Bytes = []byte{0x66, 0x6f, 0x6f, 0x62, 0x61, 0x72}
-		}
+	if source.Any != nil {
+		target.Any = *source.Any
 	}
-	{
-		var zero string
-		if target.Any == zero {
-			target.Any = "something"
-		}
+	if source.Int == nil {
+		target.Int = 100
+	}
+	if source.RawJson == nil {
+		target.RawJSON = json.RawMessage{0x66, 0x6f, 0x6f}
+	}
+	if source.String_ == nil {
+		target.String = "foo"
+	}
+	if source.Bytes_ == nil {
+		target.Bytes = []byte{0x66, 0x6f, 0x6f, 0x62, 0x61, 0x72}
+	}
+	if source.Any == nil {
+		target.Any = "something"
 	}
 	if source.Array != nil {
 		target.Array = make([]string, len(source.Array))

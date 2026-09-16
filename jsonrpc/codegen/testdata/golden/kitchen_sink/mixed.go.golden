@@ -2,8 +2,8 @@ package kitchensink
 
 import (
 	"context"
-	mixed "kitchensink/mixed"
 
+	mixed "generated.local/gen/mixed"
 	"goa.design/clue/log"
 )
 

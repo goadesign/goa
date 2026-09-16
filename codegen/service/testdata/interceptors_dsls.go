@@ -73,6 +73,25 @@ var SingleClientInterceptorDSL = func() {
 	})
 }
 
+// LeadingInitialismInterceptorDSL defines an interceptor whose name starts with
+// the common JWT initialism.
+var LeadingInitialismInterceptorDSL = func() {
+	Interceptor("JWTAuth")
+	Service("LeadingInitialismInterceptor", func() {
+		ServerInterceptor("JWTAuth")
+		ClientInterceptor("JWTAuth")
+		Method("GetInfo", func() {
+			Payload(func() {
+				Attribute("id", Int)
+			})
+			Result(func() {
+				Attribute("value", String)
+			})
+			HTTP(func() { GET("/") })
+		})
+	})
+}
+
 var MultipleInterceptorsDSL = func() {
 	Interceptor("logging")
 	Interceptor("tracing")
@@ -108,6 +127,98 @@ var InterceptorWithReadPayloadDSL = func() {
 				Required("name")
 			})
 			HTTP(func() { POST("/") })
+		})
+	})
+}
+
+var InterceptorWithExternalReadPayloadDSL = func() {
+	var UUID = Type("UUID", String, func() {
+		Meta("struct:pkg:path", "types")
+	})
+	Interceptor("authorization", func() {
+		ReadPayload(func() {
+			Attribute("org_id")
+		})
+	})
+	Service("InterceptorWithExternalReadPayload", func() {
+		ServerInterceptor("authorization")
+		Method("Method", func() {
+			Payload(func() {
+				Attribute("org_id", UUID)
+				Required("org_id")
+			})
+			HTTP(func() { POST("/") })
+		})
+	})
+}
+
+var InterceptorWithExternalPayloadDSL = func() {
+	var Event = Type("Event", func() {
+		Attribute("runtime_session_id", String)
+		Required("runtime_session_id")
+		Meta("struct:pkg:path", "types")
+	})
+	Interceptor("identify", func() {
+		ReadPayload(func() {
+			Attribute("runtime_session_id")
+		})
+	})
+	Service("InterceptorWithExternalPayload", func() {
+		ServerInterceptor("identify")
+		Method("Append", func() {
+			Payload(Event)
+			HTTP(func() { POST("/") })
+		})
+	})
+}
+
+var MixedInterceptorsWithExternalClientPayloadDSL = func() {
+	var UUID = Type("UUID", String, func() {
+		Meta("struct:pkg:path", "types")
+	})
+	Interceptor("logging")
+	Interceptor("authorization", func() {
+		ReadPayload(func() {
+			Attribute("org_id")
+		})
+	})
+	Service("MixedInterceptorsWithExternalClientPayload", func() {
+		ServerInterceptor("logging")
+		ClientInterceptor("authorization")
+		Method("Method", func() {
+			Payload(func() {
+				Attribute("org_id", UUID)
+				Required("org_id")
+			})
+			HTTP(func() { POST("/") })
+		})
+	})
+}
+
+var MergedInterceptorsWithExternalClientPayloadDSL = func() {
+	var Event = Type("Event", func() {
+		Attribute("runtime_session_id", String)
+		Required("runtime_session_id")
+		Meta("struct:pkg:path", "types")
+	})
+	Interceptor("identify", func() {
+		ReadPayload(func() {
+			Attribute("runtime_session_id")
+		})
+	})
+	Service("MergedInterceptorsWithExternalClientPayload", func() {
+		Method("ServerMethod", func() {
+			ServerInterceptor("identify")
+			Payload(func() {
+				Attribute("runtime_session_id", String)
+				Required("runtime_session_id")
+			})
+			HTTP(func() { POST("/server") })
+		})
+		Method("ClientMethod", func() {
+			ClientInterceptor("identify")
+			Payload(Event)
+			HTTP(func() { POST("/client") })
 		})
 	})
 }
@@ -281,6 +392,34 @@ var StreamingInterceptorsWithReadStreamingResultDSL = func() {
 				Field(1, "data", String)
 			})
 			GRPC(func() {})
+		})
+	})
+}
+
+var MixedResultStreamingInterceptorsDSL = func() {
+	Summary := Type("Summary", func() {
+		Meta("struct:pkg:path", "summary")
+		Field(1, "count", Int)
+	})
+	Event := Type("Event", func() {
+		Meta("struct:pkg:path", "events")
+		Field(1, "message", String)
+	})
+	Interceptor("logging", func() {
+		ReadStreamingResult(func() {
+			Attribute("message")
+		})
+	})
+	Service("MixedResultStreamingInterceptors", func() {
+		ServerInterceptor("logging")
+		ClientInterceptor("logging")
+		Method("Method", func() {
+			Result(Summary)
+			StreamingResult(Event)
+			HTTP(func() {
+				GET("/stream")
+				ServerSentEvents()
+			})
 		})
 	})
 }

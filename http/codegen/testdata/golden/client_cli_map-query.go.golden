@@ -1,3 +1,22 @@
+// cliStringFlag keeps an omitted command-line flag distinct from an explicitly empty flag.
+type cliStringFlag struct {
+	value *string
+}
+
+// String returns the flag text shown by the standard flag package.
+func (f *cliStringFlag) String() string {
+	if f.value == nil {
+		return ""
+	}
+	return *f.value
+}
+
+// Set records that the user supplied the flag, even when value is empty.
+func (f *cliStringFlag) Set(value string) error {
+	f.value = &value
+	return nil
+}
+
 // ParseEndpoint returns the endpoint and payload as specified on the command
 // line.
 func ParseEndpoint(
@@ -11,8 +30,10 @@ func ParseEndpoint(
 		serviceMapQueryPrimitiveArrayFlags = flag.NewFlagSet("service-map-query-primitive-array", flag.ContinueOnError)
 
 		serviceMapQueryPrimitiveArrayMapQueryPrimitiveArrayFlags = flag.NewFlagSet("map-query-primitive-array", flag.ExitOnError)
-		serviceMapQueryPrimitiveArrayMapQueryPrimitiveArrayPFlag = serviceMapQueryPrimitiveArrayMapQueryPrimitiveArrayFlags.String("p", "REQUIRED", "map[string][]uint is the payload type of the ServiceMapQueryPrimitiveArray service MapQueryPrimitiveArray method.")
+		serviceMapQueryPrimitiveArrayMapQueryPrimitiveArrayPFlag = new(cliStringFlag)
 	)
+	serviceMapQueryPrimitiveArrayMapQueryPrimitiveArrayFlags.Var(serviceMapQueryPrimitiveArrayMapQueryPrimitiveArrayPFlag, "p", "map[string][]uint is the payload type of the ServiceMapQueryPrimitiveArray service MapQueryPrimitiveArray method.")
+
 	serviceMapQueryPrimitiveArrayFlags.Usage = serviceMapQueryPrimitiveArrayUsage
 	serviceMapQueryPrimitiveArrayMapQueryPrimitiveArrayFlags.Usage = serviceMapQueryPrimitiveArrayMapQueryPrimitiveArrayUsage
 
@@ -81,11 +102,14 @@ func ParseEndpoint(
 			case "map-query-primitive-array":
 				endpoint = c.MapQueryPrimitiveArray()
 				var err error
+				if serviceMapQueryPrimitiveArrayMapQueryPrimitiveArrayPFlag.value == nil {
+					return nil, nil, fmt.Errorf("missing required flag --p")
+				}
 				var val map[string][]uint
-				err = json.Unmarshal([]byte(*serviceMapQueryPrimitiveArrayMapQueryPrimitiveArrayPFlag), &val)
+				err = json.Unmarshal([]byte(*serviceMapQueryPrimitiveArrayMapQueryPrimitiveArrayPFlag.value), &val)
 				data = val
 				if err != nil {
-					return nil, nil, fmt.Errorf("invalid JSON for serviceMapQueryPrimitiveArrayMapQueryPrimitiveArrayPFlag, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"Quidem accusamus.\": [\n         3906106080549376696,\n         18039872150139340048\n      ],\n      \"Repellat occaecati officiis doloremque.\": [\n         8210943955859777434,\n         7701234893751856770,\n         12687845642945213165,\n         5080739739723289788\n      ],\n      \"Voluptas officiis in eum nostrum voluptatem.\": [\n         7799018251876253497,\n         23602025540978920\n      ]\n   }'")
+					return nil, nil, fmt.Errorf("invalid JSON for serviceMapQueryPrimitiveArrayMapQueryPrimitiveArrayPFlag, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"Deserunt itaque pariatur ipsam consequuntur nostrum.\": [\n         11990920063555956079,\n         17089161724625472560\n      ],\n      \"Libero dolore est accusantium explicabo nostrum rerum.\": [\n         2438159965416078706,\n         977176377124085955,\n         16802288397808742928\n      ],\n      \"Occaecati nulla iusto.\": [\n         11103002557489322756,\n         17383528869145716448,\n         5505226717552383690,\n         3219217238434884659\n      ]\n   }'")
 				}
 			}
 		}

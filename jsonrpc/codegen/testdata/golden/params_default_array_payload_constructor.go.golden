@@ -1,0 +1,16 @@
+// NewDefaultArrayPayload builds a defaults service default_array endpoint
+// payload.
+func NewDefaultArrayPayload(body []string) *defaults.DefaultArrayPayload {
+	res := &defaults.DefaultArrayPayload{}
+	if body != nil {
+		v := make([]string, len(body))
+		for i, val := range body {
+			v[i] = val
+		}
+		res.Value = v
+	} else {
+		res.Value = defaults.Values{"safe"}
+	}
+
+	return res
+}

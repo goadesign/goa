@@ -28,7 +28,7 @@
 		if p{{ if $.HasFields }}.{{ .FieldName }}{{ end }} != nil {
 		{{- end }}
 			{{- if .IsAliased }}
-			{{ .VarName }} = {{ .ServiceTypeRef }}({{ if .Pointer }}*{{ end }}p{{ if $.HasFields }}.{{ .FieldName }}{{ end }})
+			{{ .VarName }} = {{ .TypeRef }}({{ if .Pointer }}*{{ end }}p{{ if $.HasFields }}.{{ .FieldName }}{{ end }})
 			{{- else }}
 			{{ .VarName }} = {{ if .Pointer }}*{{ end }}p{{ if $.HasFields }}.{{ .FieldName }}{{ end }}
 			{{- end }}
@@ -53,7 +53,7 @@
 			scheme = "wss"
 		}
 	{{- end }}
-	u := &url.URL{Scheme: {{ if .IsWebSocket }}scheme{{ else }}c.scheme{{ end }}, Host: c.host, Path: {{ .PathInit.Name }}({{ range .Args }}{{ .Ref }}, {{ end }})}
+	u := &url.URL{Scheme: {{ if .IsWebSocket }}scheme{{ else }}c.scheme{{ end }}, Host: c.host, Path: {{ .PathInit.ClientDeclaration.Name }}({{ range .Args }}{{ .Ref }}, {{ end }})}
 	req, err := http.NewRequest("{{ .Verb }}", u.String(), {{ if .RequestStruct }}body{{ else }}nil{{ end }})
 	if err != nil {
 		return nil, goahttp.ErrInvalidURL("{{ .ServiceName }}", "{{ .EndpointName }}", u.String(), err)

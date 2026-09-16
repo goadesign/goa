@@ -1,0 +1,26 @@
+// BuildMethodPathPrimitiveStringFormatIPValidateRequest instantiates a HTTP
+// request object with method and path set to call the
+// "ServicePathPrimitiveStringFormatIPValidate" service
+// "MethodPathPrimitiveStringFormatIPValidate" endpoint
+func (c *Client) BuildMethodPathPrimitiveStringFormatIPValidateRequest(ctx context.Context, v any) (*http.Request, error) {
+	var (
+		ip string
+	)
+	{
+		p, ok := v.(string)
+		if !ok {
+			return nil, goahttp.ErrInvalidType("ServicePathPrimitiveStringFormatIPValidate", "MethodPathPrimitiveStringFormatIPValidate", "string", v)
+		}
+		ip = p
+	}
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: MethodPathPrimitiveStringFormatIPValidateServicePathPrimitiveStringFormatIPValidatePath(ip)}
+	req, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("ServicePathPrimitiveStringFormatIPValidate", "MethodPathPrimitiveStringFormatIPValidate", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}

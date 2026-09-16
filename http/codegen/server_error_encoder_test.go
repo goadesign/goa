@@ -31,12 +31,13 @@ func TestEncodeError(t *testing.T) {
 		{"api-no-body-error-response-with-content-type", testdata.APINoBodyErrorResponseWithContentTypeDSL},
 		{"empty-error-response-body", testdata.EmptyErrorResponseBodyDSL},
 		{"empty-custom-error-response-body", testdata.EmptyCustomErrorResponseBodyDSL},
+		{"error-body-attribute-response", testdata.ErrorBodyAttributeResponseDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := expr.RunDSL(t, c.DSL)
-			services := CreateHTTPServices(root)
-			fs := ServerFiles("", services)
+			plan := linkedHTTPPlanForRoot(t, root)
+			fs := plan.ServerFiles()
 			require.Len(t, fs, 2)
 			sections := fs[1].SectionTemplates
 			require.Greater(t, len(sections), 1)

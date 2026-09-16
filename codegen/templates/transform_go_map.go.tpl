@@ -1,14 +1,16 @@
 {{ .TargetVar }} {{ if .NewVar }}:={{ else }}={{ end }} make({{ if .TypeAliasName }}{{ .TypeAliasName }}{{ else }}map[{{ .KeyTypeRef }}]{{ .ElemTypeRef }}{{ end }}, len({{ .SourceVar }}))
 for key, val := range {{ .SourceVar }} {
-{{ if .IsKeyStruct -}}
-	tk := {{ transformHelperName .SourceKey .TargetKey .TransformAttrs -}}(val)
+{{ if .UseKeyHelper -}}
+	tk := {{ transformHelperName .SourceKey .TargetKey .TransformAttrs -}}(key)
 {{ else -}}
 	{{ transformAttribute .SourceKey .TargetKey "key" "tk" true .TransformAttrs }}{{ end -}}
-{{ if .IsElemStruct -}}
+{{ if .ElemIsObject -}}
 	if val == nil {
 		{{ .TargetVar }}[tk] = nil
 		continue
 	}
+{{ end -}}
+{{ if .UseElemHelper -}}
 	{{ .TargetVar }}[tk] = {{ transformHelperName .SourceElem .TargetElem .TransformAttrs -}}(val)
 {{ else -}}
 	{{ transformAttribute .SourceElem .TargetElem "val" (printf "tv%s" .LoopVar) true .TransformAttrs -}}
