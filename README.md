@@ -1,238 +1,229 @@
 <p align="center">
-  <p align="center">
-    <a href="https://goa.design">
-      <img alt="Goa" src="https://goa.design/img/social/goa-banner.png">
-    </a>
-  </p>
-  <p align="center">
-    <a href="https://github.com/goadesign/goa/releases/latest"><img alt="Release" src="https://img.shields.io/github/release/goadesign/goa.svg?style=for-the-badge"></a>
-    <a href="https://pkg.go.dev/goa.design/goa/v3@v3.31.1/dsl?tab=doc"><img alt="Go Doc" src="https://img.shields.io/badge/godoc-reference-blue.svg?style=for-the-badge"></a>
-    <a href="https://github.com/goadesign/goa/actions/workflows/ci.yml"><img alt="GitHub Action: Test" src="https://img.shields.io/github/actions/workflow/status/goadesign/goa/test.yml?branch=v3&style=for-the-badge"></a>
-    <a href="https://goreportcard.com/report/github.com/goadesign/goa"><img alt="Go Report Card" src="https://goreportcard.com/badge/github.com/goadesign/goa?style=for-the-badge"></a>
-    <a href="/LICENSE"><img alt="Software License" src="https://img.shields.io/badge/license-MIT-brightgreen.svg?style=for-the-badge"></a>
-    <a href="https://gurubase.io/g/goa"><img alt="Gurubase" src="https://img.shields.io/badge/Gurubase-Ask%20Goa%20Guru-006BFF?style=for-the-badge"></a>
-    <a href="https://chat.openai.com/g/g-mLuQDGyro-goa-design-wizard"><img alt="Goa Design Wizard" src="https://img.shields.io/badge/Goa%20Design%20Wizard-ChatGPT-00A67D?logo=openai&logoColor=white&style=for-the-badge"></a>
-    </br>
-    <a href="https://goadesign.substack.com"><img alt="Substack: Design First" src="https://img.shields.io/badge/Design%20First-Substack-FF6719?logo=substack&logoColor=white&style=for-the-badge"></a>
-    <a href="https://gophers.slack.com/messages/goa"><img alt="Slack: Goa" src="https://img.shields.io/badge/Goa-Slack-4A154B?logo=slack&logoColor=white&style=for-the-badge"></a>
-    <a href="https://bsky.app/profile/goadesign.bsky.social"><img alt="Bluesky: Goa Design" src="https://img.shields.io/badge/Goa%20Design-Bluesky-0285FF?logo=bluesky&logoColor=white&style=for-the-badge"></a>
-  </p>
+  <a href="https://goa.design">
+    <img alt="Goa — Let agents reason. Let Goa generate." src="docs/goa-banner.png" width="960">
+  </a>
 </p>
 
-<!-- Removed card; Wizard is now a badge button above -->
+<p align="center">
+  <a href="https://github.com/goadesign/goa/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/goadesign/goa"></a>
+  <a href="https://pkg.go.dev/goa.design/goa/v3@v3.31.1/dsl?tab=doc"><img alt="Go reference" src="https://img.shields.io/badge/go-reference-007d9c"></a>
+  <a href="https://github.com/goadesign/goa/actions/workflows/test.yml"><img alt="Tests" src="https://img.shields.io/github/actions/workflow/status/goadesign/goa/test.yml?branch=v3"></a>
+  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-blue"></a>
+</p>
 
-# Goa - Design First, Code With Confidence
+# Go services. Less code to write.
 
-## Overview
+**Goa is a design-first Go framework that generates HTTP, gRPC, and JSON-RPC APIs from a single contract.** Describe your types, operations, and validation in Go. Goa generates the server and client code, CLI clients, and OpenAPI/protobuf specifications. You and your coding agent implement the business logic.
 
-Goa transforms how you build APIs and microservices in Go with its powerful design-first approach. Instead of writing boilerplate code, you express your API's intent through a clear, expressive DSL. Goa then automatically generates production-ready code, comprehensive documentation, and client libraries—all perfectly aligned with your design.
+For a coding agent, that's less repetitive code to write, fewer representations to keep in sync, and a clear contract to reason from.
 
-The result? Dramatically reduced development time, consistent APIs, and the elimination of the documentation-code drift that plagues traditional development.
+**[Quickstart](https://goa.design/docs/1-goa/quickstart/)** · [Documentation](https://goa.design/docs/1-goa/) · [Examples](https://github.com/goadesign/examples) · [Build AI agents with Goa-AI](https://github.com/goadesign/goa-ai)
 
-## Sponsors
+## Give your coding agent a contract
 
-<table width="100%">
-    <tr>
-        <td>
-            <img width="1000" height="0" />
-            <a href="https://www.incident.io">
-                <img src="docs/incidentio.png" alt="incident.io" width="260" align="right" />
-            </a>
-            <h3>incident.io: Bounce back stronger after every incident</h3>
-            <p>
-                Use our platform to empower your team to run incidents end-to-end. Rapidly fix and
-                learn from incidents, so you can build more resilient products.
-            </p>
-            <a href="https://incident.io">Learn more</a>
-        </td>
-    </tr>
-    <tr>
-        <td>
-            <img width="1000" height="0" />
-            <a href="https://www.speakeasy.com/editor?utm_source=goa+repo&utm_medium=github+sponsorship">
-                <img src="docs/speakeasy.png" alt="Speakeasy" width="260" align="right" />
-            </a>
-            <h3>Speakeasy: Enterprise DevEx for your API</h3>
-            <p>
-                Our platform makes it easy to create feature-rich production ready SDKs.
-                Speed up integrations and reduce errors by giving your API the DevEx it deserves.
-            </p>
-            <a href="https://www.speakeasy.com/docs/api-frameworks/goa?utm_source=goa+repo&utm_medium=github+sponsorship">Integrate with Goa</a>
-        </td>
-    </tr>
-</table>
+A new field can affect a handler, a client, validation, and an API specification. With Goa, your agent changes the design and regenerates those pieces together.
 
-## Why Goa?
+- **Spend tokens on the interesting work.** Goa generates routing, serialization, validation, and clients. Your agent can focus on requirements, business rules, and tests.
+- **Start from useful context.** Types, descriptions, examples, errors, and constraints live together in the design. The agent can read the relevant contract before exploring the implementation.
+- **Make edits predictable.** Change `design/`, regenerate `gen/`, implement outside it. The same structure carries across services and transports.
+- **Let the compiler guide the next step.** When a generated interface changes, Go identifies implementations and callers that need updating. Tests cover the behavior.
 
-Traditional API development suffers from:
-- **Inconsistency**: Manually maintained docs that quickly fall out of sync with code
-- **Wasted effort**: Writing repetitive boilerplate and transport-layer code
-- **Painful integrations**: Client packages that need constant updates
-- **Design afterthoughts**: Documentation added after implementation, missing key details
-
-Goa solves these problems by:
-- Generating 30-50% of your codebase directly from your design
-- Ensuring perfect alignment between design, code, and documentation
-- Supporting multiple transports (HTTP, gRPC, and JSON-RPC) from a single design
-- Maintaining a clean separation between business logic and transport details
-
-## Key Features
-
-- **Expressive Design Language**: Define your API with a clear, type-safe DSL that captures your intent
-- **Comprehensive Code Generation**:
-  - Type-safe server interfaces that enforce your design
-  - Client packages with full error handling
-  - Transport layer adapters (HTTP/gRPC/JSON-RPC) with routing and encoding
-  - OpenAPI/Swagger documentation that's always in sync
-  - CLI tools for testing your services
-- **Multi-Protocol Support**: Generate HTTP REST, gRPC, and JSON-RPC endpoints from a single design
-- **Clean Architecture**: Business logic remains separate from transport concerns
-- **Enterprise Ready**: Supports authentication, authorization, CORS, logging, and more
-- **Comprehensive Testing**: Includes extensive unit and integration test suites ensuring quality and reliability
-
-## How It Works
-
-```
-┌─────────────┐     ┌──────────────┐     ┌─────────────────────┐
-│ Design API  │────>│ Generate Code│────>│ Implement Business  │
-│ using DSL   │     │ & Docs       │     │ Logic               │
-└─────────────┘     └──────────────┘     └─────────────────────┘
-```
-
-1. **Design**: Express your API's intent in Goa's DSL
-2. **Generate**: Run `goa gen` to create server interfaces, client code, and documentation
-3. **Implement**: Focus solely on writing your business logic in the generated interfaces
-4. **Evolve**: Update your design and regenerate code as your API evolves
-
-## Quick Start
+Install the **[Goa service designer skill](skills/goa-service-designer/)** in your application repository:
 
 ```bash
-# Install Goa
-go install goa.design/goa/v3/cmd/goa@latest
+npx skills add goadesign/goa --skill goa-service-designer
+```
 
-# Create a new module
-mkdir hello && cd hello
-go mod init hello
+The installer requires Node.js and npm and lets you choose your coding tool. The skill guides design changes, generation, implementation, and verification, and points the agent to relevant Goa documentation.
 
-# Define a service in design/design.go
-mkdir design
-cat > design/design.go << EOF
+Then give it a real task:
+
+> Add a catalog service with a product lookup by SKU over HTTP and gRPC. Use the Goa service designer skill. Define the contract, generate the code, implement the lookup, and test successful and missing-product responses.
+
+[See the coding-agent workflow](https://goa.design/docs/ai-development/) · [Other skill installation options](skills/)
+
+## One design. Three ways to call it.
+
+This service exposes the same greeting over HTTP, gRPC, and JSON-RPC:
+
+```go
 package design
 
 import . "goa.design/goa/v3/dsl"
 
 var _ = Service("hello", func() {
-    Method("say_hello", func() {
-        Payload(func() {
-            Field(1, "name", String)
-            Required("name")
-        })
-        Result(String)
+	Description("Greets people by name.")
+	JSONRPC(func() {
+		POST("/rpc")
+	})
 
-        HTTP(func() {
-            GET("/hello/{name}")
-        })
-    })
+	Method("greet", func() {
+		Description("Return a personal greeting.")
+		Payload(func() {
+			Field(1, "name", String, "Name to greet", func() {
+				MinLength(1)
+			})
+			Required("name")
+		})
+		Result(String)
+
+		HTTP(func() {
+			GET("/hello/{name}")
+		})
+		GRPC(func() {
+		})
+		JSONRPC(func() {
+		})
+	})
 })
-EOF
-
-# Generate the code
-goa gen hello/design
-goa example hello/design
-
-# Build and run
-go mod tidy
-go run cmd/hello/*.go --http-port 8000
-
-# In another terminal
-curl http://localhost:8000/hello/world
 ```
 
-The example above:
-1. Defines a simple "hello" service with one method
-2. Generates server and client code
-3. Starts a server that logs requests server-side (without displaying any client output)
-
-### JSON-RPC Alternative
-
-For a JSON-RPC service, simply add a `JSONRPC` expression to the service and
-method:
+Goa generates the three transports, their Go clients, request validation, a CLI client, OpenAPI specifications, and Protocol Buffer definitions. They all call the same generated service interface. Your complete `hello.go` implementation is ordinary Go:
 
 ```go
-var _ = Service("hello" , func() {
-    JSONRPC(func() {
-        Path("/jsonrpc")
-    })
-    Method("say_hello", func() {
-        Payload(func() {
-            Field(1, "name", String)
-            Required("name")
-        })
-        Result(String)
+package helloapi
 
-        JSONRPC(func() {})
-    })
+import (
+	"context"
+
+	genhello "hello/gen/hello"
+)
+
+type hellosrvc struct{}
+
+// NewHello returns the greeting service.
+func NewHello() genhello.Service {
+	return &hellosrvc{}
+}
+
+// Greet returns a greeting for the supplied name.
+func (s *hellosrvc) Greet(ctx context.Context, p *genhello.GreetPayload) (string, error) {
+	return "Hello, " + p.Name + "!", nil
 }
 ```
 
-Then test with:
+Here, `genhello` is the generated `gen/hello` package. The generated transports reject an empty name before calling `Greet`. Add a field or change a validation rule in the design, then regenerate the corresponding code and specifications.
+
+### Try it
+
+Start with **Go 1.25 or later**:
+
 ```bash
-curl -X POST http://localhost:8000/jsonrpc \
-  -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","method":"hello.say_hello","params":{"name":"world"},"id":"1"}'
+mkdir hello && cd hello
+go mod init hello
+go get goa.design/goa/v3@latest
+mkdir design
 ```
 
-## Upgrading to v3.31.0
+Save the design above as `design/design.go`. For all three transports, install the [Protocol Buffer compiler](https://protobuf.dev/installation/) and the [Go protobuf generators](UPGRADING.md#install-v3311). For an HTTP-only first run, omit both `JSONRPC` blocks and the `GRPC` block.
 
-v3.31.0 is a substantial generator upgrade that stays on the v3 module path
-and includes intentional breaking changes. Regenerate the complete generated
-tree and review changes to handwritten code and plugins. Some gRPC, JSON-RPC,
-and streaming contracts require coordinated client/server deployment.
+Generate the code and starter application:
 
-Read the [v3.31.0 upgrade guide](UPGRADING.md) before updating. It covers the
-exact installation commands, source and design migrations, deployment order,
-and rollback.
+```bash
+go mod tidy
+go run goa.design/goa/v3/cmd/goa gen hello/design
+go run goa.design/goa/v3/cmd/goa example hello/design
+```
 
-## Documentation
+Replace the starter `hello.go` with the implementation above, then run:
 
-Our documentation site at [goa.design](https://goa.design) provides comprehensive guides and references:
+```bash
+go get goa.design/clue@v1.2.6
+go mod tidy
+go run ./cmd/hello --http-port=8000
+```
 
-- **[Introduction](https://goa.design/docs/1-introduction/)**: Understand Goa's philosophy and benefits
-- **[Getting Started](https://goa.design/docs/2-getting-started/)**: Build your first Goa service step-by-step
-- **[Tutorials](https://goa.design/docs/3-tutorials/)**: Learn to create REST APIs, gRPC services, and more
-- **[Core Concepts](https://goa.design/docs/4-concepts/)**: Master the design language and architecture
-- **[Real-World Guide](https://goa.design/docs/5-real-world/)**: Follow best practices for production services
-- **[Advanced Topics](https://goa.design/docs/6-advanced/)**: Explore advanced features and techniques
+The Clue pin keeps the starter compatible with Go 1.25. In another terminal:
 
-Using a coding agent with Goa? See [`skills/`](skills/) for reusable Agent Skills that help agents follow Goa's design-first workflow in application repositories.
+```bash
+curl http://localhost:8000/hello/Alice
+# "Hello, Alice!"
+```
 
-##  Real-World Examples
+<details>
+<summary>Try the generated HTTP, gRPC, and JSON-RPC clients</summary>
 
-The [examples repository](https://github.com/goadesign/examples) contains complete, working examples demonstrating:
+If you kept all three transports in the design, each command returns `"Hello, Alice!"`:
 
-- **Basic**: Simple service showcasing core Goa concepts
-- **Cellar**: A more complete REST API example
-- **Cookies**: HTTP cookie management
-- **Encodings**: Working with different content types
-- **Error**: Comprehensive error handling strategies
-- **Files & Upload/Download**: File handling capabilities
-- **HTTP Status**: Custom status code handling
-- **Interceptors**: Request/response processing middleware
-- **Multipart**: Handling multipart form submissions
-- **Security**: Authentication and authorization examples
-- **Streaming**: Implementing streaming endpoints (HTTP, WebSocket, JSON-RPC SSE)
-- **Tracing**: Integrating with observability tools
-- **TUS**: Resumable file uploads implementation
+```bash
+go run ./cmd/hello-cli --url=http://localhost:8000 hello greet --name=Alice
+go run ./cmd/hello-cli --url=grpc://127.0.0.1:8080 hello greet --message '{"name":"Alice"}'
+go run ./cmd/hello-cli --jsonrpc --url=http://localhost:8000 hello greet --body '{"name":"Alice"}'
+```
 
-## Community & Support
+</details>
 
-- Join the [#goa](https://gophers.slack.com/messages/goa/) channel on Gophers Slack
-- Ask questions on [GitHub Discussions](https://github.com/goadesign/goa/discussions)
-- Follow us on [Bluesky](https://goadesign.bsky.social)
-- Report issues on [GitHub](https://github.com/goadesign/goa/issues)
-- Find answers with the [Goa Guru](https://gurubase.io/g/goa) AI assistant
-- Subscribe to our Substack, “Design First”: [Design First](https://goadesign.substack.com/subscribe?params=%5Bobject%20Object%5D)
+`gen` replaces the generated tree. `example` creates missing application files and leaves existing ones alone. Keep your implementation outside `gen/`, and use `go run` as above to run the generator version selected by your module.
 
-## License
+For a guided walkthrough, follow the **[HTTP quickstart](https://goa.design/docs/1-goa/quickstart/)**.
 
-MIT License - see [LICENSE](LICENSE) for details.
+## More of your service, generated
+
+| Design in Goa | Get from the generator |
+| --- | --- |
+| Types, methods, validation, and errors | Typed service interfaces, endpoints, clients, and boundary validation |
+| HTTP routes, parameters, headers, and bodies | Server handlers, encoders/decoders, Go clients, CLI commands, and OpenAPI specifications |
+| gRPC messages, metadata, and status mappings | Protocol Buffer definitions, server/client adapters, serialization, and CLI commands |
+| JSON-RPC methods and error mappings | Server/client code, request dispatch, batches, and notifications |
+| Streaming methods | WebSocket and SSE support for HTTP, SSE for JSON-RPC, and gRPC streams |
+| Result views | Named response shapes and the code to select and serialize them |
+
+Build on these with [security schemes, interceptors, and production guidance](https://goa.design/docs/1-goa/production/), or extend generation with [plugins](https://github.com/goadesign/plugins).
+
+## One ecosystem. Services and AI agents.
+
+**[Goa-AI](https://github.com/goadesign/goa-ai)** brings the same approach to AI applications. Reuse Goa types and bind tools to service methods, so your API and agent tools share a contract.
+
+- **Build AI agents** with typed tools, structured completions, agent composition, streaming, and evaluation suites.
+- **Create MCP servers** that expose tools, resources, and prompts from your design.
+- **Host a tool registry** for discovery and invocation across providers.
+- **Run locally or durably** with the in-memory engine for local execution or the Temporal engine for durable workflows.
+
+You implement the planner and application behavior; Goa-AI generates contracts, schemas, codecs, and integration code.
+
+**[Explore Goa-AI →](https://github.com/goadesign/goa-ai)** · [Quickstart](https://goa.design/docs/2-goa-ai/quickstart/) · [A service and an agent sharing one design](https://goa.design/docs/ai-development/#one-design-two-entry-points)
+
+## Upgrading to v3.31.1
+
+The generation preview is now stable. v3.31.1 brings a redesigned generator, more precise gRPC field presence and defaults, and fixes for recursive collections, result views, and multi-transport generation.
+
+This is a substantial upgrade on the **v3 module path**, with intentional breaking changes from v3.30.x. Read the **[upgrade guide](UPGRADING.md)** before regenerating; it covers source changes and cases requiring coordinated client/server deployment. The [release notes](https://github.com/goadesign/goa/releases/tag/v3.31.1) explain the benefits and fixes.
+
+## Keep exploring
+
+- **Learn the design language:** [DSL reference](https://goa.design/docs/1-goa/dsl-reference/) and [code generation](https://goa.design/docs/1-goa/code-generation/).
+- **Choose a transport:** [HTTP guide](https://goa.design/docs/1-goa/http-guide/), [gRPC guide](https://goa.design/docs/1-goa/grpc-guide/), and [JSON-RPC reference](https://pkg.go.dev/goa.design/goa/v3/dsl#JSONRPC).
+- **See complete applications:** [Examples](https://github.com/goadesign/examples) cover security, streaming, file uploads, interceptors, tracing, and more.
+- **Give an agent focused documentation:** Start with [llms.txt](https://goa.design/llms.txt), then load the relevant guide's Markdown version.
+
+## Sponsors
+
+Goa is supported by these sponsors. Thank you for helping keep the project growing.
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <a href="https://www.incident.io"><img src="docs/incidentio.png" alt="incident.io" width="220"></a>
+      <h3>Bounce back stronger after every incident</h3>
+      <p>Run incidents end-to-end. Rapidly fix and learn from incidents, so you can build more resilient products.</p>
+      <a href="https://incident.io">Explore incident.io →</a>
+    </td>
+    <td align="center" width="50%">
+      <a href="https://www.speakeasy.com/editor?utm_source=goa+repo&utm_medium=github+sponsorship"><img src="docs/speakeasy.png" alt="Speakeasy" width="220"></a>
+      <h3>Enterprise DevEx for your API</h3>
+      <p>Create feature-rich SDKs. Speed up integrations and reduce errors by giving your API the DevEx it deserves.</p>
+      <a href="https://www.speakeasy.com/docs/api-frameworks/goa?utm_source=goa+repo&utm_medium=github+sponsorship">Integrate with Goa →</a>
+    </td>
+  </tr>
+</table>
+
+## Join the community
+
+Questions, ideas, and contributions are welcome.
+
+- **Talk with us:** [Gophers Slack #goa](https://gophers.slack.com/messages/goa/) and [GitHub Discussions](https://github.com/goadesign/goa/discussions).
+- **Get help:** [Goa Guru](https://gurubase.io/g/goa) and [Goa Design Wizard](https://chat.openai.com/g/g-mLuQDGyro-goa-design-wizard).
+- **Follow along:** [Bluesky](https://bsky.app/profile/goadesign.bsky.social) and [Design First on Substack](https://goadesign.substack.com).
+- **Contribute:** [Report a bug](https://github.com/goadesign/goa/issues) or [open a pull request](https://github.com/goadesign/goa/pulls).
+
+MIT licensed. See [LICENSE](LICENSE) · [Go Report Card](https://goreportcard.com/report/github.com/goadesign/goa).
