@@ -11,6 +11,10 @@ collection-presence and cancellation fixes. Goa still requires Go 1.25 or later.
 The examples and plugins repositories require Go 1.26 or later, as on their
 existing stable branches.
 
+Generated application starters import Clue for logging and debugging. Clue
+v1.3.0 requires Go 1.26. Applications staying on Go 1.25 can use Clue v1.2.6:
+run `go get goa.design/clue@v1.2.6` before tidying a new starter module.
+
 ## Plan the upgrade
 
 | If you use… | Required action |

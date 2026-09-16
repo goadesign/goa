@@ -235,8 +235,10 @@ func compileGeneratedServiceFilesWith(t *testing.T, files []*codegen.File, addit
 	t.Helper()
 	directory := t.TempDir()
 	goaRoot := serviceModuleDirectory(t, "goa.design/goa/v3")
-	module := "module generated.local\n\ngo 1.24\n\n" +
-		"require goa.design/goa/v3 v3.0.0\n\n" +
+	// Relocated types may import Clue. Pin its Go 1.25-compatible release so
+	// these fixtures continue testing Goa's minimum supported toolchain.
+	module := "module generated.local\n\ngo 1.25.0\n\n" +
+		"require (\n\tgoa.design/goa/v3 v3.0.0\n\tgoa.design/clue v1.2.6\n)\n\n" +
 		"replace goa.design/goa/v3 => " + filepath.ToSlash(goaRoot) + "\n"
 	require.NoError(t, os.WriteFile(filepath.Join(directory, "go.mod"), []byte(module), 0o600))
 	for _, file := range files {

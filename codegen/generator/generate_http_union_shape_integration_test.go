@@ -111,7 +111,10 @@ func writeGeneratedModule(t *testing.T, dir, modulePath string) {
 	if err := os.MkdirAll(dir, 0o750); err != nil {
 		t.Fatalf("create generated module directory: %v", err)
 	}
-	module := "module " + modulePath + "\n\ngo 1.24\n\nrequire goa.design/goa/v3 v3.0.0\n\n" +
+	// Generated starters import Clue. Pin its Go 1.25-compatible release so a
+	// new Clue release cannot raise the toolchain required by these tests.
+	module := "module " + modulePath + "\n\ngo 1.25.0\n\n" +
+		"require (\n\tgoa.design/goa/v3 v3.0.0\n\tgoa.design/clue v1.2.6\n)\n\n" +
 		"replace goa.design/goa/v3 => " + filepath.ToSlash(goaRoot) + "\n"
 	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte(module), 0o600); err != nil {
 		t.Fatalf("write generated go.mod: %v", err)
