@@ -5,12 +5,21 @@ func NewProtoWrappedCollectionItemCollection(result wrappedcollectionviews.Wrapp
 	message := &wrapped_collectionpb.WrappedCollectionItemCollection{}
 	message.Field = make([]*wrapped_collectionpb.WrappedCollectionItem, len(result))
 	for i, val := range result {
-		message.Field[i] = &wrapped_collectionpb.WrappedCollectionItem{}
-		if val.Child != nil {
-			message.Field[i].Child = transformWrappedCollectionChildViewToProtoWrappedCollectionChild(val.Child)
-		}
+		message.Field[i] = transformWrappedCollectionItemViewToProtoWrappedCollectionItem(val)
 	}
 	return message
+}
+
+// transformWrappedCollectionItemViewToProtoWrappedCollectionItem builds a
+// value of type *wrapped_collectionpb.WrappedCollectionItem from a value of
+// type *wrappedcollectionviews.WrappedCollectionItemView.
+func transformWrappedCollectionItemViewToProtoWrappedCollectionItem(v *wrappedcollectionviews.WrappedCollectionItemView) *wrapped_collectionpb.WrappedCollectionItem {
+	res := &wrapped_collectionpb.WrappedCollectionItem{}
+	if v.Child != nil {
+		res.Child = transformWrappedCollectionChildViewToProtoWrappedCollectionChild(v.Child)
+	}
+
+	return res
 }
 
 // transformWrappedCollectionChildViewToProtoWrappedCollectionChild builds a

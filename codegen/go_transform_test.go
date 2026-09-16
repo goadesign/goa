@@ -1457,23 +1457,23 @@ func TestTransformHelperRegistryRejectsInvalidRootWrapper(t *testing.T) {
 		{
 			name: "missing generated field",
 			change: func(plan *TransformPlan, _ *GoTypePlan) {
-				plan.rootWrap.FieldName = "Missing"
+				plan.wrappers[TransformHelperDefinitionLocation{}].directive.FieldName = "Missing"
 			},
-			err: `select target root wrapper: wrapper field "Missing" is missing`,
+			err: `find target layout for transform helper occurrence 1: select wrapper field: wrapper field "Missing" is missing`,
 		},
 		{
 			name: "ambiguous generated field",
 			change: func(_ *TransformPlan, layout *GoTypePlan) {
 				layout.fields[1].fieldNameUpper = "Field"
 			},
-			err: `select target root wrapper: wrapper field "Field" is ambiguous`,
+			err: `find target layout for transform helper occurrence 1: select wrapper field: wrapper field "Field" is ambiguous`,
 		},
 		{
 			name: "different design field",
 			change: func(plan *TransformPlan, _ *GoTypePlan) {
-				plan.rootWrap.FieldName = "Other"
+				plan.wrappers[TransformHelperDefinitionLocation{}].directive.FieldName = "Other"
 			},
-			err: `select target root wrapper: wrapper field "Other" does not hold the selected value`,
+			err: `find target layout for transform helper occurrence 1: select wrapper field: wrapper field "Other" does not hold the selected value`,
 		},
 	}
 	for _, test := range tests {

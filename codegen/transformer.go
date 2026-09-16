@@ -225,7 +225,7 @@ type (
 		target         *expr.AttributeExpr
 		rootSource     *expr.AttributeExpr
 		rootTarget     *expr.AttributeExpr
-		rootWrap       *WrapDirective
+		wrappers       map[TransformHelperDefinitionLocation]transformLayoutWrapper
 		sourceBaseline *expr.AttributeExpr
 		targetBaseline *expr.AttributeExpr
 		sourceCopier   *expr.AttributeGraphCopier
@@ -239,6 +239,14 @@ type (
 		definitions    []TransformHelperDefinition
 		operations     []*transformOperation
 		renders        map[transformRenderRequest]transformRenderResult
+	}
+
+	// transformLayoutWrapper records the field selected inside a generated
+	// wrapper, so helper type lookup follows the same path as conversion.
+	transformLayoutWrapper struct {
+		wrapper   *expr.AttributeExpr
+		value     *expr.AttributeExpr
+		directive *WrapDirective
 	}
 
 	// transformRenderRequest identifies one Render invocation. Repeating the

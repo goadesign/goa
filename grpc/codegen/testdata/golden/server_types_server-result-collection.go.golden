@@ -18,12 +18,21 @@ func transformResultTToProtoResultT(v *serviceresultwithcollection.ResultT) *ser
 		res.CollectionField = &service_result_with_collectionpb.RTCollection{}
 		res.CollectionField.Field = make([]*service_result_with_collectionpb.RT, len(v.CollectionField))
 		for i, val := range v.CollectionField {
-			res.CollectionField.Field[i] = &service_result_with_collectionpb.RT{}
-			if val.IntField != nil {
-				intField := int32(*val.IntField)
-				res.CollectionField.Field[i].IntField = &intField
-			}
+			res.CollectionField.Field[i] = transformRTToProtoRT(val)
 		}
+	}
+
+	return res
+}
+
+// transformRTToProtoRT builds a value of type
+// *service_result_with_collectionpb.RT from a value of type
+// *serviceresultwithcollection.RT.
+func transformRTToProtoRT(v *serviceresultwithcollection.RT) *service_result_with_collectionpb.RT {
+	res := &service_result_with_collectionpb.RT{}
+	if v.IntField != nil {
+		intField := int32(*v.IntField)
+		res.IntField = &intField
 	}
 
 	return res

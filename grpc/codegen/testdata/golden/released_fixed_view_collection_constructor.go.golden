@@ -6,11 +6,7 @@ func NewProtoResultTypeCollection(result serviceclientstreamingresulttypecollect
 	message := &service_client_streaming_result_type_collection_with_explicit_viewpb.ResultTypeCollection{}
 	message.Field = make([]*service_client_streaming_result_type_collection_with_explicit_viewpb.ResultType, len(result))
 	for i, val := range result {
-		message.Field[i] = &service_client_streaming_result_type_collection_with_explicit_viewpb.ResultType{}
-		if val.IntField != nil {
-			intField := int32(*val.IntField)
-			message.Field[i].IntField = &intField
-		}
+		message.Field[i] = transformResultTypeViewToProtoResultType(val)
 	}
 	return message
 }

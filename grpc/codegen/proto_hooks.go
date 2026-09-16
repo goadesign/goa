@@ -69,7 +69,10 @@ func init() {
 		panic(fmt.Sprintf("create protobuf-to-service transform program: %s", err))
 	}
 
-	fm := template.FuncMap{"transformAttribute": codegen.TransformAttribute}
+	fm := template.FuncMap{
+		"transformAttribute":  codegen.TransformAttribute,
+		"transformHelperName": codegen.TransformHelperName,
+	}
 	renderGoArrayT = template.Must(template.New("renderGoArray").Funcs(fm).Parse(grpcTemplates.Read(grpcTransformGoArrayT)))
 	renderGoMapT = template.Must(template.New("renderGoMap").Funcs(fm).Parse(grpcTemplates.Read(grpcTransformGoMapT)))
 	renderGoUnionToProtoT = template.Must(template.New("renderGoUnionToProto").Parse(grpcTemplates.Read(grpcTransformGoUnionToProtoT)))
@@ -161,7 +164,6 @@ func protoHooks(proto bool) *codegen.TransformHooks {
 			}
 			return "&", true
 		},
-		InlineCompositeElems: true,
 	}
 }
 
@@ -283,8 +285,9 @@ func renderArrayTransform(source, target *expr.Array, sourceVar, targetVar strin
 	}
 	targetRef := ta.TargetCtx.Scope.Ref(elem, ta.TargetCtx.Pkg(elem))
 
+	useHelper := protoCollectionUsesHelper(source.ElemType, target.ElemType)
 	valVar := "val"
-	if obj := expr.AsObject(source.ElemType.Type); obj != nil && len(*obj) == 0 {
+	if obj := expr.AsObject(source.ElemType.Type); !useHelper && obj != nil && len(*obj) == 0 {
 		valVar = ""
 	}
 
@@ -303,6 +306,7 @@ func renderArrayTransform(source, target *expr.Array, sourceVar, targetVar strin
 		"TransformAttrs": childAttrs,
 		"LoopVar":        loopVar,
 		"ValVar":         valVar,
+		"UseHelper":      useHelper,
 	}
 	var buf bytes.Buffer
 	if err := renderGoArrayT.Execute(&buf, data); err != nil {
@@ -337,9 +341,14 @@ func renderMapTransform(source, target *expr.Map, sourceVar, targetVar string, n
 	if !proto && isWrappedAttr(source.ElemType) {
 		elemNewVar = false
 	}
-	elemTransform, err := codegen.TransformAttribute(source.ElemType, target.ElemType, "val", elemTarget, elemNewVar, blockAttrs)
-	if err != nil {
-		return "", err
+	var elemTransform string
+	if protoCollectionUsesHelper(source.ElemType, target.ElemType) {
+		elemTransform = fmt.Sprintf("%s := %s(val)\n", elemTarget, codegen.TransformHelperName(source.ElemType, target.ElemType, blockAttrs))
+	} else {
+		elemTransform, err = codegen.TransformAttribute(source.ElemType, target.ElemType, "val", elemTarget, elemNewVar, blockAttrs)
+		if err != nil {
+			return "", err
+		}
 	}
 	if !elemNewVar {
 		elemTransform = fmt.Sprintf("var %s %s\nif val != nil {\n%s}\n", elemTarget, ta.TargetCtx.Scope.Ref(et, ta.TargetCtx.Pkg(et)), elemTransform)
@@ -361,6 +370,15 @@ func renderMapTransform(source, target *expr.Map, sourceVar, targetVar string, n
 		return "", err
 	}
 	return ensureTrailingNewline(buf.String()), nil
+}
+
+// protoCollectionUsesHelper selects named object conversions, matching the
+// shared transform planner. Collection wrappers contain arrays or maps on the
+// service side, so they stay inline until their object elements are reached.
+func protoCollectionUsesHelper(source, target *expr.AttributeExpr) bool {
+	_, sourceNamed := source.Type.(expr.UserType)
+	_, targetNamed := target.Type.(expr.UserType)
+	return sourceNamed && targetNamed && expr.IsObject(source.Type) && expr.IsObject(target.Type)
 }
 
 // renderUnionToProtoTransform writes a service union from sourceVar into the
