@@ -390,6 +390,7 @@ func newTransformPlan(source, target *expr.AttributeExpr, prefix string, program
 		target:         target,
 		rootSource:     source,
 		rootTarget:     target,
+		wrappers:       make(map[TransformHelperDefinitionLocation]transformLayoutWrapper),
 		sourceBaseline: baselineSource.Copy(source),
 		targetBaseline: baselineTarget.Copy(target),
 		sourceCopier:   sourceCopier,
@@ -1450,14 +1451,24 @@ func planTransformOperationWithHelper(source, target *expr.AttributeExpr, requir
 			return fmt.Errorf("custom union transform helper requires a named source or target type")
 		}
 	}
-	var rootWrap *WrapDirective
+	var wrapper *WrapDirective
 	if plan.hooks != nil && plan.hooks.UnwrapPair != nil {
-		source, target, rootWrap = plan.hooks.UnwrapPair(source, target)
+		source, target, wrapper = plan.hooks.UnwrapPair(source, target)
 	}
 	if location.encoded == "" {
 		plan.rootSource = source
 		plan.rootTarget = target
-		plan.rootWrap = rootWrap
+	}
+	if wrapper != nil {
+		selected := transformLayoutWrapper{
+			wrapper:   helperSource,
+			value:     source,
+			directive: wrapper,
+		}
+		if wrapper.WrapTarget {
+			selected.wrapper, selected.value = helperTarget, target
+		}
+		plan.wrappers[location] = selected
 	}
 	if !forceHelper {
 		helperSource, helperTarget = source, target

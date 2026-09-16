@@ -58,8 +58,11 @@ func TestAnonymousUserUnionArrayNoWrappersFromProto(t *testing.T) {
 	freezeProtoBufTransformMessages(t, sd, source)
 	pbCtx := protoBufTypeContext("proto", sd)
 
-	code, _, err := protoBufTransform(source, target, pbCtx, svcCtx, false, true)
+	code, helpers, err := protoBufTransform(source, target, pbCtx, svcCtx, false, true)
 	require.NoError(t, err)
+	for _, helper := range helpers {
+		code += "\n" + helper.Code
+	}
 	out := codegen.FormatTestCode(t, "package foo\nfunc transform(){\n"+code+"}")
 
 	// Ensure no per-branch wrapper casts (e.g., types.DetailsAlpha(...)).

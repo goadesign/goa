@@ -546,15 +546,12 @@ func attributeNeedsValidation(attribute *expr.AttributeExpr, policy GoLayoutPoli
 			return true
 		}
 	}
+	if nested, ok := attribute.Type.(expr.UserType); ok && !expr.IsAlias(nested) {
+		return userTypeNeedsValidation(nested, policy, seen)
+	}
 	switch {
 	case expr.IsObject(attribute.Type):
 		for _, field := range *expr.AsObject(attribute.Type) {
-			if nested, ok := field.Attribute.Type.(expr.UserType); ok && !expr.IsAlias(nested) {
-				if userTypeNeedsValidation(nested, policy, seen) {
-					return true
-				}
-				continue
-			}
 			if attributeNeedsValidation(field.Attribute, policy, seen) {
 				return true
 			}
@@ -576,12 +573,6 @@ func attributeNeedsValidation(attribute *expr.AttributeExpr, policy GoLayoutPoli
 		for _, branch := range expr.AsUnion(attribute.Type).Values {
 			branchPolicy := policy
 			branchPolicy.Pointer = policy.Pointer && expr.IsObject(branch.Attribute.Type)
-			if nested, ok := branch.Attribute.Type.(expr.UserType); ok && !expr.IsAlias(nested) {
-				if userTypeNeedsValidation(nested, branchPolicy, seen) {
-					return true
-				}
-				continue
-			}
 			if attributeNeedsValidation(branch.Attribute, branchPolicy, seen) {
 				return true
 			}

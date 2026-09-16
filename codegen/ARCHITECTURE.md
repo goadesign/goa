@@ -424,6 +424,14 @@ example, identical recursive values reached through a direct field and a map
 value may share one function even though their generated layouts must first be
 resolved at two different paths.
 
+Array elements and map values that are named objects use planned conversion
+helpers in gRPC as well as HTTP. A recursive collection calls the helper already
+being planned instead of expanding the same object again. When a transport
+stores a collection in a wrapper message, the transform plan retains the chosen
+wrapper field at every location, including nested collections. Helper type
+lookup follows those saved fields, so function sharing compares the actual
+parameter and result types used by the generated conversion.
+
 `Helpers` and `HelperDefinitions` return detached type descriptions with
 plan-owned IDs. A caller
 may inspect or change those descriptions while choosing a function declaration,

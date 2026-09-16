@@ -559,7 +559,9 @@ The issue review reproduced two problems that also affect v3.30.0:
   implementation when a UUID value is needed.
 - A recursive gRPC result containing an array of itself can make generation
   recurse indefinitely ([#2515](https://github.com/goadesign/goa/issues/2515)).
-  This release does not fix that case.
+  v3.31.0 does not fix that case. The fix for recursive arrays and maps is on
+  `v3` after v3.31.0; regenerate with a version containing the fix. The design
+  and protobuf wire format do not need to change.
 
 ## Report a problem
 

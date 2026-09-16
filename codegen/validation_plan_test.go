@@ -345,6 +345,32 @@ func TestNeedsValidation(t *testing.T) {
 	}
 }
 
+// TestNeedsValidationRecursiveCollections checks that walking a recursive array
+// or map terminates and still finds a rule after the recursive field.
+func TestNeedsValidationRecursiveCollections(t *testing.T) {
+	for _, container := range []string{"array", "map"} {
+		for _, constrained := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/constrained=%t", container, constrained), func(t *testing.T) {
+				node := goTypeTestUserType("Node", &expr.Object{})
+				element := &expr.AttributeExpr{Type: node}
+				var children expr.DataType = &expr.Array{ElemType: element}
+				if container == "map" {
+					children = &expr.Map{KeyType: &expr.AttributeExpr{Type: expr.String}, ElemType: element}
+				}
+				label := &expr.AttributeExpr{Type: expr.String}
+				if constrained {
+					label.Validation = &expr.ValidationExpr{Pattern: "^valid$"}
+				}
+				node.Attribute().Type = &expr.Object{
+					{Name: "children", Attribute: &expr.AttributeExpr{Type: children}},
+					{Name: "label", Attribute: label},
+				}
+				require.Equal(t, constrained, NeedsValidation(&expr.AttributeExpr{Type: node}, GoLayoutPolicy{SumType: true}))
+			})
+		}
+	}
+}
+
 // TestValidationPlanChecksOnlyRepresentableNullElements verifies that a null
 // check follows the generated element type instead of the raw DSL flag.
 func TestValidationPlanChecksOnlyRepresentableNullElements(t *testing.T) {

@@ -11,10 +11,7 @@ func NewProtoListRequest() *wrapped_collectionpb.ListRequest {
 func NewListResult(message *wrapped_collectionpb.WrappedCollectionItemCollection) wrappedcollectionviews.WrappedCollectionItemCollectionView {
 	result := make([]*wrappedcollectionviews.WrappedCollectionItemView, len(message.Field))
 	for i, val := range message.Field {
-		result[i] = &wrappedcollectionviews.WrappedCollectionItemView{}
-		if val.Child != nil {
-			result[i].Child = transformProtoWrappedCollectionChildToWrappedCollectionChildView(val.Child)
-		}
+		result[i] = transformProtoWrappedCollectionItemToWrappedCollectionItemView(val)
 	}
 	return result
 }
@@ -53,6 +50,18 @@ func validatetest_20_api_WrappedCollection_WrappedCollectionChild_At_child(child
 		err = goa.MergeErrors(err, goa.MissingFieldError("value", "child"))
 	}
 	return
+}
+
+// transformProtoWrappedCollectionItemToWrappedCollectionItemView builds a
+// value of type *wrappedcollectionviews.WrappedCollectionItemView from a value
+// of type *wrapped_collectionpb.WrappedCollectionItem.
+func transformProtoWrappedCollectionItemToWrappedCollectionItemView(v *wrapped_collectionpb.WrappedCollectionItem) *wrappedcollectionviews.WrappedCollectionItemView {
+	res := &wrappedcollectionviews.WrappedCollectionItemView{}
+	if v.Child != nil {
+		res.Child = transformProtoWrappedCollectionChildToWrappedCollectionChildView(v.Child)
+	}
+
+	return res
 }
 
 // transformProtoWrappedCollectionChildToWrappedCollectionChildView builds a
