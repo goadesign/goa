@@ -1,4 +1,4 @@
-# Upgrading to Goa v3.31.0
+# Upgrading to Goa v3.31.1
 
 **This is a substantial generator upgrade with intentional breaking changes.**
 Goa remains on the `goa.design/goa/v3` module path. Keeping v3 does not mean
@@ -7,13 +7,22 @@ with v3.30.0. Read the relevant sections before regenerating a production
 application.
 
 The release promotes the generation preview and includes the subsequent gRPC
-collection-presence and cancellation fixes. Goa still requires Go 1.25 or later.
+fixes for collection presence, cancellation, and recursive collections. Goa
+still requires Go 1.25 or later.
 The examples and plugins repositories require Go 1.26 or later, as on their
 existing stable branches.
 
 Generated application starters import Clue for logging and debugging. Clue
 v1.3.0 requires Go 1.26. Applications staying on Go 1.25 can use Clue v1.2.6:
 run `go get goa.design/clue@v1.2.6` before tidying a new starter module.
+
+## Already using v3.31.0?
+
+v3.31.1 fixes recursive gRPC collection generation. Upgrade the module and
+command together and regenerate the complete `gen` tree. This patch adds no
+further breaking API or wire changes and needs no coordinated deployment.
+The full migration guidance below applies when upgrading from v3.30.x or the
+preview.
 
 ## Plan the upgrade
 
@@ -24,7 +33,7 @@ run `go get goa.design/clue@v1.2.6` before tidying a new starter module.
 | Required gRPC scalar fields | Regenerate protobuf code and update direct message literals. Coordinate peers when required zero or empty values matter. |
 | JSON-RPC errors, selected views, or server streams | Update both generated peers and custom clients for the changed envelopes and stream lifecycle. JSON-RPC WebSocket generation has been removed. |
 | Dynamic gRPC views or optional primitive HTTP SSE data | Regenerate and deploy both peers together for the cases listed under coordinated deployment. |
-| Code-generation plugins | Upgrade `goa.design/plugins/v3` to v3.31.0 and migrate custom plugins that declare names or call removed generator APIs. |
+| Code-generation plugins | Upgrade `goa.design/plugins/v3` to v3.31.1 and migrate custom plugins that declare names or call removed generator APIs. |
 
 There is no persisted-data migration. Keep the previous binaries, dependency
 versions, design, and generated tree available for rollback.
@@ -82,14 +91,14 @@ Review the matching migration sections if your project has any of these characte
 Test ordinary HTTP-only services as well. Review the generated diff even when
 none of the specialized migrations below applies.
 
-## Install v3.31.0
+## Install v3.31.1
 
 Start from a branch with the current generated tree committed. Install both the
 Goa module and the `goa` command from the same release version:
 
 ```bash
-go get goa.design/goa/v3@v3.31.0
-go install goa.design/goa/v3/cmd/goa@v3.31.0
+go get goa.design/goa/v3@v3.31.1
+go install goa.design/goa/v3/cmd/goa@v3.31.1
 goa version
 ```
 
@@ -97,7 +106,7 @@ The Go command records the same release version in `go.mod`. The installed
 command reports the same version:
 
 ```text
-Goa version v3.31.0
+Goa version v3.31.1
 ```
 
 Do not use an older `goa` command with the new module. Also install the
@@ -114,7 +123,7 @@ If your design imports the official plugins, update that module in the same
 application change:
 
 ```bash
-go get goa.design/plugins/v3@v3.31.0
+go get goa.design/plugins/v3@v3.31.1
 ```
 
 Use matching release tags when copying examples. Custom plugins must complete
@@ -388,6 +397,10 @@ return. Positional `RawRequest` and `RawResponse` literals must use named fields
 
 ### Other gRPC corrections
 
+- Recursive payloads and results containing arrays or maps of themselves now
+  generate successfully ([#2515](https://github.com/goadesign/goa/issues/2515)).
+  Regenerate to get the fix; the design and protobuf wire format stay the same.
+  Nested validation, optional values, and defaults are preserved.
 - Byte metadata uses its actual string contents. For example, `[]byte{65, 66}`
   becomes `"AB"`, not `"[65 66]"`. Floating-point metadata uses the width
   declared by the design.
@@ -549,7 +562,7 @@ persisted data needs to be changed or restored.
 
 ## Existing limitations checked for this release
 
-The issue review reproduced two problems that also affect v3.30.0:
+The issue review confirmed this remaining limitation, which also affects v3.30.0:
 
 - A custom `uuid.UUID` field mapped to an HTTP query parameter can produce a
   client that does not compile. Server-side text decoding is supported, but the
@@ -557,11 +570,6 @@ The issue review reproduced two problems that also affect v3.30.0:
   Until [#3924](https://github.com/goadesign/goa/issues/3924) is resolved, keep
   the contract field as `String` with `FormatUUID` and convert inside the
   implementation when a UUID value is needed.
-- A recursive gRPC result containing an array of itself can make generation
-  recurse indefinitely ([#2515](https://github.com/goadesign/goa/issues/2515)).
-  v3.31.0 does not fix that case. The fix for recursive arrays and maps is on
-  `v3` after v3.31.0; regenerate with a version containing the fix. The design
-  and protobuf wire format do not need to change.
 
 ## Report a problem
 
