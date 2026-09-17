@@ -1,6 +1,15 @@
 <p align="center">
-  <a href="https://goa.design">
-    <img alt="Goa — Let agents reason. Let Goa generate." src="docs/goa-banner.png" width="960">
+  <a href="https://goa.design/#gh-light-mode-only">
+    <picture>
+      <source media="(max-width: 600px)" srcset="docs/goa-banner-mobile.png">
+      <img alt="Goa — Let agents reason. Let Goa generate. Go services, built with coding agents. HTTP, gRPC, and JSON-RPC from one Go contract." src="docs/goa-banner.png" width="960">
+    </picture>
+  </a>
+  <a href="https://goa.design/#gh-dark-mode-only">
+    <picture>
+      <source media="(max-width: 600px)" srcset="docs/goa-banner-mobile-dark.png">
+      <img alt="Goa — Let agents reason. Let Goa generate. Go services, built with coding agents. HTTP, gRPC, and JSON-RPC from one Go contract." src="docs/goa-banner-dark.png" width="960">
+    </picture>
   </a>
 </p>
 
