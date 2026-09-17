@@ -1,6 +1,11 @@
 <p align="center">
   <a href="https://goa.design">
-    <img alt="Goa — Let agents reason. Let Goa generate." src="docs/goa-banner.png" width="960">
+    <picture>
+      <source media="(prefers-color-scheme: dark) and (max-width: 600px)" srcset="docs/goa-banner-mobile-dark.png">
+      <source media="(prefers-color-scheme: dark)" srcset="docs/goa-banner-dark.png">
+      <source media="(max-width: 600px)" srcset="docs/goa-banner-mobile.png">
+      <img alt="Goa — Let agents reason. Let Goa generate. Go services, built with coding agents. HTTP, gRPC, and JSON-RPC from one Go contract." src="docs/goa-banner.png" width="960">
+    </picture>
   </a>
 </p>
 
