@@ -20,6 +20,7 @@ func TestPaths(t *testing.T) {
 		{"single-path-no-param", testdata.PathNoParamDSL},
 		{"single-path-one-param", testdata.PathOneParamDSL},
 		{"single-path-multiple-params", testdata.PathMultipleParamsDSL},
+		{"path-mid-segment-params", testdata.PathMidSegmentParamsDSL},
 		{"alternative-paths", testdata.PathAlternativesDSL},
 		{"path-with-string-slice-param", testdata.PathStringSliceParamDSL},
 		{"path-with-int-slice-param", testdata.PathIntSliceParamDSL},

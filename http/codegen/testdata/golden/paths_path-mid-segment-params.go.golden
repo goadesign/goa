@@ -1,0 +1,4 @@
+// MethodPathMidSegmentParamsServicePathMidSegmentParamsPath returns the URL path to the ServicePathMidSegmentParams service MethodPathMidSegmentParams HTTP endpoint.
+func MethodPathMidSegmentParamsServicePathMidSegmentParamsPath(username string, month string, day string, year string) string {
+	return fmt.Sprintf("/user/@%v/%v-%v-%v", username, month, day, year)
+}

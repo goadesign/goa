@@ -18,6 +18,13 @@ func TestHTTPRouteValidation(t *testing.T) {
 		Error string
 	}{
 		{"valid", testdata.ValidRouteDSL, ""},
+		{"valid-mid-segment", testdata.ValidMidSegmentRouteDSL, ""},
+		{"missing-mid-segment-route-param", testdata.MissingMidSegmentRouteParamDSL, `route POST "/{year}-{month}-{day}" of service "MissingMidSegmentRouteParam" HTTP endpoint "Method": Route param "month" not found in method payload
+route POST "/{year}-{month}-{day}" of service "MissingMidSegmentRouteParam" HTTP endpoint "Method": Route param "day" not found in method payload
+service "MissingMidSegmentRouteParam" HTTP endpoint "Method": Path parameter "month" not found in payload.
+service "MissingMidSegmentRouteParam" HTTP endpoint "Method": Path parameter "day" not found in payload.`,
+		},
+		{"duplicate-mid-segment-wc-route", testdata.DuplicateMidSegmentWCRouteDSL, `route POST "/{year}-{year}" of service "DuplicateMidSegmentWCRoute" HTTP endpoint "Method": Wildcard "year" appears multiple times in full path "/{year}-{year}"`},
 		{"duplicate-wc-route", testdata.DuplicateWCRouteDSL, `route POST "/{id}" of service "DuplicateWCRoute" HTTP endpoint "Method": Wildcard "id" appears multiple times in full path "/{id}/{id}"`},
 		{"disallow-response-body", testdata.DisallowResponseBodyHeadDSL, `route HEAD "/" of service "DisallowResponseBody" HTTP endpoint "Method": HTTP status 200: Response body defined for HEAD method which does not allow response body.
 route HEAD "/" of service "DisallowResponseBody" HTTP endpoint "Method": HTTP status 404: Response body defined for HEAD method which does not allow response body.`,

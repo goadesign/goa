@@ -111,6 +111,25 @@ var PathMultipleParamsDSL = func() {
 	})
 }
 
+// PathMidSegmentParamsDSL exercises path parameters that do not span a whole
+// path segment, such as the "/user/@{username}" and "/{month}-{day}-{year}"
+// patterns supported by Chi.
+var PathMidSegmentParamsDSL = func() {
+	Service("ServicePathMidSegmentParams", func() {
+		Method("MethodPathMidSegmentParams", func() {
+			Payload(func() {
+				Attribute("username", String)
+				Attribute("month", String)
+				Attribute("day", String)
+				Attribute("year", String)
+			})
+			HTTP(func() {
+				GET("user/@{username}/{month}-{day}-{year}")
+			})
+		})
+	})
+}
+
 var PathAlternativesDSL = func() {
 	Service("ServicePathAlternatives", func() {
 		Method("MethodPathAlternatives", func() {

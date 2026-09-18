@@ -1,0 +1,77 @@
+{
+  "components": {},
+  "info": {
+    "title": "Goa API",
+    "version": "0.0.1"
+  },
+  "openapi": "3.0.3",
+  "paths": {
+    "/user/@{username}/{month}-{day}-{year}": {
+      "post": {
+        "operationId": "test service#test endpoint",
+        "parameters": [
+          {
+            "example": "alice",
+            "in": "path",
+            "name": "username",
+            "required": true,
+            "schema": {
+              "example": "alice",
+              "type": "string"
+            }
+          },
+          {
+            "example": "01",
+            "in": "path",
+            "name": "month",
+            "required": true,
+            "schema": {
+              "example": "01",
+              "type": "string"
+            }
+          },
+          {
+            "example": "02",
+            "in": "path",
+            "name": "day",
+            "required": true,
+            "schema": {
+              "example": "02",
+              "type": "string"
+            }
+          },
+          {
+            "example": "2025",
+            "in": "path",
+            "name": "year",
+            "required": true,
+            "schema": {
+              "example": "2025",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content response."
+          }
+        },
+        "summary": "test endpoint test service",
+        "tags": [
+          "test service"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "description": "Default server for test api",
+      "url": "http://localhost:80"
+    }
+  ],
+  "tags": [
+    {
+      "name": "test service"
+    }
+  ]
+}

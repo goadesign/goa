@@ -1,0 +1,49 @@
+openapi: 3.0.3
+info:
+    title: Goa API
+    version: 0.0.1
+servers:
+    - url: http://localhost:80
+      description: Default server for test api
+paths:
+    /user/@{username}/{month}-{day}-{year}:
+        post:
+            tags:
+                - test service
+            summary: test endpoint test service
+            operationId: test service#test endpoint
+            parameters:
+                - name: username
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                    example: alice
+                  example: alice
+                - name: month
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                    example: "01"
+                  example: "01"
+                - name: day
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                    example: "02"
+                  example: "02"
+                - name: year
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                    example: "2025"
+                  example: "2025"
+            responses:
+                "204":
+                    description: No Content response.
+components: {}
+tags:
+    - name: test service
