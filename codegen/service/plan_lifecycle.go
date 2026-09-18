@@ -269,6 +269,22 @@ func (p *Plan) MethodTypeLayout(method *expr.MethodExpr, attribute *expr.Attribu
 	return nil, fmt.Errorf("service method %q is not part of this plan", method.Name)
 }
 
+// ServiceHasClientInterceptors reports whether the retained service plan includes
+// client interceptors from the API, service, or any of its methods. Transport
+// planners use this before linking to plan imports for the generated interface.
+// It returns an error when serviceExpr is not an exact member of this plan.
+func (p *Plan) ServiceHasClientInterceptors(serviceExpr *expr.ServiceExpr) (bool, error) {
+	for _, service := range p.facts.services {
+		if service.service == serviceExpr {
+			return len(service.clientInterceptors) > 0, nil
+		}
+	}
+	if serviceExpr == nil {
+		return false, fmt.Errorf("service is not part of this plan")
+	}
+	return false, fmt.Errorf("service %q is not part of this plan", serviceExpr.Name)
+}
+
 // ServicePackageImports returns the generated service and views package
 // preferences recorded before Generation.Freeze. Transport generators use it
 // for service-level files that may not contain a method, such as an HTTP file
