@@ -154,6 +154,13 @@ root, or reconstructed `ServicesData`.
 
 The plan stores collected design facts, linked render data, and final
 declaration pointers. It does not store callbacks that repeat analysis.
+The service plan also owns the complete client-interceptor collection, including
+API, service, and method attachments. Transport import planners read
+`ServiceHasClientInterceptors` for the exact service before names freeze; linked
+service interfaces use the same retained collection. A transport must not infer
+this answer from service-level declarations or only its own endpoints. For
+example, an interceptor on an HTTP-only method still belongs to the service
+interface used by that service's gRPC client.
 `NewServicesData`, `renderOnly`, and the released functions that ran plugin
 callbacks are old entry points that the retained plan replaces. The released
 `Genfunc` type, replaceable `Generators` variable, and core generator functions
