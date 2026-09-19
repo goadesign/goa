@@ -77,7 +77,7 @@ depend:
 	@mkdir -p "$(GOBIN_DIR)"
 	@go mod download
 	@for package in $(DEPEND); do GOBIN="$(GOBIN_DIR)" go install $$package; done
-	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOBIN_DIR) $(GOLANGCI_LINT_VERSION)
+	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/$(GOLANGCI_LINT_VERSION)/install.sh | sh -s -- -b $(GOBIN_DIR) $(GOLANGCI_LINT_VERSION)
 	@$(GOLANGCI_LINT) version
 	@go mod tidy -compat=1.17
 	@echo INSTALLING PROTOC...
