@@ -255,7 +255,9 @@ func defaultEnumValueEqual(dataType DataType, value reflect.Value, allowed any) 
 		return reflect.DeepEqual(value.Interface(), allowed)
 	}
 	allowedValue, ok := concreteDefaultValue(reflect.ValueOf(allowed))
-	if !ok || !primitive.IsCompatible(allowedValue.Interface()) {
+	if !ok || !primitive.IsCompatible(allowedValue.Interface()) ||
+		!defaultPrimitiveValueFits(primitive, value) ||
+		!defaultPrimitiveValueFits(primitive, allowedValue) {
 		return false
 	}
 	target := defaultPrimitiveReflectType(primitive)
@@ -409,27 +411,41 @@ func defaultPrimitive(dataType DataType) Primitive {
 	}
 }
 
-// customPrimitiveDefaultValue converts a value already declared with the exact
-// custom Go type into the primitive value used by design validations. The
-// metadata contains the package path and type name, so this check never needs
-// to load or inspect a Go package.
+// customPrimitiveDefaultValue accepts the primitive representation of a custom
+// field's default without requiring the value to name the field's Go type.
+// Numeric values stay intact so bounds and range rules run before any narrowing.
+// Other values become a local primitive view; the stored default is unchanged.
 func customPrimitiveDefaultValue(attribute *AttributeExpr, value reflect.Value) (reflect.Value, bool) {
 	metadata := attribute.Meta["struct:field:type"]
-	if len(metadata) < 2 || value.Type().PkgPath() != metadata[1] {
+	if len(metadata) == 0 || metadata[0] == "" {
 		return reflect.Value{}, false
 	}
-	name := metadata[0]
-	for index := len(name) - 1; index >= 0; index-- {
-		if name[index] == '.' {
-			name = name[index+1:]
-			break
+	primitive := defaultPrimitive(attribute.Type)
+	switch primitive {
+	case Int, Int32, Int64, UInt, UInt32, UInt64, Float32, Float64:
+		switch value.Kind() {
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+			reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			return value, true
+		case reflect.Float32, reflect.Float64:
+			return value, primitive == Float32 || primitive == Float64
+		default:
+			return reflect.Value{}, false
 		}
-	}
-	if value.Type().Name() != name {
+	case Boolean:
+		if value.Kind() != reflect.Bool {
+			return reflect.Value{}, false
+		}
+	case String, Bytes:
+		if value.Kind() != reflect.String &&
+			(value.Kind() != reflect.Slice || value.Type().Elem().Kind() != reflect.Uint8) {
+			return reflect.Value{}, false
+		}
+	default:
 		return reflect.Value{}, false
 	}
-	target := defaultPrimitiveReflectType(defaultPrimitive(attribute.Type))
-	if target == nil || !value.Type().ConvertibleTo(target) {
+	target := defaultPrimitiveReflectType(primitive)
+	if !value.Type().ConvertibleTo(target) {
 		return reflect.Value{}, false
 	}
 	return value.Convert(target), true

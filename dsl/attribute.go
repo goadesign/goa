@@ -296,6 +296,12 @@ func OneOf(name string, args ...any) {
 // Default must appear in an Attribute DSL.
 //
 // Default takes one parameter: the default value.
+//
+// Defaults must satisfy the attribute's schema, including nested validation
+// rules. With Meta("struct:field:type", ...), the value may use a different Go
+// name if its primitive representation is compatible with the schema. Numeric
+// bounds are checked before conversion. The original value is retained for
+// serialization, and the generated Go compiler checks the custom target type.
 func Default(def any) {
 	a, ok := eval.Current().(*expr.AttributeExpr)
 	if !ok {

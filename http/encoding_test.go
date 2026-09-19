@@ -102,7 +102,7 @@ func TestRequestDecoder(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			r := &http.Request{Header: http.Header{}}
+			r := httptest.NewRequest(http.MethodPost, "/", nil)
 			if c.requestCT != "" {
 				r.Header.Set(ct, c.requestCT)
 			}
@@ -285,6 +285,7 @@ func TestResponseDecoder(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.contentType, func(t *testing.T) {
 			r := &http.Response{
+				Body: http.NoBody,
 				Header: map[string][]string{
 					"Content-Type": {c.contentType},
 				},

@@ -87,7 +87,7 @@ func TestRenderGoValueUsesTypedCustomDefault(t *testing.T) {
 	code, err := RenderGoValue(attribute, json.RawMessage("ok"), layout, false, nil, "defaultValue")
 	require.NoError(t, err)
 	require.Empty(t, code.Declarations)
-	require.Equal(t, `json.RawMessage{0x6f, 0x6b}`, code.Expression)
+	require.Equal(t, `json.RawMessage([]byte{0x6f, 0x6b})`, code.Expression)
 
 	code, err = RenderGoValue(attribute, "ok", layout, false, nil, "defaultValue")
 	require.NoError(t, err)
