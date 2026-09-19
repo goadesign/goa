@@ -5,6 +5,7 @@ package codegen
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -448,10 +449,10 @@ func TestGoTransformDefaultUsesFinalCustomTypeImportAlias(t *testing.T) {
 // hide an invalid earlier default while the generator walks an object.
 func TestGoTransformReturnsFirstDefaultError(t *testing.T) {
 	invalid := &expr.AttributeExpr{
-		Type:         expr.String,
-		DefaultValue: json.RawMessage("foo"),
+		Type:         expr.Float64,
+		DefaultValue: math.Inf(1),
 		Meta: expr.MetaExpr{
-			"struct:field:type": {"json.RawMessage", "example.com/not-json", "json"},
+			"struct:field:type": {"Number"},
 		},
 	}
 	valid := &expr.AttributeExpr{Type: expr.String, DefaultValue: "ready"}
@@ -471,7 +472,7 @@ func TestGoTransformReturnsFirstDefaultError(t *testing.T) {
 		"",
 		true,
 	)
-	require.EqualError(t, err, `render Go value for string: default for custom Go type "json.RawMessage" has Go type json.RawMessage`)
+	require.EqualError(t, err, `render Go value for float64: number default must be finite`)
 }
 
 // TestGoTransformArrayLoopNameUsesNestingDepth verifies that brackets in a

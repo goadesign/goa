@@ -22,7 +22,7 @@ func transform() {
 		target.Int = 100
 	}
 	if source.RawJson == nil {
-		target.RawJSON = json.RawMessage{0x66, 0x6f, 0x6f}
+		target.RawJSON = json.RawMessage([]byte{0x66, 0x6f, 0x6f})
 	}
 	if source.String_ == nil {
 		target.String = "foo"

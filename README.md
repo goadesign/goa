@@ -115,7 +115,7 @@ Here, `genhello` is the generated `gen/hello` package. The generated transports 
 
 ### Try it
 
-Start with **Go 1.25 or later**:
+Start with **Go 1.26 or later**; Go 1.27.1 is recommended:
 
 ```bash
 mkdir hello && cd hello
@@ -124,7 +124,7 @@ go get goa.design/goa/v3@latest
 mkdir design
 ```
 
-Save the design above as `design/design.go`. For all three transports, install the [Protocol Buffer compiler](https://protobuf.dev/installation/) and the [Go protobuf generators](UPGRADING.md#install-v3311). For an HTTP-only first run, omit both `JSONRPC` blocks and the `GRPC` block.
+Save the design above as `design/design.go`. For all three transports, install the [Protocol Buffer compiler](https://protobuf.dev/installation/) and the [Go protobuf generators](UPGRADING.md#install-v3320). For an HTTP-only first run, omit both `JSONRPC` blocks and the `GRPC` block.
 
 Generate the code and starter application:
 
@@ -137,12 +137,11 @@ go run goa.design/goa/v3/cmd/goa example hello/design
 Replace the starter `hello.go` with the implementation above, then run:
 
 ```bash
-go get goa.design/clue@v1.2.6
 go mod tidy
 go run ./cmd/hello --http-port=8000
 ```
 
-The Clue pin keeps the starter compatible with Go 1.25. In another terminal:
+In another terminal:
 
 ```bash
 curl http://localhost:8000/hello/Alice
@@ -192,11 +191,11 @@ You implement the planner and application behavior; Goa-AI generates contracts, 
 
 **[Explore Goa-AI →](https://github.com/goadesign/goa-ai)** · [Quickstart](https://goa.design/docs/2-goa-ai/quickstart/) · [A service and an agent sharing one design](https://goa.design/docs/ai-development/#one-design-two-entry-points)
 
-## Upgrading to v3.31.1
+## Upgrading to v3.32.0
 
-The generation preview is now stable. v3.31.1 brings a redesigned generator, more precise gRPC field presence and defaults, and fixes for recursive collections, result views, and multi-transport generation.
+v3.32.0 fixes client-interceptor imports in generated transport clients and command starters, exposes the corresponding generation-plan query to plugins, and updates dependencies. Goa now requires Go 1.26 or later.
 
-This is a substantial upgrade on the **v3 module path**, with intentional breaking changes from v3.30.x. Read the **[upgrade guide](UPGRADING.md)** before regenerating; it covers source changes and cases requiring coordinated client/server deployment. The [release notes](https://github.com/goadesign/goa/releases/tag/v3.31.1) explain the benefits and fixes.
+Projects upgrading from v3.30.x must also account for the intentional source and transport changes introduced in v3.31. Read the **[upgrade guide](UPGRADING.md)** before regenerating; it separates those migrations from the v3.32 changes. The [release notes](https://github.com/goadesign/goa/releases/tag/v3.32.0) explain the benefits and fixes.
 
 ## Keep exploring
 

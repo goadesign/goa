@@ -321,7 +321,7 @@ func (p *GeneratedPackage) BindGeneratedType(userType expr.UserType, declaration
 		return fmt.Errorf("generated package %q is frozen", p.path)
 	}
 	userTypeValue := reflect.ValueOf(userType)
-	if userType == nil || (userTypeValue.Kind() == reflect.Ptr && userTypeValue.IsNil()) {
+	if userType == nil || (userTypeValue.Kind() == reflect.Pointer && userTypeValue.IsNil()) {
 		return fmt.Errorf("generated package %q cannot bind a nil user type", p.path)
 	}
 	if declaration == nil || declaration.declaration == nil {

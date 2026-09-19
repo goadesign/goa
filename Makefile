@@ -15,8 +15,8 @@
 # - "all" is the default target, it runs "lint" and "test"
 #
 MAJOR=3
-MINOR=31
-BUILD=1
+MINOR=32
+BUILD=0
 PREVIEW_NUMBER?=
 
 PREVIEW_TAG=v$(MAJOR).$(MINOR).$(BUILD)-preview.$(PREVIEW_NUMBER)
@@ -26,7 +26,7 @@ GOARCH=$(shell go env GOARCH)
 GO_FILES=$(shell find . -type f -name '*.go')
 GOPATH=$(shell go env GOPATH)
 GOBIN_DIR=$(GOPATH)/bin
-GOLANGCI_LINT_VERSION?=v2.11.3
+GOLANGCI_LINT_VERSION?=v2.13.2
 GOLANGCI_LINT=$(GOBIN_DIR)/golangci-lint
 PROTOC_BIN=protoc
 PROTOC_DEST=$(GOBIN_DIR)/$(PROTOC_BIN)
