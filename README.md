@@ -15,7 +15,7 @@
 
 <p align="center">
   <a href="https://github.com/goadesign/goa/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/goadesign/goa"></a>
-  <a href="https://pkg.go.dev/goa.design/goa/v3@v3.31.1/dsl?tab=doc"><img alt="Go reference" src="https://img.shields.io/badge/go-reference-007d9c"></a>
+  <a href="https://pkg.go.dev/goa.design/goa/v3@v3.32.0/dsl?tab=doc"><img alt="Go reference" src="https://img.shields.io/badge/go-reference-007d9c"></a>
   <a href="https://github.com/goadesign/goa/actions/workflows/test.yml"><img alt="Tests" src="https://img.shields.io/github/actions/workflow/status/goadesign/goa/test.yml?branch=v3"></a>
   <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-blue"></a>
 </p>
