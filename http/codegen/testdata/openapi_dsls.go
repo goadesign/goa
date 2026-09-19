@@ -757,6 +757,36 @@ var PathWithMultipleExplicitWildcardDSL = func() {
 	})
 }
 
+// PathWithMidSegmentWildcardDSL exercises path parameters that do not span a
+// whole path segment, such as the "/user/@{username}" and "/{month}-{day}-{year}"
+// patterns supported by Chi.
+var PathWithMidSegmentWildcardDSL = func() {
+	Service("test service", func() {
+		Method("test endpoint", func() {
+			Payload(func() {
+				Attribute("username", String, func() {
+					Example("alice")
+				})
+				Attribute("month", String, func() {
+					Example("01")
+				})
+				Attribute("day", String, func() {
+					Example("02")
+				})
+				Attribute("year", String, func() {
+					Example("2025")
+				})
+			})
+			HTTP(func() {
+				POST("/{month}-{day}-{year}")
+			})
+		})
+		HTTP(func() {
+			Path("/user/@{username}")
+		})
+	})
+}
+
 var HeadersDSL = func() {
 	Service("test service", func() {
 		Method("test endpoint", func() {

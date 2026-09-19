@@ -1,0 +1,63 @@
+{
+  "consumes": [
+    "application/json",
+    "application/xml",
+    "application/gob"
+  ],
+  "host": "localhost:80",
+  "info": {
+    "title": "",
+    "version": "0.0.1"
+  },
+  "paths": {
+    "/user/@{username}/{month}-{day}-{year}": {
+      "post": {
+        "operationId": "test service#test endpoint",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "username",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "path",
+            "name": "month",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "path",
+            "name": "day",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "path",
+            "name": "year",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content response."
+          }
+        },
+        "schemes": [
+          "http"
+        ],
+        "summary": "test endpoint test service",
+        "tags": [
+          "test service"
+        ]
+      }
+    }
+  },
+  "produces": [
+    "application/json",
+    "application/xml",
+    "application/gob"
+  ],
+  "swagger": "2.0"
+}

@@ -48,6 +48,7 @@ func TestFiles(t *testing.T) {
 		{"path-with-wildcards", testdata.PathWithWildcardDSL},
 		{"path-with-multiple-wildcards", testdata.PathWithMultipleWildcardDSL},
 		{"path-with-multiple-explicit-wildcards", testdata.PathWithMultipleExplicitWildcardDSL},
+		{"path-with-mid-segment-wildcards", testdata.PathWithMidSegmentWildcardDSL},
 		{"headers", testdata.HeadersDSL},
 		{"with-tags", testdata.WithTagsDSL},
 		{"with-tags-swagger", testdata.WithTagsSwaggerDSL},

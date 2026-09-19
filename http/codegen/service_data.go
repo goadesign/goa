@@ -1123,7 +1123,7 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 					}
 
 					var buffer bytes.Buffer
-					pf := expr.HTTPWildcardRegex.ReplaceAllString(rpath, "/%v")
+					pf := expr.HTTPWildcardRegex.ReplaceAllString(rpath, "%v")
 					err := pathInitTmpl.Execute(&buffer, map[string]any{
 						"Args":       initArgs,
 						"PathParams": pathParamsObj,
