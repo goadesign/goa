@@ -55,6 +55,8 @@ type (
 // RenderGoValue renders value using the linked Go layout selected for attribute.
 // pointer reports whether the complete value is stored through a pointer.
 // resolveUnion is required only when attribute contains a OneOf value.
+// It checks the supplied value's literal shape, not attribute.DefaultValue or
+// schema validation rules. The Go compiler checks the authored custom target.
 func RenderGoValue(attribute *expr.AttributeExpr, value any, layout LinkedGoType, pointer bool, resolveUnion UnionConstructorResolver, localPrefix string) (GoValueCode, error) {
 	if attribute == nil {
 		return GoValueCode{}, fmt.Errorf("render Go value: attribute must not be nil")
@@ -157,23 +159,17 @@ func (r *goValueRenderer) render(attribute *expr.AttributeExpr, value reflect.Va
 // named type when the design or field metadata requires one.
 func (r *goValueRenderer) renderPrimitive(attribute *expr.AttributeExpr, value reflect.Value, layout LinkedGoType) (string, error) {
 	primitive := underlyingPrimitive(attribute.Type)
-	if custom, spec := GetMetaType(attribute); custom != "" {
-		if custom == GoNativeTypeName(primitive) {
-			return renderPrimitiveLiteral(primitive, value)
+	var target string
+	if custom, _ := GetMetaType(attribute); custom != "" {
+		// String accepts byte values only with an explicit custom target,
+		// including one spelled "string". Named custom values keep their
+		// source precision and use the final name chosen by the layout.
+		if primitive == expr.String && value.Kind() == reflect.Slice ||
+			custom != GoNativeTypeName(primitive) && value.Type().PkgPath() != "" {
+			target = layout.Def()
 		}
-		if err := validateCustomDefault(custom, spec, value); err != nil {
-			return "", err
-		}
-		if value.Type().PkgPath() == "" {
-			return renderPrimitiveLiteral(primitive, value)
-		}
-		return renderTypedCustomValue(layout.Def(), value)
 	}
-	literal, err := renderPrimitiveLiteral(primitive, value)
-	if err != nil {
-		return "", err
-	}
-	return literal, nil
+	return renderPrimitiveLiteral(primitive, value, target)
 }
 
 // renderArray writes every element using the element layout selected by the
@@ -319,7 +315,7 @@ func orderedMapValues(attribute *expr.AttributeExpr, value reflect.Value) ([]goM
 		if err != nil {
 			return nil, fmt.Errorf("map key: %w", err)
 		}
-		order, err := renderPrimitiveLiteral(primitive, key)
+		order, err := renderPrimitiveLiteral(primitive, key, "")
 		if err != nil {
 			return nil, fmt.Errorf("map key: %w", err)
 		}
@@ -346,21 +342,46 @@ func concreteGoValue(value reflect.Value) (reflect.Value, error) {
 	return value, nil
 }
 
-// renderPrimitiveLiteral writes a literal accepted by the primitive's native
-// Go type.
-func renderPrimitiveLiteral(primitive expr.Primitive, value reflect.Value) (string, error) {
+// renderPrimitiveLiteral checks and writes one primitive value. A nonempty
+// target is the planned custom Go type: keep the source numeric precision and
+// convert the literal to that type. Schema bounds remain owned by expr.
+func renderPrimitiveLiteral(primitive expr.Primitive, value reflect.Value, target string) (string, error) {
+	if primitive == expr.Any {
+		if target == "" {
+			return renderAnyValue(value)
+		}
+		// Custom Any values retain the scalar and byte forms supported by
+		// custom literals; ordinary Any containers use renderAnyValue.
+		switch value.Kind() {
+		case reflect.Bool:
+			primitive = expr.Boolean
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			primitive = expr.Int64
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			primitive = expr.UInt64
+		case reflect.Float32, reflect.Float64:
+			primitive = expr.Float64
+		case reflect.String:
+			primitive = expr.String
+		case reflect.Slice:
+			primitive = expr.Bytes
+		default:
+			return "", fmt.Errorf("default for custom Go type %s has unsupported underlying type %s", value.Type(), value.Kind())
+		}
+	}
+	var literal string
 	switch primitive.Kind() {
 	case expr.BooleanKind:
 		if value.Kind() != reflect.Bool {
 			return "", fmt.Errorf("boolean default has Go type %s", value.Type())
 		}
-		return strconv.FormatBool(value.Bool()), nil
+		literal = strconv.FormatBool(value.Bool())
 	case expr.IntKind, expr.Int32Kind, expr.Int64Kind:
 		switch value.Kind() {
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			return strconv.FormatInt(value.Int(), 10), nil
+			literal = strconv.FormatInt(value.Int(), 10)
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			return strconv.FormatUint(value.Uint(), 10), nil
+			literal = strconv.FormatUint(value.Uint(), 10)
 		default:
 			return "", fmt.Errorf("integer default has Go type %s", value.Type())
 		}
@@ -370,9 +391,9 @@ func renderPrimitiveLiteral(primitive expr.Primitive, value reflect.Value) (stri
 			if value.Int() < 0 {
 				return "", fmt.Errorf("unsigned integer default must not be negative")
 			}
-			return strconv.FormatInt(value.Int(), 10), nil
+			literal = strconv.FormatInt(value.Int(), 10)
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			return strconv.FormatUint(value.Uint(), 10), nil
+			literal = strconv.FormatUint(value.Uint(), 10)
 		default:
 			return "", fmt.Errorf("unsigned integer default has Go type %s", value.Type())
 		}
@@ -381,47 +402,58 @@ func renderPrimitiveLiteral(primitive expr.Primitive, value reflect.Value) (stri
 		switch value.Kind() {
 		case reflect.Float32, reflect.Float64:
 			number = value.Float()
+			if target != "" {
+				literal = strconv.FormatFloat(number, 'g', -1, value.Type().Bits())
+			}
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			number = float64(value.Int())
+			if target != "" {
+				literal = strconv.FormatInt(value.Int(), 10)
+			}
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 			number = float64(value.Uint())
+			if target != "" {
+				literal = strconv.FormatUint(value.Uint(), 10)
+			}
 		default:
 			return "", fmt.Errorf("number default has Go type %s", value.Type())
 		}
 		if math.IsInf(number, 0) || math.IsNaN(number) {
 			return "", fmt.Errorf("number default must be finite")
 		}
-		bits := 64
-		if primitive.Kind() == expr.Float32Kind {
-			bits = 32
+		if target == "" {
+			bits := 64
+			if primitive.Kind() == expr.Float32Kind {
+				bits = 32
+			}
+			literal = strconv.FormatFloat(number, 'g', -1, bits)
 		}
-		return strconv.FormatFloat(number, 'g', -1, bits), nil
-	case expr.StringKind:
-		if value.Kind() != reflect.String {
-			return "", fmt.Errorf("string default has Go type %s", value.Type())
-		}
-		return strconv.Quote(value.String()), nil
-	case expr.BytesKind:
+	case expr.StringKind, expr.BytesKind:
 		switch value.Kind() {
 		case reflect.String:
-			return "[]byte(" + strconv.Quote(value.String()) + ")", nil
+			literal = strconv.Quote(value.String())
+			if primitive == expr.Bytes && target == "" {
+				literal = "[]byte(" + literal + ")"
+			}
 		case reflect.Slice:
-			if value.Type().Elem().Kind() != reflect.Uint8 {
-				return "", fmt.Errorf("bytes default has Go type %s", value.Type())
+			if primitive == expr.String && target == "" || value.Type().Elem().Kind() != reflect.Uint8 {
+				return "", fmt.Errorf("%s default has Go type %s", primitive.Name(), value.Type())
 			}
 			items := make([]string, value.Len())
 			for index := range items {
 				items[index] = fmt.Sprintf("0x%x", value.Index(index).Uint())
 			}
-			return "[]byte{" + strings.Join(items, ", ") + "}", nil
+			literal = "[]byte{" + strings.Join(items, ", ") + "}"
 		default:
-			return "", fmt.Errorf("bytes default has Go type %s", value.Type())
+			return "", fmt.Errorf("%s default has Go type %s", primitive.Name(), value.Type())
 		}
-	case expr.AnyKind:
-		return renderAnyValue(value)
 	default:
 		return "", fmt.Errorf("unsupported primitive %s", primitive.Name())
 	}
+	if target != "" {
+		return target + "(" + literal + ")", nil
+	}
+	return literal, nil
 }
 
 // renderAnyValue writes JSON-compatible Go values with explicit container
@@ -491,54 +523,6 @@ func goValueIsNil(value reflect.Value) bool {
 		value = value.Elem()
 	}
 	return false
-}
-
-// renderTypedCustomValue writes an authored value that already uses the exact
-// custom Go type from the design.
-func renderTypedCustomValue(typeName string, value reflect.Value) (string, error) {
-	switch value.Kind() {
-	case reflect.Bool:
-		return typeName + "(" + strconv.FormatBool(value.Bool()) + ")", nil
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return typeName + "(" + strconv.FormatInt(value.Int(), 10) + ")", nil
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return typeName + "(" + strconv.FormatUint(value.Uint(), 10) + ")", nil
-	case reflect.Float32, reflect.Float64:
-		return typeName + "(" + strconv.FormatFloat(value.Float(), 'g', -1, value.Type().Bits()) + ")", nil
-	case reflect.String:
-		return typeName + "(" + strconv.Quote(value.String()) + ")", nil
-	case reflect.Slice:
-		if value.Type().Elem().Kind() != reflect.Uint8 {
-			return "", fmt.Errorf("default for custom Go type %s has unsupported underlying type %s", value.Type(), value.Kind())
-		}
-		items := make([]string, value.Len())
-		for index := range items {
-			items[index] = fmt.Sprintf("0x%x", value.Index(index).Uint())
-		}
-		return typeName + "{" + strings.Join(items, ", ") + "}", nil
-	default:
-		return "", fmt.Errorf("default for custom Go type %s has unsupported underlying type %s", value.Type(), value.Kind())
-	}
-}
-
-// validateCustomDefault checks an already-typed default against the declared
-// custom Go type. Native values use the existing struct:field:type contract:
-// the declared type must accept conversion from the Goa primitive.
-func validateCustomDefault(custom string, spec *ImportSpec, value reflect.Value) error {
-	if value.Type().PkgPath() == "" {
-		return nil
-	}
-	if spec == nil {
-		return fmt.Errorf("default for custom Go type %q must use that exact Go type", custom)
-	}
-	_, name, qualified := strings.Cut(custom, ".")
-	if !qualified {
-		name = custom
-	}
-	if value.Type().PkgPath() != spec.Path || value.Type().Name() != name {
-		return fmt.Errorf("default for custom Go type %q has Go type %s", custom, value.Type())
-	}
-	return nil
 }
 
 // authoredObjectField returns one supplied object field from a map or struct.

@@ -13,9 +13,11 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        go: ['1.25']
+        go: ['1.26.8', '1.27.1']
         os: ['ubuntu-latest', 'windows-latest']
     runs-on: ${{ matrix.os }}
+    env:
+      GOTOOLCHAIN: local
 
     steps:
       - name: Check out code
@@ -31,7 +33,7 @@ jobs:
         run: make ci
 
       - name: Upload test coverage for deep source
-        if: matrix.go == '1.25' && matrix.os == 'ubuntu-latest'
+        if: matrix.go == '1.27.1' && matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@v7.0.1
         with:
           name: coverage

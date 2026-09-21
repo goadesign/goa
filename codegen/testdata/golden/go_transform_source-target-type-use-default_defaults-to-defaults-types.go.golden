@@ -18,7 +18,7 @@ func transform() {
 	}
 	{
 		if target.RawJSON == nil {
-			target.RawJSON = json.RawMessage{0x66, 0x6f, 0x6f}
+			target.RawJSON = json.RawMessage([]byte{0x66, 0x6f, 0x6f})
 		}
 	}
 	{

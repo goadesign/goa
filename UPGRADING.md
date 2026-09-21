@@ -1,20 +1,38 @@
-# Upgrading to Goa v3.31.1
+# Upgrading to Goa v3.32.0
 
-**This is a substantial generator upgrade with intentional breaking changes.**
+Goa, the examples, and the plugins require **Go 1.26 or later**. Go 1.27.1 is
+recommended. Upgrade the Go toolchain before updating these modules: the new
+dependency versions require Go 1.26.
+
+## Already using v3.31.1?
+
+v3.32.0 fixes missing client-interceptor imports in generated HTTP, gRPC, and
+JSON-RPC clients and command starters. For example, applying a client
+interceptor to one method could make gRPC command generation fail or leave
+generated code unable to compile. Upgrade the module and command together and
+regenerate the complete `gen` tree.
+
+Plugins can use `service.Plan.ServiceHasClientInterceptors` to query the
+retained interceptor applicability during import planning. This is an additive
+generator API. The import correction adds no runtime or wire change and requires
+no coordinated client/server deployment or persisted-data migration.
+
+This release also updates dependencies. Compile and test applications with the
+new dependency graph. To roll back an upgrade from v3.31.1, restore its module,
+command, dependencies, and generated tree together.
+
+## Upgrading from v3.30.x or the generation preview
+
+**The v3.31 generator upgrade introduced intentional breaking changes.**
 Goa remains on the `goa.design/goa/v3` module path. Keeping v3 does not mean
 that every generated API, plugin API, or transport exchange is compatible
 with v3.30.0. Read the relevant sections before regenerating a production
 application.
 
-The release promotes the generation preview and includes the subsequent gRPC
-fixes for collection presence, cancellation, and recursive collections. Goa
-still requires Go 1.25 or later.
-The examples and plugins repositories require Go 1.26 or later, as on their
-existing stable branches.
-
-Generated application starters import Clue for logging and debugging. Clue
-v1.3.0 requires Go 1.26. Applications staying on Go 1.25 can use Clue v1.2.6:
-run `go get goa.design/clue@v1.2.6` before tidying a new starter module.
+The guidance below covers that migration, including the subsequent gRPC fixes
+for collection presence, cancellation, and recursive collections. Generated
+application starters import Clue for logging and debugging; its Go 1.26 minimum
+is now shared by Goa itself.
 
 ## Already using v3.31.0?
 
@@ -33,7 +51,7 @@ preview.
 | Required gRPC scalar fields | Regenerate protobuf code and update direct message literals. Coordinate peers when required zero or empty values matter. |
 | JSON-RPC errors, selected views, or server streams | Update both generated peers and custom clients for the changed envelopes and stream lifecycle. JSON-RPC WebSocket generation has been removed. |
 | Dynamic gRPC views or optional primitive HTTP SSE data | Regenerate and deploy both peers together for the cases listed under coordinated deployment. |
-| Code-generation plugins | Upgrade `goa.design/plugins/v3` to v3.31.1 and migrate custom plugins that declare names or call removed generator APIs. |
+| Code-generation plugins | Upgrade `goa.design/plugins/v3` to v3.32.0 and migrate custom plugins that declare names or call removed generator APIs. |
 
 There is no persisted-data migration. Keep the previous binaries, dependency
 versions, design, and generated tree available for rollback.
@@ -91,14 +109,14 @@ Review the matching migration sections if your project has any of these characte
 Test ordinary HTTP-only services as well. Review the generated diff even when
 none of the specialized migrations below applies.
 
-## Install v3.31.1
+## Install v3.32.0
 
 Start from a branch with the current generated tree committed. Install both the
 Goa module and the `goa` command from the same release version:
 
 ```bash
-go get goa.design/goa/v3@v3.31.1
-go install goa.design/goa/v3/cmd/goa@v3.31.1
+go get goa.design/goa/v3@v3.32.0
+go install goa.design/goa/v3/cmd/goa@v3.32.0
 goa version
 ```
 
@@ -106,7 +124,7 @@ The Go command records the same release version in `go.mod`. The installed
 command reports the same version:
 
 ```text
-Goa version v3.31.1
+Goa version v3.32.0
 ```
 
 Do not use an older `goa` command with the new module. Also install the
@@ -123,7 +141,7 @@ If your design imports the official plugins, update that module in the same
 application change:
 
 ```bash
-go get goa.design/plugins/v3@v3.31.1
+go get goa.design/plugins/v3@v3.32.0
 ```
 
 Use matching release tags when copying examples. Custom plugins must complete
@@ -445,6 +463,26 @@ contract corrections rather than accepting the complete generated diff
 without inspection.
 
 ## Designs that now fail validation
+
+Defaults for custom fields now use their schema value instead of requiring
+the default's Go package and type name to match `struct:field:type`. This keeps
+`json.RawMessage` defaults valid when Go represents that type as an alias.
+String fields with custom metadata accept string or byte-slice defaults; byte
+values render as `Target([]byte{...})`, which works for targets with underlying
+string or `[]byte`. The stored default and its serialization methods remain
+unchanged. Ordinary fields without custom metadata keep their existing default
+eligibility.
+
+Custom numeric defaults are checked before narrowing. For example, an int64
+default of 4294967296 for Int32 now fails instead of being validated as 0.
+Negative unsigned defaults, float-to-integer defaults, non-finite numbers and
+overflow also fail. Correct these authored values and regenerate; there is no
+data migration. Normal floating-point rounding and underflow remain supported.
+
+Direct `codegen.RenderGoValue` calls check the separately supplied value's
+literal kind, unsigned sign and finite numbers. They do not validate the stored
+default or all schema rules. Custom literals retain their source numeric
+precision; the Go compiler still checks the actual authored target declaration.
 
 Generation now rejects ambiguous designs before writing files. In addition to
 the error, response, security, and streaming rules above, check these cases:

@@ -13,6 +13,8 @@ jobs:
   analyze:
     name: Analyze
     runs-on: ubuntu-latest
+    env:
+      GOTOOLCHAIN: local
     permissions:
       actions: read
       contents: read
@@ -32,7 +34,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v7.0.0
       with:
-        go-version-file: 'go.mod'
+        go-version: '1.27.1'
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
