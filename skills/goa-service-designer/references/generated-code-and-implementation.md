@@ -5,22 +5,34 @@ interfaces, or updating downstream artifacts.
 
 ## Dirty Worktree Protocol
 
-Before running generation in a dirty worktree, snapshot the relevant design and generated files:
+Before running generation in a dirty worktree, inspect tracked, staged, and untracked changes:
 
 ```bash
+git status --short
 git diff -- design services gen
+git diff --cached -- design services gen
+git ls-files --others --exclude-standard -- design services gen
 ```
 
-Adjust paths to the project layout. Goa recreates generated output, so distinguish pre-existing
-generated drift from changes caused by your design edit. Do not fix unrelated generated churn unless
-the design change requires it.
+Adjust paths to the project layout. These commands inspect changes; they do not back them up.
+Goa deletes and recreates `gen/`. Preserve any work that could be lost with a verified copy or an
+isolated worktree before generation. Do not stash, reset, discard, or commit someone else's changes
+as an automatic preparation step. Distinguish pre-existing drift from changes caused by this task.
 
 ## Regeneration
 
 - Prefer the project's wrapper command, such as `make gen`, `scripts/gen`, or a task runner entry.
-- If there is no wrapper, use `goa gen <design-package-import-path>`.
+- Check the project's selected Goa module, including `replace` directives, before choosing tooling.
+  Check that release's Go toolchain requirements before upgrading the module.
+- If there is no wrapper, use
+  `go run goa.design/goa/v3/cmd/goa gen <design-package-import-path>`. A standalone `goa` command
+  should match the project's module version.
 - Never use `goa gen ./design`; Goa expects a Go import path.
-- `goa example <design-package-import-path>` is only for first-time scaffolding.
+- For gRPC, follow the selected release's protobuf compiler and plugin requirements. Goa v3.31
+  and later check `protoc-gen-go` and `protoc-gen-go-grpc` versions; do not fix a mismatch by changing
+  generated files or upgrading the application without authorization.
+- `goa example` creates missing starter files without overwriting existing files. It can scaffold
+  a newly added service, but existing application wiring must be updated explicitly.
 
 ## Generated Diff Triage
 
@@ -38,13 +50,16 @@ After `goa gen`, inspect generated changes by artifact role instead of scanning 
   shape.
 - `gen/grpc/<service>/pb/*.proto`, `pb/*.pb.go`, and transport `types.go`: protobuf field numbers,
   message names, metadata, streaming RPC shape, and gRPC status mapping.
+- `gen/jsonrpc/<service>/{server,client}/`: request IDs, notifications, parameter shapes, error
+  mappings, batches, and SSE encoding.
 - OpenAPI output: public HTTP contract shape.
 
 Goa may emit OpenAPI, protobuf, transport clients, and CLIs. It does not generate third-party SDKs.
 
-Stop generated-diff review when every changed generated artifact has a direct design cause. If a
-generated file changed without an obvious cause, inspect the relevant Goa docs and the design
-expression before editing implementation code.
+Every generated change should follow from the design or an intentional tooling upgrade. If a
+file changes without an obvious cause, check the generator version, plugins, design, and relevant
+documentation before editing implementation code. Never combine output from separate generation
+runs. For generator upgrades, regenerate twice and confirm the second run introduces no changes.
 
 ## Implementation Updates
 
@@ -68,7 +83,7 @@ route, or error name. Update only artifacts affected by the contract:
 
 - Service implementations and tests.
 - Generated mocks or hand-written fakes.
-- Goa-generated CLI clients, HTTP clients, gRPC clients, and downstream code that imports them.
+- Goa-generated CLI clients, HTTP, gRPC, and JSON-RPC clients, and downstream code that imports them.
 - Docs, examples, API snapshots, OpenAPI consumers, protobuf consumers, and release notes when
   user-facing behavior changes.
 - Deployment or runtime config only when ports, services, auth, health checks, or production wiring
