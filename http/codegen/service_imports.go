@@ -294,6 +294,21 @@ func httpCLIRequestFlags(endpoint *expr.HTTPEndpointExpr) []httpCLIFlag {
 			return nil
 		})
 	}
+	// MapParams records its value separately from the individual query
+	// parameters. Its CLI flag needs the same conversion and validation imports.
+	if name := endpoint.MapQueryParams; name != nil {
+		payload := endpoint.MethodExpr.Payload
+		attribute, required := payload, true
+		if *name != "" {
+			attribute = expr.AsObject(payload.Type).Attribute(*name)
+			required = payload.IsRequired(*name)
+		}
+		flags = append(flags, httpCLIFlag{
+			attribute:  attribute,
+			required:   required,
+			hasDefault: attribute.DefaultValue != nil,
+		})
+	}
 	if policy := jsonRPCRequestIDPolicyFor(endpoint); policy != nil && policy.attribute != nil {
 		flags = append(flags, httpCLIFlag{
 			attribute:  policy.attribute.Attribute,
