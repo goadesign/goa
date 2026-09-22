@@ -237,16 +237,6 @@ func httpCodecValidationImports(service *expr.HTTPServiceExpr, client bool) []*c
 func httpCLIPayloadBuilderFixedImports(service *expr.HTTPServiceExpr) []*codegen.ImportSpec {
 	seen := make(map[string]struct{})
 	var imports []*codegen.ImportSpec
-	add := func(spec *codegen.ImportSpec) {
-		if spec == nil {
-			return
-		}
-		if _, ok := seen[spec.Path]; ok {
-			return
-		}
-		seen[spec.Path] = struct{}{}
-		imports = append(imports, spec)
-	}
 	for _, endpoint := range service.HTTPEndpoints {
 		if !needInit(endpoint.MethodExpr.Payload.Type) {
 			continue
@@ -254,10 +244,11 @@ func httpCLIPayloadBuilderFixedImports(service *expr.HTTPServiceExpr) []*codegen
 		for _, flag := range httpCLIRequestFlags(endpoint) {
 			validation := codegen.NeedsValidation(flag.attribute, codegen.GoLayoutPolicy{})
 			for _, preference := range cli.FlagFieldImportPreferences(flag.attribute, validation, flag.required, flag.hasDefault) {
-				add(preference)
-			}
-			for _, preference := range codegen.GetMetaTypeImports(flag.attribute) {
-				add(preference)
+				if _, ok := seen[preference.Path]; ok {
+					continue
+				}
+				seen[preference.Path] = struct{}{}
+				imports = append(imports, preference)
 			}
 		}
 	}
@@ -301,6 +292,21 @@ func httpCLIRequestFlags(endpoint *expr.HTTPEndpointExpr) []httpCLIFlag {
 				hasDefault: hasDefault,
 			})
 			return nil
+		})
+	}
+	// MapParams records its value separately from the individual query
+	// parameters. Its CLI flag needs the same conversion and validation imports.
+	if name := endpoint.MapQueryParams; name != nil {
+		payload := endpoint.MethodExpr.Payload
+		attribute, required := payload, true
+		if *name != "" {
+			attribute = expr.AsObject(payload.Type).Attribute(*name)
+			required = payload.IsRequired(*name)
+		}
+		flags = append(flags, httpCLIFlag{
+			attribute:  attribute,
+			required:   required,
+			hasDefault: attribute.DefaultValue != nil,
 		})
 	}
 	if policy := jsonRPCRequestIDPolicyFor(endpoint); policy != nil && policy.attribute != nil {

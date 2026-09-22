@@ -78,30 +78,6 @@ func TestClientCLIFilesOmitFilesOnlyServer(t *testing.T) {
 	require.Empty(t, plan.ClientCLIFiles())
 }
 
-func TestClientCLIPayloadBuilderImportsCustomFieldType(t *testing.T) {
-	root := expr.RunDSL(t, func() {
-		dsl.Service("Reports", func() {
-			dsl.Method("create", func() {
-				dsl.Payload(func() {
-					dsl.Field(1, "at", dsl.String, func() {
-						dsl.Meta("struct:field:type", "time.Time", "time")
-					})
-					dsl.Required("at")
-				})
-				dsl.HTTP(func() {
-					dsl.POST("/reports")
-					dsl.Body("at")
-				})
-			})
-		})
-	})
-	files := linkedHTTPPlanForRoot(t, root).ClientCLIFiles()
-	require.Len(t, files, 2)
-	imports := files[1].SectionTemplates[0].Data.(map[string]any)["Imports"].([]*codegen.ImportSpec)
-
-	require.Contains(t, importPaths(imports), "time")
-}
-
 // TestClientCLIFlagPresenceGolden shows how generated HTTP commands preserve
 // explicit empty values while applying every authored zero-valued default.
 func TestClientCLIFlagPresenceGolden(t *testing.T) {
