@@ -237,6 +237,16 @@ func httpCodecValidationImports(service *expr.HTTPServiceExpr, client bool) []*c
 func httpCLIPayloadBuilderFixedImports(service *expr.HTTPServiceExpr) []*codegen.ImportSpec {
 	seen := make(map[string]struct{})
 	var imports []*codegen.ImportSpec
+	add := func(spec *codegen.ImportSpec) {
+		if spec == nil {
+			return
+		}
+		if _, ok := seen[spec.Path]; ok {
+			return
+		}
+		seen[spec.Path] = struct{}{}
+		imports = append(imports, spec)
+	}
 	for _, endpoint := range service.HTTPEndpoints {
 		if !needInit(endpoint.MethodExpr.Payload.Type) {
 			continue
@@ -244,11 +254,10 @@ func httpCLIPayloadBuilderFixedImports(service *expr.HTTPServiceExpr) []*codegen
 		for _, flag := range httpCLIRequestFlags(endpoint) {
 			validation := codegen.NeedsValidation(flag.attribute, codegen.GoLayoutPolicy{})
 			for _, preference := range cli.FlagFieldImportPreferences(flag.attribute, validation, flag.required, flag.hasDefault) {
-				if _, ok := seen[preference.Path]; ok {
-					continue
-				}
-				seen[preference.Path] = struct{}{}
-				imports = append(imports, preference)
+				add(preference)
+			}
+			for _, preference := range codegen.GetMetaTypeImports(flag.attribute) {
+				add(preference)
 			}
 		}
 	}
