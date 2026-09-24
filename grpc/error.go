@@ -90,6 +90,18 @@ func NewServiceError(resp *goapb.ErrorResponse) *goa.ServiceError {
 	}
 }
 
+// NewServiceErrorWithCause decodes response into a Goa service error that
+// unwraps to original. Both arguments are required. The response supplies the
+// Name, ID, Message, Timeout, Temporary, and Fault fields, including empty values.
+// Callers can inspect the original gRPC status code and details through the
+// cause; status.FromError uses the decoded error's text as its message.
+func NewServiceErrorWithCause(original error, response *goapb.ErrorResponse) *goa.ServiceError {
+	decoded := goa.NewServiceError(original, response.Name, response.Timeout, response.Temporary, response.Fault)
+	decoded.ID = response.Id
+	decoded.Message = response.Msg
+	return decoded
+}
+
 // NewTransportError preserves an undecoded gRPC failure as a Goa service
 // error. Unavailable failures are temporary so generated idempotent endpoints
 // can retry them without matching error strings.

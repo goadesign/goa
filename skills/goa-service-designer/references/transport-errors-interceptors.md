@@ -1,7 +1,9 @@
 # Transport, Errors, And Interceptors
 
-Use this reference when changing HTTP or gRPC mappings, streaming, errors, security, interceptors,
-middleware, or production wiring.
+Use this reference when changing HTTP, gRPC, or JSON-RPC mappings, streaming, errors, security,
+interceptors, middleware, or production wiring. The gRPC presence and JSON-RPC behavior below
+describes Goa v3.31 and later. Check the application's selected module version and its
+`UPGRADING.md` before changing older code.
 
 ## HTTP Mapping
 
@@ -25,6 +27,7 @@ HTTP object payload checks:
 ```go
 HTTP(func() {
     GET("/accounts/{account_id}/items")
+    Param("accountId:account_id")
     Param("limit")
     Response(StatusOK)
     Response("not_found", StatusNotFound)
@@ -39,6 +42,9 @@ Goa's streaming DSL is transport-agnostic. The transport mapping determines HTTP
 - Add `ServerSentEvents()` only for one-way server-to-client streams.
 - WebSocket endpoints use `GET`.
 - For gRPC streaming, check generated protobuf and server/client stream types.
+- JSON-RPC supports unary calls or a single request followed by an
+  explicit SSE stream. It rejects client or bidirectional streaming, WebSocket streams, and a
+  method combining `Result` with `StreamingResult`. Ordinary HTTP WebSocket support is separate.
 - Streaming implementations must handle flow control, `io.EOF`, send errors, context cancellation,
   timeouts, and cleanup.
 
@@ -50,12 +56,31 @@ Goa's streaming DSL is transport-agnostic. The transport mapping determines HTTP
 - Use streaming for large or continuous datasets.
 - Never renumber released `Field` values.
 - Check `.proto` output after changing shared types, streaming methods, or custom protobuf metadata.
+- Required singular scalars preserve protobuf presence. An omitted required
+  boolean is invalid; an explicitly supplied `false` can be valid. Generated decoders validate
+  before converting to service values. See the modeling reference for collections and defaults.
+
+## JSON-RPC Mapping
+
+- Use service-level `JSONRPC` to configure the shared HTTP POST endpoint, and method-level
+  `JSONRPC` for method-specific behavior and error mappings.
+- Let generated code own the JSON-RPC envelope, dispatch, request IDs, batches, and protocol errors.
+  The payload describes `params`; do not handwrite transport envelopes in service code.
+- Ordinary generated client calls have an ID even without an `ID` payload field.
+  `Notification()` explicitly declares a one-way call. Having no result does not by itself make
+  a method a notification. Notifications cannot declare a result, ID field, or stream.
+- `ID` belongs directly in the payload, not the result. The transport returns the request ID;
+  the service does not choose a response ID.
+- Map designed errors with JSON-RPC `Response` codes. Verify the generated error `data` shape
+  before changing a custom client's decoding.
+- For SSE, pair `StreamingResult` with method-level `ServerSentEvents()`. Verify event field
+  mappings and cancellation through the generated client and server.
 
 ## Errors
 
 - Define reusable potential errors at API scope when you want one canonical error type/name and one
   transport mapping. API-level `Error(...)` declarations do not make those errors applicable to
-  every endpoint.
+  every endpoint. Select a reusable definition with `Error("name")` at service or method scope.
 - Define an error at service scope only when every method on that service can return it.
 - Define an error at method scope when only that method can return it.
 - Do not promote a method-specific error to service scope just to avoid repeating a declaration or to
@@ -68,7 +93,7 @@ Goa's streaming DSL is transport-agnostic. The transport mapping determines HTTP
 - If multiple custom errors can return from the same method, include a field marked with
   `Meta("struct:error:name")`.
 - Map every exposed error for each enabled transport with `HTTP(Response(...))` and
-  `GRPC(Response(...))`.
+  `GRPC(Response(...))`, or the corresponding `JSONRPC(Response(...))`.
 - In implementation code, return generated error constructors or generated custom error payloads.
 - Wrap underlying causes for logs and tracing, but keep client-facing messages safe.
 - Test errors through the service API. Verify generated error names, transport status mappings when
@@ -76,12 +101,14 @@ Goa's streaming DSL is transport-agnostic. The transport mapping determines HTTP
 
 ## Security
 
-- Define authentication and authorization in the design.
+- Declare security schemes, required scopes, and credential fields in the design.
 - Prefer API-level defaults.
 - Override at service or method scope when needed.
 - Use `NoSecurity()` explicitly for public methods.
 - Add matching security payload fields such as `TokenField` or `APIKeyField`.
 - Map credentials through HTTP headers/query parameters or gRPC metadata.
+- Implement the generated authentication callbacks and application authorization rules.
+  A scheme declaration does not verify a token or establish resource ownership by itself.
 
 ## Goa Interceptors Vs Middleware
 

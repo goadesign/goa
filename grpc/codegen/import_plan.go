@@ -416,7 +416,7 @@ func planGRPCImports(generation *codegen.Generation, plan *Plan) error {
 			generated = append(generated,
 				codegen.NewImport(servicePlan.packages.service.Name+"c", path.Join(generation.GenPkg(), "grpc", pathName, "client")),
 			)
-			if len(servicePlan.source.ServiceExpr.ClientInterceptors) > 0 {
+			if servicePlan.hasClientInterceptors {
 				generated = append(generated, servicePlan.packages.service)
 			}
 		}
@@ -538,7 +538,7 @@ func planGRPCExampleImports(generation *codegen.Generation, plan *Plan, root *ex
 				clientImports.generated = append(clientImports.generated, plan.packages[service].service)
 			}
 			servicePlan := grpcServicePlanByName(plan.servicesPlan, serviceName)
-			if servicePlan != nil && len(servicePlan.source.ServiceExpr.ClientInterceptors) > 0 {
+			if servicePlan != nil && servicePlan.hasClientInterceptors {
 				clientImports.generated = append(clientImports.generated, codegen.NewImport("interceptors", rootPath+"/interceptors"))
 			}
 		}

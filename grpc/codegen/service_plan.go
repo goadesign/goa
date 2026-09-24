@@ -16,15 +16,16 @@ type (
 	// grpcServicePlan stores one copied gRPC service and the values selected for
 	// its generated files.
 	grpcServicePlan struct {
-		source          *expr.GRPCServiceExpr
-		expression      *expr.GRPCServiceExpr
-		packages        *grpcServicePackage
-		endpoints       []*grpcEndpointPlan
-		endpointByExpr  map[*expr.GRPCEndpointExpr]*grpcEndpointPlan
-		protoImports    []string
-		protoGoImports  []*codegen.ImportSpec
-		scope           *codegen.NameScope
-		usesAnyInErrors bool
+		source                *expr.GRPCServiceExpr
+		expression            *expr.GRPCServiceExpr
+		packages              *grpcServicePackage
+		endpoints             []*grpcEndpointPlan
+		endpointByExpr        map[*expr.GRPCEndpointExpr]*grpcEndpointPlan
+		protoImports          []string
+		protoGoImports        []*codegen.ImportSpec
+		scope                 *codegen.NameScope
+		usesAnyInErrors       bool
+		hasClientInterceptors bool
 	}
 
 	// grpcEndpointPlan stores one copied endpoint and the metadata conversions
@@ -66,6 +67,10 @@ func collectGRPCServicePlans(plan *Plan) ([]*grpcServicePlan, error) {
 		service.scope = codegen.NewNameScope()
 		service.usesAnyInErrors = usesAnyType(service.expression.GRPCEndpoints, true)
 		service.packages = plan.packages[source]
+		service.hasClientInterceptors, err = plan.service.ServiceHasClientInterceptors(source.ServiceExpr)
+		if err != nil {
+			return nil, fmt.Errorf("plan client interceptors for service %q: %w", source.Name(), err)
+		}
 
 		plannedProtobuf := plan.protobuf[source]
 		plannedTools := plan.tools[source]

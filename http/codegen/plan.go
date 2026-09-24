@@ -890,14 +890,18 @@ func planExampleFileImports(transport, application *Plan, root *example.Root) er
 		)}
 		hasInterceptors := false
 		for _, service := range services {
-			if len(service.ServiceExpr.ClientInterceptors) > 0 || exampleServiceHasOutputStream(service) {
+			hasClientInterceptors, err := transport.servicePlan.ServiceHasClientInterceptors(service.ServiceExpr)
+			if err != nil {
+				return err
+			}
+			if hasClientInterceptors || exampleServiceHasOutputStream(service) {
 				servicePackage, _, err := servicePackagePreferences(transport.servicePlan, service)
 				if err != nil {
 					return err
 				}
 				generated = append(generated, servicePackage)
 			}
-			hasInterceptors = hasInterceptors || len(service.ServiceExpr.ClientInterceptors) > 0
+			hasInterceptors = hasInterceptors || hasClientInterceptors
 		}
 		if hasInterceptors {
 			generated = append(generated, codegen.NewImport("interceptors", path.Join(rootPath, "interceptors")))
@@ -1503,11 +1507,11 @@ func planImports(generation *codegen.Generation, transport transportKind, plans 
 					path.Join(generation.GenPkg(), dir, pathName, "client"),
 				)
 				cliGenerated = append(cliGenerated, clientImport)
-				if len(transportService.ServiceExpr.ClientInterceptors) > 0 {
-					servicePackage, _, err := plan.servicePlan.ServicePackageImports(transportService.ServiceExpr)
-					if err != nil {
-						return err
-					}
+				hasClientInterceptors, err := plan.servicePlan.ServiceHasClientInterceptors(transportService.ServiceExpr)
+				if err != nil {
+					return err
+				}
+				if hasClientInterceptors {
 					cliGenerated = append(cliGenerated, servicePackage)
 				}
 			}

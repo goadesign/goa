@@ -13,6 +13,8 @@ jobs:
   analyze:
     name: Analyze
     runs-on: ubuntu-latest
+    env:
+      GOTOOLCHAIN: local
     permissions:
       actions: read
       contents: read
@@ -32,11 +34,11 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v7.0.0
       with:
-        go-version-file: 'go.mod'
+        go-version: '1.27.1'
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v4.37.6
+      uses: github/codeql-action/init@v4.38.1
       with:
         languages: ${{ matrix.language }}
         # If you wish to specify custom queries, you can do so here or in a config file.
@@ -61,6 +63,6 @@ jobs:
     - run: make depend; go build goa.design/goa/v3/cmd/goa
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v4.37.6
+      uses: github/codeql-action/analyze@v4.38.1
       with:
         category: "/language:${{matrix.language}}"

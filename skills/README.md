@@ -7,63 +7,63 @@ that use Goa. They are not contributor instructions for changing Goa itself.
 
 - [`goa-service-designer/`](goa-service-designer/): design-first workflow for
   creating and evolving Goa services, including DSL changes, generated code,
-  HTTP/gRPC mappings, errors, interceptors, and downstream consumers.
+  HTTP/gRPC/JSON-RPC mappings, errors, interceptors, and downstream consumers.
 
-## How To Use
+## Install in one command
 
-Copy the whole skill directory into the place your agent expects skills. Keep the
-directory name and `SKILL.md` file together.
-
-### Claude Code
-
-Project-local install:
+Run this in your application repository:
 
 ```bash
-mkdir -p .claude/skills
-cp -R path/to/goa/skills/goa-service-designer .claude/skills/
+npx skills add goadesign/goa --skill goa-service-designer
 ```
 
-Personal install:
+The [Skills CLI](https://github.com/vercel-labs/skills) requires Node.js and npm.
+It downloads the complete skill, including its reference files, and lets you
+choose your coding tool. Installation is project-local by default.
+
+Select tools explicitly for a non-interactive installation:
 
 ```bash
-mkdir -p ~/.claude/skills
-cp -R path/to/goa/skills/goa-service-designer ~/.claude/skills/
+npx --yes skills add goadesign/goa --skill goa-service-designer \
+  -a codex -a cursor -a claude-code --yes
 ```
 
-Claude Code discovers `.claude/skills/<skill-name>/SKILL.md` automatically. You
-can let the model invoke the skill from its description, or invoke it directly as
-`/goa-service-designer`.
+Add `--global` for a personal installation. Add `--copy` when your environment
+requires copies instead of symlinks. The installer selects only
+`goa-service-designer`; contributor and release skills are not installed.
 
-### Cursor
-
-For Cursor project skills, copy the directory to:
+## Give your agent a task
 
 ```text
-.cursor/skills/goa-service-designer/SKILL.md
+Use the goa-service-designer skill to add a catalog service with HTTP and
+gRPC endpoints. Generate the code, implement product lookup, and test it.
 ```
 
-### Codex
+The skill guides the agent to inspect the application, change the design first,
+regenerate contracts, implement outside `gen/`, update affected consumers, and
+verify the result. It covers service contracts, transports, validation, errors,
+and interceptors. It is intended for Goa application services, not for editing
+Goa's compiler or runtime.
 
-For repository-scoped Codex skills, copy the directory to:
+For Goa-AI applications, also give the coding agent the generated
+`AGENTS_QUICKSTART.md`. That guide reflects the application's agent design;
+this reusable skill focuses on Goa services.
 
-```bash
-mkdir -p .agents/skills
-cp -R path/to/goa/skills/goa-service-designer .agents/skills/
+## Install without Node.js
+
+Copy the entire `goa-service-designer/` directory, including `SKILL.md` and its
+reference files, into your coding tool's project skill directory. For tools
+supporting the shared Agent Skills directory, the result is:
+
+```text
+.agents/skills/goa-service-designer/SKILL.md
 ```
 
-Codex discovers `.agents/skills/<skill-name>/SKILL.md` automatically from the
-current working directory up to the repository root. You can let Codex invoke the
-skill from its description, or invoke it explicitly from the CLI/IDE with
-`$goa-service-designer`.
+For a tool using its own skill directory, such as `.claude/skills/`, copy the
+same complete directory there. Consult your tool's skill documentation for its
+supported locations. Do not copy only `SKILL.md`; its references are part of
+the skill.
 
-### Claude.ai Or Claude API
-
-Package `goa-service-designer/` as a custom skill using the workflow described in
-Anthropic's Agent Skills docs. The ZIP should contain the skill directory, with
-`SKILL.md` inside that directory.
-
-### Generic Setup
-
-Install the whole `goa-service-designer/` directory as a skill. If your tool only
-supports persistent instructions, reference `goa-service-designer/SKILL.md` from
-those instructions.
+See the [coding-agent workflow](https://goa.design/docs/ai-development/) for
+context selection, generated-code ownership, a complete service/agent example,
+and verification.

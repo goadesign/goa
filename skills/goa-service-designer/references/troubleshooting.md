@@ -15,8 +15,9 @@ field, or error. Common causes:
 - Mismatched security fields.
 - Invalid custom error metadata.
 - Use of filesystem paths such as `goa gen ./design` instead of a Go import path.
+- A Goa CLI or protobuf plugin version that differs from the selected module's requirements.
 
-Fix the design and regenerate. Do not edit generated output.
+Fix the owning design or tooling mismatch and regenerate. Do not edit generated output.
 
 ## Implementation No Longer Compiles
 
@@ -48,13 +49,32 @@ the body unless `Body(...)` says otherwise.
 Inspect:
 
 - `Field` numbers.
+- Inherited field numbers from every `Extend` ancestor, including collisions at `100`.
 - Package and version metadata.
 - `GRPC(Message(...))` customizations.
 - Metadata mappings.
 - Generated protobuf output.
 - Generated gRPC transport `types.go`.
+- Required scalar presence versus protobuf collection presence.
+- Whether a default is applied while decoding absent input or incorrectly expected to replace an
+  explicit service zero value.
 
 Fix the design and regenerate. Never patch `.proto` or generated `.pb.go` output directly.
+
+## JSON-RPC Behavior Is Wrong
+
+Check the selected Goa version before applying examples from another release:
+
+- Service-level POST path and method-level `JSONRPC` configuration.
+- Ordinary request versus explicit `Notification()`.
+- Request ID location and generated parameter representation.
+- Designed error code and generated error `data` shape.
+- Explicit `ServerSentEvents()` for a streaming result.
+- Combinations rejected by Goa v3.31 and later, such as JSON-RPC client streams or `Result` plus
+  `StreamingResult`.
+
+Use the generated client/server contract and the selected release's upgrade notes. Do not repair
+protocol drift with handwritten envelopes in service code.
 
 ## Interceptors Behave In The Wrong Order
 
