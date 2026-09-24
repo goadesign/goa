@@ -1,0 +1,4 @@
+target[0] := make([]string, len(source[0]))
+for i, val := range source[0] {
+	target[0][i] = val
+}
