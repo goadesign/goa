@@ -263,8 +263,15 @@ func TestInvokerPreservesLocalErrors(t *testing.T) {
 // The handler controls protobuf replies; all client conversion code is generated.
 func newCatalogClient(t *testing.T, handler grpc.StreamHandler, options ...grpc.DialOption) *genclient.Client {
 	t.Helper()
-	listener := bufconn.Listen(1 << 20)
 	server := grpc.NewServer(grpc.UnknownServiceHandler(handler))
+	return connectCatalogClient(t, server, options...)
+}
+
+// connectCatalogClient runs the supplied server over an in-memory connection
+// and closes both peers when the test finishes.
+func connectCatalogClient(t *testing.T, server *grpc.Server, options ...grpc.DialOption) *genclient.Client {
+	t.Helper()
+	listener := bufconn.Listen(1 << 20)
 	done := make(chan error, 1)
 	go func() {
 		done <- server.Serve(listener)

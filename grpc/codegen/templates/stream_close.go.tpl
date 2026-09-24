@@ -23,7 +23,7 @@ func (s *{{ .Declaration.Name }}) Close() error {
 			{{- end }}
 		{{- end }}
 		case *goapb.ErrorResponse:
-			return goagrpc.NewServiceError(message)
+			return goagrpc.NewServiceErrorWithCause(err, message)
 		default:
 			if ctxErr := goagrpc.ContextError(s.ctx, err); ctxErr != nil {
 				return ctxErr

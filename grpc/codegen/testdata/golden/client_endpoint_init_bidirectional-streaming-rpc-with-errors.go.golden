@@ -14,7 +14,7 @@ func (c *Client) MethodBidirectionalStreamingRPCWithErrors() goa.Endpoint {
 					resp := goagrpc.DecodeError(err)
 					switch message := resp.(type) {
 					case *goapb.ErrorResponse:
-						return nil, goagrpc.NewServiceError(message)
+						return nil, goagrpc.NewServiceErrorWithCause(err, message)
 					default:
 						if ctxErr := goagrpc.ContextError(ctx, err); ctxErr != nil {
 							return nil, ctxErr

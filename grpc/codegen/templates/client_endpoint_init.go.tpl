@@ -29,7 +29,7 @@ func (c *{{ .ClientStructDeclaration.Name }}) {{ .Method.VarName }}() goa.Endpoi
 						{{- end }}
 					{{- end }}
 					case *goapb.ErrorResponse:
-						return nil, goagrpc.NewServiceError(message)
+						return nil, goagrpc.NewServiceErrorWithCause(err, message)
 					default:
 						if ctxErr := goagrpc.ContextError(ctx, err); ctxErr != nil {
 							return nil, ctxErr
@@ -48,7 +48,7 @@ func (c *{{ .ClientStructDeclaration.Name }}) {{ .Method.VarName }}() goa.Endpoi
 					{{- end }}
 					resp := goagrpc.DecodeError(err)
 					if eresp, ok := resp.(*goapb.ErrorResponse); ok {
-						return nil, goagrpc.NewServiceError(eresp)
+						return nil, goagrpc.NewServiceErrorWithCause(err, eresp)
 					}
 					if ctxErr := goagrpc.ContextError(ctx, err); ctxErr != nil {
 						return nil, ctxErr

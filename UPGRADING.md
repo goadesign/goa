@@ -4,6 +4,43 @@ Goa, the examples, and the plugins require **Go 1.26 or later**. Go 1.27.1 is
 recommended. Upgrade the Go toolchain before updating these modules: the new
 dependency versions require Go 1.26.
 
+## Unreleased: generic gRPC errors retain their cause
+
+Regenerated clients decode a generic protobuf `ErrorResponse` into the same
+`*goa.ServiceError` as before, preserving its Name, ID, Message, Timeout,
+Temporary, and Fault fields, including empty values. The error now unwraps to
+the original RPC error. For example, a server-side `Canceled` or
+`DeadlineExceeded` status remains inspectable with `status.Code(err)` even
+while the caller's context is active.
+
+Direct `*goa.ServiceError` assertions and its error text remain unchanged.
+`errors.Is` and `errors.As` can additionally inspect the original cause.
+`status.FromError` retains its code and ordered protobuf details, including
+unknown detail types and malformed later details, but uses the outer service
+error's text as its status message, as it does for other wrapped errors. The
+first detail still determines decoding; this does not reconstruct additional
+service error fields or change declared custom error constructors.
+
+Receiving a cancellation status does not itself add `context.Canceled` or
+`context.DeadlineExceeded` as a cause. Existing caller-context matching remains
+unchanged. If a local interceptor already supplies a context error or multiple
+causes, the decoded service error exposes those existing causes.
+
+An interceptor's existing `Retryable() bool` trait also becomes inspectable.
+An idempotent unary method may therefore retry once even if its received
+`Temporary` field is false. The retry policy already accepts any of a true
+Temporary field, a true retryable trait, or a designed temporary error name;
+false Temporary is not a retry veto. Local codec errors and stream operations
+remain outside that retry policy.
+
+Upgrade the generator and runtime together and regenerate clients to use
+`grpc.NewServiceErrorWithCause(original, response)`. Both arguments are
+required; the existing `grpc.NewServiceError(response)` API is unchanged.
+The change applies only where generated clients already convert generic
+details during unary calls, stream opening, receive, or completion. Raw stream
+errors, EOF, sends, half-closes, and header handling are unchanged. There is no
+wire or data migration, and independently deployed servers need no update.
+
 ## Already using v3.31.1?
 
 v3.32.0 fixes missing client-interceptor imports in generated HTTP, gRPC, and
