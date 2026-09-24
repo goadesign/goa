@@ -36,7 +36,7 @@ func (s *{{ .Declaration.Name }}) {{ .RecvName }}() ({{ .RecvRef }}, error) {
 			{{- end }}
 		{{- end }}
 		case *goapb.ErrorResponse:
-			return res, goagrpc.NewServiceError(message)
+			return res, goagrpc.NewServiceErrorWithCause(err, message)
 		default:
 			if ctxErr := goagrpc.ContextError(s.ctx, err); ctxErr != nil {
 				return res, ctxErr

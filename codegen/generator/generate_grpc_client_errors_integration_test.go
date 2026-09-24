@@ -199,5 +199,30 @@ func grpcClientErrorsDSL() {
 				d.Response("denied", d.CodePermissionDenied)
 			})
 		})
+		d.Method("WatchRaw", func() {
+			d.Payload(selection)
+			d.StreamingResult(entry)
+			d.GRPC(func() {})
+		})
+		d.Method("CollectRaw", func() {
+			d.StreamingPayload(entry)
+			d.GRPC(func() {})
+		})
+		for _, method := range []struct {
+			name string
+			code int
+		}{
+			{"DeniedCanceled", d.CodeCanceled},
+			{"DeniedDeadline", d.CodeDeadlineExceeded},
+		} {
+			d.Method(method.name, func() {
+				d.Payload(selection)
+				d.Result(entry)
+				d.Error("denied", denied)
+				d.GRPC(func() {
+					d.Response("denied", method.code)
+				})
+			})
+		}
 	})
 }

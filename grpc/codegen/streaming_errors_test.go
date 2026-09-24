@@ -91,7 +91,7 @@ func TestClientStreamingContextErrorCodegen(t *testing.T) {
 	require.NotEmpty(t, clientFiles)
 
 	recvCode := codegen.SectionsCode(t, clientFiles[0].Section("client-stream-recv"))
-	serviceErrorIndex := strings.Index(recvCode, "goagrpc.NewServiceError(message)")
+	serviceErrorIndex := strings.Index(recvCode, "goagrpc.NewServiceErrorWithCause(err, message)")
 	contextErrorIndex := strings.Index(recvCode, "goagrpc.ContextError(s.ctx, err)")
 	require.NotEqual(t, -1, serviceErrorIndex)
 	require.NotEqual(t, -1, contextErrorIndex)
@@ -110,7 +110,7 @@ func TestClientStreamingContextErrorCodegen(t *testing.T) {
 	closeAndRecvCode := codegen.SectionsCode(t, noResultFiles[0].Section("client-stream-close"))
 	assert.Contains(t, closeAndRecvCode, "s.stream.CloseAndRecv()")
 	assert.NotContains(t, closeAndRecvCode, "goagrpc.DecodeError(err)")
-	assert.NotContains(t, closeAndRecvCode, "goagrpc.NewServiceError(message)")
+	assert.NotContains(t, closeAndRecvCode, "goagrpc.NewServiceErrorWithCause")
 	assert.Contains(t, closeAndRecvCode, "goagrpc.ContextError(s.ctx, err)")
 
 	closeErrorDSL := func() {
