@@ -16,6 +16,7 @@ func TestClientEndpointInit(t *testing.T) {
 		DSL  func()
 	}{
 		{"unary-rpcs", testdata.UnaryRPCsDSL},
+		{"idempotent-rpcs", testdata.IdempotentRPCsDSL},
 		{"unary-rpc-no-payload", testdata.UnaryRPCNoPayloadDSL},
 		{"unary-rpc-no-result", testdata.UnaryRPCNoResultDSL},
 		{"unary-rpc-with-errors", testdata.UnaryRPCWithErrorsDSL},
