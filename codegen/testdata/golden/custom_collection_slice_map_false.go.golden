@@ -1,0 +1,6 @@
+target[0] := make(map[string]string, len(source[0]))
+for key, val := range source[0] {
+	tk := key
+	tv := val
+	target[0][tk] = tv
+}

@@ -408,7 +408,7 @@ func newTransformPlan(source, target *expr.AttributeExpr, prefix string, program
 		return !plan.changed()
 	})
 	plan.hooks = retainedHooks
-	err := planTransformOperation(source, target, true, true, TransformHelperDefinitionLocation{}, plan.operations[0], make(map[transformPair]TransformHelperID), plan)
+	err := planTransformOperationWithHelper(source, target, true, true, false, false, TransformHelperDefinitionLocation{}, plan.operations[0], make(map[transformPair]TransformHelperID), plan)
 	if structuralChoices != nil && structuralChoices.mutationErr != nil {
 		return nil, structuralChoices.mutationErr
 	}
@@ -844,7 +844,8 @@ func TransformAttribute(source, target *expr.AttributeExpr, sourceVar, targetVar
 }
 
 // TransformHelperName returns the recursive function used to initialize target
-// from source. A TransformPlan calls it only for named object pairs.
+// from source. Built-in renderers use it for named object and collection pairs;
+// custom union renderers may also plan explicit helper calls.
 // GoTransformWithAttrs still chooses its helper name while writing code.
 func TransformHelperName(source, target *expr.AttributeExpr, ta *TransformAttrs) string {
 	if ta.calls != nil {
@@ -879,12 +880,25 @@ func legacyTransformHelperName(source, target *expr.AttributeExpr, ta *Transform
 }
 
 // usesTransformHelper reports whether source and target can define one named
-// helper function signature. Anonymous objects are rendered inline because
-// they have no package-level parameter or result declaration.
-func usesTransformHelper(source, target *expr.AttributeExpr) bool {
+// helper function signature. Named collections use helpers only when their
+// conversion uses the built-in renderer. Custom collection renderers keep
+// their existing inline conversion contract.
+func usesTransformHelper(source, target *expr.AttributeExpr, hooks *TransformHooks) bool {
 	_, sourceNamed := source.Type.(expr.UserType)
 	_, targetNamed := target.Type.(expr.UserType)
-	return sourceNamed && targetNamed && expr.IsObject(source.Type) && expr.IsObject(target.Type)
+	if !sourceNamed || !targetNamed {
+		return false
+	}
+	switch {
+	case expr.IsObject(source.Type) && expr.IsObject(target.Type):
+		return true
+	case expr.IsArray(source.Type) && expr.IsArray(target.Type):
+		return hooks == nil || hooks.TransformArray == nil
+	case expr.IsMap(source.Type) && expr.IsMap(target.Type):
+		return hooks == nil || hooks.TransformMap == nil
+	default:
+		return false
+	}
 }
 
 // transformFunctionDefinitionsEqual reports whether one function can serve
@@ -1090,6 +1104,12 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 				postlude = fmt.Sprintf("%s = &%s\n", tgtVar, unionVar)
 			}
 			switch {
+			case usesTransformHelper(srcc, tgtc, h):
+				assign := "="
+				if dispatchNewVar && !expr.IsObject(srcc.Type) {
+					assign = ":="
+				}
+				code = fmt.Sprintf("%s %s %s(%s)\n", dispatchTgtVar, assign, TransformHelperName(srcc, tgtc, ta), dispatchSrcVar)
 			case expr.IsArray(srcc.Type):
 				if h != nil && h.TransformArray != nil {
 					code, err = h.TransformArray(expr.AsArray(srcc.Type), expr.AsArray(tgtc.Type), dispatchSrcVar, dispatchTgtVar, dispatchNewVar, fieldAttrs)
@@ -1108,8 +1128,6 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 				} else {
 					code, err = transformUnion(srcc, tgtc, dispatchSrcVar, dispatchTgtVar, dispatchNewVar, fieldAttrs)
 				}
-			case usesTransformHelper(srcc, tgtc):
-				code = fmt.Sprintf("%s = %s(%s)\n", dispatchTgtVar, TransformHelperName(srcc, tgtc, ta), dispatchSrcVar)
 			case expr.IsObject(srcc.Type):
 				code, err = TransformAttribute(srcc, tgtc, dispatchSrcVar, dispatchTgtVar, dispatchNewVar, ta)
 			}
@@ -1305,7 +1323,7 @@ func transformArray(source, target *expr.Array, sourceVar, targetVar string, new
 		"LoopVar":           loopVar,
 		"SourceIsObject":    expr.IsObject(source.ElemType.Type),
 		"TargetElemPointer": ta.TargetCtx.IsArrayElementPointer(target),
-		"UseHelper":         usesTransformHelper(source.ElemType, target.ElemType),
+		"UseHelper":         usesTransformHelper(source.ElemType, target.ElemType, ta.Hooks),
 	}
 	var buf bytes.Buffer
 	if err := transformGoArrayT.Execute(&buf, data); err != nil {
@@ -1343,8 +1361,8 @@ func transformMap(source, target *expr.Map, sourceVar, targetVar string, newVar 
 		"TransformAttrs": mapAttrs,
 		"LoopVar":        loopVar,
 		"ElemIsObject":   expr.IsObject(source.ElemType.Type),
-		"UseKeyHelper":   usesTransformHelper(source.KeyType, target.KeyType),
-		"UseElemHelper":  usesTransformHelper(source.ElemType, target.ElemType),
+		"UseKeyHelper":   usesTransformHelper(source.KeyType, target.KeyType, ta.Hooks),
+		"UseElemHelper":  usesTransformHelper(source.ElemType, target.ElemType, ta.Hooks),
 	}
 	var buf bytes.Buffer
 	if err := transformGoMapT.Execute(&buf, data); err != nil {
@@ -1389,17 +1407,14 @@ func transformUnion(source, target *expr.AttributeExpr, sourceVar, targetVar str
 	childAttrs := *ta
 	childAttrs.unionDepth++
 
+	// Consume helper calls during branch emission, after any preceding inline
+	// branch has consumed its children in the planner's traversal order.
 	cases := make([]map[string]any, 0, len(srcUnion.Values))
 	for i, st := range srcUnion.Values {
 		tt := tgtUnion.Values[i]
 		branchAttrs := *ta
 		branchAttrs.SourceCtx = ta.SourceCtx.Enter(st.Attribute)
 		branchAttrs.TargetCtx = ta.TargetCtx.Enter(tt.Attribute)
-		useHelper := usesTransformHelper(st.Attribute, tt.Attribute)
-		helperName := ""
-		if useHelper {
-			helperName = TransformHelperName(st.Attribute, tt.Attribute, &branchAttrs)
-		}
 		cases = append(cases, map[string]any{
 			"CaseName":        st.Name,
 			"SourceFieldName": Goify(st.Name, true),
@@ -1408,8 +1423,8 @@ func transformUnion(source, target *expr.AttributeExpr, sourceVar, targetVar str
 			"TargetAttr":      tt.Attribute,
 			"TargetCastType":  branchAttrs.TargetCtx.Scope.Ref(tt.Attribute, branchAttrs.TargetCtx.Pkg(tt.Attribute)),
 			"SourceNilable":   IsNilable(st.Attribute.Type),
-			"UseHelper":       useHelper,
-			"HelperName":      helperName,
+			"UseHelper":       usesTransformHelper(st.Attribute, tt.Attribute, ta.Hooks),
+			"TransformAttrs":  &branchAttrs,
 		})
 	}
 
@@ -1431,18 +1446,12 @@ func transformUnion(source, target *expr.AttributeExpr, sourceVar, targetVar str
 	return buf.String(), nil
 }
 
-// planTransformOperation records the recursive calls made by the main
-// conversion or one generated function. It reuses a function when that same
-// source and target pair is already being converted.
-func planTransformOperation(source, target *expr.AttributeExpr, required, topLevel bool, location TransformHelperDefinitionLocation, operation *transformOperation, active map[transformPair]TransformHelperID, plan *TransformPlan) error {
-	return planTransformOperationWithHelper(source, target, required, topLevel, false, location, operation, active, plan)
-}
-
 // planTransformOperationWithHelper records one conversion. forceHelper is true
 // when a custom union renderer declares that it calls TransformHelperName for
-// this pair, including named arrays and aliases that the default renderer
-// writes inline.
-func planTransformOperationWithHelper(source, target *expr.AttributeExpr, required, topLevel, forceHelper bool, location TransformHelperDefinitionLocation, operation *transformOperation, active map[transformPair]TransformHelperID, plan *TransformPlan) error {
+// this pair, including aliases that the default renderer writes inline.
+// customCollection means the parent collection's renderer owns this call site:
+// it keeps its existing named-object helpers and inlines collection elements.
+func planTransformOperationWithHelper(source, target *expr.AttributeExpr, required, topLevel, forceHelper, customCollection bool, location TransformHelperDefinitionLocation, operation *transformOperation, active map[transformPair]TransformHelperID, plan *TransformPlan) error {
 	helperSource, helperTarget := source, target
 	if forceHelper {
 		_, sourceNamed := source.Type.(expr.UserType)
@@ -1478,7 +1487,7 @@ func planTransformOperationWithHelper(source, target *expr.AttributeExpr, requir
 	}
 	if topLevel {
 		required = true
-	} else if forceHelper || usesTransformHelper(source, target) {
+	} else if forceHelper || usesTransformHelper(source, target, plan.hooks) && (!customCollection || expr.IsObject(source.Type)) {
 		pair := transformPair{
 			source: source.Type,
 			target: target.Type,
@@ -1627,8 +1636,11 @@ func transformUnionHelperBranch(source, target *expr.Union, sourceBranch, target
 // planTransformChildren walks child transformations in the same order as the
 // core templates consume helper names.
 func planTransformChildren(source, target *expr.AttributeExpr, required bool, location TransformHelperDefinitionLocation, operation *transformOperation, active map[transformPair]TransformHelperID, plan *TransformPlan) error {
+	customCollection := plan.hooks != nil &&
+		(expr.IsArray(source.Type) && plan.hooks.TransformArray != nil ||
+			expr.IsMap(source.Type) && plan.hooks.TransformMap != nil)
 	collect := func(source, target *expr.AttributeExpr, childRequired bool, top bool, childLocation TransformHelperDefinitionLocation) error {
-		return planTransformOperation(source, target, childRequired, top, childLocation, operation, active, plan)
+		return planTransformOperationWithHelper(source, target, childRequired, top, false, customCollection, childLocation, operation, active, plan)
 	}
 	elementTop := plan.hooks != nil && plan.hooks.InlineCompositeElems
 	switch {
@@ -1660,7 +1672,7 @@ func planTransformChildren(source, target *expr.AttributeExpr, required bool, lo
 					planErr = fmt.Errorf("custom union transform helper must use retained authored branch attributes")
 					return
 				}
-				planErr = planTransformOperationWithHelper(sourceBranch, targetBranch, required, false, true, location.unionBranch(branch), operation, active, plan)
+				planErr = planTransformOperationWithHelper(sourceBranch, targetBranch, required, false, true, false, location.unionBranch(branch), operation, active, plan)
 			})
 			return planErr
 		}

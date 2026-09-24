@@ -429,11 +429,25 @@ func sameTransformHelper(left, right *TransformFunctionData) bool {
 }
 
 // MapDepth returns the level of nested maps. For unnested maps, it returns 0.
+// A recursive collection edge ends the current path; the result describes the
+// finite type graph, not the depth of runtime values.
 func MapDepth(m *expr.Map) int {
 	return mapDepth(m.ElemType.Type, 0)
 }
 
 func mapDepth(dt expr.DataType, depth int, seen ...map[expr.DataType]struct{}) int {
+	if expr.IsMap(dt) || expr.IsArray(dt) {
+		if len(seen) == 0 {
+			seen = []map[expr.DataType]struct{}{make(map[expr.DataType]struct{})}
+		}
+		if _, active := seen[0][dt]; active {
+			return depth
+		}
+		// Collection copies can share an origin but have different children.
+		// Only the exact collection on this path closes a recursive edge.
+		seen[0][dt] = struct{}{}
+		defer delete(seen[0], dt)
+	}
 	if mp := expr.AsMap(dt); mp != nil {
 		depth++
 		depth = mapDepth(mp.ElemType.Type, depth, seen...)

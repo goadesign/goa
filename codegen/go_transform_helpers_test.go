@@ -38,9 +38,9 @@ func TestGoTransformHelpers(t *testing.T) {
 		{"deep", deep, []string{"transformCompositeToComposite", "transformSimpleToSimple"}},
 		{"deep-array", deepArray, []string{"transformCompositeToComposite", "transformSimpleToSimple"}},
 		{"simple-alias", simpleAlias, nil},
-		{"nested-map-alias", mapAlias, nil},
-		{"array-map-alias", arrayMapAlias, nil},
-		{"result-type-collection", collection, []string{"transformResultTypeToResultType"}},
+		{"nested-map-alias", mapAlias, []string{"transformMapAliasToMapAlias"}},
+		{"array-map-alias", arrayMapAlias, []string{"transformMapWithArrayAliasToMapWithArrayAlias", "transformFloat32ArrayAliasToFloat32ArrayAlias"}},
+		{"result-type-collection", collection, []string{"transformResultTypeCollectionToResultTypeCollection", "transformResultTypeToResultType"}},
 	}
 	for _, c := range tc {
 		t.Run(c.Name, func(t *testing.T) {
