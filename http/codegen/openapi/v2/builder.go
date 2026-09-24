@@ -703,12 +703,7 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 		if key == "" {
 			key = "/"
 		}
-		bp := expr.HTTPWildcardRegex.ReplaceAllStringFunc(
-			basePath,
-			func(w string) string {
-				return fmt.Sprintf("{%s}", w[1:])
-			},
-		)
+		bp := expr.HTTPWildcardRegex.ReplaceAllString(basePath, "{$1}")
 		if bp != "/" {
 			key = strings.TrimPrefix(key, bp)
 		}
