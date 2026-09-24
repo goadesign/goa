@@ -431,9 +431,17 @@ example, identical recursive values reached through a direct field and a map
 value may share one function even though their generated layouts must first be
 resolved at two different paths.
 
-Array elements and map values that are named objects use planned conversion
-helpers in gRPC as well as HTTP. A recursive collection calls the helper already
-being planned instead of expanding the same object again. When a transport
+Named objects use planned conversion helpers in gRPC as well as HTTP. Built-in
+conversion also uses a helper when both sides are named maps or both sides are
+named arrays. The root conversion and each helper body expand once; a recursive
+call reuses the helper for the exact source and target type pair already being
+planned. Copies with the same authored origin still keep their own occurrences,
+and sharing a function still requires complete definition and Go layout
+equivalence. This terminates planning for recursive type graphs; it does not
+detect cycles in runtime values.
+
+Custom array and map renderers retain their existing inline collection calls
+and named-object helper rules, including `InlineCompositeElems`. When a transport
 stores a collection in a wrapper message, the transform plan retains the chosen
 wrapper field at every location, including nested collections. Helper type
 lookup follows those saved fields, so function sharing compares the actual

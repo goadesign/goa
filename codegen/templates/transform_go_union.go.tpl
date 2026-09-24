@@ -8,14 +8,14 @@ case {{ printf "%q" .CaseName }}:
 	var {{ $.TempVarName }} {{ .TargetCastType }}
 	if actual != nil {
 	{{- if .UseHelper }}
-		{{ $.TempVarName }} = {{ .HelperName }}(actual)
+		{{ $.TempVarName }} = {{ transformHelperName .SourceAttr .TargetAttr .TransformAttrs }}(actual)
 	{{- else }}
 		{{ transformAttribute .SourceAttr .TargetAttr "actual" $.TempVarName false $.TransformAttrs -}}
 	{{- end }}
 	}
 	{{- else }}
 	{{- if .UseHelper }}
-	{{ $.TempVarName }} := {{ .HelperName }}(actual)
+	{{ $.TempVarName }} := {{ transformHelperName .SourceAttr .TargetAttr .TransformAttrs }}(actual)
 	{{- else }}
 	{{ transformAttribute .SourceAttr .TargetAttr "actual" $.TempVarName true $.TransformAttrs -}}
 	{{- end }}
