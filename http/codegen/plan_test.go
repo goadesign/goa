@@ -557,6 +557,36 @@ func TestHTTPFilePlansIncludeGeneratedUses(t *testing.T) {
 		require.Contains(t, serverImports, "strconv")
 	})
 
+	t.Run("response body collection", func(t *testing.T) {
+		root := expr.RunDSL(t, func() {
+			item := dsl.Type("Item", func() {
+				dsl.Attribute("id", dsl.String)
+				dsl.Attribute("name", dsl.String)
+				dsl.Required("id", "name")
+			})
+			dsl.Service("Catalog", func() {
+				dsl.Method("List", func() {
+					dsl.Result(func() {
+						dsl.Attribute("items", dsl.ArrayOf(item))
+						dsl.Required("items")
+					})
+					dsl.HTTP(func() {
+						dsl.GET("/items")
+						dsl.Response(dsl.StatusOK, func() {
+							dsl.Body("items")
+						})
+					})
+				})
+			})
+		})
+		plan := linkedHTTPPlanForRoot(t, root)
+		// The body is a collection rather than a named type, so the client
+		// checks each decoded element next to the decoded value instead of
+		// calling one validator function named for the body.
+		clientImports := plannedHTTPFileImports(t, plan.ClientFiles(), "/client/encode_decode.go")
+		require.Contains(t, clientImports, codegen.GoaImport("").Path)
+	})
+
 	t.Run("built-in error constructor", func(t *testing.T) {
 		root := expr.RunDSL(t, func() {
 			dsl.Service("Records", func() {
