@@ -40,6 +40,60 @@ func TestNewV2WithValues(t *testing.T) {
 	require.Equal(t, "Original method description", method.Description)
 }
 
+// TestNewV2APIBasePath checks that API path parameters remain declared while
+// operation paths omit the prefix already stored in basePath.
+func TestNewV2APIBasePath(t *testing.T) {
+	cases := []struct {
+		name   string
+		path   string
+		params []string
+	}{
+		{"whole segment", "/users/{username}", []string{"username"}},
+		{"prefixed segment", "/users/@{username}", []string{"username"}},
+		{"suffixed segment", "/users/{username}.json", []string{"username"}},
+		{"multiple parameters", "/{month}-{day}-{year}", []string{"month", "day", "year"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			root := codegen.RunDSL(t, func() {
+				dsl.API("users", func() {
+					dsl.HTTP(func() {
+						dsl.Path(tc.path)
+						for _, name := range tc.params {
+							dsl.Param(name, dsl.String)
+						}
+					})
+				})
+				dsl.Service("users", func() {
+					dsl.Method("posts", func() {
+						dsl.Payload(func() {
+							for _, name := range tc.params {
+								dsl.Attribute(name, dsl.String)
+							}
+						})
+						dsl.HTTP(func() {
+							dsl.GET("/posts")
+						})
+					})
+				})
+			})
+			spec, err := NewV2(root, root.API.Servers[0].Hosts[0])
+			require.NoError(t, err)
+			require.Equal(t, tc.path, spec.BasePath)
+			require.Len(t, spec.Paths, 1)
+			require.Contains(t, spec.Paths, "/posts")
+
+			operation := spec.Paths["/posts"].(*Path).Get
+			require.Len(t, operation.Parameters, len(tc.params))
+			for i, param := range operation.Parameters {
+				require.Equal(t, tc.params[i], param.Name)
+				require.Equal(t, "path", param.In)
+				require.True(t, param.Required)
+			}
+		})
+	}
+}
+
 func TestBuildPathFromFileServer(t *testing.T) {
 	cases := []struct {
 		path     string

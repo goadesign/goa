@@ -39,6 +39,51 @@ var DuplicateWCRouteDSL = func() {
 	})
 }
 
+var ValidMidSegmentRouteDSL = func() {
+	Service("ValidMidSegmentRoute", func() {
+		HTTP(func() {
+			Path("/user/@{username}")
+		})
+		Method("Method", func() {
+			Payload(func() {
+				Attribute("username", String)
+				Attribute("year", String)
+				Attribute("month", String)
+				Attribute("day", String)
+			})
+			HTTP(func() {
+				POST("/{year}-{month}-{day}")
+			})
+		})
+	})
+}
+
+var MissingMidSegmentRouteParamDSL = func() {
+	Service("MissingMidSegmentRouteParam", func() {
+		Method("Method", func() {
+			Payload(func() {
+				Attribute("year", String)
+			})
+			HTTP(func() {
+				POST("/{year}-{month}-{day}")
+			})
+		})
+	})
+}
+
+var DuplicateMidSegmentWCRouteDSL = func() {
+	Service("DuplicateMidSegmentWCRoute", func() {
+		Method("Method", func() {
+			Payload(func() {
+				Attribute("year", String)
+			})
+			HTTP(func() {
+				POST("/{year}-{year}")
+			})
+		})
+	})
+}
+
 var DisallowResponseBodyHeadDSL = func() {
 	Service("DisallowResponseBody", func() {
 		Method("Method", func() {

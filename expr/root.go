@@ -435,10 +435,10 @@ func serverHostsService(server *ServerExpr, service string) bool {
 // router replacement. Parameter names do not change which requests match.
 func routePatternWithoutParameterNames(routePath string) string {
 	return HTTPWildcardRegex.ReplaceAllStringFunc(routePath, func(wildcard string) string {
-		if strings.HasPrefix(wildcard, "/{*") {
-			return "/{*wildcard}"
+		if strings.HasPrefix(wildcard, "{*") {
+			return "{*wildcard}"
 		}
-		return "/{parameter}"
+		return "{parameter}"
 	})
 }
 

@@ -23,6 +23,8 @@ func TestMuxRegexp(t *testing.T) {
 		{"segment 4", "/a/{b}/c", "/a/{b}/c"},
 		{"wildcard", "/{*a}", "/{a:.*}"},
 		{"wildcard 2", "/a/{*b}", "/a/{b:.*}"},
+		{"prefixed segment", "/user/@{a}", "/user/@{a}"},
+		{"multiple params in one segment", "/{a}-{b}-{c}", "/{a}-{b}-{c}"},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -126,6 +128,41 @@ func TestVars(t *testing.T) {
 			Pattern:  "/users",
 			URL:      "/users",
 			Expected: nil,
+		},
+		{
+			Name:    "prefixed segment",
+			Pattern: "/user/@{username}",
+			URL:     "/user/@alice",
+			Expected: map[string]string{
+				"username": "alice",
+			},
+		},
+		{
+			Name:    "multiple params in one segment",
+			Pattern: "/{month}-{day}-{year}",
+			URL:     "/01-02-2025",
+			Expected: map[string]string{
+				"month": "01",
+				"day":   "02",
+				"year":  "2025",
+			},
+		},
+		{
+			Name:    "suffixed segment",
+			Pattern: "/files/{name}.json",
+			URL:     "/files/report.json",
+			Expected: map[string]string{
+				"name": "report",
+			},
+		},
+		{
+			Name:    "prefixed segment mixed with whole segment",
+			Pattern: "/user/@{username}/posts/{post_id}",
+			URL:     "/user/@alice/posts/456",
+			Expected: map[string]string{
+				"username": "alice",
+				"post_id":  "456",
+			},
 		},
 	}
 
