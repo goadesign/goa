@@ -621,6 +621,29 @@ func TestHTTPFilePlansIncludeGeneratedUses(t *testing.T) {
 		require.Contains(t, serverImports, "strings")
 	})
 
+	t.Run("server-sent event body", func(t *testing.T) {
+		root := expr.RunDSL(t, func() {
+			event := dsl.Type("Event", func() {
+				dsl.Attribute("id", dsl.String)
+				dsl.Required("id")
+			})
+			dsl.Service("Feed", func() {
+				dsl.Method("Watch", func() {
+					dsl.StreamingResult(dsl.ArrayOf(event))
+					dsl.HTTP(func() {
+						dsl.GET("/feed")
+						dsl.ServerSentEvents()
+					})
+				})
+			})
+		})
+		plan := linkedHTTPPlanForRoot(t, root)
+		// The reader checks each decoded event inside the stream file rather
+		// than in the codec that starts the request.
+		streamImports := plannedHTTPFileImports(t, plan.ClientFiles(), "/client/sse.go")
+		require.Contains(t, streamImports, codegen.GoaImport("").Path)
+	})
+
 	t.Run("built-in error constructor", func(t *testing.T) {
 		root := expr.RunDSL(t, func() {
 			dsl.Service("Records", func() {
