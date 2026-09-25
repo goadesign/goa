@@ -198,16 +198,28 @@ func httpCodecValidationImports(service *expr.HTTPServiceExpr, client bool) []*c
 			panic(err) // The callback above cannot return an error.
 		}
 	}
+	addResponseBody := func(body, serviceValue *expr.AttributeExpr) {
+		if body == nil || body.Type == expr.Empty {
+			return
+		}
+		if _, named := body.Type.(expr.UserType); named {
+			// A named body is checked by its own validator function written in
+			// the transport types file.
+			return
+		}
+		add(body, httpClientResponseBodyLayout(body, serviceValue))
+	}
 	for _, endpoint := range service.HTTPEndpoints {
 		if client {
 			for _, response := range endpoint.Responses {
-				if response.Body != nil && response.Body.Type != expr.Empty {
-					if _, named := response.Body.Type.(expr.UserType); !named {
-						add(response.Body, httpClientResponseBodyLayout(response.Body, endpoint.MethodExpr.Result))
-					}
-				}
+				addResponseBody(response.Body, endpoint.MethodExpr.Result)
 				addMapped(response.Headers)
 				addMapped(response.Cookies)
+			}
+			for _, httpError := range endpoint.HTTPErrors {
+				addResponseBody(httpError.Response.Body, endpoint.MethodExpr.Error(httpError.Name).AttributeExpr)
+				addMapped(httpError.Response.Headers)
+				addMapped(httpError.Response.Cookies)
 			}
 			continue
 		}
@@ -687,7 +699,7 @@ func httpCodecUsesGoa(service *expr.HTTPServiceExpr, client bool) bool {
 				attributeHasNonRequiredValidation(policy.attribute.Attribute, make(map[expr.UserType]struct{})) {
 				return true
 			}
-			for _, response := range endpoint.Responses {
+			for _, response := range httpEndpointResponses(endpoint) {
 				if !response.Headers.IsEmpty() || !response.Cookies.IsEmpty() {
 					return true
 				}
@@ -706,6 +718,17 @@ func httpCodecUsesGoa(service *expr.HTTPServiceExpr, client bool) bool {
 		}
 	}
 	return false
+}
+
+// httpEndpointResponses returns every response one codec writes or reads,
+// including the response designed for each of the method errors.
+func httpEndpointResponses(endpoint *expr.HTTPEndpointExpr) []*expr.HTTPResponseExpr {
+	responses := make([]*expr.HTTPResponseExpr, 0, len(endpoint.Responses)+len(endpoint.HTTPErrors))
+	responses = append(responses, endpoint.Responses...)
+	for _, httpError := range endpoint.HTTPErrors {
+		responses = append(responses, httpError.Response)
+	}
+	return responses
 }
 
 // attributeHasNonRequiredValidation reports whether request conversion writes
@@ -782,7 +805,7 @@ func httpCodecUsesStrings(service *expr.HTTPServiceExpr, client bool) bool {
 		if mappedAttributeHasArray(endpoint.Headers) || mappedAttributeHasArray(endpoint.Cookies) {
 			return true
 		}
-		for _, response := range endpoint.Responses {
+		for _, response := range httpEndpointResponses(endpoint) {
 			if mappedAttributeHasArray(response.Headers) || mappedAttributeHasArray(response.Cookies) {
 				return true
 			}
@@ -847,11 +870,12 @@ func httpCodecUsesStrconv(service *expr.HTTPServiceExpr) bool {
 				return true
 			}
 		}
-		attributes := make([]*expr.MappedAttributeExpr, 0, 4+2*len(endpoint.Responses))
+		responses := httpEndpointResponses(endpoint)
+		attributes := make([]*expr.MappedAttributeExpr, 0, 4+2*len(responses))
 		attributes = append(attributes,
 			endpoint.PathParams(), endpoint.QueryParams(), endpoint.Headers, endpoint.Cookies,
 		)
-		for _, response := range endpoint.Responses {
+		for _, response := range responses {
 			attributes = append(attributes, response.Headers, response.Cookies)
 		}
 		for _, attribute := range attributes {
