@@ -203,7 +203,7 @@ func httpCodecValidationImports(service *expr.HTTPServiceExpr, client bool) []*c
 			for _, response := range endpoint.Responses {
 				if response.Body != nil && response.Body.Type != expr.Empty {
 					if _, named := response.Body.Type.(expr.UserType); !named {
-						add(response.Body, codegen.GoLayoutPolicy{ArrayElementPointer: true})
+						add(response.Body, httpClientResponseBodyLayout(response.Body, endpoint.MethodExpr.Result))
 					}
 				}
 				addMapped(response.Headers)
@@ -230,6 +230,26 @@ func httpCodecValidationImports(service *expr.HTTPServiceExpr, client bool) []*c
 		}
 	}
 	return imports
+}
+
+// httpClientResponseBodyLayout returns the pointer rules a client decoder uses
+// for one response body that is not a named user type. A body decoded into
+// generated fields keeps pointers so the generated check can reject a missing
+// value. Every other body is decoded straight into its service form and uses
+// the service field rules. This mirrors the contexts selected by
+// buildResponseBodyType.
+func httpClientResponseBodyLayout(body, serviceValue *expr.AttributeExpr) codegen.GoLayoutPolicy {
+	decodesFields := serviceValue != nil && serviceValue.Type != expr.Empty &&
+		(needInit(body.Type) || needClientResponseInit(serviceValue.Type))
+	if !decodesFields || expr.IsPrimitive(body.Type) {
+		return codegen.GoLayoutPolicy{UseDefault: true, UnionPointer: true, SumType: true}
+	}
+	return codegen.GoLayoutPolicy{
+		Pointer:             true,
+		UnionPointer:        true,
+		ArrayElementPointer: true,
+		SumType:             true,
+	}
 }
 
 // httpCLIPayloadBuilderFixedImports returns the conversion and validation
