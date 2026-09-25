@@ -174,18 +174,17 @@ func httpFixedFileImports(service *expr.HTTPServiceExpr, client bool, kind httpF
 }
 
 // httpCodecValidationImports returns the Go packages used by validation checks
-// written directly into one client or server codec file.
-func httpCodecValidationImports(service *expr.HTTPServiceExpr, client bool) []*codegen.ImportSpec {
+// written directly into one client or server codec file. Response checks use
+// the HTTP body types already prepared for those same decoders.
+func httpCodecValidationImports(
+	service *expr.HTTPServiceExpr,
+	client bool,
+	bodies *shapedBodies,
+) []*codegen.ImportSpec {
 	seen := make(map[string]struct{})
 	var imports []*codegen.ImportSpec
 	add := func(attribute *expr.AttributeExpr, policy codegen.GoLayoutPolicy) {
-		for _, runtimeImport := range codegen.ValidationRuntimeImports(attribute, policy) {
-			if _, ok := seen[runtimeImport.Path]; ok {
-				continue
-			}
-			seen[runtimeImport.Path] = struct{}{}
-			imports = append(imports, codegen.NewImport(runtimeImport.Name, runtimeImport.Path))
-		}
+		imports = appendValidationRuntimeImports(imports, seen, attribute, policy)
 	}
 	addMapped := func(mapped *expr.MappedAttributeExpr) {
 		if mapped == nil || mapped.IsEmpty() {
@@ -201,13 +200,14 @@ func httpCodecValidationImports(service *expr.HTTPServiceExpr, client bool) []*c
 	for _, endpoint := range service.HTTPEndpoints {
 		if client {
 			for _, response := range endpoint.Responses {
-				if response.Body != nil && response.Body.Type != expr.Empty {
-					if _, named := response.Body.Type.(expr.UserType); !named {
-						add(response.Body, codegen.GoLayoutPolicy{ArrayElementPointer: true})
-					}
-				}
+				imports = appendClientResponseBodyImports(imports, seen, bodies.response(response), endpoint.MethodExpr.Result)
 				addMapped(response.Headers)
 				addMapped(response.Cookies)
+			}
+			for _, httpError := range endpoint.HTTPErrors {
+				imports = appendClientResponseBodyImports(imports, seen, bodies.errorResponse(httpError), endpoint.MethodExpr.Error(httpError.Name).AttributeExpr)
+				addMapped(httpError.Response.Headers)
+				addMapped(httpError.Response.Cookies)
 			}
 			continue
 		}
@@ -230,6 +230,74 @@ func httpCodecValidationImports(service *expr.HTTPServiceExpr, client bool) []*c
 		}
 	}
 	return imports
+}
+
+// httpSSEValidationImports returns the Go packages used by the checks a client
+// Server-Sent Events reader writes for each event body it decodes.
+func httpSSEValidationImports(service *expr.HTTPServiceExpr, bodies *shapedBodies) []*codegen.ImportSpec {
+	seen := make(map[string]struct{})
+	var imports []*codegen.ImportSpec
+	for _, endpoint := range httpSSEEndpoints(service) {
+		if !endpoint.MethodExpr.HasMixedResults() {
+			// The reader decodes the body of the ordinary success response.
+			for _, response := range endpoint.Responses {
+				imports = appendClientResponseBodyImports(imports, seen, bodies.response(response), endpoint.MethodExpr.Result)
+			}
+			continue
+		}
+		// A mixed method streams a result of its own, and that result carries
+		// the body written for every event.
+		imports = appendClientResponseBodyImports(imports, seen, bodies.streamingResult(endpoint), endpoint.MethodExpr.StreamingResult)
+	}
+	return imports
+}
+
+// appendClientResponseBodyImports adds the packages used by the check a client
+// writes next to one decoded response body, each package once. The supplied body
+// already has scalar and collection aliases replaced by their underlying types.
+// A remaining named body uses its validator in the transport types file and so
+// names no package here.
+func appendClientResponseBodyImports(imports []*codegen.ImportSpec, seen map[string]struct{}, body, serviceValue *expr.AttributeExpr) []*codegen.ImportSpec {
+	if body == nil || body.Type == expr.Empty {
+		return imports
+	}
+	if _, named := body.Type.(expr.UserType); named {
+		return imports
+	}
+	return appendValidationRuntimeImports(imports, seen, body, httpClientResponseBodyLayout(body, serviceValue))
+}
+
+// appendValidationRuntimeImports adds the packages used by the checks generated
+// for one attribute, skipping every package already recorded in seen.
+func appendValidationRuntimeImports(imports []*codegen.ImportSpec, seen map[string]struct{}, attribute *expr.AttributeExpr, policy codegen.GoLayoutPolicy) []*codegen.ImportSpec {
+	for _, runtimeImport := range codegen.ValidationRuntimeImports(attribute, policy) {
+		if _, ok := seen[runtimeImport.Path]; ok {
+			continue
+		}
+		seen[runtimeImport.Path] = struct{}{}
+		imports = append(imports, codegen.NewImport(runtimeImport.Name, runtimeImport.Path))
+	}
+	return imports
+}
+
+// httpClientResponseBodyLayout returns the pointer rules a client decoder uses
+// for one response body that is not a named user type. A body decoded into
+// generated fields keeps pointers so the generated check can reject a missing
+// value. Every other body is decoded straight into its service form and uses
+// the service field rules. This mirrors the contexts selected by
+// buildResponseBodyType.
+func httpClientResponseBodyLayout(body, serviceValue *expr.AttributeExpr) codegen.GoLayoutPolicy {
+	decodesFields := serviceValue != nil && serviceValue.Type != expr.Empty &&
+		(needInit(body.Type) || needClientResponseInit(serviceValue.Type))
+	if !decodesFields || expr.IsPrimitive(body.Type) {
+		return codegen.GoLayoutPolicy{UseDefault: true, UnionPointer: true, SumType: true}
+	}
+	return codegen.GoLayoutPolicy{
+		Pointer:             true,
+		UnionPointer:        true,
+		ArrayElementPointer: true,
+		SumType:             true,
+	}
 }
 
 // httpCLIPayloadBuilderFixedImports returns the conversion and validation
@@ -667,7 +735,7 @@ func httpCodecUsesGoa(service *expr.HTTPServiceExpr, client bool) bool {
 				attributeHasNonRequiredValidation(policy.attribute.Attribute, make(map[expr.UserType]struct{})) {
 				return true
 			}
-			for _, response := range endpoint.Responses {
+			for _, response := range httpEndpointResponses(endpoint) {
 				if !response.Headers.IsEmpty() || !response.Cookies.IsEmpty() {
 					return true
 				}
@@ -686,6 +754,17 @@ func httpCodecUsesGoa(service *expr.HTTPServiceExpr, client bool) bool {
 		}
 	}
 	return false
+}
+
+// httpEndpointResponses returns every response one codec writes or reads,
+// including the response designed for each of the method errors.
+func httpEndpointResponses(endpoint *expr.HTTPEndpointExpr) []*expr.HTTPResponseExpr {
+	responses := make([]*expr.HTTPResponseExpr, 0, len(endpoint.Responses)+len(endpoint.HTTPErrors))
+	responses = append(responses, endpoint.Responses...)
+	for _, httpError := range endpoint.HTTPErrors {
+		responses = append(responses, httpError.Response)
+	}
+	return responses
 }
 
 // attributeHasNonRequiredValidation reports whether request conversion writes
@@ -762,7 +841,7 @@ func httpCodecUsesStrings(service *expr.HTTPServiceExpr, client bool) bool {
 		if mappedAttributeHasArray(endpoint.Headers) || mappedAttributeHasArray(endpoint.Cookies) {
 			return true
 		}
-		for _, response := range endpoint.Responses {
+		for _, response := range httpEndpointResponses(endpoint) {
 			if mappedAttributeHasArray(response.Headers) || mappedAttributeHasArray(response.Cookies) {
 				return true
 			}
@@ -827,11 +906,12 @@ func httpCodecUsesStrconv(service *expr.HTTPServiceExpr) bool {
 				return true
 			}
 		}
-		attributes := make([]*expr.MappedAttributeExpr, 0, 4+2*len(endpoint.Responses))
+		responses := httpEndpointResponses(endpoint)
+		attributes := make([]*expr.MappedAttributeExpr, 0, 4+2*len(responses))
 		attributes = append(attributes,
 			endpoint.PathParams(), endpoint.QueryParams(), endpoint.Headers, endpoint.Cookies,
 		)
-		for _, response := range endpoint.Responses {
+		for _, response := range responses {
 			attributes = append(attributes, response.Headers, response.Cookies)
 		}
 		for _, attribute := range attributes {
