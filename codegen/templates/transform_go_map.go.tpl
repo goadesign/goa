@@ -3,8 +3,8 @@ for key, val := range {{ .SourceVar }} {
 {{ if .UseKeyHelper -}}
 	tk := {{ transformHelperName .SourceKey .TargetKey .TransformAttrs -}}(key)
 {{ else -}}
-	{{ transformAttribute .SourceKey .TargetKey "key" "tk" true .TransformAttrs }}{{ end -}}
-{{ if .ElemIsObject -}}
+	{{ transformAttribute .SourceKey .TargetKey "key" "tk" true false false .TransformAttrs }}{{ end -}}
+{{ if .ElemIsNilable -}}
 	if val == nil {
 		{{ .TargetVar }}[tk] = nil
 		continue
@@ -13,7 +13,10 @@ for key, val := range {{ .SourceVar }} {
 {{ if .UseElemHelper -}}
 	{{ .TargetVar }}[tk] = {{ transformHelperName .SourceElem .TargetElem .TransformAttrs -}}(val)
 {{ else -}}
-	{{ transformAttribute .SourceElem .TargetElem "val" (printf "tv%s" .LoopVar) true .TransformAttrs -}}
+{{ if .ElemIsUnion -}}
+	var {{ printf "tv%s" .LoopVar }} {{ .ElemTypeRef }}
+{{ end -}}
+	{{ transformAttribute .SourceElem .TargetElem "val" (printf "tv%s" .LoopVar) (not .ElemIsUnion) false false .TransformAttrs -}}
 	{{ .TargetVar }}[tk] = {{ printf "tv%s" .LoopVar -}}
 {{ end -}}
 }

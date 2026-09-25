@@ -328,7 +328,13 @@ effective constraints and named declaration. For a named union, branch checks
 convert the receiver to the retained union declaration that owns its methods,
 using the original reference's pointer form and the linked package name.
 Validation imports include that method owner's package. Nested named values
-still call their bound validators. An incomplete structural layout returns a
+still call their bound validators. A named union stored by value is passed by
+address; a stored pointer is passed directly and checked for nil. These choices
+come from the containing field, collection, or branch result, independently of
+pointer fields inside the union's selected object. Required named-union value
+fields also retain their method owner's declaration for the presence check.
+That check imports the owner even when no branch needs validation. Required
+pointer fields keep their nil presence check. An incomplete structural layout returns a
 planning error before required-field rules are built; it cannot become a partially
 validated value. Primitive alias rules and the ordinary named reference remain
 unchanged.
@@ -430,6 +436,29 @@ then renders the conversion. Planning and rendering therefore use the same
 function declarations and final package qualifiers. `GoTransformWithAttrs`
 keeps its released interface, but now performs these same steps internally and
 returns the released helper data after rendering once.
+
+Collection allocations use their generated type definitions. A union element
+is a value in an array or map even though a standalone union parameter uses a
+pointer. Object elements retain their pointers, and required primitive JSON
+elements retain the pointer policy that distinguishes null from a zero value.
+Map conversions declare union temporaries with the exact element type;
+validation follows that same element representation.
+Allocation planning stops at named references and reads custom primitive names
+and imports from the final type resolver. It does not expand unrelated named
+fields or replace final import aliases with authored preferences.
+Nested arrays and maps preserve nil elements instead of allocating empty
+collections for them. Required-element validation rejects null where the design
+forbids it; conversion does not replace an invalid null with an empty value.
+
+Named union conversions keep the original input and output Go types. The
+default converter follows the retained named definition chain to find the union
+that owns `Kind`, branch accessors, setters, and branch type names. Only method
+receivers are converted to that underlying union. The caller supplies whether
+each union is stored as a pointer or a value: roots and union branches use
+ordinary references, collection elements use values, and fields use their
+declared pointer policy. Declaring a new destination variable does not choose
+its representation. Collection dispatch still runs the same planned hooks;
+custom union converters, including protobuf conversion, retain their ownership.
 
 Each recursive call is a helper occurrence. `Helpers` returns those occurrences
 with the requiredness that decides whether the generated caller checks for nil.

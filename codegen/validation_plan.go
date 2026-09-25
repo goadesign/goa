@@ -101,6 +101,7 @@ type (
 		name      string
 		fieldName string
 		unionKind bool
+		receiver  *GoTypePlan
 	}
 
 	// validationFieldPlan stores one object child and its context path segment.
@@ -137,6 +138,7 @@ type (
 	// validatorCallPlan stores one exact nested validator declaration.
 	validatorCallPlan struct {
 		declaration *NameDeclaration
+		address     bool
 	}
 
 	// validationPlanner performs all expression reads while validation checks and
@@ -150,7 +152,8 @@ type (
 // NewValidationPlan records every check needed for attribute before Goa chooses
 // the final generated names. layout must describe the same attribute and the
 // requested service or view representation. Expanding a nonprimitive named
-// root requires a layout built with GoTypePlanOptions.RetainNamedValue.
+// root or checking presence of a named union value field requires a layout
+// built with GoTypePlanOptions.RetainNamedValue.
 func NewValidationPlan(attribute *expr.AttributeExpr, layout *GoTypePlan, options ValidationPlanOptions) (*ValidationPlan, error) {
 	if attribute == nil {
 		return nil, fmt.Errorf("plan validation: attribute must not be nil")
@@ -165,7 +168,7 @@ func NewValidationPlan(attribute *expr.AttributeExpr, layout *GoTypePlan, option
 		return nil, fmt.Errorf("plan validation: service/view validation requires a sum-type Go layout")
 	}
 	planner := validationPlanner{bind: options.Bind}
-	root, err := planner.plan(attribute, layout, options.Required, options.Alias, false, "root")
+	root, err := planner.plan(attribute, layout, options.Required, options.Alias, false, layout.ReferenceIsPointer(), "root")
 	if err != nil {
 		return nil, err
 	}
@@ -225,13 +228,39 @@ func (p *ValidationPlan) ImportPreferences() []GoTypeImport {
 		goa := GoaImport("")
 		add(GoTypeImport{Name: goa.Name, Path: goa.Path})
 	}
-	// Only root named types expand here; nested named values call their bound
-	// validators. A root union conversion needs its method owner's package.
-	if union := p.root.union; union != nil && union.receiver != nil {
-		for _, preference := range union.receiver.ImportPreferences() {
+	addReceiver := func(receiver *GoTypePlan) {
+		if receiver == nil {
+			return
+		}
+		for _, preference := range receiver.ImportPreferences() {
 			add(preference)
 		}
 	}
+	// A required field can need its union owner's methods even when none of
+	// its branches need validation. Include those receivers at every depth.
+	var addMethodOwners func(*validationPlanNode)
+	addMethodOwners = func(node *validationPlanNode) {
+		for _, required := range node.rules.required {
+			addReceiver(required.receiver)
+		}
+		for _, field := range node.fields {
+			addMethodOwners(field.node)
+		}
+		if node.array != nil {
+			addMethodOwners(node.array.element)
+		}
+		if node.mapValue != nil {
+			addMethodOwners(node.mapValue.key)
+			addMethodOwners(node.mapValue.value)
+		}
+		if node.union != nil {
+			addReceiver(node.union.receiver)
+			for _, branch := range node.union.cases {
+				addMethodOwners(branch.node)
+			}
+		}
+	}
+	addMethodOwners(p.root)
 	for _, declaration := range p.declarations {
 		owner := declaration.packagePath()
 		add(GoTypeImport{
@@ -290,7 +319,9 @@ func (p LinkedValidationPlan) Imports() []GoTypeImport {
 
 // plan copies one recursive operation. nested distinguishes a user-type field
 // call from a root definition whose anonymous layout is expanded in place.
-func (p *validationPlanner) plan(attribute *expr.AttributeExpr, layout *GoTypePlan, required, alias, nested bool, path string) (*validationPlanNode, error) {
+// valuePointer describes the stored value, independently of pointer fields
+// inside it and the parameter type required by its validator.
+func (p *validationPlanner) plan(attribute *expr.AttributeExpr, layout *GoTypePlan, required, alias, nested, valuePointer bool, path string) (*validationPlanNode, error) {
 	if !layout.MatchesOccurrence(attribute) {
 		return nil, fmt.Errorf("plan validation for %s: Go type layout occurrence does not match", path)
 	}
@@ -323,7 +354,11 @@ func (p *validationPlanner) plan(attribute *expr.AttributeExpr, layout *GoTypePl
 		return &validationPlanNode{
 			occurrence: attribute,
 			layout:     layout,
-			call:       &validatorCallPlan{declaration: declaration},
+			guard:      valuePointer || !layout.ReferenceIsPointer() && layout.ReferenceCanBeNil(),
+			call: &validatorCallPlan{
+				declaration: declaration,
+				address:     layout.ReferenceIsPointer() && !valuePointer,
+			},
 		}, nil
 	}
 
@@ -349,6 +384,7 @@ func (p *validationPlanner) plan(attribute *expr.AttributeExpr, layout *GoTypePl
 				attribute.IsRequired(field.Name),
 				expr.IsAlias(field.Attribute.Type),
 				true,
+				fields[index].IsPointer(),
 				fmt.Sprintf("field %q", field.Name),
 			)
 			if err != nil {
@@ -370,7 +406,7 @@ func (p *validationPlanner) plan(attribute *expr.AttributeExpr, layout *GoTypePl
 			childPolicy.Pointer = childLayout.definitionPointer
 		}
 		childLayout = childLayout.withPolicy(childPolicy)
-		child, err := p.plan(array.ElemType, childLayout, true, expr.IsAlias(array.ElemType.Type), true, path+"[*]")
+		child, err := p.plan(array.ElemType, childLayout, true, expr.IsAlias(array.ElemType.Type), true, childLayout.definitionPointer, path+"[*]")
 		if err != nil {
 			return nil, err
 		}
@@ -384,18 +420,22 @@ func (p *validationPlanner) plan(attribute *expr.AttributeExpr, layout *GoTypePl
 		}
 	case expr.IsMap(attribute.Type):
 		mapping := expr.AsMap(attribute.Type)
-		childPolicy := policy
-		childPolicy.Pointer = false
+		keyPolicy := policy
+		keyPolicy.Pointer = false
 		keyLayout := structure.Key()
 		valueLayout := structure.Elem()
 		if keyLayout == nil || valueLayout == nil {
 			return nil, fmt.Errorf("plan validation for %s: map layout is incomplete", path)
 		}
-		key, err := p.plan(mapping.KeyType, keyLayout.withPolicy(childPolicy), true, expr.IsAlias(mapping.KeyType.Type), true, path+".key")
+		key, err := p.plan(mapping.KeyType, keyLayout.withPolicy(keyPolicy), true, expr.IsAlias(mapping.KeyType.Type), true, keyLayout.definitionPointer, path+".key")
 		if err != nil {
 			return nil, err
 		}
-		value, err := p.plan(mapping.ElemType, valueLayout.withPolicy(childPolicy), true, expr.IsAlias(mapping.ElemType.Type), true, path+"[key]")
+		valuePolicy := policy
+		if expr.IsPrimitive(mapping.ElemType.Type) {
+			valuePolicy.Pointer = false
+		}
+		value, err := p.plan(mapping.ElemType, valueLayout.withPolicy(valuePolicy), true, expr.IsAlias(mapping.ElemType.Type), true, valueLayout.definitionPointer, path+"[key]")
 		if err != nil {
 			return nil, err
 		}
@@ -418,6 +458,7 @@ func (p *validationPlanner) plan(attribute *expr.AttributeExpr, layout *GoTypePl
 				true,
 				expr.IsAlias(branch.Attribute.Type),
 				true,
+				branches[index].ReferenceIsPointer(),
 				fmt.Sprintf("union branch %q", branch.Name),
 			)
 			if err != nil {
@@ -443,18 +484,26 @@ func (p *validationPlanner) plan(attribute *expr.AttributeExpr, layout *GoTypePl
 	}
 	// Required-field rules index the structural fields checked above. Keep
 	// effective constraints on the original occurrence and its named chain.
-	node.rules = planValidationRules(attribute, structure, required, alias)
+	var err error
+	node.rules, err = planValidationRules(attribute, structure, required, alias)
+	if err != nil {
+		return nil, fmt.Errorf("plan validation for %s: %w", path, err)
+	}
 	if nested && !node.empty() {
 		node.guard = validationNeedsNilGuard(attribute, required, policy)
+		if expr.IsUnion(attribute.Type) {
+			node.guard = valuePointer
+		}
 	}
 	return node, nil
 }
 
-// planValidationRules copies every local effective validation rule.
-func planValidationRules(attribute *expr.AttributeExpr, layout *GoTypePlan, required, alias bool) validationRulePlan {
+// planValidationRules copies local rules and the method owner needed by each
+// required union field. A missing retained named union returns an error.
+func planValidationRules(attribute *expr.AttributeExpr, layout *GoTypePlan, required, alias bool) (validationRulePlan, error) {
 	validation := expr.EffectiveValidation(attribute)
 	if validation == nil {
-		return validationRulePlan{}
+		return validationRulePlan{}, nil
 	}
 	policy := layout.Policy()
 	unaliased := unalias(attribute.Type)
@@ -490,22 +539,33 @@ func planValidationRules(attribute *expr.AttributeExpr, layout *GoTypePlan, requ
 	object := expr.AsObject(attribute.Type)
 	fields := layout.Fields()
 	for _, name := range generatedRequiredValidationNames(attribute, validation, policy) {
-		var fieldName string
+		var fieldLayout *GoTypePlan
 		for index, field := range *object {
 			if field.Name == name {
-				fieldName = fields[index].FieldName(true)
+				fieldLayout = fields[index]
 				break
 			}
 		}
 		requiredAttribute := object.Attribute(name)
-		rules.required = append(rules.required, validationRequiredPlan{
+		check := validationRequiredPlan{
 			name:      name,
-			fieldName: fieldName,
+			fieldName: fieldLayout.FieldName(true),
 			unionKind: expr.IsUnion(requiredAttribute.Type) &&
-				policy.SumType && !(policy.UnionPointer && policy.Pointer),
-		})
+				policy.SumType && !fieldLayout.IsPointer(),
+		}
+		if check.unionKind && fieldLayout.kind == GoNamed {
+			receiver := fieldLayout
+			for receiver.kind == GoNamed && receiver.value != nil {
+				receiver = receiver.value
+			}
+			if receiver.kind != GoUnion {
+				return validationRulePlan{}, fmt.Errorf("required field %q: named union layout does not retain its union definition", name)
+			}
+			check.receiver = receiver
+		}
+		rules.required = append(rules.required, check)
 	}
-	return rules
+	return rules, nil
 }
 
 // generatedRequiredValidationNames retains required checks emitted for policy.
@@ -596,10 +656,14 @@ func attributeNeedsValidation(attribute *expr.AttributeExpr, policy GoLayoutPoli
 		return attributeNeedsValidation(array.ElemType, policy, seen)
 	case expr.IsMap(attribute.Type):
 		mapping := expr.AsMap(attribute.Type)
-		mapPolicy := policy
-		mapPolicy.Pointer = false
-		return attributeNeedsValidation(mapping.KeyType, mapPolicy, seen) ||
-			attributeNeedsValidation(mapping.ElemType, mapPolicy, seen)
+		keyPolicy := policy
+		keyPolicy.Pointer = false
+		valuePolicy := policy
+		if expr.IsPrimitive(mapping.ElemType.Type) {
+			valuePolicy.Pointer = false
+		}
+		return attributeNeedsValidation(mapping.KeyType, keyPolicy, seen) ||
+			attributeNeedsValidation(mapping.ElemType, valuePolicy, seen)
 	case expr.IsUnion(attribute.Type):
 		for _, branch := range expr.AsUnion(attribute.Type).Values {
 			branchPolicy := policy
@@ -676,14 +740,21 @@ func isStringDataType(dataType expr.DataType) bool {
 func (p LinkedValidationPlan) renderNode(node *validationPlanNode, target, context string) string {
 	if node.call != nil {
 		name := p.validatorName(node.call.declaration)
+		argument := target
+		if node.call.address {
+			argument = "&" + target
+		}
 		var buffer bytes.Buffer
 		if err := userValT.Execute(&buffer, map[string]any{
-			"call": fmt.Sprintf("%s(%s)", name, target),
+			"call": fmt.Sprintf("%s(%s)", name, argument),
 			"goa":  p.goaPackage(),
 		}); err != nil {
 			panic(err)
 		}
-		return fmt.Sprintf("if %s != nil {\n\t%s\n}", target, buffer.String())
+		if node.guard {
+			return fmt.Sprintf("if %s != nil {\n\t%s\n}", target, buffer.String())
+		}
+		return buffer.String()
 	}
 	var sections []string
 	if local := p.renderValidationRules(node.rules, target, context, !node.guard); local != "" {
@@ -832,9 +903,13 @@ func (p LinkedValidationPlan) renderValidationRules(rules validationRulePlan, ta
 	}
 	for _, required := range rules.required {
 		if required.unionKind {
+			receiver := target + "." + required.fieldName
+			if required.receiver != nil {
+				receiver = fmt.Sprintf("(%s)(%s)", p.layout.Enter(required.receiver).Name(), receiver)
+			}
 			rendered = append(rendered, fmt.Sprintf(
-				"if %s.%s.Kind() == \"\" {\n        err = %s.MergeErrors(err, %s.MissingFieldError(%q, %q))\n}",
-				target, required.fieldName, p.goaPackage(), p.goaPackage(), required.name, context,
+				"if %s.Kind() == \"\" {\n        err = %s.MergeErrors(err, %s.MissingFieldError(%q, %q))\n}",
+				receiver, p.goaPackage(), p.goaPackage(), required.name, context,
 			))
 			continue
 		}

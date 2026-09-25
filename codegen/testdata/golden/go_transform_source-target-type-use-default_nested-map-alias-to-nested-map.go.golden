@@ -4,9 +4,17 @@ func transform() {
 		target.NestedMap = make(map[float64]map[int]map[float64]uint64, len(source.NestedMap))
 		for key, val := range source.NestedMap {
 			tk := float64(key)
+			if val == nil {
+				target.NestedMap[tk] = nil
+				continue
+			}
 			tvc := make(map[int]map[float64]uint64, len(val))
 			for key, val := range val {
 				tk := int(key)
+				if val == nil {
+					tvc[tk] = nil
+					continue
+				}
 				tvb := make(map[float64]uint64, len(val))
 				for key, val := range val {
 					tk := float64(key)

@@ -10,23 +10,23 @@ case {{ printf "%q" .CaseName }}:
 	{{- if .UseHelper }}
 		{{ $.TempVarName }} = {{ transformHelperName .SourceAttr .TargetAttr .TransformAttrs }}(actual)
 	{{- else }}
-		{{ transformAttribute .SourceAttr .TargetAttr "actual" $.TempVarName false $.TransformAttrs -}}
+		{{ transformAttribute .SourceAttr .TargetAttr "actual" $.TempVarName false true true .TransformAttrs -}}
 	{{- end }}
 	}
 	{{- else }}
 	{{- if .UseHelper }}
 	{{ $.TempVarName }} := {{ transformHelperName .SourceAttr .TargetAttr .TransformAttrs }}(actual)
 	{{- else }}
-	{{ transformAttribute .SourceAttr .TargetAttr "actual" $.TempVarName true $.TransformAttrs -}}
+	{{ transformAttribute .SourceAttr .TargetAttr "actual" $.TempVarName true true true .TransformAttrs -}}
 	{{- end }}
 	{{- end }}
-	{{- if $.NewVar }}
+	{{- if $.TargetPointer }}
 	var u {{ $.ValueTypeRef }}
-	u.Set{{ .TargetFieldName }}(({{ .TargetCastType }})({{ $.TempVarName }}))
+	{{ $.TargetReceiver }}.Set{{ .TargetFieldName }}(({{ .TargetCastType }})({{ $.TempVarName }}))
 	{{ $.TargetVar }} = &u
 	{{- else }}
 	u := {{ $.TargetVar }}
-	u.Set{{ .TargetFieldName }}(({{ .TargetCastType }})({{ $.TempVarName }}))
+	{{ $.TargetReceiver }}.Set{{ .TargetFieldName }}(({{ .TargetCastType }})({{ $.TempVarName }}))
 	{{ $.TargetVar }} = u
 	{{- end }}
 {{- end }}
