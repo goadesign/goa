@@ -321,6 +321,27 @@ remain separate so later transforms can find the fields from either copy. The
 only child layout shared while planning is an active recursive reference, which
 stops a type that refers to itself from expanding forever.
 
+Validation that expands a nonprimitive named root requires a layout planned
+with `RetainNamedValue`. The planner follows that retained structure to read
+fields, elements and union branches, while keeping the original occurrence's
+effective constraints and named declaration. For a named union, branch checks
+convert the receiver to the retained union declaration that owns its methods,
+using the original reference's pointer form and the linked package name.
+Validation imports include that method owner's package. Nested named values
+still call their bound validators. An incomplete structural layout returns a
+planning error before required-field rules are built; it cannot become a partially
+validated value. Primitive alias rules and the ordinary named reference remain
+unchanged.
+
+Object conversion matches fields from the underlying defining object. After
+DSL evaluation, a named layer can retain additional value constraints without
+changing the pointer form of fields in the Go struct it is based on. DSL
+evaluation can already have added `Required` to the immediate named definition:
+a two-level chain may therefore have a required string value where a longer
+chain retains a string pointer with an effective required check. Conversion
+keeps the original named source and target for declarations and constructors
+while using that defining object for requiredness, defaults and field-name mapping.
+
 Plugins that write a named type call `DeclareGeneratedType` to reserve its Go
 name, then call `BindGeneratedType` for every user type expression that must
 refer to that declaration. The binding follows `UserType.Origin()`, so copies

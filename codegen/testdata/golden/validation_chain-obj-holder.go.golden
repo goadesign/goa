@@ -1,4 +1,7 @@
 func Validate() (err error) {
+	if target.Tag == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("tag", "target"))
+	}
 	err = goa.MergeErrors(err, goa.ValidatePattern("target.name", target.Name, "^[a-z]+$"))
 	if utf8.RuneCountInString(target.Name) < 2 {
 		err = goa.MergeErrors(err, goa.InvalidLengthError("target.name", target.Name, utf8.RuneCountInString(target.Name), 2, true))
