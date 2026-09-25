@@ -4,6 +4,10 @@ func transform() {
 		target.ArrayMap = make(map[uint32]Float32ArrayAlias, len(source.ArrayMap))
 		for key, val := range source.ArrayMap {
 			tk := key
+			if val == nil {
+				target.ArrayMap[tk] = nil
+				continue
+			}
 			tv := make([]Float32Alias, len(val))
 			for i, val := range val {
 				tv[i] = Float32Alias(val)

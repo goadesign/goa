@@ -83,22 +83,7 @@ func init() {
 		"oneof":          oneof,
 		"constant":       constant,
 		"validationPath": renderValidationPath,
-		"isUnion": func(att *expr.AttributeExpr) bool {
-			if att == nil {
-				return false
-			}
-			return expr.IsUnion(att.Type)
-		},
-		"isSumType": func(scope Attributor) bool {
-			if scope == nil {
-				return false
-			}
-			return scope.IsSumType()
-		},
-		"isUnionPointer": func(ctx *AttributeContext, required bool) bool {
-			return ctx.IsUnionPointer(required)
-		},
-		"add": func(a, b int) int { return a + b },
+		"add":            func(a, b int) int { return a + b },
 	}
 	enumValT = template.Must(template.New("enum").Funcs(fm).Parse(codegenTemplates.Read(validationEnumT)))
 	formatValT = template.Must(template.New("format").Funcs(fm).Parse(codegenTemplates.Read(validationFormatT)))
@@ -206,7 +191,8 @@ func renderValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *At
 		for _, nat := range *(expr.AsObject(att.Type)) {
 			tgt := fmt.Sprintf("%s.%s", target, attCtx.Scope.Field(nat.Attribute, nat.Name, true))
 			ctx := context.child("." + nat.Name)
-			val := validateAttribute(attCtx, nat.Attribute, put, tgt, ctx, att.IsRequired(nat.Name), view, seen)
+			required := att.IsRequired(nat.Name)
+			val := validateAttribute(attCtx, nat.Attribute, put, tgt, ctx, required, view, attCtx.IsUnionPointer(required), seen)
 			if val != "" {
 				newline()
 				buf.WriteString(val)
@@ -220,7 +206,7 @@ func renderValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *At
 			ctx = attCtx.Dup()
 			ctx.Pointer = attCtx.IsArrayElementPointer(arr)
 		}
-		val := validateAttribute(ctx, elem, put, "e", context.child("[*]"), true, view, seen)
+		val := validateAttribute(ctx, elem, put, "e", context.child("[*]"), true, view, false, seen)
 		nonNullableElems := arr.NonNullableElems &&
 			(IsNilable(elem.Type) || attCtx.IsArrayElementPointer(arr))
 		if val != "" || nonNullableElems {
@@ -240,11 +226,15 @@ func renderValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *At
 		m := expr.AsMap(att.Type)
 		ctx := attCtx.Dup()
 		ctx.Pointer = false
-		keyVal := validateAttribute(ctx, m.KeyType, put, "k", context.child(".key"), true, view, seen)
+		keyVal := validateAttribute(ctx, m.KeyType, put, "k", context.child(".key"), true, view, false, seen)
 		if keyVal != "" {
 			keyVal = "\n" + keyVal
 		}
-		valueVal := validateAttribute(ctx, m.ElemType, put, "v", context.child("[key]"), true, view, seen)
+		valueCtx := attCtx
+		if expr.IsPrimitive(m.ElemType.Type) {
+			valueCtx = ctx
+		}
+		valueVal := validateAttribute(valueCtx, m.ElemType, put, "v", context.child("[key]"), true, view, false, seen)
 		if valueVal != "" {
 			valueVal = "\n" + valueVal
 		}
@@ -267,7 +257,7 @@ func renderValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *At
 				// only keep pointer semantics when both layers use pointers.
 				unionCtx := attCtx.Dup()
 				unionCtx.Pointer = unionCtx.Pointer && expr.IsObject(v.Attribute.Type)
-				val := validateAttribute(unionCtx, v.Attribute, put, "actual", context.child(".value"), true, view, seen)
+				val := validateAttribute(unionCtx, v.Attribute, put, "actual", context.child(".value"), true, view, true, seen)
 				if val == "" {
 					continue
 				}
@@ -299,7 +289,7 @@ func renderValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *At
 				// Union values in views are never pointers - they are concrete typed values
 				unionCtx := attCtx.Dup()
 				unionCtx.Pointer = false
-				val := validateAttribute(unionCtx, vatt, put, "v", context.child(".value"), true, view, seen)
+				val := validateAttribute(unionCtx, vatt, put, "v", context.child(".value"), true, view, false, seen)
 				if val != "" {
 					cases = append(cases, unionValidationCase{
 						Type:       attCtx.Scope.Ref(vatt, attCtx.Pkg(vatt)),
@@ -315,7 +305,7 @@ func renderValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *At
 					branchCtx = attCtx.Dup()
 					branchCtx.Pointer = false
 				}
-				val := validateAttribute(branchCtx, vatt, put, "v."+fieldName, context.child(".value"), true, view, seen)
+				val := validateAttribute(branchCtx, vatt, put, "v."+fieldName, context.child(".value"), true, view, false, seen)
 				parent := &expr.AttributeExpr{Type: put}
 				tref := attCtx.Scope.Ref(parent, attCtx.Pkg(parent))
 				cases = append(cases, unionValidationCase{
@@ -353,10 +343,17 @@ func protobufUnionPayloadRequiresPresence(att *expr.AttributeExpr) bool {
 	return !expr.IsPrimitive(att.Type) || kind == expr.BytesKind || kind == expr.AnyKind
 }
 
-func validateAttribute(ctx *AttributeContext, att *expr.AttributeExpr, put expr.UserType, target string, context validationPath, req, view bool, seen map[expr.UserType]*bytes.Buffer) string {
+// validateAttribute keeps the union's stored pointer separate from pointer
+// fields inside its selected branch. Named union values are passed by address
+// to their existing validator; only stored pointers receive a nil guard.
+func validateAttribute(ctx *AttributeContext, att *expr.AttributeExpr, put expr.UserType, target string, context validationPath, req, view, unionPointer bool, seen map[expr.UserType]*bytes.Buffer) string {
 	ut, isUT := att.Type.(expr.UserType)
+	unionValue := expr.IsUnion(att.Type) && ctx.Scope.IsSumType() && !unionPointer
 	if !isUT {
 		guard := validationAttributeNeedsNilGuard(att, ctx, req)
+		if expr.IsUnion(att.Type) && ctx.Scope.IsSumType() {
+			guard = unionPointer
+		}
 		code := renderValidationCode(att, put, ctx, req, false, view, target, context, seen, !guard).String()
 		if code == "" {
 			return ""
@@ -393,10 +390,17 @@ func validateAttribute(ctx *AttributeContext, att *expr.AttributeExpr, put expr.
 		return ""
 	}
 	var buf bytes.Buffer
-	call := ctx.Scope.ValidatorCall(att, "", target, renderValidationPath(context))
+	argument := target
+	if unionValue {
+		argument = "&" + target
+	}
+	call := ctx.Scope.ValidatorCall(att, "", argument, renderValidationPath(context))
 	data := map[string]any{"call": call, "goa": "goa"}
 	if err := userValT.Execute(&buf, data); err != nil {
 		panic(err) // bug
+	}
+	if unionValue {
+		return buf.String()
 	}
 	if resolver, ok := ctx.Scope.(nilUserTypeValidationAttributor); ok && resolver.ValidationAcceptsNil(att) {
 		return buf.String()
@@ -554,8 +558,14 @@ func validationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req, alia
 	obj := expr.AsObject(att.Type)
 	for _, r := range reqs {
 		reqAtt := obj.Attribute(r)
+		requiredTarget := target + "." + attCtx.Scope.Field(reqAtt, r, true)
+		unionKind := expr.IsUnion(reqAtt.Type) && attCtx.Scope.IsSumType() && !attCtx.IsUnionPointer(true)
+		if unionKind {
+			requiredTarget = unionMethodReceiver(reqAtt, attCtx, requiredTarget, false)
+		}
 		data["req"] = r
-		data["reqAtt"] = reqAtt
+		data["requiredTarget"] = requiredTarget
+		data["unionKind"] = unionKind
 		res = append(res, runTemplate(requiredValT, data))
 	}
 	return strings.Join(res, "\n")

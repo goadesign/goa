@@ -511,7 +511,7 @@ func TestGoTransformUnionTemporaryUsesNestingDepth(t *testing.T) {
 	require.Contains(t, code, "obj := actual")
 	require.NotContains(t, code, "tmp := actual")
 
-	nested, err := transformUnion(source, target, "source", "target.Selected", false, &TransformAttrs{
+	nested, err := transformUnion(source, target, "source", "target.Selected", false, true, true, &TransformAttrs{
 		SourceCtx:  context,
 		TargetCtx:  context,
 		unionDepth: 1,

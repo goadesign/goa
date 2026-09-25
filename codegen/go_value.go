@@ -83,13 +83,14 @@ func RenderGoValue(attribute *expr.AttributeExpr, value any, layout LinkedGoType
 }
 
 // planGoTypeWithAttributor records the final names selected by an attribute
-// scope. Pointer choices still come only from GoTypePlan.
-func planGoTypeWithAttributor(attribute *expr.AttributeExpr, policy GoLayoutPolicy, attributor Attributor) (LinkedGoType, error) {
+// scope. Pointer choices still come only from GoTypePlan. Value construction
+// retains named fields; collection allocation needs only named references.
+func planGoTypeWithAttributor(attribute *expr.AttributeExpr, policy GoLayoutPolicy, attributor Attributor, retainNamedValue bool) (LinkedGoType, error) {
 	const owner = "goa.local/generated"
 	plan, err := PlanGoType(attribute, GoTypePlanOptions{
 		Owner:            owner,
 		Policy:           policy,
-		RetainNamedValue: true,
+		RetainNamedValue: retainNamedValue,
 		Bind: func(request GoTypeBindingRequest) (GoTypeBinding, error) {
 			return GoTypeBinding{
 				Owner: request.InheritedOwner,
@@ -106,8 +107,41 @@ func planGoTypeWithAttributor(attribute *expr.AttributeExpr, policy GoLayoutPoli
 		return LinkedGoType{}, err
 	}
 	imports := make(map[string]string)
-	for _, preference := range plan.ImportPreferences() {
-		imports[preference.Path] = preference.Name
+	var importErr error
+	plan.walk(func(child *GoTypePlan) {
+		if importErr != nil {
+			return
+		}
+		if child.kind == GoPrimitive || child.kind == GoServiceError {
+			child.fixedName = attributor.Name(
+				child.occurrence,
+				attributor.Package(child.occurrence),
+				policy.Pointer,
+				policy.UseDefault,
+			)
+		}
+		if !child.hasDirectImport {
+			return
+		}
+		// AttributeScope builds layouts here, so use its frozen names
+		// directly. Other layout providers retain their own import binding;
+		// ask only for this leaf to avoid expanding unrelated named fields.
+		resolver, hasLayout := attributor.(GoTypeLayoutResolver)
+		_, attributeScope := attributor.(*AttributeScope)
+		if hasLayout && !attributeScope {
+			linked, err := resolver.GoTypeLayout(child.occurrence, policy)
+			if err != nil {
+				importErr = err
+				return
+			}
+			imports[child.directImport.Path] = linked.Package()
+			return
+		}
+		spec := NewImport(child.directImport.Name, child.directImport.Path)
+		imports[spec.Path] = attributor.Scope().importName(spec.Path, spec.preferredName())
+	})
+	if importErr != nil {
+		return LinkedGoType{}, importErr
 	}
 	return plan.Link(owner, func(importPath string) string {
 		return imports[importPath]

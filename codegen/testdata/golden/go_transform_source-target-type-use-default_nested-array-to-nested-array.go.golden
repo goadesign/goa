@@ -3,8 +3,16 @@ func transform() {
 	if source.NestedArray != nil {
 		target.NestedArray = make([][][]float64, len(source.NestedArray))
 		for i, val := range source.NestedArray {
+			if val == nil {
+				target.NestedArray[i] = nil
+				continue
+			}
 			target.NestedArray[i] = make([][]float64, len(val))
 			for j, val := range val {
+				if val == nil {
+					target.NestedArray[i][j] = nil
+					continue
+				}
 				target.NestedArray[i][j] = make([]float64, len(val))
 				for k, val := range val {
 					target.NestedArray[i][j][k] = val

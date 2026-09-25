@@ -10,7 +10,6 @@ import (
 	"go/parser"
 	"reflect"
 	"slices"
-	"strconv"
 	"strings"
 	"text/template"
 
@@ -59,7 +58,7 @@ var transformGoArrayT, transformGoMapT, transformGoUnionT *template.Template
 // NOTE: can't initialize inline because https://github.com/golang/go/issues/1817
 func init() {
 	fm := template.FuncMap{
-		"transformAttribute":  TransformAttribute,
+		"transformAttribute":  transformAttribute,
 		"transformHelperName": TransformHelperName,
 	}
 	transformGoArrayT = template.Must(template.New("transformGoArray").Funcs(fm).Parse(codegenTemplates.Read(transformGoArrayTmplName)))
@@ -145,7 +144,7 @@ func (a *transformCopyAttributor) UnionConstructor(attribute *expr.AttributeExpr
 func (a *transformCopyAttributor) GoTypeLayout(attribute *expr.AttributeExpr, policy GoLayoutPolicy) (LinkedGoType, error) {
 	resolver, ok := a.attributor.(GoTypeLayoutResolver)
 	if !ok {
-		return planGoTypeWithAttributor(a.original(attribute), policy, a.attributor)
+		return planGoTypeWithAttributor(a.original(attribute), policy, a.attributor, true)
 	}
 	return resolver.GoTypeLayout(a.original(attribute), policy)
 }
@@ -779,8 +778,16 @@ func transformDataTypesEqual(left, right expr.DataType, seen map[transformAttrib
 // TransformAttribute returns the code to transform source attribute to target
 // attribute. It returns an error if source and target are not compatible for
 // transformation. It is exported so that TransformHooks implementations can
-// recurse into the transform engine from the code they render.
+// recurse into the transform engine from the code they render. Union arguments
+// use their ordinary Go references; collection and field storage is selected by
+// the private callers that know those representations.
 func TransformAttribute(source, target *expr.AttributeExpr, sourceVar, targetVar string, newVar bool, ta *TransformAttrs) (string, error) {
+	return transformAttribute(source, target, sourceVar, targetVar, newVar, true, true, ta)
+}
+
+// transformAttribute keeps union storage separate from field pointer policies
+// while every call uses the same structural hooks and conversion dispatch.
+func transformAttribute(source, target *expr.AttributeExpr, sourceVar, targetVar string, newVar, sourceUnionPointer, targetUnionPointer bool, ta *TransformAttrs) (string, error) {
 	if ta.locals == nil {
 		var err error
 		ta.locals, err = newTransformLocalScope(sourceVar, targetVar)
@@ -830,7 +837,7 @@ func TransformAttribute(source, target *expr.AttributeExpr, sourceVar, targetVar
 		if h := ta.Hooks; h != nil && h.TransformUnion != nil {
 			code, err = h.TransformUnion(source, target, sourceVar, targetVar, newVar, nil, nil, ta)
 		} else {
-			code, err = transformUnion(source, target, sourceVar, targetVar, newVar, ta)
+			code, err = transformUnion(source, target, sourceVar, targetVar, newVar, sourceUnionPointer, targetUnionPointer, ta)
 		}
 	case expr.IsObject(source.Type):
 		code, err = transformObject(source, target, sourceVar, targetVar, newVar, ta)
@@ -1126,7 +1133,8 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 				if h != nil && h.TransformUnion != nil {
 					code, err = h.TransformUnion(srcc, tgtc, dispatchSrcVar, dispatchTgtVar, dispatchNewVar, source, target, fieldAttrs)
 				} else {
-					code, err = transformUnion(srcc, tgtc, dispatchSrcVar, dispatchTgtVar, dispatchNewVar, fieldAttrs)
+					code, err = transformUnion(srcc, tgtc, dispatchSrcVar, dispatchTgtVar, dispatchNewVar,
+						ta.SourceCtx.IsFieldPointer(n, srcMatt.AttributeExpr), false, fieldAttrs)
 				}
 			case expr.IsObject(srcc.Type):
 				code, err = TransformAttribute(srcc, tgtc, dispatchSrcVar, dispatchTgtVar, dispatchNewVar, ta)
@@ -1165,12 +1173,17 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 				// A pointer-backed union uses nil as its sole absence value. Preserve a
 				// non-nil zero union so validation rejects its missing discriminator.
 				if expr.IsUnion(srcc.Type) && !ta.SourceCtx.IsFieldPointer(n, srcMatt.AttributeExpr) {
-					cond = fmt.Sprintf("if %s.Kind() != \"\" {\n", srcVar)
+					receiver := unionMethodReceiver(srcc, fieldAttrs.SourceCtx, srcVar, false)
+					cond = fmt.Sprintf("if %s.Kind() != \"\" {\n", receiver)
 				}
 				code = fmt.Sprintf("%s\t%s}", cond, code)
 				if expr.IsArray(srcc.Type) && srcMatt.IsRequired(n) {
-					elem := expr.AsArray(tgtc.Type).ElemType
-					code += fmt.Sprintf("else {\n\t%s = []%s{}\n}\n", tgtVar, fieldAttrs.TargetCtx.Scope.Ref(elem, fieldAttrs.TargetCtx.Pkg(elem)))
+					var collectionRef string
+					collectionRef, err = transformCollectionTypeRef(tgtc, fieldAttrs.TargetCtx)
+					if err != nil {
+						return
+					}
+					code += fmt.Sprintf("else {\n\t%s = %s{}\n}\n", tgtVar, collectionRef)
 				} else {
 					code += "\n"
 				}
@@ -1298,6 +1311,10 @@ func transformArray(source, target *expr.Array, sourceVar, targetVar string, new
 	if err := IsCompatible(source.ElemType.Type, target.ElemType.Type, sourceVar+"[0]", targetVar+"[0]"); err != nil {
 		return "", err
 	}
+	elementRef, err := transformCollectionTypeRef(target.ElemType, ta.TargetCtx)
+	if err != nil {
+		return "", err
+	}
 	sourceElement := "val"
 	if ta.SourceCtx.IsArrayElementPointer(source) {
 		sourceElement = "*val"
@@ -1307,12 +1324,12 @@ func transformArray(source, target *expr.Array, sourceVar, targetVar string, new
 	if ta.TargetCtx.IsArrayElementPointer(target) {
 		localExpressions = append(localExpressions, "transformed")
 	}
-	childAttrs, err := childAttrs.EnterLocalBlock(localExpressions...)
+	childAttrs, err = childAttrs.EnterLocalBlock(localExpressions...)
 	if err != nil {
 		return "", err
 	}
 	data := map[string]any{
-		"ElemTypeRef":       ta.TargetCtx.Scope.Ref(target.ElemType, ta.TargetCtx.Pkg(target.ElemType)),
+		"ElemTypeRef":       elementRef,
 		"SourceElem":        source.ElemType,
 		"SourceElement":     sourceElement,
 		"TargetElem":        target.ElemType,
@@ -1321,7 +1338,7 @@ func transformArray(source, target *expr.Array, sourceVar, targetVar string, new
 		"NewVar":            newVar,
 		"TransformAttrs":    childAttrs,
 		"LoopVar":           loopVar,
-		"SourceIsObject":    expr.IsObject(source.ElemType.Type),
+		"SourceIsNilable":   IsNilable(source.ElemType.Type) && !expr.IsPrimitive(source.ElemType.Type),
 		"TargetElemPointer": ta.TargetCtx.IsArrayElementPointer(target),
 		"UseHelper":         usesTransformHelper(source.ElemType, target.ElemType, ta.Hooks),
 	}
@@ -1340,6 +1357,14 @@ func transformMap(source, target *expr.Map, sourceVar, targetVar string, newVar 
 	if err := IsCompatible(source.ElemType.Type, target.ElemType.Type, sourceVar+"[*]", targetVar+"[*]"); err != nil {
 		return "", err
 	}
+	keyRef, err := transformCollectionTypeRef(target.KeyType, ta.TargetCtx)
+	if err != nil {
+		return "", err
+	}
+	elementRef, err := transformCollectionTypeRef(target.ElemType, ta.TargetCtx)
+	if err != nil {
+		return "", err
+	}
 	loopVar := ""
 	if depth := MapDepth(target); depth > 0 {
 		loopVar = string(rune(97 + depth))
@@ -1349,8 +1374,8 @@ func transformMap(source, target *expr.Map, sourceVar, targetVar string, newVar 
 		return "", err
 	}
 	data := map[string]any{
-		"KeyTypeRef":     ta.TargetCtx.Scope.Ref(target.KeyType, ta.TargetCtx.Pkg(target.KeyType)),
-		"ElemTypeRef":    ta.TargetCtx.Scope.Ref(target.ElemType, ta.TargetCtx.Pkg(target.ElemType)),
+		"KeyTypeRef":     keyRef,
+		"ElemTypeRef":    elementRef,
 		"SourceKey":      source.KeyType,
 		"TargetKey":      target.KeyType,
 		"SourceElem":     source.ElemType,
@@ -1360,7 +1385,8 @@ func transformMap(source, target *expr.Map, sourceVar, targetVar string, newVar 
 		"NewVar":         newVar,
 		"TransformAttrs": mapAttrs,
 		"LoopVar":        loopVar,
-		"ElemIsObject":   expr.IsObject(source.ElemType.Type),
+		"ElemIsNilable":  IsNilable(source.ElemType.Type) && !expr.IsPrimitive(source.ElemType.Type),
+		"ElemIsUnion":    expr.IsUnion(target.ElemType.Type),
 		"UseKeyHelper":   usesTransformHelper(source.KeyType, target.KeyType, ta.Hooks),
 		"UseElemHelper":  usesTransformHelper(source.ElemType, target.ElemType, ta.Hooks),
 	}
@@ -1371,79 +1397,18 @@ func transformMap(source, target *expr.Map, sourceVar, targetVar string, newVar 
 	return buf.String(), nil
 }
 
-// transformUnion generates Go code to transform source union to target union.
-//
-// Note: transport to/from service transforms are always object to union or
-// union to object. The only case a transform is union to union is when
-// converting a projected type from/to a service type.
-func transformUnion(source, target *expr.AttributeExpr, sourceVar, targetVar string, newVar bool, ta *TransformAttrs) (string, error) {
-	if !expr.IsUnion(target.Type) {
-		return "", fmt.Errorf("cannot transform union %s to non-union %s", source.Type.Name(), target.Type.Name())
-	}
-	srcUnion, tgtUnion := expr.AsUnion(source.Type), expr.AsUnion(target.Type)
-	if len(srcUnion.Values) != len(tgtUnion.Values) {
-		return "", fmt.Errorf("cannot transform union: number of union types differ (%s has %d, %s has %d)",
-			source.Type.Name(), len(srcUnion.Values), target.Type.Name(), len(tgtUnion.Values))
-	}
-	for i, st := range srcUnion.Values {
-		if err := IsCompatible(st.Attribute.Type, tgtUnion.Values[i].Attribute.Type, sourceVar, targetVar); err != nil {
-			return "", fmt.Errorf("cannot transform union %s to %s: type at index %d: %w",
-				source.Type.Name(), target.Type.Name(), i, err)
-		}
-	}
-
-	// Unions are generated as concrete sum-type structs with Kind/AsX/SetX
-	// helpers. Transform by branching on the runtime Kind discriminator.
-	unionPkg := ta.TargetCtx.Pkg(target)
-	typeRef := ta.TargetCtx.Scope.Ref(target, unionPkg)
-
-	// The outer union keeps Goa's released local spelling. Nested unions use
-	// numbered locals selected from traversal depth, never from caller code.
-	tempVarName := "obj"
-	if ta.unionDepth > 0 {
-		tempVarName = "tmp"
-		tempVarName += strconv.Itoa(ta.unionDepth + 1)
-	}
-	childAttrs := *ta
-	childAttrs.unionDepth++
-
-	// Consume helper calls during branch emission, after any preceding inline
-	// branch has consumed its children in the planner's traversal order.
-	cases := make([]map[string]any, 0, len(srcUnion.Values))
-	for i, st := range srcUnion.Values {
-		tt := tgtUnion.Values[i]
-		branchAttrs := *ta
-		branchAttrs.SourceCtx = ta.SourceCtx.Enter(st.Attribute)
-		branchAttrs.TargetCtx = ta.TargetCtx.Enter(tt.Attribute)
-		cases = append(cases, map[string]any{
-			"CaseName":        st.Name,
-			"SourceFieldName": Goify(st.Name, true),
-			"TargetFieldName": Goify(tt.Name, true),
-			"SourceAttr":      st.Attribute,
-			"TargetAttr":      tt.Attribute,
-			"TargetCastType":  branchAttrs.TargetCtx.Scope.Ref(tt.Attribute, branchAttrs.TargetCtx.Pkg(tt.Attribute)),
-			"SourceNilable":   IsNilable(st.Attribute.Type),
-			"UseHelper":       usesTransformHelper(st.Attribute, tt.Attribute, ta.Hooks),
-			"TransformAttrs":  &branchAttrs,
-		})
-	}
-
-	data := map[string]any{
-		"SourceVar":      sourceVar,
-		"TargetVar":      targetVar,
-		"NewVar":         newVar,
-		"TypeRef":        typeRef,
-		"ValueTypeRef":   ta.TargetCtx.Scope.Name(target, unionPkg, false, ta.TargetCtx.UseDefault),
-		"TempVarName":    tempVarName,
-		"Cases":          cases,
-		"TransformAttrs": &childAttrs,
-	}
-
-	var buf bytes.Buffer
-	if err := transformGoUnionT.Execute(&buf, data); err != nil {
+// transformCollectionTypeRef uses the generated definition when allocating a
+// collection or its elements. Union elements are values even though standalone
+// union parameters use pointers; object elements retain their pointers.
+func transformCollectionTypeRef(attribute *expr.AttributeExpr, context *AttributeContext) (string, error) {
+	layout, err := planGoTypeWithAttributor(attribute, context.LayoutPolicy(), context.Scope, false)
+	if err != nil {
 		return "", err
 	}
-	return buf.String(), nil
+	if expr.IsObject(attribute.Type) {
+		return layout.RefWithPointer(true), nil
+	}
+	return layout.Def(), nil
 }
 
 // planTransformOperationWithHelper records one conversion. forceHelper is true

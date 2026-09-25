@@ -3,6 +3,7 @@
 package generator
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"path/filepath"
@@ -153,6 +154,7 @@ func (f *namedValidationFixture) plan(generation *codegen.Generation, root *expr
 	}
 	derived := &expr.AttributeExpr{Type: root.UserType("Derived")}
 	holder := &expr.AttributeExpr{Type: root.UserType("Holder")}
+	var derivedValidator *codegen.NameDeclaration
 	for _, test := range []struct {
 		name      string
 		parameter *expr.AttributeExpr
@@ -169,6 +171,8 @@ func (f *namedValidationFixture) plan(generation *codegen.Generation, root *expr
 		{"ValidateLong", &expr.AttributeExpr{Type: root.UserType("LongLeaf")}, &expr.AttributeExpr{Type: root.UserType("LongLeaf")}, true, false},
 		{"ValidateLongBase", &expr.AttributeExpr{Type: root.UserType("LongBase")}, &expr.AttributeExpr{Type: root.UserType("LongBase")}, true, false},
 		{"ValidateValue", &expr.AttributeExpr{Type: root.UserType("ValueDerived")}, &expr.AttributeExpr{Type: root.UserType("ValueDerived")}, true, false},
+		{"ValidateArray", &expr.AttributeExpr{Type: &expr.Array{ElemType: derived}}, &expr.AttributeExpr{Type: &expr.Array{ElemType: derived}}, false, false},
+		{"ValidateMap", &expr.AttributeExpr{Type: &expr.Map{KeyType: &expr.AttributeExpr{Type: expr.String}, ElemType: derived}}, &expr.AttributeExpr{Type: &expr.Map{KeyType: &expr.AttributeExpr{Type: expr.String}, ElemType: derived}}, false, false},
 	} {
 		options := codegen.GoTypePlanOptions{
 			Owner: "generated.local/gen/left/types", RetainNamedValue: true, Bind: bind,
@@ -182,7 +186,15 @@ func (f *namedValidationFixture) plan(generation *codegen.Generation, root *expr
 		if err != nil {
 			return err
 		}
-		validation, err := codegen.NewValidationPlan(test.body, layout, codegen.ValidationPlanOptions{Required: true})
+		validation, err := codegen.NewValidationPlan(test.body, layout, codegen.ValidationPlanOptions{
+			Required: true,
+			Bind: func(request codegen.ValidatorBindingRequest) (*codegen.NameDeclaration, error) {
+				if request.Attribute.Type != derived.Type {
+					return nil, fmt.Errorf("unexpected nested validation type %s", request.Attribute.Type.Name())
+				}
+				return derivedValidator, nil
+			},
+		})
 		if err != nil {
 			return err
 		}
@@ -192,8 +204,12 @@ func (f *namedValidationFixture) plan(generation *codegen.Generation, root *expr
 		if test.nullable {
 			f.optional = parameter
 		}
-		if err := f.pkg.DeclareName(codegen.NewExactName(codegen.NameFunction, test.name)); err != nil {
+		declaration := codegen.NewExactName(codegen.NameFunction, test.name)
+		if err := f.pkg.DeclareName(declaration); err != nil {
 			return err
+		}
+		if test.name == "ValidateDerived" {
+			derivedValidator = declaration
 		}
 		for _, spec := range append(parameter.ImportPreferences(), validation.ImportPreferences()...) {
 			if spec.Path == "unicode/utf8" || spec.Path == codegen.GoaImport("").Path {
@@ -220,6 +236,9 @@ func (f *namedValidationFixture) file() (*codegen.File, error) {
 			return nil, err
 		}
 		parameter := operation.parameter.Link(f.pkg.ImportPath(), f.pkg.ImportName).RefWithPointer(operation.pointer)
+		if operation.parameter.Kind() == codegen.GoArray || operation.parameter.Kind() == codegen.GoMap {
+			parameter = operation.parameter.Link(f.pkg.ImportPath(), f.pkg.ImportName).Def()
+		}
 		if operation.name == "ValidateOptional" {
 			parameter = "*Optional"
 		}
@@ -297,6 +316,26 @@ func namedDefinitionValidationDSL() {
 }
 
 const namedDefinitionValidationTests = `
+func TestNamedUnionCollections(t *testing.T) {
+	for _, invalid := range []bool{false, true} {
+		value := {{.Derived}}({{.Choicetext}}("valid"))
+		if invalid {
+			value = {{.Derived}}({{.Choicetext}}(""))
+		}
+		array := []{{.Derived}}{value}
+		mapped := map[string]{{.Derived}}{"first": value}
+		if err := ValidateArray(array); (err != nil) != invalid {
+			t.Errorf("array validation = %v, want invalid %t", err, invalid)
+		}
+		if err := ValidateMap(mapped); (err != nil) != invalid {
+			t.Errorf("map validation = %v, want invalid %t", err, invalid)
+		}
+		if array[0] != value || mapped["first"] != value {
+			t.Error("validation changed a collection element")
+		}
+	}
+}
+
 func TestNamedUnionBranches(t *testing.T) {
 	for _, test := range []struct {
 		name string

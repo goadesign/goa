@@ -619,7 +619,7 @@ func (a *AttributeScope) Ref(att *expr.AttributeExpr, pkg string) string {
 // GoTypeLayout records the exact names from this scope with the pointer policy
 // selected by the caller.
 func (a *AttributeScope) GoTypeLayout(attribute *expr.AttributeExpr, policy GoLayoutPolicy) (LinkedGoType, error) {
-	return planGoTypeWithAttributor(attribute, policy, a)
+	return planGoTypeWithAttributor(attribute, policy, a, true)
 }
 
 // Package returns the qualifier selected by att's explicit type location or

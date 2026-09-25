@@ -1,9 +1,9 @@
-{{- if and (isUnion .reqAtt) (isSumType .attCtx.Scope) (not (isUnionPointer .attCtx true)) }}
-if {{ $.target }}.{{ .attCtx.Scope.Field $.reqAtt .req true }}.Kind() == "" {
+{{- if .unionKind }}
+if {{ .requiredTarget }}.Kind() == "" {
         err = {{ $.goa }}.MergeErrors(err, {{ $.goa }}.MissingFieldError("{{ .req }}", {{ validationPath $.context }}))
 }
 {{- else }}
-if {{ $.target }}.{{ .attCtx.Scope.Field $.reqAtt .req true }} == nil {
+if {{ .requiredTarget }} == nil {
         err = {{ $.goa }}.MergeErrors(err, {{ $.goa }}.MissingFieldError("{{ .req }}", {{ validationPath $.context }}))
 }
 {{- end }}

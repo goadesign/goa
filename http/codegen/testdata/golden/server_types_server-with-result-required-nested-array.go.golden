@@ -18,6 +18,10 @@ func NewMethodResultRequiredNestedArrayResponseBody(res *serviceresultrequiredne
 	if res.Items != nil {
 		body.Items = make([][]*NestedElemResponseBody, len(res.Items))
 		for i, val := range res.Items {
+			if val == nil {
+				body.Items[i] = nil
+				continue
+			}
 			body.Items[i] = make([]*NestedElemResponseBody, len(val))
 			for j, val := range val {
 				if val == nil {
