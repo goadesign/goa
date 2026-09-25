@@ -1336,6 +1336,7 @@ func planImports(generation *codegen.Generation, transport transportKind, plans 
 		dir := transportDirectory(transport)
 		for _, transportService := range expressions.Services {
 			pathName := plan.servicePaths[transportService]
+			bodies := &plan.wireTypes[transportService].bodies
 			clientPath := path.Join(generation.GenPkg(), dir, pathName, "client")
 			serverPath := path.Join(generation.GenPkg(), dir, pathName, "server")
 			servicePackage, viewsPackage, err := servicePackagePreferences(plan.servicePlan, transportService)
@@ -1376,7 +1377,7 @@ func planImports(generation *codegen.Generation, transport transportKind, plans 
 						fixedImports = append(fixedImports, wireCatalogValidationImports(catalog)...)
 						references = append(references, serviceReferenceAttributes(transportService.HTTPEndpoints...)...)
 					case httpCodecFile:
-						fixedImports = append(fixedImports, httpCodecValidationImports(transportService, index == 0)...)
+						fixedImports = append(fixedImports, httpCodecValidationImports(transportService, index == 0, bodies)...)
 						references = serviceReferenceAttributes(transportService.HTTPEndpoints...)
 					case httpPayloadBuilderFile:
 						references = httpCLIPayloadBuilderReferenceAttributes(transportService)
@@ -1428,7 +1429,7 @@ func planImports(generation *codegen.Generation, transport transportKind, plans 
 				if transport == httpTransport && len(httpSSEEndpoints(transportService)) > 0 {
 					sseImports := httpFixedFileImports(transportService, index == 0, httpSSEFile)
 					if index == 0 {
-						sseImports = append(sseImports, httpSSEValidationImports(transportService)...)
+						sseImports = append(sseImports, httpSSEValidationImports(transportService, bodies)...)
 					}
 					if err := retainPlannedFileImports(
 						plan,

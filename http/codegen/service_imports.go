@@ -174,8 +174,13 @@ func httpFixedFileImports(service *expr.HTTPServiceExpr, client bool, kind httpF
 }
 
 // httpCodecValidationImports returns the Go packages used by validation checks
-// written directly into one client or server codec file.
-func httpCodecValidationImports(service *expr.HTTPServiceExpr, client bool) []*codegen.ImportSpec {
+// written directly into one client or server codec file. Response checks use
+// the HTTP body types already prepared for those same decoders.
+func httpCodecValidationImports(
+	service *expr.HTTPServiceExpr,
+	client bool,
+	bodies *shapedBodies,
+) []*codegen.ImportSpec {
 	seen := make(map[string]struct{})
 	var imports []*codegen.ImportSpec
 	add := func(attribute *expr.AttributeExpr, policy codegen.GoLayoutPolicy) {
@@ -192,18 +197,15 @@ func httpCodecValidationImports(service *expr.HTTPServiceExpr, client bool) []*c
 			panic(err) // The callback above cannot return an error.
 		}
 	}
-	addResponseBody := func(body, serviceValue *expr.AttributeExpr) {
-		imports = appendClientResponseBodyImports(imports, seen, body, serviceValue)
-	}
 	for _, endpoint := range service.HTTPEndpoints {
 		if client {
 			for _, response := range endpoint.Responses {
-				addResponseBody(response.Body, endpoint.MethodExpr.Result)
+				imports = appendClientResponseBodyImports(imports, seen, bodies.response(response), endpoint.MethodExpr.Result)
 				addMapped(response.Headers)
 				addMapped(response.Cookies)
 			}
 			for _, httpError := range endpoint.HTTPErrors {
-				addResponseBody(httpError.Response.Body, endpoint.MethodExpr.Error(httpError.Name).AttributeExpr)
+				imports = appendClientResponseBodyImports(imports, seen, bodies.errorResponse(httpError), endpoint.MethodExpr.Error(httpError.Name).AttributeExpr)
 				addMapped(httpError.Response.Headers)
 				addMapped(httpError.Response.Cookies)
 			}
@@ -232,32 +234,29 @@ func httpCodecValidationImports(service *expr.HTTPServiceExpr, client bool) []*c
 
 // httpSSEValidationImports returns the Go packages used by the checks a client
 // Server-Sent Events reader writes for each event body it decodes.
-func httpSSEValidationImports(service *expr.HTTPServiceExpr) []*codegen.ImportSpec {
+func httpSSEValidationImports(service *expr.HTTPServiceExpr, bodies *shapedBodies) []*codegen.ImportSpec {
 	seen := make(map[string]struct{})
 	var imports []*codegen.ImportSpec
 	for _, endpoint := range httpSSEEndpoints(service) {
 		if !endpoint.MethodExpr.HasMixedResults() {
 			// The reader decodes the body of the ordinary success response.
 			for _, response := range endpoint.Responses {
-				imports = appendClientResponseBodyImports(imports, seen, response.Body, endpoint.MethodExpr.Result)
+				imports = appendClientResponseBodyImports(imports, seen, bodies.response(response), endpoint.MethodExpr.Result)
 			}
 			continue
 		}
 		// A mixed method streams a result of its own, and that result carries
 		// the body written for every event.
-		event := endpoint.MethodExpr.StreamingResult
-		if event.Type == expr.Empty {
-			event = endpoint.MethodExpr.Result
-		}
-		imports = appendClientResponseBodyImports(imports, seen, event, event)
+		imports = appendClientResponseBodyImports(imports, seen, bodies.streamingResult(endpoint), endpoint.MethodExpr.StreamingResult)
 	}
 	return imports
 }
 
 // appendClientResponseBodyImports adds the packages used by the check a client
-// writes next to one decoded response body, each package once. A named body is
-// checked by its own validator function written in the transport types file and
-// so names no package here.
+// writes next to one decoded response body, each package once. The supplied body
+// already has scalar and collection aliases replaced by their underlying types.
+// A remaining named body uses its validator in the transport types file and so
+// names no package here.
 func appendClientResponseBodyImports(imports []*codegen.ImportSpec, seen map[string]struct{}, body, serviceValue *expr.AttributeExpr) []*codegen.ImportSpec {
 	if body == nil || body.Type == expr.Empty {
 		return imports
