@@ -250,6 +250,25 @@ string.
 
 ### Imports and output paths
 
+Validation functions belong to the package that emits them, which may differ
+from the package containing their argument type. A `ValidatorDeclarationBinder`
+must select an owned function that accepts the requested occurrence's exact
+Go representation and returns an error. The declaration records its name and
+kind, not a Go signature; the producing generator remains responsible for the
+function body and typed parameter.
+
+`ValidationPlan.Link` checks that every called name is frozen. Functions local
+to its output package may be private; functions from another package must have
+an exported final Go identifier. A failed link returns a zero linked plan.
+Type ownership, field layouts, pointer choices and validation rules are retained
+independently and do not change to match the function package.
+
+`ValidationPlan.ImportPreferences` records all called function packages before
+freeze, including a package that may later be the output package. File producers
+filter their actual output path, as `GeneratedImportPlan` does.
+`LinkedValidationPlan.Imports` applies that same filter before resolving aliases.
+The root type's package is not an output-package substitute.
+
 Complete import path is the only import identity. Static-template requirements
 have priority over generated-package preferences, which have priority over
 design metadata preferences. References and `ImportSpec` values consume the

@@ -6,6 +6,7 @@ package codegen
 import (
 	"bytes"
 	"fmt"
+	"go/token"
 	"path"
 	"strings"
 	"text/template"
@@ -29,7 +30,9 @@ type (
 	}
 
 	// ValidatorDeclarationBinder returns the package-level validation function
-	// chosen before Goa starts writing files.
+	// chosen before Goa starts writing files. The function must accept the
+	// requested Go value and return an error. Its declaring package may differ
+	// from the value's type package; Link checks access from the output package.
 	ValidatorDeclarationBinder func(ValidatorBindingRequest) (*NameDeclaration, error)
 
 	// ValidationPlanOptions configures one root validation operation.
@@ -201,7 +204,8 @@ func (p *ValidationPlan) ValidatorDeclarations() []*NameDeclaration {
 // ImportPreferences returns each package needed by the stored validation
 // checks. Goa and standard library packages keep the names used by the
 // templates. A package containing another generated validator includes the
-// name Goa should try first.
+// name Goa should try first. File producers must exclude their output package
+// before reserving imports, as GeneratedImportPlan does.
 func (p *ValidationPlan) ImportPreferences() []GoTypeImport {
 	seen := make(map[string]struct{})
 	var imports []GoTypeImport
@@ -221,9 +225,6 @@ func (p *ValidationPlan) ImportPreferences() []GoTypeImport {
 	}
 	for _, declaration := range p.declarations {
 		owner := declaration.packagePath()
-		if owner == p.layout.Owner() {
-			continue
-		}
 		add(GoTypeImport{
 			Name: strings.ToLower(Goify(path.Base(owner), false)),
 			Path: owner,
@@ -233,10 +234,20 @@ func (p *ValidationPlan) ImportPreferences() []GoTypeImport {
 }
 
 // Link joins p with the Go types and package aliases that Goa chose for the
-// generated file.
+// generated file. Called function names must be frozen and accessible from the
+// output package. A linking error returns a zero LinkedValidationPlan.
 func (p *ValidationPlan) Link(layout LinkedGoType) (LinkedValidationPlan, error) {
 	if layout.plan != p.layout {
 		return LinkedValidationPlan{}, fmt.Errorf("link validation: linked Go type does not belong to this validation plan")
+	}
+	for _, declaration := range p.declarations {
+		if !declaration.frozen {
+			return LinkedValidationPlan{}, fmt.Errorf("link validation: validator declaration in package %q is not frozen", declaration.packagePath())
+		}
+		if declaration.packagePath() != layout.outputPath && !token.IsExported(declaration.Name()) {
+			return LinkedValidationPlan{}, fmt.Errorf("link validation: validator %q in package %q is not exported to output package %q",
+				declaration.Name(), declaration.packagePath(), layout.outputPath)
+		}
 	}
 	return LinkedValidationPlan{plan: p, layout: layout}, nil
 }
@@ -255,12 +266,15 @@ func (p LinkedValidationPlan) Imports() []GoTypeImport {
 	if len(preferences) == 0 {
 		return nil
 	}
-	imports := make([]GoTypeImport, len(preferences))
-	for index, preference := range preferences {
-		imports[index] = GoTypeImport{
+	imports := make([]GoTypeImport, 0, len(preferences))
+	for _, preference := range preferences {
+		if preference.Path == p.layout.outputPath {
+			continue
+		}
+		imports = append(imports, GoTypeImport{
 			Name: p.layout.qualify(preference.Path),
 			Path: preference.Path,
-		}
+		})
 	}
 	return imports
 }
@@ -293,11 +307,8 @@ func (p *validationPlanner) plan(attribute *expr.AttributeExpr, layout *GoTypePl
 		if declaration.owner == nil {
 			return nil, fmt.Errorf("plan validation for %s: validator declaration is not owned", path)
 		}
-		if declaration.packagePath() != layout.Owner() {
-			return nil, fmt.Errorf(
-				"plan validation for %s: validator owner %q does not match layout owner %q",
-				path, declaration.packagePath(), layout.Owner(),
-			)
+		if declaration.Kind() != NameFunction {
+			return nil, fmt.Errorf("plan validation for %s: validator declaration must be a function, got %s", path, declaration.Kind())
 		}
 		p.declarations = append(p.declarations, declaration)
 		return &validationPlanNode{
