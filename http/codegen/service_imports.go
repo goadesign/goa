@@ -179,13 +179,7 @@ func httpCodecValidationImports(service *expr.HTTPServiceExpr, client bool) []*c
 	seen := make(map[string]struct{})
 	var imports []*codegen.ImportSpec
 	add := func(attribute *expr.AttributeExpr, policy codegen.GoLayoutPolicy) {
-		for _, runtimeImport := range codegen.ValidationRuntimeImports(attribute, policy) {
-			if _, ok := seen[runtimeImport.Path]; ok {
-				continue
-			}
-			seen[runtimeImport.Path] = struct{}{}
-			imports = append(imports, codegen.NewImport(runtimeImport.Name, runtimeImport.Path))
-		}
+		imports = appendValidationRuntimeImports(imports, seen, attribute, policy)
 	}
 	addMapped := func(mapped *expr.MappedAttributeExpr) {
 		if mapped == nil || mapped.IsEmpty() {
@@ -199,15 +193,7 @@ func httpCodecValidationImports(service *expr.HTTPServiceExpr, client bool) []*c
 		}
 	}
 	addResponseBody := func(body, serviceValue *expr.AttributeExpr) {
-		if body == nil || body.Type == expr.Empty {
-			return
-		}
-		if _, named := body.Type.(expr.UserType); named {
-			// A named body is checked by its own validator function written in
-			// the transport types file.
-			return
-		}
-		add(body, httpClientResponseBodyLayout(body, serviceValue))
+		imports = appendClientResponseBodyImports(imports, seen, body, serviceValue)
 	}
 	for _, endpoint := range service.HTTPEndpoints {
 		if client {
@@ -240,6 +226,57 @@ func httpCodecValidationImports(service *expr.HTTPServiceExpr, client bool) []*c
 		if policy := jsonRPCRequestIDPolicyFor(endpoint); policy != nil && policy.attribute != nil {
 			add(policy.attribute.Attribute, codegen.GoLayoutPolicy{Pointer: policy.pointer})
 		}
+	}
+	return imports
+}
+
+// httpSSEValidationImports returns the Go packages used by the checks a client
+// Server-Sent Events reader writes for each event body it decodes.
+func httpSSEValidationImports(service *expr.HTTPServiceExpr) []*codegen.ImportSpec {
+	seen := make(map[string]struct{})
+	var imports []*codegen.ImportSpec
+	for _, endpoint := range httpSSEEndpoints(service) {
+		if !endpoint.MethodExpr.HasMixedResults() {
+			// The reader decodes the body of the ordinary success response.
+			for _, response := range endpoint.Responses {
+				imports = appendClientResponseBodyImports(imports, seen, response.Body, endpoint.MethodExpr.Result)
+			}
+			continue
+		}
+		// A mixed method streams a result of its own, and that result carries
+		// the body written for every event.
+		event := endpoint.MethodExpr.StreamingResult
+		if event.Type == expr.Empty {
+			event = endpoint.MethodExpr.Result
+		}
+		imports = appendClientResponseBodyImports(imports, seen, event, event)
+	}
+	return imports
+}
+
+// appendClientResponseBodyImports adds the packages used by the check a client
+// writes next to one decoded response body, each package once. A named body is
+// checked by its own validator function written in the transport types file and
+// so names no package here.
+func appendClientResponseBodyImports(imports []*codegen.ImportSpec, seen map[string]struct{}, body, serviceValue *expr.AttributeExpr) []*codegen.ImportSpec {
+	if body == nil || body.Type == expr.Empty {
+		return imports
+	}
+	if _, named := body.Type.(expr.UserType); named {
+		return imports
+	}
+	return appendValidationRuntimeImports(imports, seen, body, httpClientResponseBodyLayout(body, serviceValue))
+}
+
+// appendValidationRuntimeImports adds the packages used by the checks generated
+// for one attribute, skipping every package already recorded in seen.
+func appendValidationRuntimeImports(imports []*codegen.ImportSpec, seen map[string]struct{}, attribute *expr.AttributeExpr, policy codegen.GoLayoutPolicy) []*codegen.ImportSpec {
+	for _, runtimeImport := range codegen.ValidationRuntimeImports(attribute, policy) {
+		if _, ok := seen[runtimeImport.Path]; ok {
+			continue
+		}
+		seen[runtimeImport.Path] = struct{}{}
+		imports = append(imports, codegen.NewImport(runtimeImport.Name, runtimeImport.Path))
 	}
 	return imports
 }

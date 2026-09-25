@@ -1426,10 +1426,14 @@ func planImports(generation *codegen.Generation, transport transportKind, plans 
 					sseFile = "stream.go"
 				}
 				if transport == httpTransport && len(httpSSEEndpoints(transportService)) > 0 {
+					sseImports := httpFixedFileImports(transportService, index == 0, httpSSEFile)
+					if index == 0 {
+						sseImports = append(sseImports, httpSSEValidationImports(transportService)...)
+					}
 					if err := retainPlannedFileImports(
 						plan,
 						outputPackage,
-						httpFixedFileImports(transportService, index == 0, httpSSEFile),
+						sseImports,
 						httpGeneratedImportPlan(transportService, index == 0, httpSSEFile, servicePackage, viewsPackage),
 						nil,
 						serviceReferenceAttributes(httpSSEEndpoints(transportService)...),
