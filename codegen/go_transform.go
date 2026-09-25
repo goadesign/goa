@@ -1759,8 +1759,8 @@ func generateTransformHelper(helper TransformHelper, ta *TransformAttrs) (*Trans
 // function for each pair of matched attributes. Both source and target must be
 // objects or else walkMatches panics.
 func walkMatches(source, target *expr.AttributeExpr, walker func(src, tgt *expr.MappedAttributeExpr, srcc, tgtc *expr.AttributeExpr, n string)) {
-	srcMatt := expr.NewMappedAttributeExpr(source)
-	tgtMatt := expr.NewMappedAttributeExpr(target)
+	srcMatt := mappedObjectDefinition(source)
+	tgtMatt := mappedObjectDefinition(target)
 	srcFields := originalMappedFields(source)
 	tgtFields := originalMappedFields(target)
 	srcObj := expr.AsObject(srcMatt.Type)
@@ -1769,6 +1769,18 @@ func walkMatches(source, target *expr.AttributeExpr, walker func(src, tgt *expr.
 		if att := tgtObj.Attribute(nat.Name); att != nil {
 			walker(srcMatt, tgtMatt, srcFields[nat.Name], tgtFields[nat.Name], nat.Name)
 		}
+	}
+}
+
+// mappedObjectDefinition maps the fields that define the actual Go struct.
+// Constraints on a named layer do not change its inherited field pointers.
+func mappedObjectDefinition(attribute *expr.AttributeExpr) *expr.MappedAttributeExpr {
+	for {
+		named, ok := attribute.Type.(expr.UserType)
+		if !ok {
+			return expr.NewMappedAttributeExpr(attribute)
+		}
+		attribute = named.Attribute()
 	}
 }
 

@@ -123,7 +123,8 @@ type (
 
 	// validationUnionPlan stores generated sum-type branch operations.
 	validationUnionPlan struct {
-		cases []validationUnionCasePlan
+		cases    []validationUnionCasePlan
+		receiver *GoTypePlan
 	}
 
 	// validationUnionCasePlan stores one sum-type accessor and branch program.
@@ -148,7 +149,8 @@ type (
 
 // NewValidationPlan records every check needed for attribute before Goa chooses
 // the final generated names. layout must describe the same attribute and the
-// requested service or view representation.
+// requested service or view representation. Expanding a nonprimitive named
+// root requires a layout built with GoTypePlanOptions.RetainNamedValue.
 func NewValidationPlan(attribute *expr.AttributeExpr, layout *GoTypePlan, options ValidationPlanOptions) (*ValidationPlan, error) {
 	if attribute == nil {
 		return nil, fmt.Errorf("plan validation: attribute must not be nil")
@@ -222,6 +224,13 @@ func (p *ValidationPlan) ImportPreferences() []GoTypeImport {
 	if !p.root.empty() {
 		goa := GoaImport("")
 		add(GoTypeImport{Name: goa.Name, Path: goa.Path})
+	}
+	// Only root named types expand here; nested named values call their bound
+	// validators. A root union conversion needs its method owner's package.
+	if union := p.root.union; union != nil && union.receiver != nil {
+		for _, preference := range union.receiver.ImportPreferences() {
+			add(preference)
+		}
 	}
 	for _, declaration := range p.declarations {
 		owner := declaration.packagePath()
@@ -318,15 +327,17 @@ func (p *validationPlanner) plan(attribute *expr.AttributeExpr, layout *GoTypePl
 		}, nil
 	}
 
-	node := &validationPlanNode{
-		occurrence: attribute,
-		layout:     layout,
-		rules:      planValidationRules(attribute, layout, required, alias),
+	structure := layout
+	if !expr.IsPrimitive(attribute.Type) {
+		for structure.kind == GoNamed && structure.value != nil {
+			structure = structure.value
+		}
 	}
+	node := &validationPlanNode{occurrence: attribute, layout: layout}
 	switch {
 	case expr.IsObject(attribute.Type):
 		object := expr.AsObject(attribute.Type)
-		fields := layout.Fields()
+		fields := structure.Fields()
 		if len(fields) != len(*object) {
 			return nil, fmt.Errorf("plan validation for %s: object layout has %d fields, expected %d", path, len(fields), len(*object))
 		}
@@ -350,7 +361,7 @@ func (p *validationPlanner) plan(attribute *expr.AttributeExpr, layout *GoTypePl
 		}
 	case expr.IsArray(attribute.Type):
 		array := expr.AsArray(attribute.Type)
-		childLayout := layout.Elem()
+		childLayout := structure.Elem()
 		if childLayout == nil {
 			return nil, fmt.Errorf("plan validation for %s: array layout has no element", path)
 		}
@@ -375,8 +386,8 @@ func (p *validationPlanner) plan(attribute *expr.AttributeExpr, layout *GoTypePl
 		mapping := expr.AsMap(attribute.Type)
 		childPolicy := policy
 		childPolicy.Pointer = false
-		keyLayout := layout.Key()
-		valueLayout := layout.Elem()
+		keyLayout := structure.Key()
+		valueLayout := structure.Elem()
 		if keyLayout == nil || valueLayout == nil {
 			return nil, fmt.Errorf("plan validation for %s: map layout is incomplete", path)
 		}
@@ -393,7 +404,7 @@ func (p *validationPlanner) plan(attribute *expr.AttributeExpr, layout *GoTypePl
 		}
 	case expr.IsUnion(attribute.Type):
 		union := expr.AsUnion(attribute.Type)
-		branches := layout.Branches()
+		branches := structure.Branches()
 		if len(branches) != len(union.Values) {
 			return nil, fmt.Errorf("plan validation for %s: union layout has %d branches, expected %d", path, len(branches), len(union.Values))
 		}
@@ -423,8 +434,16 @@ func (p *validationPlanner) plan(attribute *expr.AttributeExpr, layout *GoTypePl
 		}
 		if len(cases) > 0 {
 			node.union = &validationUnionPlan{cases: cases}
+			if structure != layout {
+				// Defined types do not inherit the underlying union's methods.
+				// Retain that declaration for the receiver conversion.
+				node.union.receiver = structure
+			}
 		}
 	}
+	// Required-field rules index the structural fields checked above. Keep
+	// effective constraints on the original occurrence and its named chain.
+	node.rules = planValidationRules(attribute, structure, required, alias)
 	if nested && !node.empty() {
 		node.guard = validationNeedsNilGuard(attribute, required, policy)
 	}
@@ -499,7 +518,8 @@ func generatedRequiredValidationNames(attribute *expr.AttributeExpr, validation 
 			continue
 		}
 		if !policy.Pointer && expr.IsPrimitive(required.Type) &&
-			required.Type.Kind() != expr.BytesKind && required.Type.Kind() != expr.AnyKind {
+			required.Type.Kind() != expr.BytesKind && required.Type.Kind() != expr.AnyKind &&
+			!attribute.IsPrimitivePointer(name, policy.UseDefault) {
 			continue
 		}
 		if policy.IgnoreRequired && expr.IsPrimitive(required.Type) {
@@ -721,8 +741,13 @@ func (p LinkedValidationPlan) renderNode(node *validationPlanNode, target, conte
 				"validation": p.renderNode(unionCase.node, "actual", context+".value"),
 			}
 		}
+		unionTarget := target
+		if node.union.receiver != nil {
+			receiver := p.layout.Enter(node.union.receiver).RefWithPointer(node.layout.ReferenceIsPointer())
+			unionTarget = fmt.Sprintf("(%s)(%s)", receiver, target)
+		}
 		var buffer bytes.Buffer
-		if err := unionSumValT.Execute(&buffer, map[string]any{"target": target, "cases": cases}); err != nil {
+		if err := unionSumValT.Execute(&buffer, map[string]any{"target": unionTarget, "cases": cases}); err != nil {
 			panic(err)
 		}
 		sections = append(sections, buffer.String())
@@ -917,69 +942,4 @@ func (p *GoTypePlan) withPolicy(policy GoLayoutPolicy) *GoTypePlan {
 		}
 	}
 	return &clone
-}
-
-// copyValidationFloat copies one optional scalar rule value.
-func copyValidationFloat(value *float64) *float64 {
-	if value == nil {
-		return nil
-	}
-	copy := *value
-	return &copy
-}
-
-// copyValidationInt copies one optional length rule value.
-func copyValidationInt(value *int) *int {
-	if value == nil {
-		return nil
-	}
-	copy := *value
-	return &copy
-}
-
-// copyValidationValue detaches the mutable collection shapes accepted by Goa
-// enum validations. Primitive values are immutable and remain shared.
-func copyValidationValue(value any) any {
-	switch actual := value.(type) {
-	case expr.Val:
-		copied := make(expr.Val, len(actual))
-		for name, child := range actual {
-			copied[name] = copyValidationValue(child)
-		}
-		return copied
-	case expr.ArrayVal:
-		copied := make(expr.ArrayVal, len(actual))
-		for index, child := range actual {
-			copied[index] = copyValidationValue(child)
-		}
-		return copied
-	case expr.MapVal:
-		copied := make(expr.MapVal, len(actual))
-		for key, child := range actual {
-			copied[copyValidationValue(key)] = copyValidationValue(child)
-		}
-		return copied
-	case []any:
-		copied := make([]any, len(actual))
-		for index, child := range actual {
-			copied[index] = copyValidationValue(child)
-		}
-		return copied
-	case []byte:
-		return append([]byte(nil), actual...)
-	case map[string]any:
-		copied := make(map[string]any, len(actual))
-		for name, child := range actual {
-			copied[name] = copyValidationValue(child)
-		}
-		return copied
-	case map[any]any:
-		copied := make(map[any]any, len(actual))
-		for key, child := range actual {
-			copied[copyValidationValue(key)] = copyValidationValue(child)
-		}
-		return copied
-	default:
-		return actual
-	}
 }
