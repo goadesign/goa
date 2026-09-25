@@ -198,7 +198,7 @@ func TestValidationPlanUsesFinalRuntimeImportNames(t *testing.T) {
 	minimum := 2
 	attribute := &expr.AttributeExpr{
 		Type:       expr.String,
-		Validation: &expr.ValidationExpr{MinLength: &minimum},
+		Validation: &expr.ValidationExpr{MinLength: &minimum, Format: expr.FormatUUID},
 	}
 	layout, err := PlanGoType(attribute, GoTypePlanOptions{
 		Owner:  "generated.local/gen/service",
@@ -227,6 +227,9 @@ func TestValidationPlanUsesFinalRuntimeImportNames(t *testing.T) {
 	code := linked.Render("target", "target")
 	require.Contains(t, code, "utf82.RuneCountInString")
 	require.Contains(t, code, "goa2.MergeErrors")
+	require.Contains(t, code, "goa2.ValidateFormat")
+	require.Contains(t, code, "goa2.FormatUUID")
+	require.NotContains(t, code, "goa.FormatUUID")
 }
 
 // TestValidationPlanSharesOptionalFieldGuard verifies that copied validation
