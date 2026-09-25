@@ -5,8 +5,11 @@ package codegen
 
 import (
 	"fmt"
+	"iter"
+	"maps"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"golang.org/x/mod/module"
@@ -70,6 +73,39 @@ func (g *Generation) GenPkg() string {
 // returned roots still point to the prepared design values.
 func (g *Generation) Roots() []eval.Root {
 	return append([]eval.Root(nil), g.roots...)
+}
+
+// UserTypes returns the original types registered by DeclareUserType and their
+// generated declarations, ordered by package import path and recorded exact Go
+// name. Copies of one original appear once per package; an original declared in
+// multiple packages appears once for each owner. Generated type bindings,
+// method and view types, and generated union branch types are not included.
+//
+// Each iteration snapshots the registered pairs before yielding, so declarations
+// added while iterating appear only in later iterations. The returned types and
+// declarations are the existing records, not copies. Iteration is valid before
+// and after Freeze. Before Freeze, callers may use PackagePath and Declaration
+// to reserve dependent names, but must not call TypeDeclaration.Name.
+func (g *Generation) UserTypes() iter.Seq2[expr.UserType, *TypeDeclaration] {
+	return func(yield func(expr.UserType, *TypeDeclaration) bool) {
+		originals := make(map[*TypeDeclaration]expr.UserType)
+		for _, pkg := range g.packages {
+			for original, declaration := range pkg.userTypes {
+				originals[declaration] = original
+			}
+		}
+		declarations := slices.SortedFunc(maps.Keys(originals), func(a, b *TypeDeclaration) int {
+			if order := strings.Compare(a.PackagePath(), b.PackagePath()); order != 0 {
+				return order
+			}
+			return strings.Compare(a.declaration.preferred, b.declaration.preferred)
+		})
+		for _, declaration := range declarations {
+			if !yield(originals[declaration], declaration) {
+				return
+			}
+		}
+	}
 }
 
 // ClaimPackage records path as a generated package and returns the package's

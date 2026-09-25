@@ -211,6 +211,42 @@ flag variables and conversion variables. Templates receive those exact names
 and write the selected conversion directly. They do not search generated text,
 replace variable names, or decide a conversion from a type name at runtime.
 
+### Original type discovery
+
+Planning plugins can enumerate the original types already selected by core
+service planning without linking service render data or finalizing names:
+
+```go
+func (g *Generation) UserTypes() iter.Seq2[expr.UserType, *TypeDeclaration]
+```
+
+Each pair contains the original expression (`UserType.Origin()`) and the
+existing declaration owned by its generated package. Repeated registration of
+the same original in one package yields one pair. The same original emitted in
+two packages yields two pairs. Iteration orders pairs by actual package import
+path, then by the exact Go type name recorded at registration, without reading
+`TypeDeclaration.Name()` before freeze.
+
+Each iteration snapshots all currently registered pairs before yielding. A
+plugin may add declarations while consuming that snapshot; later iterations
+see the additions. The expressions and declaration records themselves are not
+copied. The query visits only registered originals and does not walk design
+graphs, collect more declarations, or filter types for an encoding format.
+Bindings added only through `BindGeneratedType`, generated method and view
+types, and generated union branch types are excluded.
+
+Before freeze, consumers use `TypeDeclaration.PackagePath()` to find the owner
+and `TypeDeclaration.Declaration()` to reserve dependent names. After freeze,
+the same records expose their final names. `service.Plan.Services()` is render
+data and remains unavailable until linking; plugins must not link early or
+repeat service analysis to discover types.
+
+`service.planUserTypes` owns reachability and package selection. The catalog
+therefore includes reachable nested originals and types selected by the
+existing `type:generate:force` metadata, including its service-name restrictions.
+Force still requires a service emission context. An unreferenced type without
+applicable force metadata gains no declaration through this query.
+
 ### Exact and preferred symbols
 
 An exact symbol is part of an authored or external contract. Two distinct
@@ -628,12 +664,13 @@ for adding evaluated services; plugins must not run individual expression
 steps or use the package-global root.
 
 Factory plugin planning receives `*generator.Plan`. It may declare plugin-owned
-output through the same Generation, and it consumes core declarations through
-the exact retained service plan. Factory plugin rendering receives the same
-plan after names are final. It may add files and sections, but it cannot create
-another root, re-run service or transport analysis, reserve a name, or change
-an expression. Released callbacks keep their original arguments and do not
-gain a planning phase.
+output through the same Generation, and it consumes service facts through the
+exact retained service plan. For original declarations across generated packages,
+it uses [original type discovery](#original-type-discovery). Factory plugin
+rendering receives the same plan after names are final. It may add files and
+sections, but it cannot create another root, re-run service or transport analysis,
+reserve a name, or change an expression. Released callbacks keep their original
+arguments and do not gain a planning phase.
 
 An HTTP plugin calls `Plan.HTTP(root)` with the exact prepared service root it
 received. The method returns the ordinary HTTP plan for that root. It returns
