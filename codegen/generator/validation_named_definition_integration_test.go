@@ -79,7 +79,7 @@ func TestGenerateNamedDefinitionValidation(t *testing.T) {
 		require.NoError(t, err)
 	}
 	data := make(map[string]string)
-	for _, name := range []string{"Base", "Derived", "LongBase", "LongLeaf", "ValueDerived", "Holder"} {
+	for _, name := range []string{"Base", "Derived", "LongBase", "LongLeaf", "ValueDerived", "Holder", "DefaultedHolder"} {
 		owner := left
 		if name == "Derived" || name == "LongLeaf" || name == "ValueDerived" {
 			owner = right
@@ -171,6 +171,7 @@ func (f *namedValidationFixture) plan(generation *codegen.Generation, root *expr
 		{"ValidateLong", &expr.AttributeExpr{Type: root.UserType("LongLeaf")}, &expr.AttributeExpr{Type: root.UserType("LongLeaf")}, true, false},
 		{"ValidateLongBase", &expr.AttributeExpr{Type: root.UserType("LongBase")}, &expr.AttributeExpr{Type: root.UserType("LongBase")}, true, false},
 		{"ValidateValue", &expr.AttributeExpr{Type: root.UserType("ValueDerived")}, &expr.AttributeExpr{Type: root.UserType("ValueDerived")}, true, false},
+		{"ValidateDefaults", &expr.AttributeExpr{Type: root.UserType("DefaultedHolder")}, root.UserType("DefaultedHolder").Attribute(), true, false},
 		{"ValidateArray", &expr.AttributeExpr{Type: &expr.Array{ElemType: derived}}, &expr.AttributeExpr{Type: &expr.Array{ElemType: derived}}, false, false},
 		{"ValidateMap", &expr.AttributeExpr{Type: &expr.Map{KeyType: &expr.AttributeExpr{Type: expr.String}, ElemType: derived}}, &expr.AttributeExpr{Type: &expr.Map{KeyType: &expr.AttributeExpr{Type: expr.String}, ElemType: derived}}, false, false},
 	} {
@@ -313,9 +314,39 @@ func namedDefinitionValidationDSL() {
 		d.Meta("type:generate:force")
 		d.Required("Note")
 	})
+	label := d.Type("Label", d.String, func() {
+		d.Meta("struct:pkg:path", "left/types")
+		d.Enum("brief", "detailed")
+		d.Default("brief")
+	})
+	d.Type("DefaultedHolder", func() {
+		d.Meta("struct:pkg:path", "left/types")
+		d.Meta("type:generate:force")
+		d.Attribute("label", label)
+	})
 }
 
 const namedDefinitionValidationTests = `
+func TestDefaultedAliasValidation(t *testing.T) {
+	for _, test := range []struct {
+		value {{.DefaultedHolder}}
+		invalid bool
+	}{
+		{value: {{.DefaultedHolder}}{Label: "brief"}},
+		{value: {{.DefaultedHolder}}{Label: "detailed"}},
+		{value: {{.DefaultedHolder}}{Label: ""}, invalid: true},
+		{value: {{.DefaultedHolder}}{Label: "other"}, invalid: true},
+	} {
+		before := test.value
+		if err := ValidateDefaults(&test.value); (err != nil) != test.invalid {
+			t.Errorf("validation = %v, want invalid %t", err, test.invalid)
+		}
+		if test.value != before {
+			t.Error("validation changed the caller's value")
+		}
+	}
+}
+
 func TestNamedUnionCollections(t *testing.T) {
 	for _, invalid := range []bool{false, true} {
 		value := {{.Derived}}({{.Choicetext}}("valid"))

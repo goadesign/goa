@@ -484,30 +484,33 @@ func (p *validationPlanner) plan(attribute *expr.AttributeExpr, layout *GoTypePl
 	}
 	// Required-field rules index the structural fields checked above. Keep
 	// effective constraints on the original occurrence and its named chain.
+	pointer := policy.Pointer || !required && (attribute.DefaultValue == nil || !policy.UseDefault)
+	if nested && (expr.IsUnion(attribute.Type) || expr.IsPrimitive(attribute.Type) && !IsNilable(attribute.Type)) {
+		// Fields and collection entries already have a planned Go representation.
+		// In particular, a named scalar's default can make its field a value even
+		// when the field does not declare a default of its own.
+		pointer = valuePointer
+	}
 	var err error
-	node.rules, err = planValidationRules(attribute, structure, required, alias)
+	node.rules, err = planValidationRules(attribute, structure, pointer, alias)
 	if err != nil {
 		return nil, fmt.Errorf("plan validation for %s: %w", path, err)
 	}
 	if nested && !node.empty() {
-		node.guard = validationNeedsNilGuard(attribute, required, policy)
-		if expr.IsUnion(attribute.Type) {
-			node.guard = valuePointer
-		}
+		node.guard = pointer && !expr.IsArray(attribute.Type) && !expr.IsMap(attribute.Type)
 	}
 	return node, nil
 }
 
 // planValidationRules copies local rules and the method owner needed by each
 // required union field. A missing retained named union returns an error.
-func planValidationRules(attribute *expr.AttributeExpr, layout *GoTypePlan, required, alias bool) (validationRulePlan, error) {
+func planValidationRules(attribute *expr.AttributeExpr, layout *GoTypePlan, pointer, alias bool) (validationRulePlan, error) {
 	validation := expr.EffectiveValidation(attribute)
 	if validation == nil {
 		return validationRulePlan{}, nil
 	}
 	policy := layout.Policy()
 	unaliased := unalias(attribute.Type)
-	pointer := policy.Pointer || !required && (attribute.DefaultValue == nil || !policy.UseDefault)
 	rules := validationRulePlan{
 		format:           string(validation.Format),
 		pattern:          validation.Pattern,
@@ -591,18 +594,6 @@ func generatedRequiredValidationNames(attribute *expr.AttributeExpr, validation 
 		names = append(names, name)
 	}
 	return names
-}
-
-// validationNeedsNilGuard reports whether generated checks must first verify
-// that the value is not nil.
-func validationNeedsNilGuard(attribute *expr.AttributeExpr, required bool, policy GoLayoutPolicy) bool {
-	if expr.IsArray(attribute.Type) || expr.IsMap(attribute.Type) {
-		return false
-	}
-	if expr.IsUnion(attribute.Type) {
-		return policy.UnionPointer && (!required || policy.Pointer)
-	}
-	return policy.Pointer || !required && (attribute.DefaultValue == nil || !policy.UseDefault)
 }
 
 // userTypeNeedsValidation reports whether a user-defined type or any value

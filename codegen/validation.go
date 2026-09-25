@@ -626,37 +626,38 @@ func oneof(target string, vals []any) string {
 	return strings.Join(elems, " || ")
 }
 
-// constant returns the Go constant name of the format with the given value.
+// constant returns the unqualified Go constant name for a validation format.
+// The template supplies the runtime package's resolved import name.
 func constant(formatName string) string {
 	switch formatName {
 	case "date":
-		return "goa.FormatDate"
+		return "FormatDate"
 	case "date-time":
-		return "goa.FormatDateTime"
+		return "FormatDateTime"
 	case "uuid":
-		return "goa.FormatUUID"
+		return "FormatUUID"
 	case "email":
-		return "goa.FormatEmail"
+		return "FormatEmail"
 	case "hostname":
-		return "goa.FormatHostname"
+		return "FormatHostname"
 	case "ipv4":
-		return "goa.FormatIPv4"
+		return "FormatIPv4"
 	case "ipv6":
-		return "goa.FormatIPv6"
+		return "FormatIPv6"
 	case "ip":
-		return "goa.FormatIP"
+		return "FormatIP"
 	case "uri":
-		return "goa.FormatURI"
+		return "FormatURI"
 	case "mac":
-		return "goa.FormatMAC"
+		return "FormatMAC"
 	case "cidr":
-		return "goa.FormatCIDR"
+		return "FormatCIDR"
 	case "regexp":
-		return "goa.FormatRegexp"
+		return "FormatRegexp"
 	case "json":
-		return "goa.FormatJSON"
+		return "FormatJSON"
 	case "rfc1123":
-		return "goa.FormatRFC1123"
+		return "FormatRFC1123"
 	}
 	panic("unknown format") // bug
 }
