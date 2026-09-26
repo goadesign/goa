@@ -44,6 +44,7 @@ type (
 		externalAlias     string
 		externalAttribute *expr.AttributeExpr
 		externalPackages  map[expr.UserType]*codegen.ImportSpec
+		externalNames     map[expr.UserType]*codegen.NameScope
 		externalScope     *codegen.NameScope
 		plan              *codegen.TransformPlan
 		methodName        string
@@ -74,6 +75,8 @@ type (
 	externalConversionResolver struct {
 		scope    *codegen.AttributeScope
 		packages map[expr.UserType]string
+		names    map[expr.UserType]*codegen.NameScope
+		current  expr.UserType
 	}
 )
 
@@ -251,12 +254,19 @@ func planExternalConversion(
 		return nil, err
 	}
 	externalPackages := make(map[expr.UserType]*codegen.ImportSpec, len(reflectedTypes))
+	externalNames := make(map[expr.UserType]*codegen.NameScope, len(reflectedTypes))
 	for userType, reflected := range reflectedTypes {
 		importPath, alias, err := getExternalReflectTypeInfo(reflected)
 		if err != nil {
 			return nil, err
 		}
 		externalPackages[userType.Origin()] = codegen.NewImport(alias, importPath)
+		// These types already exist in external packages. Bind their exact
+		// names without sharing a namespace with other packages or helpers.
+		names := codegen.NewNameScope()
+		names.HashedUnique(userType, reflected.Name())
+		names.Freeze()
+		externalNames[userType.Origin()] = names
 	}
 	externalPath := identity.externalPath
 	externalAttribute := &expr.AttributeExpr{Type: externalDataType}
@@ -284,6 +294,7 @@ func planExternalConversion(
 		externalAlias:     externalAlias,
 		externalAttribute: externalAttribute,
 		externalPackages:  externalPackages,
+		externalNames:     externalNames,
 		externalScope:     codegen.NewNameScope(),
 		plan:              transform,
 		receiverType:      identity.receiver,
@@ -423,11 +434,13 @@ func linkExternalConversion(
 	externalResolver := newExternalConversionResolver(
 		operation.externalScope,
 		operation.externalPackages,
+		operation.externalNames,
 		aliases,
 		serviceResolver.outputPath,
 	)
 	externalContext := &codegen.AttributeContext{
-		Scope: externalResolver,
+		Scope:        externalResolver,
+		UnionPointer: true,
 	}
 	serviceContext := &codegen.AttributeContext{
 		UseDefault: true,
@@ -471,6 +484,7 @@ func linkExternalConversion(
 func newExternalConversionResolver(
 	scope *codegen.NameScope,
 	packages map[expr.UserType]*codegen.ImportSpec,
+	names map[expr.UserType]*codegen.NameScope,
 	aliases *importAliases,
 	outputPackage string,
 ) *externalConversionResolver {
@@ -481,21 +495,26 @@ func newExternalConversionResolver(
 	return &externalConversionResolver{
 		scope:    codegen.NewAttributeScope(scope),
 		packages: resolved,
+		names:    names,
 	}
 }
 
 // Name renders an external reflected type with the alias for its own package.
 func (r *externalConversionResolver) Name(att *expr.AttributeExpr, pkg string, ptr, useDefault bool) string {
-	if userType, ok := att.Type.(expr.UserType); ok {
-		pkg = r.packageName(userType)
+	if userType := r.namedType(att); userType != nil {
+		return r.names[userType.Origin()].GoFullTypeName(
+			&expr.AttributeExpr{Type: userType}, r.packageName(userType),
+		)
 	}
 	return r.scope.Name(att, pkg, ptr, useDefault)
 }
 
 // Ref renders an external reflected type reference with its own package alias.
 func (r *externalConversionResolver) Ref(att *expr.AttributeExpr, pkg string) string {
-	if userType, ok := att.Type.(expr.UserType); ok {
-		pkg = r.packageName(userType)
+	if userType := r.namedType(att); userType != nil {
+		return r.names[userType.Origin()].GoFullTypeRef(
+			&expr.AttributeExpr{Type: userType}, r.packageName(userType),
+		)
 	}
 	return r.scope.Ref(att, pkg)
 }
@@ -507,16 +526,36 @@ func (r *externalConversionResolver) Field(att *expr.AttributeExpr, name string,
 
 // Package returns the Go name written before a user-supplied named type.
 func (r *externalConversionResolver) Package(att *expr.AttributeExpr) string {
-	if userType, ok := att.Type.(expr.UserType); ok {
+	if userType := r.namedType(att); userType != nil {
 		return r.packageName(userType)
 	}
 	return ""
 }
 
-// Enter returns the same resolver because each child named type already records
-// the package that declares it.
-func (r *externalConversionResolver) Enter(*expr.AttributeExpr) codegen.Attributor {
+// Enter remembers the named type that owns an underlying union's methods.
+// Nested named branches still select their own exact package.
+func (r *externalConversionResolver) Enter(att *expr.AttributeExpr) codegen.Attributor {
+	if userType, ok := att.Type.(expr.UserType); ok {
+		entered := *r
+		entered.current = userType
+		return &entered
+	}
 	return r
+}
+
+// namedType returns the existing external declaration for a reference. A raw
+// union is the definition inside the last entered named external type.
+func (r *externalConversionResolver) namedType(att *expr.AttributeExpr) expr.UserType {
+	if userType, ok := att.Type.(expr.UserType); ok {
+		return userType
+	}
+	if _, union := att.Type.(*expr.Union); union {
+		if r.current == nil || !expr.IsUnion(r.current) {
+			panic("external union reference has no named owner")
+		}
+		return r.current
+	}
+	return nil
 }
 
 // IsSumType reports the standard Goa transform representation.

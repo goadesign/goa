@@ -496,6 +496,25 @@ declared pointer policy. Declaring a new destination variable does not choose
 its representation. Collection dispatch still runs the same planned hooks;
 custom union converters, including protobuf conversion, retain their ownership.
 
+`ConvertTo` and `CreateFrom` use that same union converter for external Go
+types. During service planning, the authored union supplies its branch names
+and schemas, while the actual external `Kind`, `As<Branch>` and `Set<Branch>`
+method signatures supply its public Go representation. Planning rejects missing
+or extra branches, mismatched getter/setter types and incompatible pointer
+forms. Reflected graph nodes retain both the external type and authored schema,
+so shared Go types do not impose one occurrence's branch order on another.
+Planning never inspects private union storage. Named scalars and collections
+keep their reflected names and package imports at every visited field, branch,
+collection key and element. Named collections enter the graph cache before
+their children so recursive references retain the same declaration. External
+union fields may store values or one pointer; union branch parameters use the
+single pointer required by their public methods. Planning rejects deeper union
+pointers and union pointers in collections or map keys with the attribute path.
+Value union collections and ordinary recursive object pointers retain their
+existing representation. Local names still come from the service package's
+completed declaration plan. These mappings need no separate plugin, external
+descriptor or runtime reflection.
+
 Each recursive call is a helper occurrence. `Helpers` returns those occurrences
 with the requiredness that decides whether the generated caller checks for nil.
 Several occurrences can call the same function. `HelperDefinitions` returns one
