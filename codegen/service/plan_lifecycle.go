@@ -61,9 +61,12 @@ func NewPlans(generation *codegen.Generation, inputs ...PlanInput) ([]*Plan, err
 	if err != nil {
 		return nil, err
 	}
+	// Collect authored types from every validated design before registering any
+	// declarations. A union may use an authored child declared by another root.
+	rootTypes := newRootTypeSet(roots...)
 	plans := make([]*Plan, len(inputs))
 	for index, input := range inputs {
-		facts, err := collectRootFacts(input.Root, generation, input.Examples, servicePaths)
+		facts, err := collectRootFacts(input.Root, generation, input.Examples, servicePaths, rootTypes)
 		if err != nil {
 			return nil, err
 		}
@@ -351,8 +354,15 @@ func (p *Plan) projectedResultFacts(method *expr.MethodExpr) (*viewedResultFacts
 }
 
 // collectRootFacts reads one service design and chooses names used only by that
-// design before shared files receive their names.
-func collectRootFacts(root *expr.RootExpr, generation *codegen.Generation, examples *expr.ExampleGenerator, servicePaths map[string]string) (*rootFacts, error) {
+// design before shared files receive their names. rootTypes identifies authored
+// types across the complete batch without adding other roots' emission inputs.
+func collectRootFacts(
+	root *expr.RootExpr,
+	generation *codegen.Generation,
+	examples *expr.ExampleGenerator,
+	servicePaths map[string]string,
+	rootTypes *rootTypeSet,
+) (*rootFacts, error) {
 	examplePackageScope := codegen.NewNameScope()
 	for _, service := range root.Services {
 		examplePackageScope.Unique(strings.ToLower(codegen.Goify(service.Name, false)))
@@ -364,7 +374,7 @@ func collectRootFacts(root *expr.RootExpr, generation *codegen.Generation, examp
 		examplePackageName: examplePackageScope.Unique(strings.ToLower(codegen.Goify(root.API.Name, false)), "api"),
 		serviceByID:        make(map[string]*serviceFacts, len(root.Services)),
 		types:              append([]expr.UserType(nil), root.Types...),
-		rootTypes:          newRootTypeSet(root),
+		rootTypes:          rootTypes,
 		examples:           examples,
 	}
 	for _, service := range root.Services {

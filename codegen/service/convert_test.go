@@ -17,6 +17,7 @@ import (
 	"goa.design/goa/v3/codegen/service/testdata"
 	aliasd "goa.design/goa/v3/codegen/service/testdata/alias-external"
 	"goa.design/goa/v3/codegen/service/testdata/external"
+	externalunion "goa.design/goa/v3/codegen/service/testdata/external-union"
 	"goa.design/goa/v3/dsl"
 	"goa.design/goa/v3/expr"
 )
@@ -145,6 +146,20 @@ func TestDesignType(t *testing.T) {
 	}
 }
 func TestCompatible(t *testing.T) {
+	named := func(name string, underlying expr.DataType) expr.DataType {
+		return &expr.UserTypeExpr{
+			AttributeExpr: &expr.AttributeExpr{Type: underlying},
+			TypeName:      name,
+			UID:           name,
+		}
+	}
+	namedString := named("NamedString", expr.String)
+	nestedString := named("NestedString", namedString)
+	namedBytes := named("NamedBytes", expr.Bytes)
+	namedInt32 := named("NamedInt32", expr.Int32)
+	namedUInt32 := named("NamedUInt32", expr.UInt32)
+	namedFloat32 := named("NamedFloat32", expr.Float32)
+
 	cases := []struct {
 		Name        string
 		From        expr.DataType
@@ -172,6 +187,22 @@ func TestCompatible(t *testing.T) {
 		{"object-recursive", objRecursive(), objRecursiveT{}, ""},
 		{"array-object", dsl.ArrayOf(obj), []objT{{}}, ""},
 
+		{"string-to-named", expr.String, externalunion.Text_Value(""), ""},
+		{"named-string-to-plain", namedString, "", ""},
+		{"named-string-to-named", namedString, externalunion.Text_Value(""), ""},
+		{"nested-string-to-plain", nestedString, "", ""},
+		{"nested-string-to-named", nestedString, externalunion.Text_Value(""), ""},
+		{"bytes-to-named", expr.Bytes, externalunion.Byte_Data{}, ""},
+		{"named-bytes-to-plain", namedBytes, []byte{}, ""},
+		{"named-bytes-to-named", namedBytes, externalunion.Byte_Data{}, ""},
+		{"named-int32", namedInt32, int32(0), ""},
+		{"named-uint32", namedUInt32, uint32(0), ""},
+		{"named-float32", namedFloat32, float32(0), ""},
+		{"array-named-element", dsl.ArrayOf(expr.String), externalunion.Text_List{}, ""},
+		{"named-array-element", dsl.ArrayOf(nestedString), externalunion.Text_List{}, ""},
+		{"map-named-key-element", dsl.MapOf(expr.String, dsl.ArrayOf(expr.String)), externalunion.Text_Table{}, ""},
+		{"named-map-key-element", dsl.MapOf(nestedString, dsl.ArrayOf(namedString)), externalunion.Text_Table{}, ""},
+
 		{"invalid-primitive", expr.String, 0, "types don't match: type of <value> is int but type of corresponding attribute is string"},
 		{"invalid-int", expr.Int, 0.0, "types don't match: type of <value> is float64 but type of corresponding attribute is int"},
 		{"invalid-float32", expr.Float32, 0, "types don't match: type of <value> is int but type of corresponding attribute is float32"},
@@ -184,6 +215,15 @@ func TestCompatible(t *testing.T) {
 		{"invalid-obj-4", obj, objT4{}, "types don't match: type of <value>.Goo2 is float32 but type of corresponding attribute is uint"},
 		{"invalid-obj-5", obj, objT5{}, "types don't match: could not find field \"Baz\" of external type \"objT5\" matching attribute \"Baz\" of type \"objT\""},
 		{"invalid-array-object", dsl.ArrayOf(obj), []objT2{{}}, "types don't match: type of <value>[0].Bar is string but type of corresponding attribute is int"},
+		{"invalid-named-string-kind", namedString, 0, "types don't match: type of <value> is int but type of corresponding attribute is NamedString"},
+		{"invalid-named-int32-width", namedInt32, int64(0), "types don't match: type of <value> is int64 but type of corresponding attribute is NamedInt32"},
+		{"invalid-named-uint32-signedness", namedUInt32, int32(0), "types don't match: type of <value> is int32 but type of corresponding attribute is NamedUInt32"},
+		{"invalid-named-float32-width", namedFloat32, float64(0), "types don't match: type of <value> is float64 but type of corresponding attribute is NamedFloat32"},
+		{"invalid-string-to-named-bytes", expr.String, externalunion.Byte_Data{}, "types don't match: type of <value> is Byte_Data but type of corresponding attribute is string"},
+		{"invalid-bytes-to-named-string", expr.Bytes, externalunion.Text_Value(""), "types don't match: type of <value> is Text_Value but type of corresponding attribute is bytes"},
+		{"invalid-any-to-named-string", expr.Any, externalunion.Text_Value(""), "types don't match: type of <value> is Text_Value but type of corresponding attribute is any"},
+		{"invalid-named-map-key", dsl.MapOf(namedInt32, dsl.ArrayOf(expr.String)), externalunion.Text_Table{}, "types don't match: type of <value>.key is Text_Value but type of corresponding attribute is NamedInt32"},
+		{"invalid-named-array-element", dsl.ArrayOf(namedInt32), externalunion.Text_List{}, "types don't match: type of <value>[0] is Text_Value but type of corresponding attribute is NamedInt32"},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

@@ -68,8 +68,8 @@ type (
 		owner    *codegen.GeneratedPackage
 	}
 
-	// rootTypeSet maps compiler-created copies back to the user type declared in
-	// the same design. Generated Goa OneOf branch aliases are not included.
+	// rootTypeSet maps copied types back to authored types across one planning
+	// batch. Generated Goa OneOf branch aliases are not included.
 	rootTypeSet struct {
 		byOrigin map[expr.UserType]expr.UserType
 	}
@@ -1054,25 +1054,27 @@ func planViewUnions(attribute *expr.AttributeExpr, generatedPackage *codegen.Gen
 	return nil
 }
 
-// newRootTypeSet records the authored types in one design so compiler-created
-// copies can use the same generated Go declarations. Generated Goa OneOf branch
-// aliases are not added.
-func newRootTypeSet(root *expr.RootExpr) *rootTypeSet {
+// newRootTypeSet records authored types from every design in one planning batch
+// before declarations are registered. A union can then recognize an authored
+// child from another design while generated branch types stay separate.
+func newRootTypeSet(roots ...*expr.RootExpr) *rootTypeSet {
 	userTypes := &rootTypeSet{
-		byOrigin: make(map[expr.UserType]expr.UserType, len(root.Types)+len(root.ResultTypes)+1),
+		byOrigin: make(map[expr.UserType]expr.UserType),
 	}
-	for _, userType := range root.Types {
-		userTypes.add(userType)
-	}
-	for _, resultType := range root.ResultTypes {
-		userTypes.add(resultType)
+	for _, root := range roots {
+		for _, userType := range root.Types {
+			userTypes.add(userType)
+		}
+		for _, resultType := range root.ResultTypes {
+			userTypes.add(resultType)
+		}
 	}
 	userTypes.add(expr.ErrorResult)
 	return userTypes
 }
 
 // generatedUnionBranch reports whether OneOf created a user type around a
-// branch that was not declared as a user type in the design.
+// branch that was not authored in any design in this planning batch.
 func generatedUnionBranch(branch *expr.NamedAttributeExpr, rootTypes *rootTypeSet) (expr.UserType, bool) {
 	userType, ok := branch.Attribute.Type.(expr.UserType)
 	if !ok {
@@ -1081,14 +1083,13 @@ func generatedUnionBranch(branch *expr.NamedAttributeExpr, rootTypes *rootTypeSe
 	return userType, !rootTypes.contains(userType)
 }
 
-// add records one user type declared in this design under its original type.
+// add records one authored type under its original declaration.
 func (s *rootTypeSet) add(userType expr.UserType) {
 	s.byOrigin[userType.Origin()] = userType
 }
 
 // canonical returns the original authored declaration for a compiler-created
-// copy from this design. Types originating in another design are returned
-// unchanged.
+// copy in this planning batch. Types not authored in the batch are returned unchanged.
 func (s *rootTypeSet) canonical(userType expr.UserType) expr.UserType {
 	if canonical, ok := s.byOrigin[userType.Origin()]; ok {
 		return canonical
@@ -1096,8 +1097,8 @@ func (s *rootTypeSet) canonical(userType expr.UserType) expr.UserType {
 	return userType
 }
 
-// contains reports whether userType was declared in this design or copied from
-// one of its declarations.
+// contains reports whether userType was authored in this planning batch or
+// copied from one of its authored declarations.
 func (s *rootTypeSet) contains(userType expr.UserType) bool {
 	_, ok := s.byOrigin[userType.Origin()]
 	return ok
