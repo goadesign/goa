@@ -102,7 +102,8 @@ func NewLength(a *AttributeExpr, r *ExampleGenerator) int {
 		count := 0
 		switch {
 		case math.IsInf(minlength, 1):
-			count = int(maxlength) - (r.Int() % 3)
+			diff := min(int(maxlength), maxLength-1) + 1
+			count = int(maxlength) - (r.Int() % diff)
 		case math.IsInf(maxlength, -1):
 			count = int(minlength) + (r.Int() % 3)
 		case minlength < maxlength:
