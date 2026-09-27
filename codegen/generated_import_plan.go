@@ -83,6 +83,37 @@ func (p *GeneratedImportPlan) AddRecursiveTypeReferences(attributes ...*expr.Att
 	return nil
 }
 
+// AddTypeReference records imports named by a retained Go type reference.
+// It follows anonymous arrays, maps, and structs but does not enter named
+// definitions or union branches. Generated and custom requests keep their
+// existing priorities; final aliases belong to the output package at Freeze.
+// Imported generated declarations require the binder's PreferredImportName.
+// Local declarations need no import name. The operation never reads expressions.
+func (p *GeneratedImportPlan) AddTypeReference(layout *GoTypePlan) error {
+	if err := p.ensurePlanning(); err != nil {
+		return err
+	}
+	if layout == nil {
+		return fmt.Errorf("type reference imports require a retained Go layout")
+	}
+	return p.addRetainedTypeImports(layout.walkImports, "type reference")
+}
+
+// AddCompleteType records imports used while generated code reads or constructs
+// a complete retained value. It keeps generated and custom requests at their
+// existing priorities and leaves final aliases to the output package at Freeze.
+// Imported generated declarations require the binder's PreferredImportName.
+// Local declarations need no import name. The operation never reads expressions.
+func (p *GeneratedImportPlan) AddCompleteType(layout *GoTypePlan) error {
+	if err := p.ensurePlanning(); err != nil {
+		return err
+	}
+	if layout == nil {
+		return fmt.Errorf("complete type imports require a retained Go layout")
+	}
+	return p.addRetainedTypeImports(layout.walk, "complete type")
+}
+
 // Paths returns independent copies of the complete package paths used by this
 // contribution. It can compare plans before their package names are fixed.
 func (p *GeneratedImportPlan) Paths() []string {
@@ -124,6 +155,30 @@ func (p *GeneratedImportPlan) Imports() []*ImportSpec {
 		imports[index] = &copy
 	}
 	return imports
+}
+
+// addRetainedTypeImports registers each visited layout's import at its existing
+// priority. The caller chooses the traversal; description identifies errors.
+func (p *GeneratedImportPlan) addRetainedTypeImports(walk func(func(*GoTypePlan)), description string) error {
+	var failure error
+	walk(func(current *GoTypePlan) {
+		if failure != nil {
+			return
+		}
+		if current.hasDirectImport {
+			failure = p.AddDesign(NewImport(current.directImport.Name, current.directImport.Path))
+			return
+		}
+		if current.declaration == nil || current.owner == p.output.path {
+			return
+		}
+		if current.preferredImportName == "" {
+			failure = fmt.Errorf("%s import from %q into %q requires a preferred generated package name", description, current.owner, p.output.path)
+			return
+		}
+		failure = p.AddGenerated(NewImport(current.preferredImportName, current.owner))
+	})
+	return failure
 }
 
 // add registers each import preference on the output package and saves its

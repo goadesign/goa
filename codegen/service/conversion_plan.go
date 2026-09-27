@@ -5,6 +5,7 @@ package service
 import (
 	"cmp"
 	"fmt"
+	"go/token"
 	"reflect"
 	"sort"
 	"strings"
@@ -38,6 +39,7 @@ type (
 		servicePath       string
 		receiverID        string
 		receiverAttribute *expr.AttributeExpr
+		receiverLayout    *codegen.GoTypePlan
 		receiverType      *codegen.TypeDeclaration
 		externalType      reflect.Type
 		externalPath      string
@@ -108,7 +110,7 @@ func collectExternalConversions(roots []*rootFacts, generation *codegen.Generati
 						continue
 					}
 					owner := generation.Package(generatedPackagePath(
-						generation.GenPkg(), service.packagePath, codegen.UserTypeLocation(mapping.User),
+						generation.GenPkg(), service.packagePath, candidate.rootTypes.location(mapping.User),
 					))
 					selected := owners[owner]
 					if selected == nil || service.packagePath < selected.packagePath {
@@ -168,7 +170,7 @@ func collectExternalConversions(roots []*rootFacts, generation *codegen.Generati
 	}
 
 	for _, file := range files {
-		if err := finishExternalConversionFile(file, generation); err != nil {
+		if err := finishExternalConversionFile(file, generation, fileRoots[file.owner].rootTypes); err != nil {
 			return err
 		}
 		owner := fileRoots[file.owner]
@@ -283,6 +285,11 @@ func planExternalConversion(
 	if err != nil {
 		return nil, err
 	}
+	if err := validateExternalConversionAccess(
+		externalAttribute, reflectedTypes, externalPackages, owner, identity.direction, transform,
+	); err != nil {
+		return nil, err
+	}
 	operation := &externalConversionFacts{
 		direction:         identity.direction,
 		serviceName:       service.name,
@@ -332,15 +339,102 @@ func planExternalConversion(
 	return operation, nil
 }
 
+// validateExternalConversionAccess checks external names that the selected
+// conversion must write. Target construction spells nested types in casts and
+// allocations. Reading a source only needs names in method and helper signatures;
+// fields and iteration variables otherwise retain their inferred Go types.
+func validateExternalConversionAccess(
+	external *expr.AttributeExpr,
+	reflected map[expr.UserType]reflect.Type,
+	packages map[expr.UserType]*codegen.ImportSpec,
+	owner *codegen.GeneratedPackage,
+	direction externalConversionDirection,
+	transform *codegen.TransformPlan,
+) error {
+	name := "ConvertTo"
+	if direction == externalCreateFrom {
+		name = "CreateFrom"
+	}
+	seen := make(map[expr.UserType]struct{})
+	var visit func(*expr.AttributeExpr, string, bool) error
+	visit = func(attribute *expr.AttributeExpr, path string, contents bool) error {
+		if userType, ok := attribute.Type.(expr.UserType); ok {
+			origin := userType.Origin()
+			if typ, exists := reflected[origin]; exists {
+				if !token.IsExported(typ.Name()) && packages[origin].Path != owner.ImportPath() {
+					return fmt.Errorf(
+						"%s cannot name unexported external type %s.%s at %s from generated package %q",
+						name, packages[origin].Path, typ.Name(), path, owner.ImportPath(),
+					)
+				}
+			}
+			if !contents {
+				return nil
+			}
+			if _, visited := seen[origin]; visited {
+				return nil
+			}
+			seen[origin] = struct{}{}
+			return visit(userType.Attribute(), path, true)
+		}
+		switch dt := attribute.Type.(type) {
+		case *expr.Object:
+			for _, field := range *dt {
+				if err := visit(field.Attribute, path+"."+field.Name, contents); err != nil {
+					return err
+				}
+			}
+		case *expr.Array:
+			return visit(dt.ElemType, path+"[0]", contents)
+		case *expr.Map:
+			if err := visit(dt.KeyType, path+".key", contents); err != nil {
+				return err
+			}
+			return visit(dt.ElemType, path+".value", contents)
+		case *expr.Union:
+			for _, branch := range dt.Values {
+				if err := visit(branch.Attribute, path+"."+branch.Name, contents); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	}
+	if err := visit(external, "<value>", direction == externalConvertTo); err != nil {
+		return err
+	}
+	if direction == externalCreateFrom {
+		for _, definition := range transform.HelperDefinitions() {
+			if err := visit(definition.Source, "<helper parameter>", false); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 // finishExternalConversionFile sorts the generated methods, assigns child
 // helper names within each receiver method, and records the imports used by
 // convert.go.
-func finishExternalConversionFile(file *externalConversionFileFacts, generation *codegen.Generation) error {
+func finishExternalConversionFile(file *externalConversionFileFacts, generation *codegen.Generation, rootTypes *rootTypeSet) error {
 	sort.Slice(file.operations, func(i, j int) bool {
 		return externalConversionOperationLess(file.operations[i], file.operations[j])
 	})
 	takenByReceiver := make(map[*codegen.TypeDeclaration]map[string]struct{})
 	for _, operation := range file.operations {
+		// Helpers render independently of their enclosing object. Retain the
+		// receiver snapshot's complete layout so each helper can find the exact
+		// declaration chosen for an unlocated union branch or collection.
+		layout, err := codegen.PlanGoType(operation.receiverAttribute, codegen.GoTypePlanOptions{
+			Owner:            operation.receiverType.PackagePath(),
+			Policy:           codegen.GoLayoutPolicy{UseDefault: true, SumType: true},
+			RetainNamedValue: true,
+			Bind:             serviceGoTypeBinder(rootTypes, generation),
+		})
+		if err != nil {
+			return fmt.Errorf("plan external conversion receiver %q layout: %w", operation.receiverID, err)
+		}
+		operation.receiverLayout = layout
 		receiver := operation.receiverType
 		taken := takenByReceiver[receiver]
 		if taken == nil {
@@ -362,6 +456,7 @@ func finishExternalConversionFile(file *externalConversionFileFacts, generation 
 	}
 	imports, err := retainFileImports(
 		generation,
+		rootTypes,
 		file.owner.ImportPath(),
 		nil,
 		nil,
@@ -411,6 +506,7 @@ func linkExternalConversions(
 		for _, operation := range file.operations {
 			serviceResolver := newServiceResolver(
 				generation,
+				facts.rootTypes,
 				aliases,
 				operation.serviceName,
 				operation.servicePath,
@@ -446,6 +542,13 @@ func linkExternalConversion(
 		UseDefault: true,
 		Scope:      serviceResolver,
 	}
+	receiverLayout := operation.receiverLayout.Link(serviceResolver.outputPath, func(importPath string) string {
+		return aliases.name(serviceResolver.outputPath, importPath)
+	})
+	serviceContext, err := serviceContext.WithGoTypeLayout(receiverLayout)
+	if err != nil {
+		return err
+	}
 	sourceContext, targetContext := serviceContext, externalContext
 	sourceVar, targetVar := "t", "v"
 	if operation.direction == externalCreateFrom {
@@ -456,10 +559,6 @@ func linkExternalConversion(
 		return err
 	}
 	code, helpers, err := operation.plan.Render(sourceVar, targetVar, true)
-	if err != nil {
-		return err
-	}
-	receiverLayout, err := serviceResolver.GoTypeLayout(operation.receiverAttribute, serviceContext.LayoutPolicy())
 	if err != nil {
 		return err
 	}

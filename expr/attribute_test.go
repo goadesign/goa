@@ -124,7 +124,6 @@ func TestAttributeExprValidate(t *testing.T) {
 		errRequiredFieldNotExist = fmt.Errorf(`%srequired field %q does not exist in type %s`, normalizedCtx, "foo", fieldNotExistType.Name())
 		errViewButNotAResultType = fmt.Errorf("%s uses view %q but %q is not a result type", normalizedCtx, metadata["view"][0], notAResultType.Name())
 		errTypeNotDefineView     = fmt.Errorf("%s: type %q does not define view %q", normalizedCtx, viewNotDefinedTypeName, "foo")
-		errConflictingTypes      = fmt.Errorf("type \"%s\" has conflicting packages %s and %s", "SecondType", "types2", "types")
 	)
 	cases := map[string]struct {
 		typ        DataType
@@ -401,7 +400,7 @@ func TestAttributeExprValidate(t *testing.T) {
 					},
 				},
 			},
-			expected: &eval.ValidationErrors{Errors: []error{errConflictingTypes}},
+			expected: &eval.ValidationErrors{Errors: []error{}},
 		},
 		"conflicting custom packages between sub-type in array and parent": {
 			typ: &UserTypeExpr{
@@ -435,7 +434,7 @@ func TestAttributeExprValidate(t *testing.T) {
 					},
 				},
 			},
-			expected: &eval.ValidationErrors{Errors: []error{errConflictingTypes}},
+			expected: &eval.ValidationErrors{Errors: []error{}},
 		},
 		"conflicting custom packages between sub-type in map key and parent": {
 			typ: &UserTypeExpr{
@@ -472,7 +471,7 @@ func TestAttributeExprValidate(t *testing.T) {
 					},
 				},
 			},
-			expected: &eval.ValidationErrors{Errors: []error{errConflictingTypes}},
+			expected: &eval.ValidationErrors{Errors: []error{}},
 		},
 		"conflicting custom packages between sub-type in map element and parent": {
 			typ: &UserTypeExpr{
@@ -509,7 +508,7 @@ func TestAttributeExprValidate(t *testing.T) {
 					},
 				},
 			},
-			expected: &eval.ValidationErrors{Errors: []error{errConflictingTypes}},
+			expected: &eval.ValidationErrors{Errors: []error{}},
 		},
 	}
 

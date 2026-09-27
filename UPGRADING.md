@@ -4,6 +4,57 @@ Goa, the examples, and the plugins require **Go 1.26 or later**. Go 1.27.1 is
 recommended. Upgrade the Go toolchain before updating these modules: the new
 dependency versions require Go 1.26.
 
+## Unreleased: generated packages and transport conversions
+
+Regenerate the complete `gen` tree after updating the generator. Generated
+declarations, conversion methods, transport references, and imports now use the
+same planned package and names, including types shared across services.
+
+A type assigned `struct:pkg:path` supplies the package for its unlocated
+dependencies. A referenced type with its own explicit location keeps that
+location and supplies it to its descendants. The design no longer needs to
+repeat the parent's location on every dependency. Conflicting locations for one
+original type, incompatible inherited locations, and generated Go import cycles
+fail during planning. Give a shared dependency one explicit location when its
+parents would otherwise place it in different packages. Check handwritten Go
+imports after regeneration if types move to an inherited package.
+
+External `ConvertTo` and `CreateFrom` methods retain exact external named scalar,
+collection, and union method types. Conversion methods belong to the generated
+receiver's package, including relocated receivers shared by several services.
+An external type name must be accessible wherever the selected conversion writes
+it: for example, `ConvertTo` cannot construct an exported slice whose elements
+have an unexported named type from another package. Planning now reports that
+type and its use instead of emitting uncompilable Go. Export the necessary
+external types or remove that conversion declaration. `CreateFrom` may still
+read private scalar or collection-entry types through exported fields or getters
+when no generated signature needs to name them. It must still be able to name
+its external root and any external helper parameter types.
+
+Named scalar HTTP headers use the underlying primitive's formatting and retain
+their named service type and inherited validation rules. Regenerate HTTP clients
+and servers to pick up the corrected header conversions.
+
+Protobuf repeated and map fields lose empty-versus-absent information on the
+wire. Regenerated protobuf-to-service request and response constructors allocate
+empty required collections after that round trip. Optional direct collections
+retain their existing representation; singular message, scalar, and wrapper
+presence checks remain independent. Length and element constraints still apply.
+This does not relax required JSON properties: missing or `null` required
+collections remain invalid, while `[]` and `{}` are valid unless a length rule
+forbids them. An original typed Go value with a nil required collection still
+fails strict JSON validation.
+
+For streaming gRPC clients, an initial request send that returns `io.EOF` now
+allows the receive path to obtain the server's final status. Other send errors
+still fail immediately. Streaming invokers no longer add the unary header
+capture option; caller-supplied call options remain forwarded. These changes
+apply independently of generic error cause retention below.
+
+The header and collection corrections do not change the DSL or protobuf field
+numbers and require no wire or stored-data migration. Independently deployed
+servers do not need a matching regeneration for clients to use these fixes.
+
 ## Unreleased: generic gRPC errors retain their cause
 
 Regenerated clients decode a generic protobuf `ErrorResponse` into the same
@@ -36,9 +87,10 @@ remain outside that retry policy.
 Upgrade the generator and runtime together and regenerate clients to use
 `grpc.NewServiceErrorWithCause(original, response)`. Both arguments are
 required; the existing `grpc.NewServiceError(response)` API is unchanged.
-The change applies only where generated clients already convert generic
-details during unary calls, stream opening, receive, or completion. Raw stream
-errors, EOF, sends, half-closes, and header handling are unchanged. There is no
+This cause-retention change applies only where generated clients already convert
+generic details during unary calls, stream opening, receive, or completion.
+It does not itself change raw stream errors, sends, half-closes, or header
+handling; the separate streaming corrections are described above. There is no
 wire or data migration, and independently deployed servers need no update.
 
 ## Already using v3.31.1?
@@ -526,8 +578,9 @@ the error, response, security, and streaming rules above, check these cases:
 
 - Nested defaults must satisfy their complete type, required fields, and
   validation rules.
-- A relocated authored type using `struct:pkg:path` must give its referenced
-  authored types explicit generated package locations too.
+- A relocated authored type using `struct:pkg:path` supplies its location to
+  unlocated dependencies. Each original type must resolve to one package, and
+  the resulting Go package imports must be acyclic.
 - Ordinary HTTP and JSON-RPC routes on one server cannot overlap, even when
   their path parameter names differ.
 - JSON-RPC routes must use `POST`; method names cannot start with `rpc.`.

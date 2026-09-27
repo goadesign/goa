@@ -932,6 +932,7 @@ func (d *ServicesData) ServiceAttributor(name, outputPackage string) codegen.Att
 	}
 	return newServiceResolver(
 		d.generation,
+		d.facts.rootTypes,
 		d.aliases,
 		serviceFacts.name,
 		serviceFacts.packagePath,

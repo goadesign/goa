@@ -1,7 +1,7 @@
 // This file writes service type definitions and references using the Go names
-// chosen for each generated package. A type with an explicit package location
-// uses that import path; a child type without one stays in its enclosing type's
-// package.
+// chosen for each generated package. Shared declarations use the location
+// selected for the complete generation. Ordinary local types use their service
+// package, and views keep their separately planned declarations.
 package service
 
 import (
@@ -18,6 +18,7 @@ type (
 	// package declarations recorded by Plan.
 	declarationResolver struct {
 		generation  *codegen.Generation
+		rootTypes   *rootTypeSet
 		aliases     *importAliases
 		serviceName string
 		currentPath string
@@ -30,9 +31,10 @@ type (
 
 // newServiceResolver starts in the assigned service package and qualifies type
 // references for the package that will contain the generated file.
-func newServiceResolver(generation *codegen.Generation, aliases *importAliases, serviceName, servicePath, outputPath string) *declarationResolver {
+func newServiceResolver(generation *codegen.Generation, rootTypes *rootTypeSet, aliases *importAliases, serviceName, servicePath, outputPath string) *declarationResolver {
 	return &declarationResolver{
 		generation:  generation,
+		rootTypes:   rootTypes,
 		aliases:     aliases,
 		serviceName: serviceName,
 		currentPath: servicePath,
@@ -176,8 +178,10 @@ func (r *declarationResolver) GoTypeLayout(attribute *expr.AttributeExpr, policy
 		RetainNamedValue: true,
 		Bind: func(request codegen.GoTypeBindingRequest) (codegen.GoTypeBinding, error) {
 			bindingOwner := request.InheritedOwner
-			if location := codegen.UserTypeLocation(request.Attribute.Type); location != nil {
-				bindingOwner = path.Join(r.generation.GenPkg(), location.RelImportPath)
+			if !r.view {
+				if location := r.rootTypes.location(request.Attribute.Type); location != nil {
+					bindingOwner = path.Join(r.generation.GenPkg(), location.RelImportPath)
+				}
 			}
 			switch request.Kind {
 			case codegen.GoNamed:
@@ -308,7 +312,7 @@ func (r *declarationResolver) owner(att *expr.AttributeExpr) string {
 	if r.view {
 		return r.currentPath
 	}
-	if location := codegen.UserTypeLocation(att.Type); location != nil {
+	if location := r.rootTypes.location(att.Type); location != nil {
 		return path.Join(r.generation.GenPkg(), location.RelImportPath)
 	}
 	return r.currentPath

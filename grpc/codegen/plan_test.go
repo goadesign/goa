@@ -18,7 +18,8 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
-// TestNewPlansKeepsExactInputs checks that each result keeps its input pair.
+// TestNewPlansKeepsExactInputs checks that reversed roots keep each original
+// method paired with its copied attributes, even when method names match.
 func TestNewPlansKeepsExactInputs(t *testing.T) {
 	roots := grpcPlanRoots(t, "First", "Second")
 	generation, services := grpcServicePlans(t, roots)
@@ -32,6 +33,22 @@ func TestNewPlansKeepsExactInputs(t *testing.T) {
 	require.Same(t, services[1], plans[0].Service())
 	require.Same(t, roots[0], plans[1].Root())
 	require.Same(t, services[0], plans[1].Service())
+	for index, rootIndex := range []int{1, 0} {
+		endpoint := plans[index].servicesPlan[0].endpoints[0]
+		original := roots[rootIndex].API.GRPC.Services[0].GRPCEndpoints[0]
+		require.Same(t, original, endpoint.source)
+		require.NotSame(t, original, endpoint.expression)
+		require.NotSame(t, original.MethodExpr, endpoint.expression.MethodExpr)
+		attribute := endpoint.expression.MethodExpr.Payload
+		require.NotSame(t, original.MethodExpr.Payload, attribute)
+		layout, err := services[rootIndex].MethodTypeLayout(original.MethodExpr, attribute)
+		require.NoError(t, err)
+		require.Equal(t, plans[index].servicesPlan[0].packages.service.Path, layout.Owner())
+		_, err = services[rootIndex].MethodTypeLayout(endpoint.expression.MethodExpr, attribute)
+		require.EqualError(t, err, `service method "Read" is not part of this plan`)
+		_, err = services[1-rootIndex].MethodTypeLayout(original.MethodExpr, attribute)
+		require.EqualError(t, err, `service method "Read" is not part of this plan`)
+	}
 }
 
 // TestNewExamplePlanRejectsAnotherServicePlan checks that server names and

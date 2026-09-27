@@ -138,7 +138,13 @@ func protoHooks(proto bool) *codegen.TransformHooks {
 			}
 		},
 		SameHelperDefinition: sameGRPCHelperDefinition,
-		GuardCondition: func(src *expr.AttributeExpr, srcVar string, _, srcPtr bool) (string, bool) {
+		GuardCondition: func(src *expr.AttributeExpr, srcVar string, required, srcPtr bool) (string, bool) {
+			// Validated protobuf collections may be nil when empty. Always
+			// construct required service collections, including inside a
+			// present wrapper; decoding already checks required wrappers.
+			if !proto && required && (expr.IsArray(src.Type) || expr.IsMap(src.Type)) {
+				return "", true
+			}
 			// Protobuf message fields can be nil, so check them before use.
 			if expr.IsPrimitive(src.Type) && !srcPtr {
 				return "", true

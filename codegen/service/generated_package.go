@@ -71,7 +71,10 @@ type (
 	// rootTypeSet maps copied types back to authored types across one planning
 	// batch. Generated Goa OneOf branch aliases are not included.
 	rootTypeSet struct {
-		byOrigin map[expr.UserType]expr.UserType
+		byOrigin        map[expr.UserType]expr.UserType
+		locations       map[expr.UserType]*codegen.Location
+		originalLayouts map[*codegen.TypeDeclaration]originalTypeLayout
+		packageImports  map[string]*codegen.ImportSpec
 	}
 
 	// generatedPackageData stores the render data emitted into one Go package.
@@ -584,7 +587,7 @@ func planUserTypes(attribute *expr.AttributeExpr, service *serviceFacts, locatio
 			return recurse(actual.Attribute(), location)
 		}
 		declaredType := rootTypes.canonical(actual)
-		typeLocation := codegen.UserTypeLocation(actual)
+		typeLocation := rootTypes.location(actual)
 		if typeLocation == nil {
 			typeLocation = location
 		}
@@ -642,7 +645,7 @@ func planUnions(attribute *expr.AttributeExpr, service *serviceFacts, location *
 	switch actual := attribute.Type.(type) {
 	case expr.UserType:
 		declaredType := rootTypes.canonical(actual)
-		typeLocation := codegen.UserTypeLocation(actual)
+		typeLocation := rootTypes.location(actual)
 		if typeLocation == nil {
 			typeLocation = location
 		}
@@ -1059,7 +1062,10 @@ func planViewUnions(attribute *expr.AttributeExpr, generatedPackage *codegen.Gen
 // child from another design while generated branch types stay separate.
 func newRootTypeSet(roots ...*expr.RootExpr) *rootTypeSet {
 	userTypes := &rootTypeSet{
-		byOrigin: make(map[expr.UserType]expr.UserType),
+		byOrigin:        make(map[expr.UserType]expr.UserType),
+		locations:       make(map[expr.UserType]*codegen.Location),
+		originalLayouts: make(map[*codegen.TypeDeclaration]originalTypeLayout),
+		packageImports:  make(map[string]*codegen.ImportSpec),
 	}
 	for _, root := range roots {
 		for _, userType := range root.Types {

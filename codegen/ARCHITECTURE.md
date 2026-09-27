@@ -145,6 +145,65 @@ different fields, tags, pointer policies, union branches, or file facts are
 rejected. `NewPlan` is only the strict single-root convenience form and rejects
 a generation that contains more than one service root.
 
+Shared package placement is also decided by this complete batch. A type with
+`struct:pkg:path` selects its reachable unlocated authored children by exact
+`Origin`, through every schema edge. Explicit owners are selected first across
+all roots. A distinct explicitly located child keeps its own owner and carries
+that package to its unlocated descendants: `A@left -> B@right -> C` places B and
+C in right. Equal inferred requirements share one owner. Conflicting explicit
+copies of an origin and ambiguous inherited requirements fail before declarations
+are submitted. Actual direct imports required by retained declarations, union
+branches, and service signatures must be acyclic; same-package recursion remains
+valid. Conservative import reservations do not imply a required dependency.
+The compiler
+does not write inferred metadata into imported declarations. Unconstrained
+originals retain their separate service-local declarations. Root and attribute
+validation no longer independently reject missing annotations or propagate them.
+
+Original-value consumers use the retained root attribute and layout for the
+exact pair returned by `Generation.UserTypes`:
+
+```go
+func (p *service.Plan) UserTypeLayout(original expr.UserType, declaration *codegen.TypeDeclaration) (*expr.AttributeExpr, *codegen.GoTypePlan, error)
+```
+
+The returned attribute is the exact root occurrence used to plan the layout.
+Consumers must use that attribute with the layout and treat both as read-only;
+creating another attribute for the same type does not preserve occurrence
+identity. The attribute contains the complete canonical original, even when
+the query receives an exact-origin copy.
+
+Every service plan from this batch shares the same retained attribute/layout
+pointers for a declaration, even though `p.Root()` identifies only one design.
+The query accepts an exact-origin copy paired with its registered declaration
+and rejects unrelated pairs or a declaration from another generation. Multiple
+local declarations of one original retain separate attribute/layout pairs.
+Querying does not allocate an attribute, choose a method, or repeat package
+inference. Attributes and layouts are retained when `NewPlans` completes; later
+plugin-created declarations are outside this original-type query.
+
+Complete-value consumers pass the layout to
+`GeneratedImportPlan.AddCompleteType`. This operation follows the retained named
+definitions. Consumers that only write a Go type reference pass the layout to
+`GeneratedImportPlan.AddTypeReference`. It follows anonymous arrays, maps and
+structs, but does not enter named definitions or union branches. For example,
+referencing `*parent.Value` does not reserve imports used only by Value's fields.
+
+Both operations register custom and generated requests at their existing separate
+priorities, omit self-imports, and record the contributed paths. Even requests
+for the same path retain their priority until allocation. Fixed template imports
+keep their existing precedence. Nil layouts and calls after `Freeze` fail.
+
+`GoTypeBinding.PreferredImportName` retains the service, shared, or views binder's
+existing preferred qualifier. Both operations require it when importing a
+generated declaration; it may be absent for a representation that remains local.
+Final aliases are still chosen independently by each output package at
+`Freeze`, including collisions with fixed imports and local declarations.
+`ImportPreferences` and `CompleteImportPreferences` remain informational and
+compatible; consumers do not classify their flattened results to register imports.
+Neither operation reads expression metadata, infers owners from paths, or needs
+a public dependency graph.
+
 HTTP, gRPC, JSON-RPC, OpenAPI, and example generation use equivalent typed
 constructors. A transport plan receives the exact `*service.Plan` for its root.
 JSON-RPC may retain and reuse its HTTP plan because it emits HTTP codecs and
@@ -1198,7 +1257,7 @@ migration. Fix the design, then regenerate the complete generated tree.
 | Design | What now fails | How to migrate |
 | --- | --- | --- |
 | Authored default values | Defaults on declared types, result types, and errors are checked through the complete nested value. Generation fails when a default has an incompatible schema representation, omits a required nested field, selects an unknown `OneOf` branch, or violates a nested length, range, enum, pattern, or format rule. Arrays, maps, and their elements and keys are checked too. Custom field defaults need not share the Go name in `struct:field:type`; numeric bounds and ranges are checked before narrowing, while the original value is retained for serialization. | Change the default so it is a valid value of the designed type. If the rejected value is intentional, change the type or its validation rule instead of relying on Goa to emit an invalid default. |
-| Relocated authored types | A declared type moved with `Meta("struct:pkg:path", ...)` now fails when it refers to another declared type that has no explicit generated package. Without that information, Goa cannot safely import the dependency and may create an import cycle. Compiler-created nested types remain with their owner and do not need this metadata. | Give each referenced declared type its own `struct:pkg:path`, usually the same path when the types belong together, or stop relocating the outer type. |
+| Relocated authored types | A declared type moved with `Meta("struct:pkg:path", ...)` selects a generated package for its unlocated descendants. A distinct explicit child keeps its own package and carries it to descendants. Equal requirements deduplicate; conflicting explicit copies, ambiguous inheritance, and actual generated import cycles are rejected during complete service planning before emission. Imported expressions are not annotated. | Regenerate the complete design. Standalone DSL evaluation does not prove generated-package representability. Ordinary service-local types outside shared graphs keep their existing placement. |
 | Ordinary HTTP and JSON-RPC route overlap | One server cannot mount an ordinary HTTP route and a JSON-RPC route with the same HTTP method and matching path pattern. Parameter names do not make routes different: `POST /tasks/{taskID}` and `POST /tasks/{id}` accept the same requests. Released generation could let one handler replace the other. | Change one path, or mount the services on different servers. Keep JSON-RPC routes on `POST`. |
 | JSON-RPC route, method, and request ID rules | Every JSON-RPC route must use `POST`, and a JSON-RPC method name cannot start with the reserved `rpc.` prefix. A request ID must be at most one direct string field in the payload. It cannot also appear in `params`, an HTTP parameter, header, cookie, or `Last-Event-ID`, and results and errors cannot define another request ID. When an optional ID has no default, its validation rules must accept the UUID that the generated client creates. | Change the route to `POST` and rename a method that starts with `rpc.`. Keep one direct string ID field or let Goa create the ID. Remove duplicate transport mappings. If an optional ID has rules that reject a UUID, make it required, give it a valid default, or change those rules. |
 | JSON-RPC notifications | `Notification()` is only valid for a one-way method. The method may have a payload, but it cannot define a request ID, result, streaming payload, or streaming result. | Remove the response and stream from the notification, or remove `Notification()` and use an ordinary JSON-RPC request with a non-null ID. |

@@ -12,7 +12,7 @@ import (
 // collectServiceFacts copies the service fields and transport choices needed by
 // templates, so later steps do not walk design collections that plugins could
 // change.
-func collectServiceFacts(root *expr.RootExpr, service *expr.ServiceExpr, examples *expr.ExampleGenerator) *serviceFacts {
+func collectServiceFacts(root *expr.RootExpr, service *expr.ServiceExpr, examples *expr.ExampleGenerator, rootTypes *rootTypeSet) *serviceFacts {
 	facts := &serviceFacts{
 		service:        service,
 		apiName:        root.API.Name,
@@ -25,7 +25,7 @@ func collectServiceFacts(root *expr.RootExpr, service *expr.ServiceExpr, example
 		projections:    make(map[*expr.MethodExpr]*projectionFacts),
 	}
 	for _, serviceError := range facts.errors {
-		facts.errorFacts = append(facts.errorFacts, retainErrorRenderFacts(serviceError))
+		facts.errorFacts = append(facts.errorFacts, retainErrorRenderFacts(serviceError, rootTypes))
 		facts.referenceAttributes = append(facts.referenceAttributes, serviceError.AttributeExpr)
 		retainServiceValueTypes(facts, serviceError.AttributeExpr)
 	}
@@ -39,8 +39,8 @@ func collectServiceFacts(root *expr.RootExpr, service *expr.ServiceExpr, example
 			name:            method.Name,
 			description:     method.Description,
 			idempotent:      method.Idempotent,
-			payload:         retainMethodAttribute(method.Payload, examples.At(expr.MethodPayloadExampleIdentity(method))),
-			result:          retainMethodAttribute(method.Result, examples.At(expr.MethodResultExampleIdentity(method))),
+			payload:         retainMethodAttribute(method.Payload, examples.At(expr.MethodPayloadExampleIdentity(method)), rootTypes),
+			result:          retainMethodAttribute(method.Result, examples.At(expr.MethodResultExampleIdentity(method)), rootTypes),
 			streamKind:      method.Stream,
 			isStreaming:     method.IsStreaming(),
 			hasMixedResults: method.HasMixedResults(),
@@ -48,15 +48,15 @@ func collectServiceFacts(root *expr.RootExpr, service *expr.ServiceExpr, example
 		}
 		methodFacts.streamingPayload = retainMethodAttribute(
 			method.StreamingPayload,
-			examples.At(expr.MethodStreamingPayloadExampleIdentity(method)),
+			examples.At(expr.MethodStreamingPayloadExampleIdentity(method)), rootTypes,
 		)
 		methodFacts.streamingResult = retainMethodAttribute(
 			method.StreamingResult,
-			examples.At(expr.MethodStreamingResultExampleIdentity(method)),
+			examples.At(expr.MethodStreamingResultExampleIdentity(method)), rootTypes,
 		)
 		methodFacts.requirements, methodFacts.schemes = retainMethodSecurity(method)
 		for _, methodError := range method.Errors {
-			methodFacts.errors = append(methodFacts.errors, retainErrorRenderFacts(methodError))
+			methodFacts.errors = append(methodFacts.errors, retainErrorRenderFacts(methodError, rootTypes))
 		}
 		if method.IsStreaming() || method.HasMixedResults() {
 			methodFacts.serverStreamVarName = methodScope.Unique(codegen.Goify(method.Name, true), "ServerStream")
@@ -157,7 +157,7 @@ func collectInterceptorFacts(interceptors []*expr.InterceptorExpr, methods []*ex
 
 // retainMethodAttribute copies one payload or result's description, metadata,
 // default, and example. GoTypePlan separately records its nested Go fields.
-func retainMethodAttribute(attribute *expr.AttributeExpr, examples *expr.ExampleGenerator) *methodAttributeFacts {
+func retainMethodAttribute(attribute *expr.AttributeExpr, examples *expr.ExampleGenerator, rootTypes *rootTypeSet) *methodAttributeFacts {
 	if attribute == nil {
 		return nil
 	}
@@ -169,7 +169,7 @@ func retainMethodAttribute(attribute *expr.AttributeExpr, examples *expr.Example
 		attribute:    &retained,
 		present:      attribute.Type != expr.Empty,
 		isObject:     expr.IsObject(attribute.Type),
-		location:     codegen.UserTypeLocation(attribute.Type),
+		location:     rootTypes.location(attribute.Type),
 		description:  attribute.Description,
 		defaultValue: cloneRetainedValue(attribute.DefaultValue),
 		example:      cloneRetainedValue(attribute.Example(examples)),
@@ -179,7 +179,7 @@ func retainMethodAttribute(attribute *expr.AttributeExpr, examples *expr.Example
 // retainErrorRenderFacts copies the error description, type, output location,
 // and temporary, timeout, and fault settings used by generated constructors
 // and client comments.
-func retainErrorRenderFacts(errorExpression *expr.ErrorExpr) *errorRenderFacts {
+func retainErrorRenderFacts(errorExpression *expr.ErrorExpr, rootTypes *rootTypeSet) *errorRenderFacts {
 	_, temporary := errorExpression.Meta["goa:error:temporary"]
 	_, timeout := errorExpression.Meta["goa:error:timeout"]
 	_, fault := errorExpression.Meta["goa:error:fault"]
@@ -191,7 +191,7 @@ func retainErrorRenderFacts(errorExpression *expr.ErrorExpr) *errorRenderFacts {
 		attribute:   &attribute,
 		name:        errorExpression.Name,
 		description: errorExpression.Description,
-		location:    codegen.UserTypeLocation(errorExpression.Type),
+		location:    rootTypes.location(errorExpression.Type),
 		temporary:   temporary,
 		timeout:     timeout,
 		fault:       fault,

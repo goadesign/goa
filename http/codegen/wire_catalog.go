@@ -7,6 +7,7 @@ package codegen
 import (
 	"cmp"
 	"fmt"
+	"path"
 	"reflect"
 	"slices"
 	"strings"
@@ -65,6 +66,8 @@ type (
 		wireUse        wireUnionUse
 		servicePointer bool
 		servicePackage codegen.ImportSpec
+		servicePlan    *service.Plan
+		method         *expr.MethodExpr
 	}
 
 	// wireTransformHelperRecord stores one function declaration shared by
@@ -515,11 +518,11 @@ func (c *wireTypeCatalog) collectTransform(source, target *expr.AttributeExpr, p
 func (c *wireTypeCatalog) transformHelperIdentity(transform *wireTransformRecord, helper codegen.TransformHelper) (wireTransformHelperIdentity, error) {
 	sourceWire := transform.layout.wireSide == wireTransformSource
 	targetWire := transform.layout.wireSide == wireTransformTarget
-	source, err := c.transformTypeIdentity(helper.Source, sourceWire, transform.layout.wirePolicy, transform.layout.servicePointer, transform.layout.servicePackage)
+	source, err := c.transformTypeIdentity(helper.Source, sourceWire, transform.layout.wirePolicy, transform.layout.servicePointer, transform.layout.servicePackage, transform.layout)
 	if err != nil {
 		return wireTransformHelperIdentity{}, err
 	}
-	target, err := c.transformTypeIdentity(helper.Target, targetWire, transform.layout.wirePolicy, transform.layout.servicePointer, transform.layout.servicePackage)
+	target, err := c.transformTypeIdentity(helper.Target, targetWire, transform.layout.wirePolicy, transform.layout.servicePointer, transform.layout.servicePackage, transform.layout)
 	if err != nil {
 		return wireTransformHelperIdentity{}, err
 	}
@@ -531,14 +534,19 @@ func (c *wireTypeCatalog) transformHelperIdentity(transform *wireTransformRecord
 
 // transformTypeIdentity returns the declaration and field rules that determine
 // a generated conversion function's parameter or result type.
-func (c *wireTypeCatalog) transformTypeIdentity(attribute *expr.AttributeExpr, wire bool, policy wireTypePolicy, servicePointer bool, servicePackage codegen.ImportSpec) (wireTransformTypeIdentity, error) {
+func (c *wireTypeCatalog) transformTypeIdentity(attribute *expr.AttributeExpr, wire bool, policy wireTypePolicy, servicePointer bool, servicePackage codegen.ImportSpec, layout wireTransformLayout) (wireTransformTypeIdentity, error) {
 	userType, ok := attribute.Type.(expr.UserType)
 	if !ok {
 		return wireTransformTypeIdentity{}, fmt.Errorf("HTTP conversion function type %q is not named", attribute.Type.Name())
 	}
 	if !wire {
-		if location := codegen.UserTypeLocation(userType); location != nil {
-			servicePackage = codegen.ImportSpec{Name: location.PackageName(), Path: location.RelImportPath}
+		planned, err := layout.servicePlan.MethodTypeLayout(layout.method, attribute)
+		if err != nil {
+			return wireTransformTypeIdentity{}, err
+		}
+		if servicePackage.Path != planned.Owner() {
+			servicePackage.Name = strings.ToLower(codegen.Goify(path.Base(planned.Owner()), false))
+			servicePackage.Path = planned.Owner()
 		}
 		if servicePackage.Name == "" || servicePackage.Path == "" {
 			return wireTransformTypeIdentity{}, fmt.Errorf("HTTP conversion function type %q has no service package", userType.Name())

@@ -210,7 +210,7 @@ func planInterceptorAccess(selection *expr.AttributeExpr, parent *methodAttribut
 func serviceGoTypeBinder(rootTypes *rootTypeSet, generation *codegen.Generation) codegen.GoTypeBinder {
 	return func(request codegen.GoTypeBindingRequest) (codegen.GoTypeBinding, error) {
 		owner := request.InheritedOwner
-		if location := codegen.UserTypeLocation(request.Attribute.Type); location != nil {
+		if location := rootTypes.location(request.Attribute.Type); location != nil {
 			owner = path.Join(generation.GenPkg(), location.RelImportPath)
 		}
 		generatedPackage := generation.Package(owner)
@@ -221,13 +221,13 @@ func serviceGoTypeBinder(rootTypes *rootTypeSet, generation *codegen.Generation)
 			if err != nil {
 				return codegen.GoTypeBinding{}, err
 			}
-			return codegen.GoTypeBinding{Owner: owner, Type: declaration}, nil
+			return codegen.GoTypeBinding{Owner: owner, PreferredImportName: rootTypes.packageImports[owner].Name, Type: declaration}, nil
 		case codegen.GoUnion:
 			declaration, err := generatedPackage.Union(request.Attribute)
 			if err != nil {
 				return codegen.GoTypeBinding{}, err
 			}
-			return codegen.GoTypeBinding{Owner: owner, Union: declaration}, nil
+			return codegen.GoTypeBinding{Owner: owner, PreferredImportName: rootTypes.packageImports[owner].Name, Union: declaration}, nil
 		default:
 			return codegen.GoTypeBinding{}, fmt.Errorf("bind unsupported retained Go type kind %s", request.Kind)
 		}
@@ -255,14 +255,14 @@ func collectServiceUnionFacts(facts *serviceFacts, rootTypes *rootTypeSet, gener
 		for _, attribute := range attributes {
 			var location *codegen.Location
 			if attribute != nil {
-				location = codegen.UserTypeLocation(attribute.Type)
+				location = rootTypes.location(attribute.Type)
 			}
 			if err := collect(attribute, location); err != nil {
 				return err
 			}
 		}
 		for _, methodError := range method.Errors {
-			if err := collect(methodError.AttributeExpr, codegen.UserTypeLocation(methodError.Type)); err != nil {
+			if err := collect(methodError.AttributeExpr, rootTypes.location(methodError.Type)); err != nil {
 				return err
 			}
 		}
@@ -281,7 +281,7 @@ func collectUnionFacts(attribute *expr.AttributeExpr, servicePath string, locati
 	}
 	switch actual := attribute.Type.(type) {
 	case expr.UserType:
-		typeLocation := codegen.UserTypeLocation(actual)
+		typeLocation := rootTypes.location(actual)
 		if typeLocation == nil {
 			typeLocation = location
 		}
@@ -367,7 +367,7 @@ func collectServiceTypeFacts(facts *serviceFacts, rootTypes []expr.UserType, can
 			location := (*codegen.Location)(nil)
 			inner := attribute
 			if userType, ok := attribute.Type.(expr.UserType); ok {
-				location = codegen.UserTypeLocation(userType)
+				location = canonical.location(userType)
 				if _, normalized := generation.NormalizedMethodType(userType); normalized || location == nil {
 					inner = userType.Attribute()
 				}
@@ -395,7 +395,7 @@ func collectServiceTypeFacts(facts *serviceFacts, rootTypes []expr.UserType, can
 			}
 			if userType, ok := attribute.Type.(expr.UserType); ok {
 				declaration, err := generation.Package(generatedPackagePath(
-					generation.GenPkg(), facts.packagePath, codegen.UserTypeLocation(userType),
+					generation.GenPkg(), facts.packagePath, canonical.location(userType),
 				)).Type(userType)
 				if err != nil {
 					return err
@@ -528,7 +528,7 @@ func collectUserTypeFacts(attribute *expr.AttributeExpr, servicePath string, loc
 // makeUserTypeFacts records one authored type and the generated declaration
 // that every use of that type must share.
 func makeUserTypeFacts(userType expr.UserType, servicePath string, location *codegen.Location, canonical *rootTypeSet, generation *codegen.Generation) (*userTypeFacts, userTypeDataKey, error) {
-	typeLocation := codegen.UserTypeLocation(userType)
+	typeLocation := canonical.location(userType)
 	if typeLocation == nil {
 		typeLocation = location
 	}

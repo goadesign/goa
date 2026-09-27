@@ -39,6 +39,11 @@ type (
 	GoTypeBinding struct {
 		// Owner is the import path of the package containing the declaration.
 		Owner string
+		// PreferredImportName is the owning planner's preferred Go qualifier
+		// before the importing package resolves name collisions at Freeze.
+		// AddTypeReference and AddCompleteType require it for an imported
+		// generated declaration; bindings that stay local may leave it empty.
+		PreferredImportName string
 		// Type is the generated declaration for a named user type.
 		Type *TypeDeclaration
 		// Union is the generated declaration for a union.
@@ -95,32 +100,33 @@ type (
 	// expression pointers only so callers can find which plans came from the same
 	// attribute; its methods do not read those expressions.
 	GoTypePlan struct {
-		kind              GoTypeKind
-		owner             string
-		policy            GoLayoutPolicy
-		occurrence        *expr.AttributeExpr
-		fieldNameUpper    string
-		fieldNameLower    string
-		description       string
-		comment           string
-		tag               string
-		fieldPointer      bool
-		definitionPointer bool
-		referencePointer  bool
-		referenceNilable  bool
-		primitive         string
-		directImport      GoTypeImport
-		hasDirectImport   bool
-		customQualifier   string
-		typeDeclaration   *TypeDeclaration
-		unionDeclaration  *UnionDeclaration
-		declaration       *NameDeclaration
-		fixedName         string
-		fields            []*GoTypePlan
-		branches          []*GoTypePlan
-		element           *GoTypePlan
-		key               *GoTypePlan
-		value             *GoTypePlan
+		kind                GoTypeKind
+		owner               string
+		preferredImportName string
+		policy              GoLayoutPolicy
+		occurrence          *expr.AttributeExpr
+		fieldNameUpper      string
+		fieldNameLower      string
+		description         string
+		comment             string
+		tag                 string
+		fieldPointer        bool
+		definitionPointer   bool
+		referencePointer    bool
+		referenceNilable    bool
+		primitive           string
+		directImport        GoTypeImport
+		hasDirectImport     bool
+		customQualifier     string
+		typeDeclaration     *TypeDeclaration
+		unionDeclaration    *UnionDeclaration
+		declaration         *NameDeclaration
+		fixedName           string
+		fields              []*GoTypePlan
+		branches            []*GoTypePlan
+		element             *GoTypePlan
+		key                 *GoTypePlan
+		value               *GoTypePlan
 	}
 
 	// GoTypeQualifier returns the final package name written before a type from
@@ -677,6 +683,7 @@ func (p goTypePlanner) plan(attribute *expr.AttributeExpr, owner, fieldName stri
 				return nil, err
 			}
 			plan.owner = binding.Owner
+			plan.preferredImportName = binding.PreferredImportName
 			plan.typeDeclaration = binding.Type
 			plan.declaration = binding.declaration()
 			plan.fixedName = binding.name
@@ -703,6 +710,7 @@ func (p goTypePlanner) plan(attribute *expr.AttributeExpr, owner, fieldName stri
 			return nil, err
 		}
 		plan.owner = binding.Owner
+		plan.preferredImportName = binding.PreferredImportName
 		plan.unionDeclaration = binding.Union
 		plan.declaration = binding.declaration()
 		plan.fixedName = binding.name

@@ -18,6 +18,7 @@ type (
 	// grpcFileImportInput lists the packages and service types emitted by one
 	// generated gRPC file.
 	grpcFileImportInput struct {
+		endpoints       []*grpcEndpointPlan
 		required        []*codegen.ImportSpec
 		generated       []*codegen.ImportSpec
 		design          []*codegen.ImportSpec
@@ -168,6 +169,7 @@ func planGRPCImports(generation *codegen.Generation, plan *Plan) error {
 			path.Join(codegen.Gendir, "grpc", pathName, "client", "client.go"),
 			client,
 			grpcFileImportInput{
+				endpoints:       servicePlan.endpoints,
 				required:        clientFileRequired,
 				generated:       clientFileGenerated,
 				typeDefinitions: streamReferences,
@@ -182,6 +184,12 @@ func planGRPCImports(generation *codegen.Generation, plan *Plan) error {
 				codegen.SimpleImport("context"),
 				codegen.GoaNamedImport("grpc", "goagrpc"),
 				codegen.SimpleImport("google.golang.org/grpc"),
+			)
+		}
+		if facts.streamsPayload {
+			clientCodecRequired = append(clientCodecRequired,
+				codegen.SimpleImport("errors"),
+				codegen.SimpleImport("io"),
 			)
 		}
 		if facts.clientCodecUsesMetadata {
@@ -215,6 +223,7 @@ func planGRPCImports(generation *codegen.Generation, plan *Plan) error {
 			path.Join(codegen.Gendir, "grpc", pathName, "client", "encode_decode.go"),
 			client,
 			grpcFileImportInput{
+				endpoints:      servicePlan.endpoints,
 				required:       clientCodecRequired,
 				generated:      clientCodecGenerated,
 				typeReferences: codecReferences,
@@ -249,6 +258,7 @@ func planGRPCImports(generation *codegen.Generation, plan *Plan) error {
 			path.Join(codegen.Gendir, "grpc", pathName, "client", "types.go"),
 			client,
 			grpcFileImportInput{
+				endpoints:      servicePlan.endpoints,
 				required:       clientTypesRequired,
 				generated:      clientTypesGenerated,
 				design:         clientTypesDesign,
@@ -272,6 +282,7 @@ func planGRPCImports(generation *codegen.Generation, plan *Plan) error {
 				path.Join(codegen.Gendir, "grpc", pathName, "client", "cli.go"),
 				client,
 				grpcFileImportInput{
+					endpoints:      servicePlan.endpoints,
 					required:       clientCLIRequired,
 					generated:      clientCLIGenerated,
 					typeReferences: payloadReferences,
@@ -307,6 +318,7 @@ func planGRPCImports(generation *codegen.Generation, plan *Plan) error {
 			path.Join(codegen.Gendir, "grpc", pathName, "server", "server.go"),
 			server,
 			grpcFileImportInput{
+				endpoints:       servicePlan.endpoints,
 				required:        serverFileRequired,
 				generated:       serverFileGenerated,
 				typeDefinitions: serverDefinitions,
@@ -351,6 +363,7 @@ func planGRPCImports(generation *codegen.Generation, plan *Plan) error {
 			path.Join(codegen.Gendir, "grpc", pathName, "server", "encode_decode.go"),
 			server,
 			grpcFileImportInput{
+				endpoints:      servicePlan.endpoints,
 				required:       serverCodecRequired,
 				generated:      serverCodecGenerated,
 				typeReferences: codecReferences,
@@ -385,6 +398,7 @@ func planGRPCImports(generation *codegen.Generation, plan *Plan) error {
 			path.Join(codegen.Gendir, "grpc", pathName, "server", "types.go"),
 			server,
 			grpcFileImportInput{
+				endpoints:      servicePlan.endpoints,
 				required:       serverTypesRequired,
 				generated:      serverTypesGenerated,
 				design:         serverTypesDesign,
@@ -459,6 +473,27 @@ func recordGRPCFileImports(
 	}
 	if err := imports.AddRecursiveTypeReferences(input.typeReferences...); err != nil {
 		return err
+	}
+	selected := make(map[*expr.AttributeExpr]struct{})
+	for _, attribute := range input.typeDefinitions {
+		selected[attribute] = struct{}{}
+	}
+	for _, attribute := range input.typeReferences {
+		selected[attribute] = struct{}{}
+	}
+	for _, endpoint := range input.endpoints {
+		for _, attribute := range grpcEndpointAttributes(endpoint.expression) {
+			if _, used := selected[attribute]; !used || attribute == nil || attribute.Type == expr.Empty {
+				continue
+			}
+			layout, err := plan.service.MethodTypeLayout(endpoint.source.MethodExpr, attribute)
+			if err != nil {
+				return err
+			}
+			if err := imports.AddCompleteType(layout); err != nil {
+				return err
+			}
+		}
 	}
 	plan.fileImports[key] = imports
 	return nil

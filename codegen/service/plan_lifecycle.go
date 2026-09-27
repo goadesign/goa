@@ -64,6 +64,13 @@ func NewPlans(generation *codegen.Generation, inputs ...PlanInput) ([]*Plan, err
 	// Collect authored types from every validated design before registering any
 	// declarations. A union may use an authored child declared by another root.
 	rootTypes := newRootTypeSet(roots...)
+	if err := rootTypes.resolveLocations(roots); err != nil {
+		return nil, err
+	}
+	for _, location := range rootTypes.locations {
+		owner := path.Join(generation.GenPkg(), location.RelImportPath)
+		rootTypes.packageImports[owner] = codegen.NewImport(strings.ToLower(codegen.Goify(path.Base(owner), false)), owner)
+	}
 	plans := make([]*Plan, len(inputs))
 	for index, input := range inputs {
 		facts, err := collectRootFacts(input.Root, generation, input.Examples, servicePaths, rootTypes)
@@ -80,6 +87,12 @@ func NewPlans(generation *codegen.Generation, inputs ...PlanInput) ([]*Plan, err
 		return nil, err
 	}
 	if err := collectExternalConversions(allFacts, generation); err != nil {
+		return nil, err
+	}
+	if err := rootTypes.retainOriginalLayouts(generation); err != nil {
+		return nil, err
+	}
+	if err := validateRequiredPackageImports(allFacts); err != nil {
 		return nil, err
 	}
 	return plans, nil
@@ -251,7 +264,7 @@ func (p *Plan) MethodTypeLayout(method *expr.MethodExpr, attribute *expr.Attribu
 			if request.Kind == codegen.GoNamed {
 				userType := request.Attribute.Type.(expr.UserType)
 				if declaration := projected[userType.Origin()]; declaration != nil {
-					return codegen.GoTypeBinding{Owner: service.viewsPath, Type: declaration}, nil
+					return codegen.GoTypeBinding{Owner: service.viewsPath, PreferredImportName: service.viewsImport.Name, Type: declaration}, nil
 				}
 			}
 			return serviceBinder(request)
@@ -378,7 +391,7 @@ func collectRootFacts(
 		examples:           examples,
 	}
 	for _, service := range root.Services {
-		serviceFacts := collectServiceFacts(root, service, examples)
+		serviceFacts := collectServiceFacts(root, service, examples, rootTypes)
 		serviceFacts.packagePath = servicePaths[service.Name]
 		serviceFacts.viewsPath = serviceFacts.packagePath + "/views"
 		serviceFacts.packageImport = codegen.NewImport(
@@ -389,6 +402,8 @@ func collectRootFacts(
 			serviceFacts.packageImport.Name+"views",
 			serviceFacts.viewsPath,
 		)
+		rootTypes.packageImports[serviceFacts.packagePath] = serviceFacts.packageImport
+		rootTypes.packageImports[serviceFacts.viewsPath] = serviceFacts.viewsImport
 		facts.services = append(facts.services, serviceFacts)
 		facts.serviceByID[service.Name] = serviceFacts
 	}

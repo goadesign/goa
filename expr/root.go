@@ -1,6 +1,6 @@
 // This file defines the evaluated design root and validates relationships
-// between its API, services, generated types, and explicitly relocated user
-// types before code generation begins.
+// between its API, services, and types. Complete service planning checks the
+// generated package placement before any source files are emitted.
 package expr
 
 import (
@@ -237,7 +237,6 @@ func (r *RootExpr) Validate() error {
 	verr.Merge(r.validateErrorDefaults())
 	verr.Merge(ValidateSharedErrorNames(r))
 
-	verr.Merge(r.validateRelocatedUserTypes())
 	verr.Merge(validateTypeMappings("conversion", r.Conversions))
 	verr.Merge(validateTypeMappings("creation", r.Creations))
 	if r.API != nil {
@@ -476,113 +475,6 @@ func validateTypeMappings(direction string, mappings []*TypeMap) *eval.Validatio
 		seen[identity] = struct{}{}
 	}
 	return &verr
-}
-
-// validateRelocatedUserTypes enforces that relocated user types (those with
-// `struct:pkg:path`) only depend on other declared user types with an explicit
-// generation location.
-//
-// Without this constraint, generated code would need to reference service-local
-// user types across packages, which is not safe (it either fails to compile or
-// forces import cycles). Generated/derived user types (e.g. union branch
-// wrappers) are exempt because they are materialized alongside their owning
-// types.
-func (r *RootExpr) validateRelocatedUserTypes() *eval.ValidationErrors {
-	var verr eval.ValidationErrors
-	declared := make(map[UserType]struct{}, len(r.Types))
-	for _, ut := range r.Types {
-		declared[ut.Origin()] = struct{}{}
-	}
-	for _, ut := range r.Types {
-		pkgPath, ok := ut.Attribute().Meta.Last("struct:pkg:path")
-		if !ok || pkgPath == "" {
-			continue
-		}
-		seen := make(map[UserType]struct{})
-		r.walkUserTypeDependencies(ut, seen, "", func(dep UserType, path string) {
-			if dep.Origin() == ut.Origin() {
-				return
-			}
-			if _, ok := declared[dep.Origin()]; !ok {
-				// Generated/derived user types (e.g. union branch wrappers) are
-				// materialized alongside their owning types and do not require an
-				// explicit struct:pkg:path.
-				return
-			}
-			if _, ok := dep.Attribute().Meta.Last("struct:pkg:path"); ok {
-				return
-			}
-			msg := fmt.Sprintf(
-				`type %q is generated in package %q (struct:pkg:path) but depends on %q with no explicit struct:pkg:path`,
-				ut.Name(),
-				pkgPath,
-				dep.Name(),
-			)
-			if path != "" {
-				msg = fmt.Sprintf("%s (referenced via %s)", msg, path)
-			}
-			msg = fmt.Sprintf(
-				`%s; fix: add Meta("struct:pkg:path", %q) to %q (or move it to an explicitly located shared type)`,
-				msg,
-				pkgPath,
-				dep.Name(),
-			)
-			verr.Add(dep, "%s", msg)
-		})
-	}
-	return &verr
-}
-
-// walkUserTypeDependencies traverses the attribute graph reachable from root and
-// invokes visit for each encountered user type.
-func (r *RootExpr) walkUserTypeDependencies(root UserType, seen map[UserType]struct{}, path string, visit func(UserType, string)) {
-	if root == nil || root.Attribute() == nil {
-		return
-	}
-	r.walkAttributeUserTypes(root.Attribute(), seen, path, visit)
-}
-
-// walkAttributeUserTypes traverses att and invokes visit for each encountered
-// user type.
-//
-// The path argument records the traversal path through objects, arrays, maps,
-// and unions and is intended for diagnostics.
-func (r *RootExpr) walkAttributeUserTypes(att *AttributeExpr, seen map[UserType]struct{}, path string, visit func(UserType, string)) {
-	if att == nil || att.Type == Empty {
-		return
-	}
-	switch t := att.Type.(type) {
-	case UserType:
-		origin := t.Origin()
-		if _, ok := seen[origin]; ok {
-			return
-		}
-		seen[origin] = struct{}{}
-		visit(t, path)
-		r.walkAttributeUserTypes(t.Attribute(), seen, path, visit)
-	case *Object:
-		for _, nat := range *t {
-			next := nat.Name
-			if path != "" {
-				next = path + "." + nat.Name
-			}
-			r.walkAttributeUserTypes(nat.Attribute, seen, next, visit)
-		}
-	case *Array:
-		next := path + "[]"
-		r.walkAttributeUserTypes(t.ElemType, seen, next, visit)
-	case *Map:
-		r.walkAttributeUserTypes(t.KeyType, seen, path+"[key]", visit)
-		r.walkAttributeUserTypes(t.ElemType, seen, path+"[value]", visit)
-	case *Union:
-		for _, nat := range t.Values {
-			next := nat.Name
-			if path != "" {
-				next = path + "." + nat.Name
-			}
-			r.walkAttributeUserTypes(nat.Attribute, seen, next, visit)
-		}
-	}
 }
 
 // Finalize finalizes the server expressions.

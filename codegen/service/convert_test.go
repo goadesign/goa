@@ -17,6 +17,7 @@ import (
 	"goa.design/goa/v3/codegen/service/testdata"
 	aliasd "goa.design/goa/v3/codegen/service/testdata/alias-external"
 	"goa.design/goa/v3/codegen/service/testdata/external"
+	accessibility "goa.design/goa/v3/codegen/service/testdata/external-accessibility"
 	externalunion "goa.design/goa/v3/codegen/service/testdata/external-union"
 	"goa.design/goa/v3/dsl"
 	"goa.design/goa/v3/expr"
@@ -29,12 +30,6 @@ type (
 
 	hasNonPtrFields struct {
 		inner inner
-	}
-
-	externalSibling struct {
-		Label string
-		Left  *externalSibling
-		Right *externalSibling
 	}
 )
 
@@ -427,8 +422,8 @@ func TestConvertFiles(t *testing.T) {
 func TestConversionPlanSharesHelperDeclarations(t *testing.T) {
 	root := runDSL(t, func() {
 		recursive := dsl.Type("Recursive", func() {
-			dsl.ConvertTo(objRecursiveT{})
-			dsl.CreateFrom(objRecursiveT{})
+			dsl.ConvertTo(accessibility.Recursive{})
+			dsl.CreateFrom(accessibility.Recursive{})
 			dsl.Attribute("Foo", dsl.String)
 			dsl.Attribute("Bar", dsl.Int)
 			dsl.Attribute("Goo", dsl.Float32)
@@ -462,7 +457,7 @@ func TestConversionPlanSharesHelperDeclarations(t *testing.T) {
 func TestExternalConversionSharesSiblingHelper(t *testing.T) {
 	root := runDSL(t, func() {
 		sibling := dsl.Type("ExternalSibling", func() {
-			dsl.ConvertTo(externalSibling{})
+			dsl.ConvertTo(accessibility.Sibling{})
 			dsl.Attribute("Label", dsl.String)
 			dsl.Attribute("Left", "ExternalSibling")
 			dsl.Attribute("Right", "ExternalSibling")

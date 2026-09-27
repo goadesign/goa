@@ -22,6 +22,7 @@ import (
 // ordering that narrows a plan position to one byte.
 func TestTransformHelperOrderingSupportsMoreThan255Functions(t *testing.T) {
 	source, target := manyDistinctTransformChildren(257, false)
+	servicePlan, serviceMethod := testTransformServicePlan(t, source, testServicePackage())
 	catalog, generation := testWireTypeCatalog(t)
 	policy := jsonBodyPolicy(true, false, false, "")
 	catalog.collect(target, wireRequestBody, policy)
@@ -29,6 +30,8 @@ func TestTransformHelperOrderingSupportsMoreThan255Functions(t *testing.T) {
 		wireSide:       wireTransformTarget,
 		wirePolicy:     policy,
 		servicePackage: testServicePackage(),
+		servicePlan:    servicePlan,
+		method:         serviceMethod,
 	})
 
 	require.NoError(t, catalog.Declare())
@@ -39,6 +42,7 @@ func TestTransformHelperOrderingSupportsMoreThan255Functions(t *testing.T) {
 // conversions being exchanged when rendering happens in a different order.
 func TestTransformHandleSelectsTheCollectedPlan(t *testing.T) {
 	source, target := manyDistinctTransformChildren(1, false)
+	servicePlan, serviceMethod := testTransformServicePlan(t, source, testServicePackage())
 	catalog, generation := testWireTypeCatalog(t)
 	policy := jsonBodyPolicy(true, false, false, "")
 	catalog.collect(target, wireRequestBody, policy)
@@ -46,11 +50,15 @@ func TestTransformHandleSelectsTheCollectedPlan(t *testing.T) {
 		wireSide:       wireTransformTarget,
 		wirePolicy:     policy,
 		servicePackage: testServicePackage(),
+		servicePlan:    servicePlan,
+		method:         serviceMethod,
 	})
 	second := catalog.collectTransform(source, target, "marshal", "second", wireTransformLayout{
 		wireSide:       wireTransformTarget,
 		wirePolicy:     policy,
 		servicePackage: testServicePackage(),
+		servicePlan:    servicePlan,
+		method:         serviceMethod,
 	})
 	linkTestWireTypeCatalog(t, generation, catalog)
 
@@ -66,6 +74,7 @@ func TestTransformHandleSelectsTheCollectedPlan(t *testing.T) {
 // rendered into a package that did not claim its declarations.
 func TestTransformHandleRejectsAnotherCatalog(t *testing.T) {
 	source, target := manyDistinctTransformChildren(1, false)
+	servicePlan, serviceMethod := testTransformServicePlan(t, source, testServicePackage())
 	first, firstGeneration := testWireTypeCatalog(t)
 	policy := jsonBodyPolicy(true, false, false, "")
 	first.collect(target, wireRequestBody, policy)
@@ -73,6 +82,8 @@ func TestTransformHandleRejectsAnotherCatalog(t *testing.T) {
 		wireSide:       wireTransformTarget,
 		wirePolicy:     policy,
 		servicePackage: testServicePackage(),
+		servicePlan:    servicePlan,
+		method:         serviceMethod,
 	})
 	linkTestWireTypeCatalog(t, firstGeneration, first)
 
@@ -194,6 +205,7 @@ func TestTransformHelperUsesRetainedServicePackagePreference(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			source, target := manyDistinctTransformChildren(1, false)
+			servicePlan, serviceMethod := testTransformServicePlan(t, source, test.preference)
 			catalog, generation := testWireTypeCatalog(t)
 			policy := jsonBodyPolicy(true, false, false, "")
 			catalog.collect(target, wireRequestBody, policy)
@@ -201,6 +213,8 @@ func TestTransformHelperUsesRetainedServicePackagePreference(t *testing.T) {
 				wireSide:       wireTransformTarget,
 				wirePolicy:     policy,
 				servicePackage: test.preference,
+				servicePlan:    servicePlan,
+				method:         serviceMethod,
 			})
 			linkTestWireTypeCatalog(t, generation, catalog)
 
@@ -473,12 +487,12 @@ func manyDistinctTransformChildren(count int, reverse bool) (*expr.AttributeExpr
 		required[index] = field
 	}
 	return &expr.AttributeExpr{
-			Type:       &sourceObject,
-			Validation: &expr.ValidationExpr{Required: required},
-		}, &expr.AttributeExpr{
-			Type:       &targetObject,
-			Validation: &expr.ValidationExpr{Required: append([]string(nil), required...)},
-		}
+		Type:       &sourceObject,
+		Validation: &expr.ValidationExpr{Required: required},
+	}, &expr.AttributeExpr{
+		Type:       &targetObject,
+		Validation: &expr.ValidationExpr{Required: append([]string(nil), required...)},
+	}
 }
 
 // plannedTransformHelperNames returns each distinct child field and the helper
@@ -486,6 +500,7 @@ func manyDistinctTransformChildren(count int, reverse bool) (*expr.AttributeExpr
 func plannedTransformHelperNames(t *testing.T, reverse bool) map[string]string {
 	t.Helper()
 	source, target := manyDistinctTransformChildren(3, reverse)
+	servicePlan, serviceMethod := testTransformServicePlan(t, source, testServicePackage())
 	catalog, generation := testWireTypeCatalog(t)
 	policy := jsonBodyPolicy(true, false, false, "")
 	catalog.collect(target, wireRequestBody, policy)
@@ -493,6 +508,8 @@ func plannedTransformHelperNames(t *testing.T, reverse bool) map[string]string {
 		wireSide:       wireTransformTarget,
 		wirePolicy:     policy,
 		servicePackage: testServicePackage(),
+		servicePlan:    servicePlan,
+		method:         serviceMethod,
 	})
 	linkTestWireTypeCatalog(t, generation, catalog)
 
@@ -511,6 +528,7 @@ func plannedMatchingTransforms(
 ) (*wireTypeCatalog, wireTransformHandle, wireTransformHandle) {
 	t.Helper()
 	source, target := manyDistinctTransformChildren(1, false)
+	servicePlan, serviceMethod := testTransformServicePlan(t, source, testServicePackage())
 	catalog, generation := testWireTypeCatalog(t)
 	policy := jsonBodyPolicy(true, false, false, "")
 	catalog.collect(target, wireRequestBody, policy)
@@ -518,6 +536,8 @@ func plannedMatchingTransforms(
 		wireSide:       wireTransformTarget,
 		wirePolicy:     policy,
 		servicePackage: testServicePackage(),
+		servicePlan:    servicePlan,
+		method:         serviceMethod,
 	}
 	first := catalog.collectTransform(source, target, "marshal", "first", layout)
 	second := catalog.collectTransform(source, target, "marshal", "second", layout)
@@ -575,4 +595,22 @@ func plannedTransformErrorService(
 	plans, err := NewPlans(generation, PlanInput{Root: root, Service: servicePlan})
 	require.NoError(t, err)
 	return root, generation, servicePlan, plans[0]
+}
+
+// testTransformServicePlan gives direct catalog tests the same service-layout
+// input supplied by full HTTP planning, without generating transport files.
+func testTransformServicePlan(t *testing.T, attribute *expr.AttributeExpr, preference codegen.ImportSpec) (*service.Plan, *expr.MethodExpr) {
+	t.Helper()
+	root := codegen.RunDSL(t, func() {
+		dsl.Service(preference.Name, func() {
+			dsl.Method("exchange", func() {
+				dsl.Payload(attribute.Type)
+			})
+		})
+	})
+	generation, err := codegen.NewGeneration("generated.local/gen", []eval.Root{root})
+	require.NoError(t, err)
+	plan, err := service.NewPlan(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
+	require.NoError(t, err)
+	return plan, root.Services[0].Methods[0]
 }

@@ -4,6 +4,7 @@ package service
 
 import (
 	"path"
+	"strings"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
@@ -58,6 +59,7 @@ func (a *importAliases) spec(outputPackage, importPath string) *codegen.ImportSp
 // Generation.Freeze chooses their Go package names.
 func retainFileImports(
 	generation *codegen.Generation,
+	rootTypes *rootTypeSet,
 	outputPackage string,
 	fixed, generated []*codegen.ImportSpec,
 	definitions, references []*expr.AttributeExpr,
@@ -75,7 +77,68 @@ func retainFileImports(
 	if err := imports.AddRecursiveTypeReferences(references...); err != nil {
 		return nil, err
 	}
+	if rootTypes != nil {
+		for _, attribute := range definitions {
+			if err := rootTypes.addTypeImports(imports, generation.GenPkg(), attribute, false, nil); err != nil {
+				return nil, err
+			}
+		}
+		seen := make(map[expr.UserType]struct{})
+		for _, attribute := range references {
+			if err := rootTypes.addTypeImports(imports, generation.GenPkg(), attribute, true, seen); err != nil {
+				return nil, err
+			}
+		}
+	}
 	return imports, nil
+}
+
+// addTypeImports records selected shared packages at the same named boundaries
+// as the source contribution. View copies use their separate declaration plan.
+func (s *rootTypeSet) addTypeImports(imports *codegen.GeneratedImportPlan, genpkg string, attribute *expr.AttributeExpr, recursive bool, seen map[expr.UserType]struct{}) error {
+	if attribute == nil || attribute.Type == expr.Empty {
+		return nil
+	}
+	recurse := func(attribute *expr.AttributeExpr) error {
+		return s.addTypeImports(imports, genpkg, attribute, recursive, seen)
+	}
+	switch actual := attribute.Type.(type) {
+	case expr.UserType:
+		if location := s.location(actual); location != nil {
+			importPath := path.Join(genpkg, location.RelImportPath)
+			if err := imports.AddGenerated(codegen.NewImport(strings.ToLower(codegen.Goify(path.Base(importPath), false)), importPath)); err != nil {
+				return err
+			}
+		}
+		if !recursive {
+			return nil
+		}
+		if _, exists := seen[actual.Origin()]; exists {
+			return nil
+		}
+		seen[actual.Origin()] = struct{}{}
+		return recurse(actual.Attribute())
+	case *expr.Object:
+		for _, field := range *actual {
+			if err := recurse(field.Attribute); err != nil {
+				return err
+			}
+		}
+	case *expr.Array:
+		return recurse(actual.ElemType)
+	case *expr.Map:
+		if err := recurse(actual.KeyType); err != nil {
+			return err
+		}
+		return recurse(actual.ElemType)
+	case *expr.Union:
+		for _, branch := range actual.Values {
+			if err := recurse(branch.Attribute); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 // planServiceFileImports selects the package paths used by each concrete file
@@ -87,7 +150,7 @@ func planServiceFileImports(facts *serviceFacts, rootTypes *rootTypeSet, generat
 	viewsImport := facts.viewsImport
 	facts.generatedTypeImports = make(map[*codegen.TypeDeclaration]*codegen.GeneratedImportPlan)
 
-	definitions := serviceDefinitionAttributes(facts)
+	definitions := serviceDefinitionAttributes(facts, rootTypes)
 	serviceDefinitions := append([]*expr.AttributeExpr(nil), facts.referenceAttributes...)
 	serviceDefinitions = append(serviceDefinitions, definitions...)
 	viewDefinitions := viewDefinitionAttributes(facts)
@@ -114,7 +177,7 @@ func planServiceFileImports(facts *serviceFacts, rootTypes *rootTypeSet, generat
 	}
 	var err error
 	facts.imports.service, err = retainFileImports(
-		generation, servicePath, serviceFixed, serviceGenerated, serviceDefinitions, nil,
+		generation, rootTypes, servicePath, serviceFixed, serviceGenerated, serviceDefinitions, nil,
 	)
 	if err != nil {
 		return err
@@ -135,7 +198,7 @@ func planServiceFileImports(facts *serviceFacts, rootTypes *rootTypeSet, generat
 		}
 	}
 	facts.imports.endpoint, err = retainFileImports(
-		generation, servicePath, endpointFixed, endpointGenerated, facts.referenceAttributes, nil,
+		generation, rootTypes, servicePath, endpointFixed, endpointGenerated, facts.referenceAttributes, nil,
 	)
 	if err != nil {
 		return err
@@ -146,7 +209,7 @@ func planServiceFileImports(facts *serviceFacts, rootTypes *rootTypeSet, generat
 		clientFixed = append(clientFixed, ioImport)
 	}
 	facts.imports.client, err = retainFileImports(
-		generation, servicePath, clientFixed, nil, facts.referenceAttributes, nil,
+		generation, rootTypes, servicePath, clientFixed, nil, facts.referenceAttributes, nil,
 	)
 	if err != nil {
 		return err
@@ -164,7 +227,7 @@ func planServiceFileImports(facts *serviceFacts, rootTypes *rootTypeSet, generat
 			)
 		}
 		facts.imports.views, err = retainFileImports(
-			generation, servicePath+"/views", viewsFixed, validationGenerated, viewDefinitions, nil,
+			generation, nil, servicePath+"/views", viewsFixed, validationGenerated, viewDefinitions, nil,
 		)
 		if err != nil {
 			return err
@@ -180,7 +243,7 @@ func planServiceFileImports(facts *serviceFacts, rootTypes *rootTypeSet, generat
 			interceptorTypesOnly(facts.clientInterceptorFacts, serverInterceptorNames)...,
 		)
 		facts.imports.serverInterceptors, err = retainFileImports(
-			generation, servicePath, interceptorFixed, nil, serverInterceptorTypes, nil,
+			generation, rootTypes, servicePath, interceptorFixed, nil, serverInterceptorTypes, nil,
 		)
 		if err != nil {
 			return err
@@ -192,7 +255,7 @@ func planServiceFileImports(facts *serviceFacts, rootTypes *rootTypeSet, generat
 			interceptorNames(facts.serverInterceptorFacts),
 		)
 		facts.imports.clientInterceptors, err = retainFileImports(
-			generation, servicePath, interceptorFixed, nil, clientInterceptorTypes, nil,
+			generation, rootTypes, servicePath, interceptorFixed, nil, clientInterceptorTypes, nil,
 		)
 		if err != nil {
 			return err
@@ -202,7 +265,7 @@ func planServiceFileImports(facts *serviceFacts, rootTypes *rootTypeSet, generat
 		streamTypes := interceptorStreamTypes(facts.serverInterceptorFacts)
 		streamTypes = append(streamTypes, interceptorStreamTypes(facts.clientInterceptorFacts)...)
 		facts.imports.interceptorWrappers, err = retainFileImports(
-			generation, servicePath, interceptorFixed, nil, streamTypes, nil,
+			generation, rootTypes, servicePath, interceptorFixed, nil, streamTypes, nil,
 		)
 		if err != nil {
 			return err
@@ -220,7 +283,7 @@ func planServiceFileImports(facts *serviceFacts, rootTypes *rootTypeSet, generat
 		exampleFixed = append(exampleFixed, codegen.SimpleImport("fmt"), securityImport)
 	}
 	facts.imports.exampleService, err = retainFileImports(
-		generation, path.Dir(generation.GenPkg()), exampleFixed,
+		generation, rootTypes, path.Dir(generation.GenPkg()), exampleFixed,
 		[]*codegen.ImportSpec{serviceImport}, facts.referenceAttributes, nil,
 	)
 	if err != nil {
@@ -230,7 +293,7 @@ func planServiceFileImports(facts *serviceFacts, rootTypes *rootTypeSet, generat
 	exampleInterceptorFixed := []*codegen.ImportSpec{contextImport, logImport, goaImport}
 	if len(facts.serverInterceptors) > 0 {
 		facts.imports.exampleServerInterceptors, err = retainFileImports(
-			generation, path.Join(path.Dir(generation.GenPkg()), "interceptors"),
+			generation, rootTypes, path.Join(path.Dir(generation.GenPkg()), "interceptors"),
 			exampleInterceptorFixed, []*codegen.ImportSpec{serviceImport}, nil, nil,
 		)
 		if err != nil {
@@ -239,7 +302,7 @@ func planServiceFileImports(facts *serviceFacts, rootTypes *rootTypeSet, generat
 	}
 	if len(facts.clientInterceptors) > 0 {
 		facts.imports.exampleClientInterceptors, err = retainFileImports(
-			generation, path.Join(path.Dir(generation.GenPkg()), "interceptors"),
+			generation, rootTypes, path.Join(path.Dir(generation.GenPkg()), "interceptors"),
 			exampleInterceptorFixed, []*codegen.ImportSpec{serviceImport}, nil, nil,
 		)
 		if err != nil {
@@ -251,7 +314,7 @@ func planServiceFileImports(facts *serviceFacts, rootTypes *rootTypeSet, generat
 			continue
 		}
 		userType.imports, err = retainFileImports(
-			generation,
+			generation, rootTypes,
 			userType.declaration.PackagePath(),
 			nil,
 			nil,
@@ -269,7 +332,7 @@ func planServiceFileImports(facts *serviceFacts, rootTypes *rootTypeSet, generat
 			attributes = append(attributes, method.StreamingResult)
 		}
 		for _, attribute := range attributes {
-			if attribute == nil || codegen.UserTypeLocation(attribute.Type) == nil {
+			if attribute == nil || rootTypes.location(attribute.Type) == nil {
 				continue
 			}
 			userType, ok := attribute.Type.(expr.UserType)
@@ -280,7 +343,7 @@ func planServiceFileImports(facts *serviceFacts, rootTypes *rootTypeSet, generat
 				continue
 			}
 			owner := generation.Package(generatedPackagePath(
-				generation.GenPkg(), facts.packagePath, codegen.UserTypeLocation(userType),
+				generation.GenPkg(), facts.packagePath, rootTypes.location(userType),
 			))
 			declaration, err := owner.UserType(rootTypes.canonical(userType))
 			if err != nil {
@@ -290,7 +353,7 @@ func planServiceFileImports(facts *serviceFacts, rootTypes *rootTypeSet, generat
 				continue
 			}
 			retained, err := retainFileImports(
-				generation,
+				generation, rootTypes,
 				declaration.PackagePath(),
 				nil,
 				nil,
@@ -315,7 +378,7 @@ func planServiceFileImports(facts *serviceFacts, rootTypes *rootTypeSet, generat
 			definitions = append(definitions, branch.Attribute)
 		}
 		union.imports, err = retainFileImports(
-			generation,
+			generation, rootTypes,
 			union.declaration.PackagePath(),
 			unionFixed,
 			nil,
@@ -496,7 +559,7 @@ func linkServiceFileImports(facts *serviceFacts) error {
 
 // serviceDefinitionAttributes returns the exact named definitions written to
 // service.go in addition to method references.
-func serviceDefinitionAttributes(facts *serviceFacts) []*expr.AttributeExpr {
+func serviceDefinitionAttributes(facts *serviceFacts, rootTypes *rootTypeSet) []*expr.AttributeExpr {
 	var definitions []*expr.AttributeExpr
 	for _, method := range facts.methods {
 		attributes := []*expr.AttributeExpr{method.Payload, method.StreamingPayload, method.Result}
@@ -504,7 +567,7 @@ func serviceDefinitionAttributes(facts *serviceFacts) []*expr.AttributeExpr {
 			attributes = append(attributes, method.StreamingResult)
 		}
 		for _, attribute := range attributes {
-			if attribute == nil || codegen.UserTypeLocation(attribute.Type) != nil {
+			if attribute == nil || rootTypes.location(attribute.Type) != nil {
 				continue
 			}
 			if userType, ok := attribute.Type.(expr.UserType); ok {
