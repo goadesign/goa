@@ -1800,6 +1800,7 @@ func (s *wireAttributeScope) planGoType(attribute *expr.AttributeExpr, policy co
 	return codegen.PlanGoType(attribute, codegen.GoTypePlanOptions{
 		Owner:            owner,
 		Policy:           policy,
+		MappedFields:     true,
 		RetainNamedValue: !referenceOnly,
 		Bind: func(request codegen.GoTypeBindingRequest) (codegen.GoTypeBinding, error) {
 			// A selected response view applies only to this root. Complete

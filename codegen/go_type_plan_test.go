@@ -744,6 +744,140 @@ func TestGoTypePlanRetainsRecursiveNamedValue(t *testing.T) {
 	require.Same(t, plan.value, plan.value.fields[0].value)
 }
 
+// TestGoTypePlanMappedFields keeps wire names separate from the logical keys
+// that determine field pointers and required-dependent tags.
+func TestGoTypePlanMappedFields(t *testing.T) {
+	tests := []struct {
+		name        string
+		mapped      bool
+		required    string
+		force       bool
+		useDefault  bool
+		defaulted   bool
+		override    string
+		wantName    string
+		wantPointer bool
+	}{
+		{name: "mapped required", mapped: true, required: "detail", wantName: "Message"},
+		{name: "mapped optional", mapped: true, wantName: "Message", wantPointer: true},
+		{name: "mapped default", mapped: true, defaulted: true, useDefault: true, wantName: "Message"},
+		{name: "mapped default pointer", mapped: true, defaulted: true, wantName: "Message", wantPointer: true},
+		{name: "mapped required decoder", mapped: true, required: "detail", force: true, wantName: "Message", wantPointer: true},
+		{name: "mapped Go name override", mapped: true, required: "detail", override: "DisplayText", wantName: "DisplayText"},
+		{name: "ordinary colon required", required: "detail:message", wantName: "Detail"},
+		{name: "ordinary colon optional", wantName: "Detail", wantPointer: true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			field := &expr.AttributeExpr{
+				Type: expr.String, Description: "visible detail",
+				Meta: expr.MetaExpr{"struct:tag:json:name": {"visible"}},
+			}
+			if test.defaulted {
+				field.DefaultValue = "ready"
+			}
+			if test.override != "" {
+				field.Meta["struct:field:name"] = []string{test.override}
+			}
+			attribute := &expr.AttributeExpr{Type: &expr.Object{{Name: "detail:message", Attribute: field}}}
+			if test.required != "" {
+				attribute.Validation = &expr.ValidationExpr{Required: []string{test.required}}
+			}
+			plan, err := PlanGoType(attribute, GoTypePlanOptions{
+				Owner: "generated.local/gen/service", MappedFields: test.mapped,
+				Policy: GoLayoutPolicy{Pointer: test.force, UseDefault: test.useDefault, SumType: true},
+			})
+			require.NoError(t, err)
+			require.Len(t, plan.Fields(), 1)
+			planned := plan.Fields()[0]
+			require.True(t, planned.MatchesOccurrence(field))
+			require.Equal(t, test.wantName, planned.FieldName(true))
+			require.Equal(t, test.wantPointer, planned.IsPointer())
+			require.Equal(t, "visible detail", planned.Description())
+			wantTag := " `json:\"visible\"`"
+			if test.required == "" {
+				wantTag = " `json:\"visible,omitempty\"`"
+			}
+			require.Equal(t, wantTag, planned.Tag())
+			require.Equal(t, "detail:message", (*expr.AsObject(attribute.Type))[0].Name)
+			require.Same(t, field, (*expr.AsObject(attribute.Type))[0].Attribute)
+			if test.required != "" {
+				require.Equal(t, []string{test.required}, attribute.AllRequired())
+			}
+			if !test.mapped {
+				require.Equal(t, NewNameScope().GoTypeDef(attribute, test.force, test.useDefault), plan.Link(plan.Owner(), goTypeTestQualifier).Def())
+			}
+			field.Meta["struct:field:name"] = []string{"Changed"}
+			require.Equal(t, test.wantName, planned.FieldName(true))
+		})
+	}
+}
+
+// TestGoTypePlanMappedFieldsPreserveSharedChildren retains each field use when
+// two differently mapped keys share one original child attribute.
+func TestGoTypePlanMappedFieldsPreserveSharedChildren(t *testing.T) {
+	field := &expr.AttributeExpr{Type: expr.String}
+	attribute := &expr.AttributeExpr{
+		Type: &expr.Object{
+			{Name: "first:first_value", Attribute: field},
+			{Name: "second:second_value", Attribute: field},
+		},
+		Validation: &expr.ValidationExpr{Required: []string{"first"}},
+	}
+	plan, err := PlanGoType(attribute, GoTypePlanOptions{
+		Owner: "generated.local/gen/service", MappedFields: true, Policy: GoLayoutPolicy{SumType: true},
+	})
+	require.NoError(t, err)
+	fields := plan.PlansForOccurrence(field)
+	require.Len(t, fields, 2)
+	require.Equal(t, "FirstValue", fields[0].FieldName(true))
+	require.Equal(t, "firstValue", fields[0].FieldName(false))
+	require.False(t, fields[0].IsPointer())
+	require.Equal(t, "SecondValue", fields[1].FieldName(true))
+	require.Equal(t, "secondValue", fields[1].FieldName(false))
+	require.True(t, fields[1].IsPointer())
+	require.Nil(t, field.Meta)
+}
+
+// TestGoTypePlanMappedFieldsRetainRecursiveContainers preserves the original
+// named value through direct, array, and map references while mapping its fields.
+func TestGoTypePlanMappedFieldsRetainRecursiveContainers(t *testing.T) {
+	const owner = "generated.local/gen/service"
+	detail := &expr.AttributeExpr{Type: expr.String}
+	record := &expr.UserTypeExpr{TypeName: "Record"}
+	record.AttributeExpr = &expr.AttributeExpr{
+		Type: &expr.Object{
+			{Name: "detail:message", Attribute: detail},
+			{Name: "next:following", Attribute: &expr.AttributeExpr{Type: record}},
+			{Name: "items:children", Attribute: &expr.AttributeExpr{Type: &expr.Array{ElemType: &expr.AttributeExpr{Type: record}}}},
+			{Name: "index:by_key", Attribute: &expr.AttributeExpr{Type: &expr.Map{
+				KeyType: &expr.AttributeExpr{Type: expr.String}, ElemType: &expr.AttributeExpr{Type: record},
+			}}},
+		},
+		Validation: &expr.ValidationExpr{Required: []string{"detail"}},
+	}
+	plan, err := PlanGoType(&expr.AttributeExpr{Type: record}, GoTypePlanOptions{
+		Owner: owner, MappedFields: true, RetainNamedValue: true, Policy: GoLayoutPolicy{SumType: true},
+		Bind: func(request GoTypeBindingRequest) (GoTypeBinding, error) {
+			require.Same(t, record, request.Attribute.Type)
+			return GoTypeBinding{Owner: owner, name: "Record"}, nil
+		},
+	})
+	require.NoError(t, err)
+	fields := plan.value.Fields()
+	require.Len(t, fields, 4)
+	require.Equal(t, "Message", fields[0].FieldName(true))
+	require.True(t, fields[0].MatchesOccurrence(detail))
+	require.False(t, fields[0].IsPointer())
+	require.Equal(t, "Following", fields[1].FieldName(true))
+	require.Same(t, plan.value, fields[1].value)
+	require.Equal(t, "Children", fields[2].FieldName(true))
+	require.Same(t, plan.value, fields[2].Elem().value)
+	require.Equal(t, "ByKey", fields[3].FieldName(true))
+	require.Same(t, plan.value, fields[3].Elem().value)
+	require.Len(t, plan.PlansForOccurrence(detail), 1)
+}
+
 // goTypeTestUserType constructs one named type without running the DSL.
 func goTypeTestUserType(name string, dataType expr.DataType) expr.UserType {
 	return &expr.UserTypeExpr{

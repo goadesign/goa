@@ -482,6 +482,77 @@ func TestBindCopiedUnionOccurrencesRejectsDifferentGraphs(t *testing.T) {
 	}
 }
 
+// TestWireTypeLayoutMappedFields compares the retained field facts with the
+// HTTP declaration and exercises strict lookup through the complete context.
+func TestWireTypeLayoutMappedFields(t *testing.T) {
+	for _, test := range []struct {
+		name    string
+		request bool
+		server  bool
+		want    []bool
+	}{
+		{name: "server request", request: true, server: true, want: []bool{true, true, true}},
+		{name: "client request", request: true, want: []bool{false, true, false}},
+		{name: "server response", server: true, want: []bool{false, true, false}},
+		{name: "client response", want: []bool{true, true, true}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			detail := &expr.AttributeExpr{Type: expr.String}
+			optional := &expr.AttributeExpr{Type: expr.String}
+			defaulted := &expr.AttributeExpr{
+				Type: expr.String, DefaultValue: "ready",
+				Meta: expr.MetaExpr{"struct:field:name": {"DisplayText"}, "struct:tag:json": {"custom"}},
+			}
+			body := &expr.AttributeExpr{
+				Type: &expr.Object{
+					{Name: "detail:message", Attribute: detail},
+					{Name: "extra:note", Attribute: optional},
+					{Name: "fallback:label", Attribute: defaulted},
+				},
+				Validation: &expr.ValidationExpr{Required: []string{"detail"}},
+			}
+			catalog, generation := testWireTypeCatalog(t)
+			linkTestWireTypeCatalog(t, generation, catalog)
+			context := jsonBodyContext(catalog, catalog.scope, test.request, test.server)
+			scope := context.Scope.(*wireAttributeScope)
+			plan, err := scope.planGoType(body, context.LayoutPolicy(), false)
+			require.NoError(t, err)
+			linked, err := httpTransformContext(body, context)
+			require.NoError(t, err)
+			definition := goTypeDefForContext(body, context)
+			fields := plan.Fields()
+			require.Len(t, fields, 3)
+			for index, field := range []struct {
+				attribute *expr.AttributeExpr
+				element   string
+				name      string
+			}{
+				{attribute: detail, element: "message", name: "Message"},
+				{attribute: optional, element: "note", name: "Note"},
+				{attribute: defaulted, element: "label", name: "DisplayText"},
+			} {
+				require.True(t, fields[index].MatchesOccurrence(field.attribute))
+				require.Equal(t, test.want[index], fields[index].IsPointer())
+				require.Equal(t, field.name, fields[index].FieldName(true))
+				require.Equal(t, field.name, linked.Scope.Field(field.attribute, field.element, true))
+				typeName := "string"
+				if test.want[index] {
+					typeName = "*string"
+				}
+				require.Contains(t, definition, "\t"+field.name+" "+typeName+" `")
+			}
+			require.Equal(t, " `json:\"custom\"`", fields[2].Tag())
+			require.Contains(t, definition, " `json:\"custom\"`")
+			require.Panics(t, func() {
+				linked.Scope.Field(detail, "detail", true)
+			})
+			require.Equal(t, "detail:message", (*expr.AsObject(body.Type))[0].Name)
+			require.Equal(t, []string{"detail"}, body.AllRequired())
+			require.Equal(t, "ready", defaulted.DefaultValue)
+		})
+	}
+}
+
 // testWireTypeCatalog creates the generated package that assigns names for a test.
 // Reserved names simulate declarations contributed by another generator.
 func testWireTypeCatalog(t *testing.T, reserved ...string) (*wireTypeCatalog, *codegen.Generation) {

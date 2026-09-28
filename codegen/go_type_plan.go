@@ -87,6 +87,11 @@ type (
 		Owner string
 		// FieldName is the design field name of the top-level attribute, when set.
 		FieldName string
+		// MappedFields interprets object keys as "name:element" mappings. Go fields
+		// use the element name, while requiredness and defaults use the name.
+		// Explicit struct:field:name metadata still overrides the Go field name.
+		// When false, object keys keep their ordinary Go field interpretation.
+		MappedFields bool
 		// Policy contains the pointer and validation choices selected by the caller.
 		Policy GoLayoutPolicy
 		// Bind returns the generated declaration for every named type and union.
@@ -147,6 +152,7 @@ type (
 		bind              GoTypeBinder
 		activeNamedValues map[expr.UserType]*GoTypePlan
 		retainNamedValue  bool
+		mappedFields      bool
 	}
 )
 
@@ -184,6 +190,7 @@ func PlanGoType(attribute *expr.AttributeExpr, options GoTypePlanOptions) (*GoTy
 		bind:              options.Bind,
 		activeNamedValues: make(map[expr.UserType]*GoTypePlan),
 		retainNamedValue:  options.RetainNamedValue,
+		mappedFields:      options.MappedFields,
 	}
 	return planner.plan(attribute, options.Owner, options.FieldName, nil, false)
 }
@@ -667,11 +674,28 @@ func (p goTypePlanner) plan(attribute *expr.AttributeExpr, owner, fieldName stri
 		plan.element = element
 	case *expr.Object:
 		plan.kind = GoStruct
-		plan.fields = make([]*GoTypePlan, len(*actual))
-		for index, field := range *actual {
+		fields := actual
+		var mapped *expr.MappedAttributeExpr
+		if p.mappedFields {
+			// Remap a shallow parent so the logical keys change without copying
+			// the original children retained by the layout or changing the input.
+			parent := *layoutAttribute
+			mapped = expr.NewEmptyMappedAttributeExpr()
+			mapped.AttributeExpr = &parent
+			mapped.Remap()
+			layoutAttribute = mapped.AttributeExpr
+			fields = expr.AsObject(mapped.Type)
+		}
+		plan.fields = make([]*GoTypePlan, len(*fields))
+		for index, field := range *fields {
 			child, err := p.plan(field.Attribute, owner, field.Name, layoutAttribute, false)
 			if err != nil {
 				return nil, err
+			}
+			if mapped != nil {
+				element := mapped.ElemName(field.Name)
+				child.fieldNameUpper = GoifyAtt(field.Attribute, element, true)
+				child.fieldNameLower = GoifyAtt(field.Attribute, element, false)
 			}
 			plan.fields[index] = child
 		}

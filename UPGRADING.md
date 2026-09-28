@@ -10,6 +10,18 @@ Regenerate the complete `gen` tree after updating the generator. Generated
 declarations, conversion methods, transport references, and imports now use the
 same planned package and names, including types shared across services.
 
+HTTP and JSON-RPC body mappings keep their existing names and validation rules.
+For example, `detail:message` maps the service field `Detail` to the body field
+`Message`; requiredness and defaults still refer to `detail`. Regenerate to fix
+conversion generation for these mapped fields. The JSON body and error envelope
+are unchanged.
+
+Generator plugins constructing `codegen.GoTypePlanOptions` must use keyed literals:
+the struct adds `MappedFields`. HTTP wire planning enables this option to retain
+mapped Go field names and logical requiredness together. Leave it false when
+planning ordinary service fields. Existing keyed literals retain their behavior;
+old positional literals must name their fields.
+
 A type assigned `struct:pkg:path` supplies the package for its unlocated
 dependencies. A referenced type with its own explicit location keeps that
 location and supplies it to its descendants. The design no longer needs to
