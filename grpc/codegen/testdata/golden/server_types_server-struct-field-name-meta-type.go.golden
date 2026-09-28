@@ -8,11 +8,9 @@ func NewMethodPayload(message *using_meta_typespb.MethodRequest) *usingmetatypes
 	if message.A == nil {
 		v.Foo = 1
 	}
-	if message.B != nil {
-		v.Bar = make([]int64, len(message.B))
-		for i, val := range message.B {
-			v.Bar[i] = val
-		}
+	v.Bar = make([]int64, len(message.B))
+	for i, val := range message.B {
+		v.Bar[i] = val
 	}
 	return v
 }

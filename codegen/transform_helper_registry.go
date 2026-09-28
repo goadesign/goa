@@ -70,6 +70,36 @@ func NewTransformHelperRegistry() *TransformHelperRegistry {
 	return &TransformHelperRegistry{}
 }
 
+// HelperLayouts returns the existing source and target Go layouts selected by
+// id's saved field, collection, and union path. The complete layouts must describe
+// the authored roots supplied to this plan or compiler copies of those roots,
+// including fields beneath named types. The query rejects foreign IDs and missing
+// or incompatible layouts. It does not change expressions, names, or the plan.
+func (p *TransformPlan) HelperLayouts(id TransformHelperID, source, target *GoTypePlan) (*GoTypePlan, *GoTypePlan, error) {
+	if id.plan != p || id.index < 0 || id.index >= len(p.helpers) {
+		return nil, nil, fmt.Errorf("transform helper does not belong to this plan")
+	}
+	if source == nil || target == nil {
+		return nil, nil, fmt.Errorf("transform helper layouts must not be nil")
+	}
+	if source.occurrence == nil || source.occurrence.AuthoredAttribute() != p.sourceCopier.Original(p.source).AuthoredAttribute() {
+		return nil, nil, fmt.Errorf("transform helper source layout describes another root")
+	}
+	if target.occurrence == nil || target.occurrence.AuthoredAttribute() != p.targetCopier.Original(p.target).AuthoredAttribute() {
+		return nil, nil, fmt.Errorf("transform helper target layout describes another root")
+	}
+	helper := p.helpers[id.index]
+	source, err := transformLayoutAtLocation(source, p.rootSource, helper.location, p.wrappers, false, nil)
+	if err != nil {
+		return nil, nil, fmt.Errorf("find source layout for transform helper occurrence %d: %w", helper.Occurrence, err)
+	}
+	target, err = transformLayoutAtLocation(target, p.rootTarget, helper.location, p.wrappers, true, nil)
+	if err != nil {
+		return nil, nil, fmt.Errorf("find target layout for transform helper occurrence %d: %w", helper.Occurrence, err)
+	}
+	return source, target, nil
+}
+
 // Collect adds every helper occurrence in plan. sourceLayout and targetLayout
 // must describe the complete source and target values supplied to plan and
 // retain the fields beneath named types. order must combine the conversion's
@@ -98,13 +128,9 @@ func (r *TransformHelperRegistry) Collect(plan *TransformPlan, sourceLayout, tar
 		if !ok {
 			return fmt.Errorf("transform helper occurrence %d has no definition", helper.Occurrence)
 		}
-		source, err := transformLayoutAtLocation(sourceLayout, plan.rootSource, helper.location, plan.wrappers, false)
+		source, target, err := plan.HelperLayouts(helper.ID, sourceLayout, targetLayout)
 		if err != nil {
-			return fmt.Errorf("find source layout for transform helper occurrence %d: %w", helper.Occurrence, err)
-		}
-		target, err := transformLayoutAtLocation(targetLayout, plan.rootTarget, helper.location, plan.wrappers, true)
-		if err != nil {
-			return fmt.Errorf("find target layout for transform helper occurrence %d: %w", helper.Occurrence, err)
+			return err
 		}
 		candidateOrder := order(helper.location)
 		if err := validatePackageNameOrder(candidateOrder); err != nil {
@@ -127,7 +153,7 @@ func (r *TransformHelperRegistry) Collect(plan *TransformPlan, sourceLayout, tar
 // wrapper instruction. The generated field and design field must describe the
 // same value that the transform planned to read or write.
 func transformWrapperField(layout *GoTypePlan, wrapper, selected *expr.AttributeExpr, fieldName string) (*GoTypePlan, error) {
-	layout, wrapper = transformLayoutValue(layout, wrapper)
+	layout, wrapper = transformLayoutValue(layout, wrapper, nil)
 	object := expr.AsObject(wrapper.Type)
 	if object == nil || layout.kind != GoStruct {
 		return nil, fmt.Errorf("wrapper does not select a generated struct")
@@ -458,12 +484,16 @@ func transformSemanticDataTypesEqual(left, right expr.DataType, seen map[transfo
 
 // transformLayoutAtLocation follows the authored field, collection, and union
 // path saved by TransformPlan, entering wrapper fields on the chosen side, and
-// returns the generated layout at that point.
-func transformLayoutAtLocation(layout *GoTypePlan, attribute *expr.AttributeExpr, location TransformHelperDefinitionLocation, wrappers map[TransformHelperDefinitionLocation]transformLayoutWrapper, target bool) (*GoTypePlan, error) {
+// returns the generated layout at that point. When enter is provided, it also
+// enters the enclosing rendering scopes along that same path.
+func transformLayoutAtLocation(layout *GoTypePlan, attribute *expr.AttributeExpr, location TransformHelperDefinitionLocation, wrappers map[TransformHelperDefinitionLocation]transformLayoutWrapper, target bool, enter func(*expr.AttributeExpr)) (*GoTypePlan, error) {
 	remaining := location.encoded
 	for len(remaining) > 0 {
 		parent := TransformHelperDefinitionLocation{encoded: location.encoded[:len(location.encoded)-len(remaining)]}
 		if wrapper, ok := wrappers[parent]; ok && wrapper.directive.WrapTarget == target {
+			if enter != nil {
+				enter(wrapper.wrapper)
+			}
 			selected, err := transformWrapperField(layout, wrapper.wrapper, wrapper.value, wrapper.directive.FieldName)
 			if err != nil {
 				return nil, fmt.Errorf("select wrapper field: %w", err)
@@ -491,12 +521,15 @@ func transformLayoutAtLocation(layout *GoTypePlan, attribute *expr.AttributeExpr
 			name.WriteByte(remaining[0])
 			remaining = remaining[1:]
 		}
-		layout, attribute = transformLayoutValue(layout, attribute)
+		layout, attribute = transformLayoutValue(layout, attribute, enter)
 		switch kind {
 		case transformObjectFieldLocation:
 			object := expr.AsObject(attribute.Type)
 			if object == nil || layout.kind != GoStruct {
 				return nil, fmt.Errorf("object field %q does not select a generated struct", name.String())
+			}
+			if len(layout.fields) != len(*object) {
+				return nil, fmt.Errorf("object has %d design fields and %d generated fields", len(*object), len(layout.fields))
 			}
 			found := false
 			for index, field := range *object {
@@ -531,6 +564,9 @@ func transformLayoutAtLocation(layout *GoTypePlan, attribute *expr.AttributeExpr
 			if union == nil || layout.kind != GoUnion {
 				return nil, fmt.Errorf("union branch %q does not select a generated union", name.String())
 			}
+			if len(layout.branches) != len(union.Values) {
+				return nil, fmt.Errorf("union has %d design branches and %d generated branches", len(union.Values), len(layout.branches))
+			}
 			found := false
 			for index, branch := range union.Values {
 				if branch.Name == name.String() {
@@ -546,14 +582,20 @@ func transformLayoutAtLocation(layout *GoTypePlan, attribute *expr.AttributeExpr
 		default:
 			return nil, fmt.Errorf("unknown transform helper location step %d", kind)
 		}
+		if layout == nil {
+			return nil, fmt.Errorf("transform helper path has no generated layout")
+		}
 	}
 	return layout, nil
 }
 
 // transformLayoutValue enters every consecutive named type while keeping the
 // outer named layout available as the helper parameter or result type.
-func transformLayoutValue(layout *GoTypePlan, attribute *expr.AttributeExpr) (*GoTypePlan, *expr.AttributeExpr) {
+func transformLayoutValue(layout *GoTypePlan, attribute *expr.AttributeExpr, enter func(*expr.AttributeExpr)) (*GoTypePlan, *expr.AttributeExpr) {
 	for {
+		if enter != nil {
+			enter(attribute)
+		}
 		userType, ok := attribute.Type.(expr.UserType)
 		if !ok || userType == expr.Empty {
 			return layout, attribute

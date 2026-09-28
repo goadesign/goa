@@ -27,8 +27,17 @@ import (
 // The following limitations apply on the external Go struct field types
 // recursively:
 //
-//   - struct fields must use pointers
+//   - object fields must use pointers; OneOf fields may use values or one pointer
 //   - pointers on slices or on maps are not supported
+//   - OneOf collection elements and map keys must use values, not pointers
+//
+// A OneOf maps to an exported external struct with the same branches and public
+// Kind, As<Branch>, and pointer-receiver Set<Branch> methods as a generated Goa
+// union. Getter and setter value types must agree with each other and with the
+// authored branch schema. Generation rejects incompatible methods or branches.
+// The conversion uses these methods, not the union's private storage.
+// Named scalar and collection types retain their external Go names and packages
+// in fields, branches, and nested collection keys and elements.
 //
 // ConvertTo must appear in Type or ResutType.
 //
@@ -108,8 +117,13 @@ func ConvertTo(obj any) {
 // The following limitations apply on the external Go struct field types
 // recursively:
 //
-//   - struct fields must use pointers
+//   - object fields must use pointers; OneOf fields may use values or one pointer
 //   - pointers on slices or on maps are not supported
+//   - OneOf collection elements and map keys must use values, not pointers
+//
+// OneOf conversions use the external union's public methods with the same
+// requirements as ConvertTo. External named scalar and collection types supply
+// their actual Go names and packages at every nested field, branch and element.
 //
 // CreateFrom must appear in Type or ResultType.
 //

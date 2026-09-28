@@ -1,5 +1,5 @@
 // This file verifies root validation, including shared HTTP routes and
-// exact-origin dependency traversal for explicitly relocated user types.
+// deferral of full-generation package placement to service planning.
 package expr
 
 import (
@@ -15,53 +15,21 @@ type rootExternalType struct {
 	Value string
 }
 
-func TestRelocatedDependenciesUseDeclarationOrigin(t *testing.T) {
-	dependency := &UserTypeExpr{
-		TypeName:      "Dependency",
-		UID:           "shared-semantic-id",
-		AttributeExpr: &AttributeExpr{Type: String},
-	}
-	relocated := &UserTypeExpr{
-		TypeName: "Relocated",
-		UID:      "shared-semantic-id",
-		AttributeExpr: &AttributeExpr{
-			Meta: MetaExpr{"struct:pkg:path": {"types"}},
-			Type: &Object{&NamedAttributeExpr{
-				Name:      "dependency",
-				Attribute: &AttributeExpr{Type: dependency},
-			}},
-		},
-	}
-	root := &RootExpr{Types: []UserType{relocated, dependency}}
-
-	errors := root.validateRelocatedUserTypes()
-	if len(errors.Errors) != 1 {
-		t.Fatalf("expected one relocated dependency error, got %d", len(errors.Errors))
-	}
-	if message := errors.Errors[0].Error(); !strings.Contains(message, "Dependency") {
-		t.Errorf("expected dependency name in error, got %q", message)
-	}
-}
-
-func TestRelocatedDependencyWalkStopsAtExactOriginCopy(t *testing.T) {
-	relocated := &UserTypeExpr{
-		TypeName: "Relocated",
-		UID:      "relocated",
-		AttributeExpr: &AttributeExpr{
-			Meta: MetaExpr{"struct:pkg:path": {"types"}},
-			Type: String,
-		},
-	}
-	copy := relocated.Dup(DupAtt(relocated.Attribute()))
-	relocated.AttributeExpr.Type = &Object{&NamedAttributeExpr{
-		Name:      "self",
-		Attribute: &AttributeExpr{Type: copy},
+// TestRootValidationDefersPackagePlacement verifies schema validation accepts
+// package constraints without deciding their full-generation ownership.
+func TestRootValidationDefersPackagePlacement(t *testing.T) {
+	dependency := &UserTypeExpr{TypeName: "Dependency", AttributeExpr: &AttributeExpr{Type: String}}
+	parent := &UserTypeExpr{TypeName: "Parent", AttributeExpr: &AttributeExpr{
+		Meta: MetaExpr{"struct:pkg:path": {"types"}},
+		Type: &Object{&NamedAttributeExpr{Name: "child", Attribute: &AttributeExpr{Type: dependency}}},
 	}}
-	root := &RootExpr{Types: []UserType{relocated}}
-
-	errors := root.validateRelocatedUserTypes()
-	if len(errors.Errors) != 0 {
-		t.Errorf("expected exact origin copy to be treated as recursion, got %v", errors)
+	root := &RootExpr{API: &APIExpr{Name: "test"}, Types: []UserType{parent, dependency}}
+	var validation *eval.ValidationErrors
+	if errors.As(root.Validate(), &validation) && len(validation.Errors) != 0 {
+		t.Errorf("schema validation decided generated package placement: %v", validation)
+	}
+	if _, exists := dependency.Attribute().Meta["struct:pkg:path"]; exists {
+		t.Error("schema validation assigned a package to the dependency")
 	}
 }
 

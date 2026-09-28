@@ -64,12 +64,7 @@ func clientEncodeDecodeFile(svc *expr.HTTPServiceExpr, services *ServicesData) *
 						_, ok := dt.(expr.UserType)
 						return ok
 					},
-					"underlyingType": func(dt expr.DataType) expr.DataType {
-						if ut, ok := dt.(expr.UserType); ok {
-							return ut.Attribute().Type
-						}
-						return dt
-					},
+					"underlyingType": underlyingDataType,
 				},
 				Data: e,
 			})

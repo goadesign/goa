@@ -64,13 +64,13 @@ func planServiceValidations(facts *serviceFacts, rootTypes *rootTypeSet, generat
 					return codegen.GoTypeBinding{}, err
 				}
 			}
-			return codegen.GoTypeBinding{Owner: facts.viewsPath, Type: declaration}, nil
+			return codegen.GoTypeBinding{Owner: facts.viewsPath, PreferredImportName: facts.viewsImport.Name, Type: declaration}, nil
 		case codegen.GoUnion:
 			declaration, err := views.Union(request.Attribute)
 			if err != nil {
 				return codegen.GoTypeBinding{}, err
 			}
-			return codegen.GoTypeBinding{Owner: facts.viewsPath, Union: declaration}, nil
+			return codegen.GoTypeBinding{Owner: facts.viewsPath, PreferredImportName: facts.viewsImport.Name, Union: declaration}, nil
 		default:
 			return codegen.GoTypeBinding{}, fmt.Errorf("bind unsupported view validation type %s", request.Kind)
 		}
@@ -158,7 +158,7 @@ func planServiceValidations(facts *serviceFacts, rootTypes *rootTypeSet, generat
 					targetType := conversion.target.Type.(expr.UserType)
 					conversionBinder = func(request codegen.GoTypeBindingRequest) (codegen.GoTypeBinding, error) {
 						if request.Kind == codegen.GoNamed && request.Attribute.Type == targetType {
-							return codegen.GoTypeBinding{Owner: facts.viewsPath, Type: projected.declaration}, nil
+							return codegen.GoTypeBinding{Owner: facts.viewsPath, PreferredImportName: facts.viewsImport.Name, Type: projected.declaration}, nil
 						}
 						return viewBinder(request)
 					}

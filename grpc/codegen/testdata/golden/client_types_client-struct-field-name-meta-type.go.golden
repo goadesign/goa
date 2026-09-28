@@ -23,11 +23,9 @@ func NewMethodResult(message *using_meta_typespb.MethodResponse) *usingmetatypes
 	if message.A == nil {
 		result.Foo = 1
 	}
-	if message.B != nil {
-		result.Bar = make([]int64, len(message.B))
-		for i, val := range message.B {
-			result.Bar[i] = val
-		}
+	result.Bar = make([]int64, len(message.B))
+	for i, val := range message.B {
+		result.Bar[i] = val
 	}
 	return result
 }

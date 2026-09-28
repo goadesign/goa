@@ -846,6 +846,7 @@ func planExampleFileImports(transport, application *Plan, root *example.Root) er
 		}
 		if err := retainPlannedFileImports(
 			transport,
+			nil,
 			serverOutput,
 			fixed,
 			generated,
@@ -911,6 +912,7 @@ func planExampleFileImports(transport, application *Plan, root *example.Root) er
 		}
 		if err := retainPlannedFileImports(
 			transport,
+			nil,
 			clientOutput,
 			fixed,
 			generated,
@@ -1399,6 +1401,7 @@ func planImports(generation *codegen.Generation, transport transportKind, plans 
 					filePath := path.Join(codegen.Gendir, dir, pathName, side, file.name)
 					if err := retainPlannedFileImports(
 						plan,
+						transportService.HTTPEndpoints,
 						outputPackage,
 						fixedImports,
 						httpGeneratedImportPlan(transportService, index == 0, file.kind, servicePackage, viewsPackage),
@@ -1412,6 +1415,7 @@ func planImports(generation *codegen.Generation, transport transportKind, plans 
 				if transport == httpTransport && len(httpWebSocketEndpoints(transportService)) > 0 {
 					if err := retainPlannedFileImports(
 						plan,
+						transportService.HTTPEndpoints,
 						outputPackage,
 						httpFixedFileImports(transportService, index == 0, httpWebSocketFile),
 						httpGeneratedImportPlan(transportService, index == 0, httpWebSocketFile, servicePackage, viewsPackage),
@@ -1433,6 +1437,7 @@ func planImports(generation *codegen.Generation, transport transportKind, plans 
 					}
 					if err := retainPlannedFileImports(
 						plan,
+						transportService.HTTPEndpoints,
 						outputPackage,
 						sseImports,
 						httpGeneratedImportPlan(transportService, index == 0, httpSSEFile, servicePackage, viewsPackage),
@@ -1476,6 +1481,7 @@ func planImports(generation *codegen.Generation, transport transportKind, plans 
 				}
 				if err := retainPlannedFileImports(
 					plan,
+					transportService.HTTPEndpoints,
 					rootOutput,
 					[]*codegen.ImportSpec{codegen.SimpleImport("mime/multipart")},
 					[]*codegen.ImportSpec{servicePackage, serverPackage},
@@ -1522,6 +1528,7 @@ func planImports(generation *codegen.Generation, transport transportKind, plans 
 			}
 			if err := retainPlannedFileImports(
 				plan,
+				nil,
 				cliPackage,
 				httpCLIParserFixedImports(cliServices...),
 				cliGenerated,
@@ -1578,6 +1585,7 @@ func servicePackagePreferences(plan *service.Plan, transportService *expr.HTTPSe
 // Repeated calls merge imports when several services write the same file.
 func retainPlannedFileImports(
 	plan *Plan,
+	endpoints []*expr.HTTPEndpointExpr,
 	output *codegen.GeneratedPackage,
 	fixed, generated []*codegen.ImportSpec,
 	definitions, references []*expr.AttributeExpr,
@@ -1601,6 +1609,24 @@ func retainPlannedFileImports(
 		}
 		if err := imports.AddRecursiveTypeReferences(references...); err != nil {
 			return err
+		}
+		selected := make(map[*expr.AttributeExpr]struct{}, len(references))
+		for _, reference := range references {
+			selected[reference] = struct{}{}
+		}
+		for _, endpoint := range endpoints {
+			for _, attribute := range serviceReferenceAttributes(endpoint) {
+				if _, used := selected[attribute]; !used || attribute == nil || attribute.Type == expr.Empty {
+					continue
+				}
+				layout, err := plan.servicePlan.MethodTypeLayout(endpoint.MethodExpr, attribute)
+				if err != nil {
+					return err
+				}
+				if err := imports.AddCompleteType(layout); err != nil {
+					return err
+				}
+			}
 		}
 	}
 	return nil

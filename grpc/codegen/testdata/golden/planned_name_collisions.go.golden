@@ -10,7 +10,9 @@ func BuildWatchFunc2(grpccli saved_transportpb.SavedTransportClient, cliopts ...
 			return nil, err
 		}
 		if reqpb != nil {
-			if err := stream.Send(reqpb.(*saved_transportpb.WatchStreamingRequest)); err != nil {
+			// An initial-send EOF leaves the server status for Recv or
+			// CloseAndRecv. Keep the stream so its decoder can read it.
+			if err := stream.Send(reqpb.(*saved_transportpb.WatchStreamingRequest)); err != nil && !errors.Is(err, io.EOF) {
 				return nil, err
 			}
 		}
@@ -80,8 +82,11 @@ func (c *Client) Watch() goa.Endpoint {
 		// Convert errors from the RPC call here so local encoding and decoding
 		// errors keep their original types and validation details.
 		inv := goagrpc.NewInvoker(
-			func(ctx context.Context, request any, opts ...grpc.CallOption) (any, error) {
-				res, err := remote(ctx, request, opts...)
+			func(ctx context.Context, request any, _ ...grpc.CallOption) (any, error) {
+				// Opening a stream does not wait for completion, so omit
+				// the invoker's unary header/trailer capture options. The
+				// remote builder still applies the client's own options.
+				res, err := remote(ctx, request)
 				if err != nil {
 					// Decode a Goa error detail before returning a matching context error or falling back to Fault.
 					resp := goagrpc.DecodeError(err)

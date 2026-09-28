@@ -6,13 +6,20 @@ func (c *{{ .ClientStructDeclaration.Name }}) {{ .Method.VarName }}() goa.Endpoi
 		// Convert errors from the RPC call here so local encoding and decoding
 		// errors keep their original types and validation details.
 		inv := goagrpc.NewInvoker(
-			func(ctx context.Context, request any, opts ...grpc.CallOption) (any, error) {
+			func(ctx context.Context, request any, {{ if .ClientStream }}_{{ else }}opts{{ end }} ...grpc.CallOption) (any, error) {
 				{{- if $retry }}
 				// The request is already encoded. Retry this RPC call, then
 				// let the invoker decode its successful response once.
 				rpc := func(ctx context.Context, request any) (any, error) {
 				{{- end }}
+				{{- if .ClientStream }}
+				// Opening a stream does not wait for completion, so omit
+				// the invoker's unary header/trailer capture options. The
+				// remote builder still applies the client's own options.
+				res, err := remote(ctx, request)
+				{{- else }}
 				res, err := remote(ctx, request, opts...)
+				{{- end }}
 				if err != nil {
 				{{- if .Errors }}
 					resp := goagrpc.DecodeError(err)

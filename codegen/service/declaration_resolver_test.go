@@ -59,6 +59,7 @@ func TestDeclarationResolverTransformsRelocatedUnionBranches(t *testing.T) {
 	externalAttribute := &expr.AttributeExpr{Type: external}
 	resolver := newServiceResolver(
 		generation,
+		&rootTypeSet{locations: map[expr.UserType]*codegen.Location{relocated.Origin(): codegen.UserTypeLocation(relocated)}},
 		aliasesForTest(t, "generated.local/gen/types"),
 		service.Name,
 		servicePackagePath(generation.GenPkg(), service),
@@ -126,6 +127,7 @@ func TestDeclarationResolverQualifiesRelocatedConsumersWithoutRenamingLocalType(
 
 	resolver := newServiceResolver(
 		generation,
+		&rootTypeSet{locations: map[expr.UserType]*codegen.Location{relocated.Origin(): codegen.UserTypeLocation(relocated), container.Origin(): codegen.UserTypeLocation(container)}},
 		aliasesForTest(
 			t,
 			servicePackagePath(generation.GenPkg(), service),
@@ -162,6 +164,7 @@ func TestDeclarationResolverUsesFinalCustomTypeImportAlias(t *testing.T) {
 
 	resolver := newServiceResolver(
 		generation,
+		newRootTypeSet(),
 		&importAliases{generation: generation},
 		"Values",
 		servicePath,
@@ -179,6 +182,7 @@ func TestDeclarationResolverPanicsWhenPlanOmittedType(t *testing.T) {
 	require.NoError(t, generation.Freeze())
 	resolver := newServiceResolver(
 		generation,
+		newRootTypeSet(),
 		aliasesForTest(t, servicePackagePath(generation.GenPkg(), service)),
 		service.Name,
 		servicePackagePath(generation.GenPkg(), service),

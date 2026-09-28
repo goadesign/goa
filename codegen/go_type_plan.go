@@ -39,6 +39,11 @@ type (
 	GoTypeBinding struct {
 		// Owner is the import path of the package containing the declaration.
 		Owner string
+		// PreferredImportName is the owning planner's preferred Go qualifier
+		// before the importing package resolves name collisions at Freeze.
+		// AddTypeReference and AddCompleteType require it for an imported
+		// generated declaration; bindings that stay local may leave it empty.
+		PreferredImportName string
 		// Type is the generated declaration for a named user type.
 		Type *TypeDeclaration
 		// Union is the generated declaration for a union.
@@ -82,6 +87,11 @@ type (
 		Owner string
 		// FieldName is the design field name of the top-level attribute, when set.
 		FieldName string
+		// MappedFields interprets object keys as "name:element" mappings. Go fields
+		// use the element name, while requiredness and defaults use the name.
+		// Explicit struct:field:name metadata still overrides the Go field name.
+		// When false, object keys keep their ordinary Go field interpretation.
+		MappedFields bool
 		// Policy contains the pointer and validation choices selected by the caller.
 		Policy GoLayoutPolicy
 		// Bind returns the generated declaration for every named type and union.
@@ -95,32 +105,33 @@ type (
 	// expression pointers only so callers can find which plans came from the same
 	// attribute; its methods do not read those expressions.
 	GoTypePlan struct {
-		kind              GoTypeKind
-		owner             string
-		policy            GoLayoutPolicy
-		occurrence        *expr.AttributeExpr
-		fieldNameUpper    string
-		fieldNameLower    string
-		description       string
-		comment           string
-		tag               string
-		fieldPointer      bool
-		definitionPointer bool
-		referencePointer  bool
-		referenceNilable  bool
-		primitive         string
-		directImport      GoTypeImport
-		hasDirectImport   bool
-		customQualifier   string
-		typeDeclaration   *TypeDeclaration
-		unionDeclaration  *UnionDeclaration
-		declaration       *NameDeclaration
-		fixedName         string
-		fields            []*GoTypePlan
-		branches          []*GoTypePlan
-		element           *GoTypePlan
-		key               *GoTypePlan
-		value             *GoTypePlan
+		kind                GoTypeKind
+		owner               string
+		preferredImportName string
+		policy              GoLayoutPolicy
+		occurrence          *expr.AttributeExpr
+		fieldNameUpper      string
+		fieldNameLower      string
+		description         string
+		comment             string
+		tag                 string
+		fieldPointer        bool
+		definitionPointer   bool
+		referencePointer    bool
+		referenceNilable    bool
+		primitive           string
+		directImport        GoTypeImport
+		hasDirectImport     bool
+		customQualifier     string
+		typeDeclaration     *TypeDeclaration
+		unionDeclaration    *UnionDeclaration
+		declaration         *NameDeclaration
+		fixedName           string
+		fields              []*GoTypePlan
+		branches            []*GoTypePlan
+		element             *GoTypePlan
+		key                 *GoTypePlan
+		value               *GoTypePlan
 	}
 
 	// GoTypeQualifier returns the final package name written before a type from
@@ -141,6 +152,7 @@ type (
 		bind              GoTypeBinder
 		activeNamedValues map[expr.UserType]*GoTypePlan
 		retainNamedValue  bool
+		mappedFields      bool
 	}
 )
 
@@ -178,6 +190,7 @@ func PlanGoType(attribute *expr.AttributeExpr, options GoTypePlanOptions) (*GoTy
 		bind:              options.Bind,
 		activeNamedValues: make(map[expr.UserType]*GoTypePlan),
 		retainNamedValue:  options.RetainNamedValue,
+		mappedFields:      options.MappedFields,
 	}
 	return planner.plan(attribute, options.Owner, options.FieldName, nil, false)
 }
@@ -214,6 +227,14 @@ func (p *GoTypePlan) Kind() GoTypeKind {
 // Owner returns the import path of the package containing this type.
 func (p *GoTypePlan) Owner() string {
 	return p.owner
+}
+
+// PreferredImportName returns the package name supplied when this generated
+// type was planned, or empty when none was supplied. Generators can read it
+// before names are final. Import conflicts may change the final alias without
+// changing this preference.
+func (p *GoTypePlan) PreferredImportName() string {
+	return p.preferredImportName
 }
 
 // Policy returns the pointer and validation choices used for this type.
@@ -653,23 +674,47 @@ func (p goTypePlanner) plan(attribute *expr.AttributeExpr, owner, fieldName stri
 		plan.element = element
 	case *expr.Object:
 		plan.kind = GoStruct
-		plan.fields = make([]*GoTypePlan, len(*actual))
-		for index, field := range *actual {
+		fields := actual
+		var mapped *expr.MappedAttributeExpr
+		if p.mappedFields {
+			// Remap a shallow parent so the logical keys change without copying
+			// the original children retained by the layout or changing the input.
+			parent := *layoutAttribute
+			mapped = expr.NewEmptyMappedAttributeExpr()
+			mapped.AttributeExpr = &parent
+			mapped.Remap()
+			layoutAttribute = mapped.AttributeExpr
+			fields = expr.AsObject(mapped.Type)
+		}
+		plan.fields = make([]*GoTypePlan, len(*fields))
+		for index, field := range *fields {
 			child, err := p.plan(field.Attribute, owner, field.Name, layoutAttribute, false)
 			if err != nil {
 				return nil, err
 			}
+			if mapped != nil {
+				element := mapped.ElemName(field.Name)
+				child.fieldNameUpper = GoifyAtt(field.Attribute, element, true)
+				child.fieldNameLower = GoifyAtt(field.Attribute, element, false)
+			}
 			plan.fields[index] = child
 		}
 	case expr.UserType:
-		switch actual {
-		case expr.Empty:
+		switch {
+		case actual == expr.Empty:
 			plan.kind = GoEmpty
-		case expr.ErrorResult:
+		case expr.IsErrorResult(actual):
 			plan.kind = GoServiceError
 			goaImport := GoaImport("")
 			plan.directImport = GoTypeImport{Name: goaImport.Name, Path: goaImport.Path}
 			plan.hasDirectImport = true
+			if p.retainNamedValue {
+				value, err := p.plan(actual.Attribute(), goaImport.Path, "", nil, false)
+				if err != nil {
+					return nil, err
+				}
+				plan.value = value
+			}
 		default:
 			plan.kind = GoNamed
 			binding, err := p.binding(layoutAttribute, owner, GoNamed)
@@ -677,6 +722,7 @@ func (p goTypePlanner) plan(attribute *expr.AttributeExpr, owner, fieldName stri
 				return nil, err
 			}
 			plan.owner = binding.Owner
+			plan.preferredImportName = binding.PreferredImportName
 			plan.typeDeclaration = binding.Type
 			plan.declaration = binding.declaration()
 			plan.fixedName = binding.name
@@ -703,6 +749,7 @@ func (p goTypePlanner) plan(attribute *expr.AttributeExpr, owner, fieldName stri
 			return nil, err
 		}
 		plan.owner = binding.Owner
+		plan.preferredImportName = binding.PreferredImportName
 		plan.unionDeclaration = binding.Union
 		plan.declaration = binding.declaration()
 		plan.fixedName = binding.name

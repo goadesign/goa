@@ -79,6 +79,7 @@ func (d *ServicesData) analyze(facts *serviceFacts) (*Data, error) {
 	viewDerived := make(map[expr.UserType]codegen.DerivedTypeID)
 	serviceResolver := newServiceResolver(
 		d.generation,
+		d.facts.rootTypes,
 		d.aliases,
 		facts.name,
 		facts.packagePath,

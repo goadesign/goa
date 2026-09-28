@@ -1557,6 +1557,7 @@ func collectPlannedTransforms(
 			requestTransforms := planned.transforms.request(endpoint, wireRequestBody)
 			if needInit(request.Type) {
 				requestTransforms.clientEncode = client.collectTransform(target, request, "marshal", methodName+" request body", wireTransformLayout{
+					servicePlan: servicePlan, method: endpoint.MethodExpr,
 					wireSide:       wireTransformTarget,
 					wirePolicy:     jsonBodyPolicy(true, false, false, ""),
 					wireUse:        wireUnionUse{role: wireRequestBody},
@@ -1564,12 +1565,14 @@ func collectPlannedTransforms(
 				})
 			}
 			requestTransforms.serverDecode = server.collectTransform(request, target, "unmarshal", methodName+" server payload", wireTransformLayout{
+				servicePlan: servicePlan, method: endpoint.MethodExpr,
 				wireSide:       wireTransformSource,
 				wirePolicy:     jsonBodyPolicy(true, true, false, ""),
 				wireUse:        wireUnionUse{role: wireRequestBody},
 				servicePackage: *servicePackage,
 			})
 			requestTransforms.clientDecode = client.collectTransform(request, target, "marshal", methodName+" command payload", wireTransformLayout{
+				servicePlan: servicePlan, method: endpoint.MethodExpr,
 				wireSide:       wireTransformSource,
 				wirePolicy:     jsonBodyPolicy(true, false, false, ""),
 				wireUse:        wireUnionUse{role: wireRequestBody},
@@ -1579,12 +1582,14 @@ func collectPlannedTransforms(
 			if params := expr.AsObject(endpoint.Params.Type); len(*params) > 0 {
 				requestTransforms := planned.transforms.request(endpoint, wireRequestBody)
 				requestTransforms.serverDecode = server.collectTransform((*params)[0].Attribute, payload, "unmarshal", methodName+" server parameters", wireTransformLayout{
+					servicePlan: servicePlan, method: endpoint.MethodExpr,
 					wireSide:       wireTransformSource,
 					wirePolicy:     wireTypePolicy{request: true, pointer: true},
 					wireUse:        wireUnionUse{role: wireRequestBody},
 					servicePackage: *servicePackage,
 				})
 				requestTransforms.clientDecode = client.collectTransform((*params)[0].Attribute, payload, "marshal", methodName+" command parameters", wireTransformLayout{
+					servicePlan: servicePlan, method: endpoint.MethodExpr,
 					wireSide:       wireTransformSource,
 					wirePolicy:     wireTypePolicy{request: true, useDefault: true},
 					wireUse:        wireUnionUse{role: wireRequestBody},
@@ -1643,6 +1648,7 @@ func collectPlannedTransforms(
 			if prepared.Type != expr.Empty && resultAttribute.Type != expr.Empty && needInit(prepared.Type) {
 				responseTransforms := planned.transforms.response(endpoint, response, viewName)
 				responseTransforms.serverEncode = server.collectTransform(resultAttribute, prepared, "marshal", transformResponseOwner(methodName, response, view, "server"), wireTransformLayout{
+					servicePlan: servicePlan, method: endpoint.MethodExpr,
 					wireSide:       wireTransformTarget,
 					wirePolicy:     jsonBodyPolicy(false, true, false, viewName),
 					wireUse:        wireUnionUse{role: wireResponseBody, view: viewName},
@@ -1688,6 +1694,7 @@ func collectPlannedTransforms(
 			if prepared.Type != expr.Empty {
 				responseTransforms := planned.transforms.response(endpoint, response, viewName)
 				responseTransforms.clientDecode = client.collectTransform(prepared, resultAttribute, "unmarshal", transformResponseOwner(methodName, response, view, "client"), wireTransformLayout{
+					servicePlan: servicePlan, method: endpoint.MethodExpr,
 					wireSide:       wireTransformSource,
 					wirePolicy:     jsonBodyPolicy(false, false, true, viewName),
 					wireUse:        wireUnionUse{role: wireResponseBody, view: viewName},
@@ -1700,6 +1707,7 @@ func collectPlannedTransforms(
 			if params := expr.AsObject(endpoint.QueryParams().Type); len(*params) > 0 {
 				responseTransforms := planned.transforms.response(endpoint, response, "")
 				responseTransforms.clientDecode = client.collectTransform((*params)[0].Attribute, result, "unmarshal", transformResponseOwner(methodName, response, nil, "client parameters"), wireTransformLayout{
+					servicePlan: servicePlan, method: endpoint.MethodExpr,
 					wireSide:       wireTransformSource,
 					wirePolicy:     wireTypePolicy{pointer: true},
 					wireUse:        wireUnionUse{role: wireResponseBody},
@@ -1720,6 +1728,7 @@ func collectPlannedTransforms(
 			errorTransforms := planned.transforms.transportError(transportError)
 			if needInit(body.Type) {
 				errorTransforms.serverEncode = server.collectTransform(target, body, "marshal", methodName+" server error "+transportError.Name, wireTransformLayout{
+					servicePlan: servicePlan, method: endpoint.MethodExpr,
 					wireSide:       wireTransformTarget,
 					wirePolicy:     jsonBodyPolicy(false, true, false, ""),
 					wireUse:        wireUnionUse{role: wireResponseBody},
@@ -1727,6 +1736,7 @@ func collectPlannedTransforms(
 				})
 			}
 			errorTransforms.clientDecode = client.collectTransform(body, target, "unmarshal", methodName+" client error "+transportError.Name, wireTransformLayout{
+				servicePlan: servicePlan, method: endpoint.MethodExpr,
 				wireSide:       wireTransformSource,
 				wirePolicy:     jsonBodyPolicy(false, false, true, ""),
 				wireUse:        wireUnionUse{role: wireResponseBody},
@@ -1736,6 +1746,7 @@ func collectPlannedTransforms(
 			if params := expr.AsObject(endpoint.QueryParams().Type); len(*params) > 0 {
 				errorTransforms := planned.transforms.transportError(transportError)
 				errorTransforms.clientDecode = client.collectTransform((*params)[0].Attribute, endpoint.MethodExpr.Error(transportError.Name).AttributeExpr, "unmarshal", methodName+" client error parameters "+transportError.Name, wireTransformLayout{
+					servicePlan: servicePlan, method: endpoint.MethodExpr,
 					wireSide:       wireTransformSource,
 					wirePolicy:     wireTypePolicy{pointer: true},
 					wireUse:        wireUnionUse{role: wireResponseBody},
@@ -1751,12 +1762,14 @@ func collectPlannedTransforms(
 		if body.Type != expr.Empty && needInit(endpoint.MethodExpr.StreamingPayload.Type) {
 			requestTransforms := planned.transforms.request(endpoint, wireStreamPayload)
 			requestTransforms.serverDecode = server.collectTransform(body, endpoint.MethodExpr.StreamingPayload, "marshal", methodName+" server stream payload", wireTransformLayout{
+				servicePlan: servicePlan, method: endpoint.MethodExpr,
 				wireSide:       wireTransformSource,
 				wirePolicy:     jsonBodyPolicy(true, true, false, ""),
 				wireUse:        wireUnionUse{role: wireStreamPayload},
 				servicePackage: *servicePackage,
 			})
 			requestTransforms.clientEncode = client.collectTransform(endpoint.MethodExpr.StreamingPayload, body, "marshal", methodName+" client stream body", wireTransformLayout{
+				servicePlan: servicePlan, method: endpoint.MethodExpr,
 				wireSide:       wireTransformTarget,
 				wirePolicy:     jsonBodyPolicy(true, false, false, ""),
 				wireUse:        wireUnionUse{role: wireStreamPayload},
@@ -1782,6 +1795,7 @@ func collectPlannedTransforms(
 		if body.Type != expr.Empty && !streamTransforms.clientDecodeDirect {
 			if needInit(body.Type) {
 				streamTransforms.serverEncode = server.collectTransform(result, body, "marshal", methodName+" server streaming result", wireTransformLayout{
+					servicePlan: servicePlan, method: endpoint.MethodExpr,
 					wireSide:       wireTransformTarget,
 					wirePolicy:     jsonBodyPolicy(false, true, false, ""),
 					wireUse:        wireUnionUse{role: wireResponseBody},
@@ -1789,6 +1803,7 @@ func collectPlannedTransforms(
 				})
 			}
 			streamTransforms.clientDecode = client.collectTransform(body, result, "unmarshal", methodName+" client streaming result", wireTransformLayout{
+				servicePlan: servicePlan, method: endpoint.MethodExpr,
 				wireSide:       wireTransformSource,
 				wirePolicy:     jsonBodyPolicy(false, false, true, ""),
 				wireUse:        wireUnionUse{role: wireResponseBody},
@@ -2085,9 +2100,22 @@ func makeHTTPTypeRecursive(att *expr.AttributeExpr, seen map[expr.UserType]struc
 			// state. There is nothing to flatten in it anyway.
 			return att
 		}
-		if _, ok := dt.(*expr.ResultTypeExpr); !ok && !expr.IsObject(dt) {
-			// Aliased user type. Use the underlying aliased type instead of
-			// generating new types in the client and server packages
+		_, resultType := dt.(*expr.ResultTypeExpr)
+		alias := !resultType && !expr.IsObject(dt)
+		if alias {
+			// Keep the existing default/example choice from this definition.
+			att.DefaultValue = dt.Attribute().DefaultValue
+			att.UserExamples = dt.Attribute().UserExamples
+		}
+		origin := dt.Origin()
+		if _, ok := seen[origin]; !ok {
+			seen[origin] = struct{}{}
+			dt.SetAttribute(makeHTTPTypeRecursive(dt.Attribute(), seen))
+		}
+		if alias {
+			// Resolve the base first: RequestID -> UUID -> string must expose
+			// string to HTTP codecs, with the inherited UUID validation intact.
+			// Repeated references also need this already-shaped definition.
 			att.Type = dt.Attribute().Type
 			if v := dt.Attribute().Validation; v != nil {
 				if att.Validation == nil {
@@ -2096,15 +2124,7 @@ func makeHTTPTypeRecursive(att *expr.AttributeExpr, seen map[expr.UserType]struc
 					att.Validation.Merge(v)
 				}
 			}
-			att.DefaultValue = dt.Attribute().DefaultValue
-			att.UserExamples = dt.Attribute().UserExamples
 		}
-		origin := dt.Origin()
-		if _, ok := seen[origin]; ok {
-			return att
-		}
-		seen[origin] = struct{}{}
-		dt.SetAttribute(makeHTTPTypeRecursive(dt.Attribute(), seen))
 	case *expr.Array:
 		dt.ElemType = makeHTTPTypeRecursive(dt.ElemType, seen)
 	case *expr.Map:

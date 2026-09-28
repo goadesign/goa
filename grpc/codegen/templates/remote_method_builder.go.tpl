@@ -10,7 +10,9 @@ func {{ .ClientBuildDeclaration.Name }}(grpccli {{ .ClientProtobufPkgName }}.{{ 
 				return nil, err
 			}
 			if reqpb != nil {
-				if err := stream.Send(reqpb.({{ .Request.ClientMessageRef }})); err != nil {
+				// An initial-send EOF leaves the server status for Recv or
+				// CloseAndRecv. Keep the stream so its decoder can read it.
+				if err := stream.Send(reqpb.({{ .Request.ClientMessageRef }})); err != nil && !errors.Is(err, io.EOF) {
 					return nil, err
 				}
 			}

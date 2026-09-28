@@ -28,9 +28,11 @@ type (
 		hasClientInterceptors bool
 	}
 
-	// grpcEndpointPlan stores one copied endpoint and the metadata conversions
-	// that must be prepared before generated names are available.
+	// grpcEndpointPlan keeps the original endpoint beside its private copy.
+	// Import planning uses the original method to query its service plan;
+	// metadata planning and file rendering use the copy.
 	grpcEndpointPlan struct {
+		source         *expr.GRPCEndpointExpr
 		expression     *expr.GRPCEndpointExpr
 		legacyStream   bool
 		legacyMetadata *expr.MappedAttributeExpr
@@ -348,6 +350,7 @@ func copyGRPCService(source *expr.GRPCServiceExpr) (*grpcServicePlan, error) {
 			}
 		}
 		endpointPlan := &grpcEndpointPlan{
+			source:       sourceEndpoint,
 			expression:   endpoint,
 			legacyStream: sourceEndpoint.LegacyStreamCompat(),
 			metadata:     make(map[*expr.MappedAttributeExpr][]*grpcMetadataPlan),

@@ -193,11 +193,20 @@ func uniquify(base string, taken map[string]struct{}) string {
 	return name
 }
 
-type dtRec struct {
-	path  string
-	seen  map[reflect.Type]expr.DataType
-	named map[expr.UserType]reflect.Type
-}
+type (
+	// externalTypePair identifies a Go representation matched to one authored
+	// schema. The same external union may have a different authored branch order.
+	externalTypePair struct {
+		external reflect.Type
+		authored expr.DataType
+	}
+
+	dtRec struct {
+		path  string
+		seen  map[externalTypePair]expr.DataType
+		named map[expr.UserType]reflect.Type
+	}
+)
 
 func appendPath(r dtRec, p string) dtRec {
 	r.path += p
@@ -210,7 +219,7 @@ func buildExternalDesignType(t reflect.Type, ref expr.DataType) (expr.DataType, 
 	named := make(map[expr.UserType]reflect.Type)
 	rec := dtRec{
 		path:  "<value>",
-		seen:  make(map[reflect.Type]expr.DataType),
+		seen:  make(map[externalTypePair]expr.DataType),
 		named: named,
 	}
 	var dataType expr.DataType
@@ -234,16 +243,37 @@ func buildDesignType(dt *expr.DataType, t reflect.Type, ref expr.DataType, recs 
 
 	// handle recursive data structures
 	var rec dtRec
+	pair := externalTypePair{external: t, authored: ref}
 	if recs != nil {
 		rec = recs[0]
-		if s, ok := rec.seen[t]; ok {
+		if s, ok := rec.seen[pair]; ok {
 			*dt = s
 			return nil
 		}
 	} else {
 		rec.path = "<value>"
-		rec.seen = make(map[reflect.Type]expr.DataType)
+		rec.seen = make(map[externalTypePair]expr.DataType)
 		rec.named = make(map[expr.UserType]reflect.Type)
+	}
+
+	if ref != nil && expr.IsUnion(ref) && t.Kind() != reflect.Pointer {
+		return buildExternalUnion(dt, t, ref, rec)
+	}
+
+	// Preserve named scalars and collections wherever they occur, including
+	// fields, collection keys and elements. Record a collection before visiting
+	// its children so recursive references keep the same external declaration.
+	if t.Name() != "" && t.PkgPath() != "" &&
+		(isPrimitive(t) || t.Kind() == reflect.Slice || t.Kind() == reflect.Map) {
+		named := &expr.UserTypeExpr{
+			AttributeExpr: &expr.AttributeExpr{},
+			TypeName:      t.Name(),
+			UID:           t.PkgPath() + "#" + t.Name(),
+		}
+		*dt = named
+		rec.seen[pair] = named
+		rec.named[named] = t
+		dt = &named.Type
 	}
 
 	switch t.Kind() {
@@ -350,7 +380,7 @@ func buildDesignType(dt *expr.DataType, t reflect.Type, ref expr.DataType, recs 
 			UID:           t.PkgPath() + "#" + t.Name(),
 		}
 		*dt = ut
-		rec.seen[t] = ut
+		rec.seen[pair] = ut
 		rec.named[ut] = t
 		var required []string
 		for i, f := range fields {
@@ -375,7 +405,15 @@ func buildDesignType(dt *expr.DataType, t reflect.Type, ref expr.DataType, recs 
 					return fmt.Errorf("%s: field of type pointer to map are not supported, use map instead", rec.path)
 				}
 			case reflect.Struct:
-				return fmt.Errorf("%s: fields of type struct must use pointers", recf.path)
+				if aref == nil || !expr.IsUnion(aref) {
+					return fmt.Errorf("%s: fields of type struct must use pointers", recf.path)
+				}
+				if err := buildDesignType(&fdt, f.Type, aref, recf); err != nil {
+					return err
+				}
+				// Required marks a value field in the reflected Go description.
+				// Pointer union fields remain optional in that description.
+				required = append(required, atn)
 			default:
 				if isPrimitive(f.Type) {
 					required = append(required, atn)
@@ -399,6 +437,12 @@ func buildDesignType(dt *expr.DataType, t reflect.Type, ref expr.DataType, recs 
 		return nil
 
 	case reflect.Pointer:
+		// Field and branch traversal consume the one union pointer they can
+		// represent. A remaining pointer would be lost by the collection or
+		// field converter, so reject it before recording an incorrect layout.
+		if ref != nil && expr.IsUnion(ref) {
+			return fmt.Errorf("%s: pointer to union %s is not supported here; use a value in collections or a single pointer in fields and branches", rec.path, t)
+		}
 		rec.path = "*(" + rec.path + ")"
 		if err := buildDesignType(dt, t.Elem(), ref, rec); err != nil {
 			return err
@@ -535,6 +579,19 @@ func compatible(from expr.DataType, to reflect.Type, recs ...compRec) error {
 	}
 	rec.seen[from.Hash()+"-"+toName] = struct{}{}
 
+	if union := expr.AsUnion(from); union != nil {
+		branches, err := externalUnionBranches(to, union)
+		if err != nil {
+			return fmt.Errorf("%s: %w", rec.path, err)
+		}
+		for i, branch := range union.Values {
+			if err := compatible(branch.Attribute.Type, branches[i], appendCompPath(rec, "."+branch.Name)); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
 	if expr.IsArray(from) {
 		if to.Kind() != reflect.Slice {
 			return fmt.Errorf("types don't match: %s must be a slice", rec.path)
@@ -614,7 +671,9 @@ func compatible(from expr.DataType, to reflect.Type, recs ...compRec) error {
 		if err := buildDesignType(&dt, to, nil); err != nil {
 			return err
 		}
-		if expr.Equal(dt, from) {
+		// Primitive conversion depends on the underlying kind. Keep named types in
+		// the graph so the converter still emits their exact Go names.
+		if expr.IsPrimitive(from) && codegen.IsCompatible(dt, from, toName, rec.path) == nil {
 			return nil
 		}
 	}
