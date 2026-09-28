@@ -222,6 +222,14 @@ func (p *GoTypePlan) Owner() string {
 	return p.owner
 }
 
+// PreferredImportName returns the package name supplied when this generated
+// type was planned, or empty when none was supplied. Generators can read it
+// before names are final. Import conflicts may change the final alias without
+// changing this preference.
+func (p *GoTypePlan) PreferredImportName() string {
+	return p.preferredImportName
+}
+
 // Policy returns the pointer and validation choices used for this type.
 func (p *GoTypePlan) Policy() GoLayoutPolicy {
 	return p.policy
@@ -668,14 +676,21 @@ func (p goTypePlanner) plan(attribute *expr.AttributeExpr, owner, fieldName stri
 			plan.fields[index] = child
 		}
 	case expr.UserType:
-		switch actual {
-		case expr.Empty:
+		switch {
+		case actual == expr.Empty:
 			plan.kind = GoEmpty
-		case expr.ErrorResult:
+		case expr.IsErrorResult(actual):
 			plan.kind = GoServiceError
 			goaImport := GoaImport("")
 			plan.directImport = GoTypeImport{Name: goaImport.Name, Path: goaImport.Path}
 			plan.hasDirectImport = true
+			if p.retainNamedValue {
+				value, err := p.plan(actual.Attribute(), goaImport.Path, "", nil, false)
+				if err != nil {
+					return nil, err
+				}
+				plan.value = value
+			}
 		default:
 			plan.kind = GoNamed
 			binding, err := p.binding(layoutAttribute, owner, GoNamed)

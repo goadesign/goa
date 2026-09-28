@@ -7,7 +7,6 @@ package codegen
 import (
 	"cmp"
 	"fmt"
-	"path"
 	"reflect"
 	"slices"
 	"strings"
@@ -48,13 +47,15 @@ type (
 	// wireTransformRecord stores one value conversion and any extra functions it
 	// needs.
 	wireTransformRecord struct {
-		source *expr.AttributeExpr
-		target *expr.AttributeExpr
-		prefix string
-		owner  string
-		layout wireTransformLayout
-		plan   *codegen.TransformPlan
-		used   bool
+		source       *expr.AttributeExpr
+		target       *expr.AttributeExpr
+		prefix       string
+		owner        string
+		layout       wireTransformLayout
+		plan         *codegen.TransformPlan
+		sourceLayout *codegen.GoTypePlan
+		targetLayout *codegen.GoTypePlan
+		used         bool
 	}
 
 	// wireTransformLayout records which value belongs to the transport package,
@@ -95,6 +96,7 @@ type (
 		attribute      *expr.AttributeExpr
 		layout         codegen.GoLayoutPolicy
 		servicePackage codegen.ImportSpec
+		serviceType    *codegen.TypeDeclaration
 	}
 
 	// wireUnionRecord stores one generated union and the Go names used for its
@@ -434,7 +436,14 @@ func (c *wireTypeCatalog) Declare() error {
 		}
 	}
 	for _, transform := range c.transforms {
-		for _, helper := range transform.plan.Helpers() {
+		helpers := transform.plan.Helpers()
+		if len(helpers) == 0 {
+			continue
+		}
+		if err := c.planTransformLayouts(transform); err != nil {
+			return err
+		}
+		for _, helper := range helpers {
 			identity, err := c.transformHelperIdentity(transform, helper)
 			if err != nil {
 				return err
@@ -513,16 +522,47 @@ func (c *wireTypeCatalog) collectTransform(source, target *expr.AttributeExpr, p
 	return wireTransformHandle{catalog: c, record: record}
 }
 
+// planTransformLayouts retains the complete values supplied to one conversion.
+// A helper can then select its enclosing package by its saved field position.
+func (c *wireTypeCatalog) planTransformLayouts(transform *wireTransformRecord) error {
+	serviceAttribute, wireAttribute := transform.source, transform.target
+	if transform.layout.wireSide == wireTransformSource {
+		serviceAttribute, wireAttribute = transform.target, transform.source
+	}
+	serviceLayout, err := transform.layout.servicePlan.MethodTypeLayout(transform.layout.method, serviceAttribute)
+	if err != nil {
+		return err
+	}
+	policy := transform.layout.wirePolicy
+	scope := &wireAttributeScope{catalog: c, policy: policy, use: transform.layout.wireUse}
+	if userType, ok := wireAttribute.Type.(expr.UserType); ok {
+		scope.viewRoot = c.find(newWireTypeIdentity(wireAttribute, scope.use.role, policy, wireTypePreferredName(userType, policy)))
+	}
+	wireLayout, err := scope.planGoType(wireAttribute, wireGoLayoutPolicy(policy), false)
+	if err != nil {
+		return err
+	}
+	transform.sourceLayout, transform.targetLayout = serviceLayout, wireLayout
+	if transform.layout.wireSide == wireTransformSource {
+		transform.sourceLayout, transform.targetLayout = wireLayout, serviceLayout
+	}
+	return nil
+}
+
 // transformHelperIdentity resolves the exact generated declarations and field
 // layouts used by one planned conversion function.
 func (c *wireTypeCatalog) transformHelperIdentity(transform *wireTransformRecord, helper codegen.TransformHelper) (wireTransformHelperIdentity, error) {
 	sourceWire := transform.layout.wireSide == wireTransformSource
 	targetWire := transform.layout.wireSide == wireTransformTarget
-	source, err := c.transformTypeIdentity(helper.Source, sourceWire, transform.layout.wirePolicy, transform.layout.servicePointer, transform.layout.servicePackage, transform.layout)
+	sourceLayout, targetLayout, err := transform.plan.HelperLayouts(helper.ID, transform.sourceLayout, transform.targetLayout)
 	if err != nil {
 		return wireTransformHelperIdentity{}, err
 	}
-	target, err := c.transformTypeIdentity(helper.Target, targetWire, transform.layout.wirePolicy, transform.layout.servicePointer, transform.layout.servicePackage, transform.layout)
+	source, err := c.transformTypeIdentity(helper.Source, sourceWire, transform.layout.wirePolicy, transform.layout.servicePointer, transform.layout.servicePackage, sourceLayout)
+	if err != nil {
+		return wireTransformHelperIdentity{}, err
+	}
+	target, err := c.transformTypeIdentity(helper.Target, targetWire, transform.layout.wirePolicy, transform.layout.servicePointer, transform.layout.servicePackage, targetLayout)
 	if err != nil {
 		return wireTransformHelperIdentity{}, err
 	}
@@ -534,19 +574,17 @@ func (c *wireTypeCatalog) transformHelperIdentity(transform *wireTransformRecord
 
 // transformTypeIdentity returns the declaration and field rules that determine
 // a generated conversion function's parameter or result type.
-func (c *wireTypeCatalog) transformTypeIdentity(attribute *expr.AttributeExpr, wire bool, policy wireTypePolicy, servicePointer bool, servicePackage codegen.ImportSpec, layout wireTransformLayout) (wireTransformTypeIdentity, error) {
+func (c *wireTypeCatalog) transformTypeIdentity(attribute *expr.AttributeExpr, wire bool, policy wireTypePolicy, servicePointer bool, servicePackage codegen.ImportSpec, planned *codegen.GoTypePlan) (wireTransformTypeIdentity, error) {
 	userType, ok := attribute.Type.(expr.UserType)
 	if !ok {
 		return wireTransformTypeIdentity{}, fmt.Errorf("HTTP conversion function type %q is not named", attribute.Type.Name())
 	}
 	if !wire {
-		planned, err := layout.servicePlan.MethodTypeLayout(layout.method, attribute)
-		if err != nil {
-			return wireTransformTypeIdentity{}, err
-		}
 		if servicePackage.Path != planned.Owner() {
-			servicePackage.Name = strings.ToLower(codegen.Goify(path.Base(planned.Owner()), false))
-			servicePackage.Path = planned.Owner()
+			servicePackage = codegen.ImportSpec{
+				Path: planned.Owner(),
+				Name: planned.PreferredImportName(),
+			}
 		}
 		if servicePackage.Name == "" || servicePackage.Path == "" {
 			return wireTransformTypeIdentity{}, fmt.Errorf("HTTP conversion function type %q has no service package", userType.Name())
@@ -555,6 +593,7 @@ func (c *wireTypeCatalog) transformTypeIdentity(attribute *expr.AttributeExpr, w
 			origin:         userType.Origin(),
 			attribute:      attribute,
 			servicePackage: servicePackage,
+			serviceType:    planned.TypeDeclaration(),
 			layout: codegen.GoLayoutPolicy{
 				Pointer:    servicePointer,
 				UseDefault: true,
@@ -663,7 +702,7 @@ func wireTransformHelperIdentitiesEqual(left, right wireTransformHelperIdentity)
 // wireTransformTypeIdentitiesEqual compares exact generated declarations and
 // the concrete fields written inside service types.
 func wireTransformTypeIdentitiesEqual(left, right wireTransformTypeIdentity) bool {
-	if left.wire != right.wire || left.origin != right.origin || left.layout != right.layout || left.servicePackage != right.servicePackage {
+	if left.wire != right.wire || left.origin != right.origin || left.layout != right.layout || left.servicePackage != right.servicePackage || left.serviceType != right.serviceType {
 		return false
 	}
 	if left.wire != nil {
@@ -722,9 +761,6 @@ func (c *wireTypeCatalog) renderTransform(
 	if transform.used {
 		return "", nil, fmt.Errorf("HTTP %s conversion for %s was already rendered", transform.prefix, transform.owner)
 	}
-	if err := transform.plan.BindContexts(sourceContext, targetContext); err != nil {
-		return "", nil, err
-	}
 	if transform.layout.wireSide == wireTransformSource {
 		if err := c.bindTransformOccurrence(transform.source, wireAttribute, sourceContext, transform.layout.wireUse); err != nil {
 			return "", nil, err
@@ -738,6 +774,17 @@ func (c *wireTypeCatalog) renderTransform(
 		c.bindTransformHelper(helper.Source, sourceContext, transform.layout.wireUse)
 		c.bindTransformHelper(helper.Target, targetContext, transform.layout.wireUse)
 	}
+	sourceContext, err := httpTransformContext(transform.source, sourceContext)
+	if err != nil {
+		return "", nil, err
+	}
+	targetContext, err = httpTransformContext(transform.target, targetContext)
+	if err != nil {
+		return "", nil, err
+	}
+	if err := transform.plan.BindContexts(sourceContext, targetContext); err != nil {
+		return "", nil, err
+	}
 	code, helpers, err := transform.plan.Render(sourceVar, targetVar, true)
 	if err != nil {
 		return "", nil, err
@@ -747,6 +794,21 @@ func (c *wireTypeCatalog) renderTransform(
 	}
 	transform.used = true
 	return code, helpers, nil
+}
+
+// httpTransformContext keeps the caller's complete generated layout and field
+// policy so each nested helper can enter its saved enclosing values.
+func httpTransformContext(attribute *expr.AttributeExpr, context *codegen.AttributeContext) (*codegen.AttributeContext, error) {
+	context = context.Enter(attribute)
+	resolver, ok := context.Scope.(codegen.GoTypeLayoutResolver)
+	if !ok {
+		return nil, fmt.Errorf("HTTP conversion context has no Go type layout resolver")
+	}
+	layout, err := resolver.GoTypeLayout(attribute, context.LayoutPolicy())
+	if err != nil {
+		return nil, err
+	}
+	return context.WithGoTypeLayout(layout)
 }
 
 // checkTransformUsed rejects a planned conversion that was never written. A
@@ -1724,21 +1786,40 @@ func (s *wireAttributeScope) GoTypeLayout(attribute *expr.AttributeExpr, policy 
 
 // goTypeLayout may stop at a named root when a caller only needs its reference.
 func (s *wireAttributeScope) goTypeLayout(attribute *expr.AttributeExpr, policy codegen.GoLayoutPolicy, referenceOnly bool) (codegen.LinkedGoType, error) {
+	layout, err := s.planGoType(attribute, policy, referenceOnly)
+	if err != nil {
+		return codegen.LinkedGoType{}, err
+	}
+	return layout.Link(s.catalog.pkg.ImportPath(), s.catalog.pkg.ImportName), nil
+}
+
+// planGoType binds HTTP declarations before names are final. Linked rendering
+// and helper planning use the same type and union records.
+func (s *wireAttributeScope) planGoType(attribute *expr.AttributeExpr, policy codegen.GoLayoutPolicy, referenceOnly bool) (*codegen.GoTypePlan, error) {
 	owner := s.catalog.pkg.ImportPath()
-	layout, err := codegen.PlanGoType(attribute, codegen.GoTypePlanOptions{
+	return codegen.PlanGoType(attribute, codegen.GoTypePlanOptions{
 		Owner:            owner,
 		Policy:           policy,
 		RetainNamedValue: !referenceOnly,
 		Bind: func(request codegen.GoTypeBindingRequest) (codegen.GoTypeBinding, error) {
+			// A selected response view applies only to this root. Complete
+			// layouts retain nested fields without applying the root view again.
+			scope := s
+			if request.Attribute != attribute && s.policy.view != "" {
+				nested := *s
+				nested.policy.view = ""
+				nested.viewRoot = nil
+				scope = &nested
+			}
 			switch request.Kind {
 			case codegen.GoNamed:
-				record := s.record(request.Attribute)
+				record := scope.record(request.Attribute)
 				if record == nil || record.declaration == nil {
 					return codegen.GoTypeBinding{}, fmt.Errorf("HTTP type %q has no planned declaration", request.Attribute.Type.Name())
 				}
 				return codegen.GoTypeBinding{Owner: owner, Declaration: record.declaration}, nil
 			case codegen.GoUnion:
-				record := s.unionRecord(request.Attribute)
+				record := scope.unionRecord(request.Attribute)
 				if record == nil || record.declaration == nil {
 					return codegen.GoTypeBinding{}, fmt.Errorf("HTTP OneOf %q has no planned declaration", request.Attribute.Type.Name())
 				}
@@ -1748,10 +1829,6 @@ func (s *wireAttributeScope) goTypeLayout(attribute *expr.AttributeExpr, policy 
 			}
 		},
 	})
-	if err != nil {
-		return codegen.LinkedGoType{}, err
-	}
-	return layout.Link(owner, s.catalog.pkg.ImportName), nil
 }
 
 // Field returns the generated Go field for an HTTP attribute.

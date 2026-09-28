@@ -587,13 +587,21 @@ func (p *TransformPlan) Render(sourceVar, targetVar string, newVar bool) (code s
 	helpers = make([]*TransformFunctionData, 0, len(p.helpers))
 	definitions := make(map[*NameDeclaration]*TransformFunctionData, len(p.helpers))
 	for index, planned := range p.helpers {
-		entered := enterTransformAttrs(planned.Source, planned.Target, &renderAttrs)
+		entered := renderAttrs
+		entered.SourceCtx, err = p.helperContext(renderAttrs.SourceCtx, planned, false)
+		if err != nil {
+			return "", nil, err
+		}
+		entered.TargetCtx, err = p.helperContext(renderAttrs.TargetCtx, planned, true)
+		if err != nil {
+			return "", nil, err
+		}
 		entered.locals, err = newTransformLocalScope("v", "res")
 		if err != nil {
 			return "", nil, err
 		}
 		entered.calls = &transformCallCursor{calls: p.operations[index+1].calls}
-		helper, err := generateTransformHelper(planned, entered)
+		helper, err := generateTransformHelper(planned, &entered)
 		if err != nil {
 			return "", nil, err
 		}
@@ -610,6 +618,29 @@ func (p *TransformPlan) Render(sourceVar, targetVar string, newVar bool) (code s
 		helpers = append(helpers, helper)
 	}
 	return strings.TrimRight(code, "\n"), helpers, nil
+}
+
+// helperContext enters a helper through its saved enclosing values. Retained
+// layouts may contain the same branch node in different packages, so entering
+// that branch directly from the root would lose the selected owner.
+func (p *TransformPlan) helperContext(context *AttributeContext, helper TransformHelper, target bool) (*AttributeContext, error) {
+	attribute, root := helper.Source, p.rootSource
+	if target {
+		attribute, root = helper.Target, p.rootTarget
+	}
+	copied := context.Scope.(*transformCopyAttributor)
+	retained, ok := copied.attributor.(*goTypeLayoutAttributor)
+	if !ok {
+		return context.Enter(attribute), nil
+	}
+	entered := context
+	_, err := transformLayoutAtLocation(retained.layout.plan, root, helper.location, p.wrappers, target, func(attribute *expr.AttributeExpr) {
+		entered = entered.Enter(attribute)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("enter transform helper occurrence %d: %w", helper.Occurrence, err)
+	}
+	return entered.Enter(attribute), nil
 }
 
 // copyTransformFunctionData copies generated helper descriptions before they

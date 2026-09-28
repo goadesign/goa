@@ -474,23 +474,30 @@ func recordGRPCFileImports(
 	if err := imports.AddRecursiveTypeReferences(input.typeReferences...); err != nil {
 		return err
 	}
-	selected := make(map[*expr.AttributeExpr]struct{})
+	// A named reference stops at its declaration; a conversion also needs its
+	// nested fields. Keep complete use when one attribute is requested both ways.
+	selected := make(map[*expr.AttributeExpr]bool)
 	for _, attribute := range input.typeDefinitions {
-		selected[attribute] = struct{}{}
+		selected[attribute] = false
 	}
 	for _, attribute := range input.typeReferences {
-		selected[attribute] = struct{}{}
+		selected[attribute] = true
 	}
 	for _, endpoint := range input.endpoints {
 		for _, attribute := range grpcEndpointAttributes(endpoint.expression) {
-			if _, used := selected[attribute]; !used || attribute == nil || attribute.Type == expr.Empty {
+			complete, used := selected[attribute]
+			if !used || attribute == nil || attribute.Type == expr.Empty {
 				continue
 			}
 			layout, err := plan.service.MethodTypeLayout(endpoint.source.MethodExpr, attribute)
 			if err != nil {
 				return err
 			}
-			if err := imports.AddCompleteType(layout); err != nil {
+			if complete {
+				if err := imports.AddCompleteType(layout); err != nil {
+					return err
+				}
+			} else if err := imports.AddTypeReference(layout); err != nil {
 				return err
 			}
 		}

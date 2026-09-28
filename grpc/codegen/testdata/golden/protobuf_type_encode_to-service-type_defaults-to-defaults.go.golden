@@ -42,11 +42,9 @@ func transform() {
 	if source.Array == nil {
 		target.Array = []string{"foo", "bar"}
 	}
-	if source.RequiredArray != nil {
-		target.RequiredArray = make([]string, len(source.RequiredArray))
-		for i, val := range source.RequiredArray {
-			target.RequiredArray[i] = val
-		}
+	target.RequiredArray = make([]string, len(source.RequiredArray))
+	for i, val := range source.RequiredArray {
+		target.RequiredArray[i] = val
 	}
 	if source.Map_ != nil {
 		target.Map = make(map[int]string, len(source.Map_))
@@ -59,12 +57,10 @@ func transform() {
 	if source.Map_ == nil {
 		target.Map = map[int]string{1: "foo"}
 	}
-	if source.RequiredMap != nil {
-		target.RequiredMap = make(map[int]string, len(source.RequiredMap))
-		for key, val := range source.RequiredMap {
-			tk := int(key)
-			tv := val
-			target.RequiredMap[tk] = tv
-		}
+	target.RequiredMap = make(map[int]string, len(source.RequiredMap))
+	for key, val := range source.RequiredMap {
+		tk := int(key)
+		tv := val
+		target.RequiredMap[tk] = tv
 	}
 }
