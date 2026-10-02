@@ -20,6 +20,8 @@ type (
 		clientInit   *codegen.NameDeclaration
 		serverStruct *codegen.NameDeclaration
 		serverInit   *codegen.NameDeclaration
+		errorOwner   *codegen.NameDeclaration
+		errorNext    *codegen.NameDeclaration
 		endpoints    map[*expr.GRPCEndpointExpr]*grpcEndpointSymbols
 	}
 
@@ -146,6 +148,8 @@ const (
 	grpcConversionInitRole
 	grpcValidationRole
 	grpcTransformHelperRole
+	grpcErrorOwnerRole
+	grpcErrorNextRole
 )
 
 const (
@@ -190,6 +194,16 @@ func collectGRPCSymbols(generation *codegen.Generation, input PlanInput, service
 		return nil, err
 	}
 	for _, endpoint := range service.GRPCEndpoints {
+		if len(endpoint.GRPCErrors) > 0 && symbols.errorOwner == nil {
+			symbols.errorOwner, err = declare(serverPackage, codegen.NameFunction, "errorOwner", codegen.UnexportedName, serviceID.server(grpcErrorOwnerRole))
+			if err != nil {
+				return nil, err
+			}
+			symbols.errorNext, err = declare(serverPackage, codegen.NameFunction, "nextError", codegen.UnexportedName, serviceID.server(grpcErrorNextRole))
+			if err != nil {
+				return nil, err
+			}
+		}
 		names, err := input.Service.HTTPMethodNames(endpoint.MethodExpr)
 		if err != nil {
 			return nil, err

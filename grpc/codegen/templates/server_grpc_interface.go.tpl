@@ -57,14 +57,29 @@ func (s *{{ .ServerStructDeclaration.Name }}) {{ .GRPCMethodName }}(
 {{- define "handle_error" }}
 	if err != nil {
 	{{- if .Errors }}
-		var en goa.GoaErrorNamer
-		if errors.As(err, &en) {
+		en, {{ if hasCustomErrors .Errors }}owner, joined{{ else }}_, _{{ end }} := {{ errorOwner }}(err)
+		if en != nil {
 			switch en.GoaErrorName() {
 		{{- range .Errors }}
 			case {{ printf "%q" .Name }}:
 				{{- if .Response.ServerConvert }}
 					var er {{ .Response.ServerConvert.SrcRef }}
-					errors.As(err, &er)
+					if joined {
+						// Several causes cannot supply this owner's fields.
+						// Use its direct value or its own explicit As method.
+						var found bool
+						er, found = owner.({{ .Response.ServerConvert.SrcRef }})
+						if !found {
+							if as, ok := owner.(interface{ As(any) bool }); ok {
+								found = as.As(&er)
+							}
+						}
+						if !found {
+							return {{ if not $.ServerStream }}nil, {{ end }}goagrpc.EncodeError(err)
+						}
+					} else {
+						errors.As(err, &er)
+					}
 				{{- end }}
 				return {{ if not $.ServerStream }}nil, {{ end }}goagrpc.NewStatusError({{ .Response.StatusCode }}, err, {{ if .Response.ServerConvert }}{{ .Response.ServerConvert.Init.Declaration.Name }}({{ range .Response.ServerConvert.Init.Args }}{{ .Name }}, {{ end }}){{ else }}goagrpc.NewErrorResponse(err){{ end }})
 		{{- end }}

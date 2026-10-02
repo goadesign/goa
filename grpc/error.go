@@ -1,3 +1,6 @@
+// Package grpc encodes service failures for gRPC callers. A single outer error
+// may supply the result's status or Goa fields; independent joined failures do
+// not supply one child's details as the complete result.
 package grpc
 
 import (
@@ -39,16 +42,23 @@ type (
 		transportStatus *status.Status
 		ctxErr          error
 	}
+
+	// errorScope records the first Goa error and explicit status before an
+	// independent join, so encoding does not borrow a child's result fields.
+	errorScope struct {
+		service  *goa.ServiceError
+		explicit bool
+		causes   []error
+	}
 )
 
 // NewErrorResponse creates a new ErrorResponse protocol buffer message from
-// the given error. If the given error is a goa ServiceError, the ErrorResponse
-// message will be set with the corresponding Timeout, Temporary, and Fault
-// characteristics. If the error is not a goa ServiceError, it creates an
-// ErrorResponse message with the Fault field set to true.
+// the given error. A Goa ServiceError outside a join with several causes supplies
+// its fields and merged history, even when its cause is such a join. An unowned
+// join instead receives a fresh fault ID, the full error text, Fault true, and
+// Timeout and Temporary false. A join with one non-nil cause is a single chain.
 func NewErrorResponse(err error) *goapb.ErrorResponse {
-	var gerr *goa.ServiceError
-	if errors.As(err, &gerr) {
+	if gerr := scopeError(err).service; gerr != nil {
 		er := &goapb.ErrorResponse{
 			Name:      gerr.Name,
 			Id:        gerr.ID,
@@ -57,8 +67,8 @@ func NewErrorResponse(err error) *goapb.ErrorResponse {
 			Temporary: gerr.Temporary,
 			Fault:     gerr.Fault,
 		}
-		// Include history entries when available for richer client-side reconstruction.
-		// Only include history for merged errors (multiple entries)
+		// When Goa merged several errors, send their names, messages, and fields
+		// in the stored order so callers can inspect the original failures.
 		history := gerr.History()
 		if len(history) > 1 {
 			for _, h := range history {
@@ -162,52 +172,17 @@ func NewStatusError(code codes.Code, err error, details ...protoiface.MessageV1)
 }
 
 // EncodeError returns a gRPC status error from the given error with the error
-// response encoded in the status details. If error is a goa ServiceError type
-// it implements a heuristic to compute the status code from the Timeout,
-// Fault, and Temporary characteristics of the ServiceError. If error is not a
-// ServiceError or a gRPC status error it returns a gRPC status error with
-// Unknown code and Fault characteristic set.
+// response encoded in the status details. An explicit status on the outer
+// chain of wrappers keeps its code and ordered details. Otherwise a Goa
+// ServiceError's name and traits determine the code. Status discovery stops
+// at an independent join: unowned branches must agree on the code, or the caller receives Unknown.
+// Joined branches do not supply details for the whole result.
 func EncodeError(err error) error {
-	if st, ok := status.FromError(err); ok {
-		if s, err := st.WithDetails(NewErrorResponse(err)); err == nil {
-			return s.Err()
-		}
-		return st.Err()
+	st := encodingStatus(err)
+	if s, err := st.WithDetails(NewErrorResponse(err)); err == nil {
+		return s.Err()
 	}
-	var gerr *goa.ServiceError
-	if errors.As(err, &gerr) {
-		// goa service error type. Compute the status code from the service error
-		// characteristics and create a new detailed gRPC status error.
-		code := codes.Unknown
-		// Prefer well-known validation names for InvalidArgument mapping.
-		switch gerr.Name {
-		case goa.InvalidFieldType,
-			goa.MissingField,
-			goa.InvalidFormat,
-			goa.InvalidLength,
-			goa.InvalidRange,
-			goa.InvalidEnumValue,
-			goa.InvalidPattern:
-
-			code = codes.InvalidArgument
-		case goa.DecodePayload,
-			goa.MissingPayload:
-
-			code = codes.InvalidArgument
-		default:
-			switch {
-			case gerr.Timeout:
-				code = codes.DeadlineExceeded
-			case gerr.Fault:
-				code = codes.Internal
-			case gerr.Temporary:
-				code = codes.Unavailable
-			}
-		}
-		return NewStatusError(code, err, NewErrorResponse(err))
-	}
-	// Return an unknown gRPC status error with fault characteristic set.
-	return NewStatusError(codes.Unknown, err, NewErrorResponse(err))
+	return st.Err()
 }
 
 // DecodeError returns the protobuf error message encoded as the first gRPC
@@ -239,6 +214,92 @@ func ErrInvalidType(svc, m, expected string, actual any) error {
 // Error builds an error message.
 func (c *ClientError) Error() string {
 	return fmt.Sprintf("[%s %s]: %s", c.Service, c.Method, c.Message)
+}
+
+// scopeError follows wrappers and joins with one non-nil cause. At a join with
+// several causes it keeps only owners already encountered, so callers receive
+// whole-result fields rather than the first child's fields.
+func scopeError(err error) errorScope {
+	var scope errorScope
+	for current := err; current != nil; {
+		// These assertions inspect only this node; errors.As would also search
+		// independent children and incorrectly make one child own the result.
+		if service, ok := current.(*goa.ServiceError); ok && scope.service == nil { //nolint:errorlint
+			scope.service = service
+		}
+		if _, ok := current.(interface{ GRPCStatus() *status.Status }); ok { //nolint:errorlint
+			scope.explicit = true
+		}
+		if joined, ok := current.(interface{ Unwrap() []error }); ok { //nolint:errorlint
+			var causes []error
+			for _, cause := range joined.Unwrap() {
+				if cause != nil {
+					causes = append(causes, cause)
+				}
+			}
+			if len(causes) > 1 {
+				scope.causes = causes
+				return scope
+			}
+			if len(causes) == 0 {
+				break
+			}
+			current = causes[0]
+		} else {
+			current = errors.Unwrap(current)
+		}
+	}
+	// Without independent branches, retain errors.As support for wrappers
+	// that expose a Goa error through their own As method.
+	errors.As(err, &scope.service)
+	return scope
+}
+
+// encodingStatus preserves a single chain's existing status selection. At an
+// independent join, an outer Goa error supplies the code; an unowned join gets
+// a common branch code or Unknown, without any branch's status details.
+func encodingStatus(err error) *status.Status {
+	scope := scopeError(err)
+	if len(scope.causes) == 0 || scope.explicit {
+		if st, ok := status.FromError(err); ok {
+			return st
+		}
+	}
+	code := codes.Unknown
+	if scope.service != nil {
+		code = serviceErrorCode(scope.service)
+	} else if len(scope.causes) > 1 && !scope.explicit {
+		code = encodingStatus(scope.causes[0]).Code()
+		for _, cause := range scope.causes[1:] {
+			if encodingStatus(cause).Code() != code {
+				code = codes.Unknown
+				break
+			}
+		}
+	}
+	return status.New(code, err.Error())
+}
+
+// serviceErrorCode maps a Goa error's validation name and traits to the
+// existing generic gRPC code, with validation and timeout taking precedence.
+func serviceErrorCode(err *goa.ServiceError) codes.Code {
+	switch err.Name {
+	case goa.InvalidFieldType, goa.MissingField, goa.InvalidFormat,
+		goa.InvalidLength, goa.InvalidRange, goa.InvalidEnumValue,
+		goa.InvalidPattern, goa.DecodePayload, goa.MissingPayload:
+		return codes.InvalidArgument
+	default:
+		switch {
+		case err.Timeout:
+			return codes.DeadlineExceeded
+		case err.Fault:
+			return codes.Internal
+		case err.Temporary:
+			return codes.Unavailable
+		default:
+			return codes.Unknown
+		}
+	}
 }
 
 // Error retains the original gRPC diagnostic text.

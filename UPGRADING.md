@@ -4,6 +4,70 @@ Goa, the examples, and the plugins require **Go 1.26 or later**. Go 1.27.1 is
 recommended. Upgrade the Go toolchain before updating these modules: the new
 dependency versions require Go 1.26.
 
+## Unreleased: merged errors preserve original contributions
+
+**This changes the mutation and pointer identity contract of `MergeErrors` and
+`ServiceError.History`.** For two nonnil inputs, `MergeErrors` now returns a
+fresh `*ServiceError` and leaves both inputs unchanged. Always store or return
+the result:
+
+```go
+err = goa.MergeErrors(err, next)
+```
+
+Code that ignored the return must change. Retained inputs and earlier merge
+results no longer gain later errors. For example, merging `first` with `second`
+leaves `first.Message` unchanged; only the returned result has
+`first.Message + "; " + second.Message`. Nil operands still return the other
+input exactly.
+
+The whole result keeps the selected left ID and Field pointer, the existing
+Name rule (`"error"` adopts the right Name), the full joined message and each
+trait's AND rule. Wrapped inputs still select a ServiceError through
+`errors.As`. The existing causes remain the same concrete objects in the same
+join order. `errors.As` to ServiceError now finds the fresh result.
+`errors.Is(result, left)` no longer succeeds merely because the result used to
+be `left`; it succeeds only when the original left object is actually reachable
+as a cause or matches through a cause's own methods. No pointer-equivalence
+methods have been added.
+
+History now returns detached entries, including a detached singleton for an
+unmerged error. It preserves original Name, ID, Message, traits, cause and
+copied Field values in order, including repeated contributions. Editing a
+returned slice, entry or Field value no longer changes future History reads or
+the whole result. Set an original error's Field before including it in a merge.
+A later whole-result Field assignment affects only that whole result.
+Consumers must read each History entry as an original contribution; do not
+recursively expand its History waiting for pointer equality with the entry.
+
+These ownership rules prevent a merge from making a cycle out of stable finite
+input causes, including wrappers that refer to an input. They do not repair
+previously cyclic graphs or freeze arbitrary external causes. Finish
+constructing public fields and causes before sharing an error with readers.
+The whole Field pointer remains shared with the selected left error; only
+History Field values are isolated.
+
+The default HTTP whole response and gRPC whole detail fields retain their
+values. Existing gRPC History details now carry each original message instead
+of accumulated text, with original field values and the same order. Custom
+formatters that read History observe the same correction. The protobuf shape
+is unchanged; decoded details still do not reconstruct local contribution
+IDs, traits, causes or History.
+
+Rebuild applications with the updated runtime and migrate their merge and
+History readers in the same application change. This runtime change alone
+requires no generator, protobuf or stored-data migration. Independently
+deployed peers can decode the unchanged wire shape, but per-entry text differs
+and must not be assumed equivalent. Roll back the runtime and dependent reader
+changes together. The gRPC selection changes below additionally require the
+matching generator and regenerated servers. Keep their runtime, generated code,
+and reader changes together during deployment and rollback.
+
+Goa remains on the `goa.design/goa/v3` module path under the release policy in
+[RELEASE.md](RELEASE.md). These are intentional breaking changes within v3.
+The release version has not been selected; this section does not designate a
+compatible patch release.
+
 ## Unreleased: generated packages and transport conversions
 
 Regenerate the complete `gen` tree after updating the generator. Generated
@@ -104,6 +168,86 @@ generic details during unary calls, stream opening, receive, or completion.
 It does not itself change raw stream errors, sends, half-closes, or header
 handling; the separate streaming corrections are described above. There is no
 wire or data migration, and independently deployed servers need no update.
+
+## Unreleased: gRPC encoding selects complete returned errors
+
+Generic gRPC encoding no longer chooses a status from one independent joined
+error and Goa details from another. For example, joining a `Canceled` status
+with a Goa fault now returns `Unknown` with the complete joined message,
+instead of `Canceled` with only the fault child's message and ID.
+
+An ordinary wrapper or a join with one non-nil cause remains one error chain.
+A status supplied explicitly on that outer chain keeps its code and ordered
+details. A Goa service error on that chain keeps its Name, ID, Message, traits,
+and merged history, including empty fields. History contains the original
+contributions described above. Its single status cause retains
+the existing status precedence. When its cause contains several independent
+errors, status discovery stops at that join and its own name and traits
+determine the code.
+
+For an otherwise unowned join, each branch is classified by the existing
+generic rules. Unanimous branch codes become the result code; disagreement
+becomes `Unknown`, regardless of join order. Details describe the complete
+result: Name `fault`, a fresh ID, the exact original error text, Fault true,
+Timeout false, and Temporary false. No child's status details, Name, ID,
+history, timeout, or retry trait describe the whole join. Raw Go context errors,
+including duplicates, still encode as `Unknown` unless a caller has supplied
+an explicit status for the complete result. No context origin is inferred.
+
+This intentionally changes code and metadata selection for independent joins.
+Consumers relying on a child's name, occurrence ID, shorter text, or retry
+traits must adjust those expectations. First-detail decoding remains unchanged,
+including unknown or malformed first details; later details are not searched.
+Generated declared responses now follow this ownership rule too. Direct
+declarations, ordinary wrappers, and single effective causes keep their designed
+code and detail. An outer declared owner may retain independent causes without
+giving up its own fields. At a visible independent join, children cannot donate
+a declared name or custom fields. Fully single-chain custom `As` discovery and
+dynamic `ErrorName` fields keep their existing behavior. An outer named owner
+may explicitly supply its custom value through its own `As`; an As-only facade
+with independent visible causes cannot promote a child.
+
+For example, a temporary `busy` ErrorResult joined with an independent Canceled
+status formerly sent Unavailable with the Busy child's name, ID, shorter message,
+and Temporary field. Updating the runtime alone already changes that shared
+detail to a whole fault with a fresh ID, complete original text, Fault true, and
+Timeout/Temporary false, even with old generated servers. An existing idempotent
+client whose temporary names include busy can consequently make one call instead
+of two. Regenerating the server also changes this disagreeing join's code to
+Unknown. Direct or wrapped owned Busy keeps its fields, designed code, and
+existing retry. This rule applies to one returned composite, not every Busy
+error or all work in a request. False Temporary is not a universal retry veto:
+an explicit whole temporary detail, a designed temporary name, or an exposed
+true Retryable trait still uses the existing retry policy.
+
+An unowned join containing a custom declaration now returns a generic complete
+error instead of one child's custom type and fields. Denied plus an independent
+failure no longer promises PermissionDenied or a decoded Denied.Reason. Message
+retains exactly the original Error text; separate fields absent from that text
+are not reconstructed. Direct custom declarations keep their concrete types,
+fields, designed codes, and existing constructors, including their lack of a
+retained RPC cause. Current generic clients retain the original RPC cause.
+
+A complete status directly implemented before or on a named owner takes
+precedence over the declared mapping and keeps its ordered detail prefix. A
+status retained only below an earlier declared owner does not replace that
+declaration. A nil status does not establish whole-status precedence, and the
+first nil status is not skipped to find a later status. Single-chain status
+exposure through As alone keeps existing declared precedence. First-detail
+decoding and validation remain authoritative, including a custom first detail;
+an unknown or malformed first detail does not cause a later-detail scan.
+
+Update runtime and generator together and regenerate servers for the complete
+behavior. Old generated servers with the new runtime apply the shared ErrorResult
+detail/retry change but keep their old declared-code/custom selection. A new
+generated server with the old runtime also does not establish complete selection.
+No dependency addition, protobuf or stored-data migration, or new client repair
+API is required. Current clients can read the same generic ErrorResponse format,
+but callers relying on old composite codes, custom types, fields, or retries must
+adjust before server deployment. Clients predating generic RPC-cause retention
+need their own runtime/generator update and regeneration for that guarantee.
+Mixed server versions return their respective outcomes. Roll back runtime and
+generated server together, keeping callers able to handle both during rollback.
 
 ## Already using v3.31.1?
 
