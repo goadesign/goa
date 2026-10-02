@@ -57,8 +57,9 @@ func TestGenerateGRPCClientErrorIdentity(t *testing.T) {
 	require.NoError(t, err)
 }
 
-// grpcClientErrorsDSL gives ordinary and idempotent methods the same result so
-// the fixture can compare validation without changing the requested operation.
+// grpcClientErrorsDSL gives Read and Retry methods the same result to compare
+// client validation. Count returns an integer, and Watch streams entries, so
+// the tests also check errors across those generated method shapes.
 func grpcClientErrorsDSL() {
 	d.API("client-errors", func() {})
 	selection := d.Type("Selection", func() {
@@ -130,6 +131,11 @@ func grpcClientErrorsDSL() {
 				})
 			})
 		}
+		d.Method("Count", func() {
+			d.Payload(selection)
+			d.Result(d.Int)
+			d.GRPC(func() {})
+		})
 		for _, name := range []string{"Metadata", "RetryMetadata"} {
 			d.Method(name, func() {
 				d.Result(metadataEntry)

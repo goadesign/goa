@@ -311,7 +311,7 @@ func newEncodingCatalogClient(t *testing.T, endpoint goa.Endpoint, options ...gr
 	t.Helper()
 	server := grpc.NewServer()
 	genpb.RegisterCatalogServer(server, genserver.New(&gencatalog.Endpoints{
-		Read: endpoint, ReadErrors: endpoint, Retry: endpoint, RetryErrors: endpoint,
+		Read: endpoint, Count: endpoint, ReadErrors: endpoint, Retry: endpoint, RetryErrors: endpoint,
 		Watch: endpoint, Upload: endpoint, Exchange: endpoint, Collect: endpoint,
 		WatchRaw: endpoint, CollectRaw: endpoint,
 		DeniedCanceled: endpoint, DeniedDeadline: endpoint,

@@ -105,6 +105,45 @@ It does not itself change raw stream errors, sends, half-closes, or header
 handling; the separate streaming corrections are described above. There is no
 wire or data migration, and independently deployed servers need no update.
 
+## Unreleased: generic gRPC encoding of independent joined errors
+
+Generic gRPC encoding no longer chooses a status from one independent joined
+error and Goa details from another. For example, joining a `Canceled` status
+with a Goa fault now returns `Unknown` with the complete joined message,
+instead of `Canceled` with only the fault child's message and ID.
+
+An ordinary wrapper or a join with one non-nil cause remains one error chain.
+A status supplied explicitly on that outer chain keeps its code and ordered
+details. A Goa service error on that chain keeps its Name, ID, Message, traits,
+and merged history, including empty fields. Its single status cause retains
+the existing status precedence. When its cause contains several independent
+errors, status discovery stops at that join and its own name and traits
+determine the code.
+
+For an otherwise unowned join, each branch is classified by the existing
+generic rules. Unanimous branch codes become the result code; disagreement
+becomes `Unknown`, regardless of join order. Details describe the complete
+result: Name `fault`, a fresh ID, the exact original error text, Fault true,
+Timeout false, and Temporary false. No child's status details, Name, ID,
+history, timeout, or retry trait describe the whole join. Raw Go context errors,
+including duplicates, still encode as `Unknown` unless a caller has supplied
+an explicit status for the complete result. No context origin is inferred.
+
+This intentionally changes code and metadata selection for independent joins.
+Consumers relying on a child's name, occurrence ID, shorter text, or retry
+traits must adjust those expectations. First-detail decoding remains unchanged,
+including unknown or malformed first details; later details are not searched.
+Declared generated errors still use their designed response code and typed
+details. A bare join containing a declared error may still select that child
+in generated code before generic encoding, so this change does not repair
+declared-error joins.
+
+Rebuild servers with the updated runtime to apply this behavior. No regeneration,
+dependency addition, protobuf or stored-data migration is required. Existing
+clients understand the generic fault format; independently deployed older
+servers retain the former join behavior. Rolling back the runtime restores
+the former code and detail selection.
+
 ## Already using v3.31.1?
 
 v3.32.0 fixes missing client-interceptor imports in generated HTTP, gRPC, and
