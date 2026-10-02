@@ -1,3 +1,6 @@
+// This file constructs runtime and validation errors for generated code and
+// service implementations. Merges return a new whole error and keep original
+// contribution values; callers can inspect the existing causes through Unwrap.
 package goa
 
 import (
@@ -11,7 +14,10 @@ import (
 
 type (
 	// ServiceError is the default error type used by the goa package to
-	// encode and decode error responses.
+	// encode and decode error responses. Finish setting its public fields and
+	// constructing its causes before sharing it with readers. MergeErrors does
+	// not modify its inputs, but direct field writes and external cause behavior
+	// remain the caller's responsibility.
 	ServiceError struct {
 		// Name is a name for that class of errors.
 		Name string
@@ -27,9 +33,10 @@ type (
 		Temporary bool
 		// Is the error a server-side fault?
 		Fault bool
-		// History tracks all the individual errors that were built into this error, should
-		// this error have been merged.
-		history []*ServiceError
+		// history holds original contribution values in merge order. Each value
+		// has its own Field string and no nested history, so History can return
+		// editable copies without exposing these saved values.
+		history []ServiceError
 		// err holds the original error if exists.
 		err error
 	}
@@ -208,17 +215,24 @@ func NewErrorID() string {
 	return base64.RawURLEncoding.EncodeToString(b)
 }
 
-// MergeErrors updates an error by merging another into it. It first converts
-// other into a ServiceError if not already one. The merge algorithm then:
+// MergeErrors returns a fresh *ServiceError for two nonnil inputs without
+// modifying either input. Callers must use the returned error. Each input is
+// selected with errors.As; an input with no *ServiceError becomes an error-named
+// fault containing its original text and cause.
 //
-// * uses the name of err if a ServiceError, the name of other otherwise.
+// The result keeps the selected left error's ID and Field pointer. It keeps the
+// left Name unless that name is "error", in which case it uses the right Name.
+// Its Message joins the selected messages with "; ". Timeout, Temporary and
+// Fault are each true only when both selected errors have that trait.
 //
-// * appends both error messages.
+// The result joins the existing causes in left-to-right order and retains the
+// original contributions for History, including duplicates. No cause is copied
+// or modified. Stable finite input cause graphs remain finite because the new
+// result cannot be reached from an older input. This does not repair existing
+// cycles or control methods and mutations on caller-owned causes.
 //
-// * computes Timeout and Temporary by "and"ing the fields of both errors.
-//
-// Merge returns the updated error. This makes it possible to return other when
-// err is nil.
+// If either input is nil, MergeErrors returns the other input exactly; if both
+// are nil, it returns nil.
 func MergeErrors(err, other error) error {
 	if err == nil {
 		if other == nil {
@@ -231,32 +245,45 @@ func MergeErrors(err, other error) error {
 	}
 	e := asError(err)
 	o := asError(other)
-	if e.Name == "error" {
-		e.Name = o.Name
+
+	// Save both inputs' contributions before combining whole fields. A new
+	// slice keeps subsequent merges from writing into either input's history.
+	left := errorContributions(e)
+	right := errorContributions(o)
+	merged := *e
+	merged.history = make([]ServiceError, 0, len(left)+len(right))
+	merged.history = append(merged.history, left...)
+	merged.history = append(merged.history, right...)
+	if merged.Name == "error" {
+		merged.Name = o.Name
 	}
+	merged.Message = e.Message + "; " + o.Message
+	merged.Timeout = e.Timeout && o.Timeout
+	merged.Temporary = e.Temporary && o.Temporary
+	merged.Fault = e.Fault && o.Fault
+	merged.err = errors.Join(e.err, o.err)
 
-	// Combine error lineage. We only ever put original errors into the history slice, so we
-	// don't need to worry about gaining intermediate merges.
-	//
-	// Do this before we modify ourselves, as History() may include us!
-	e.history = append(e.History(), o.History()...)
-	e.err = errors.Join(e.err, o.err)
-
-	e.Message = e.Message + "; " + o.Message
-	e.Timeout = e.Timeout && o.Timeout
-	e.Temporary = e.Temporary && o.Temporary
-	e.Fault = e.Fault && o.Fault
-
-	return e
+	return &merged
 }
 
-// History returns the history of error revisions, ignoring the result of any merges.
+// History returns detached copies of the original, unmerged contributions in
+// left-to-right merge order, preserving duplicates. Each entry retains its
+// original Name, ID, Message, traits and cause, has a copied Field value, and
+// contains no nested history. Changing the returned slice, entries or Field
+// strings does not change saved contributions or the whole error.
+//
+// For an unmerged error, History returns a detached singleton with the error's
+// current fields. A merged error retains contributions as they were included;
+// later input or whole-field edits do not rewrite them. Causes remain the exact
+// original objects, with behavior owned by their callers.
 func (e *ServiceError) History() []*ServiceError {
-	if len(e.history) > 0 {
-		return e.history
+	contributions := errorContributions(e)
+	history := make([]*ServiceError, len(contributions))
+	for i, original := range contributions {
+		entry := copyErrorContribution(original)
+		history[i] = &entry
 	}
-
-	return []*ServiceError{e}
+	return history
 }
 
 // Error returns the error message.
@@ -270,7 +297,30 @@ func (e *ServiceError) ErrorName() string { return e.Name }
 // GoaErrorName returns the error name.
 func (e *ServiceError) GoaErrorName() string { return e.ErrorName() }
 
+// Unwrap returns the existing cause, or the ordered joined causes of a merge.
 func (e *ServiceError) Unwrap() error { return e.err }
+
+// copyErrorContribution copies an error's fields and Field string, removes its
+// nested history, and retains its exact cause so the copy describes one original
+// contribution without exposing an owned Field value.
+func copyErrorContribution(original ServiceError) ServiceError {
+	original.history = nil
+	if original.Field != nil {
+		field := *original.Field
+		original.Field = &field
+	}
+	return original
+}
+
+// errorContributions supplies the saved original values for a merged error or
+// captures an unmerged error's current fields. Its callers read this list and
+// allocate their own slices before storing or returning entries.
+func errorContributions(e *ServiceError) []ServiceError {
+	if len(e.history) > 0 {
+		return e.history
+	}
+	return []ServiceError{copyErrorContribution(*e)}
+}
 
 func withField(field string, err *ServiceError) *ServiceError {
 	err.Field = &field

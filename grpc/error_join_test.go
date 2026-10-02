@@ -122,10 +122,11 @@ func TestEncodeErrorOwnedFieldsAndHistory(t *testing.T) {
 			require.False(t, merged.Timeout)
 			require.False(t, merged.Temporary)
 			require.True(t, merged.Fault)
+			require.Equal(t, leftCause.Error()+"; "+rightCause.Error(), merged.Message)
 			require.Equal(t, codes.InvalidArgument, status.Code(EncodeError(merged)))
 			requireEncodingResponse(t, NewErrorResponse(merged), merged, merged)
 			expected := []*goapb.ErrorField{
-				{Name: goa.MissingField, Msg: leftCause.Error() + "; " + rightCause.Error(), Field: "key"},
+				{Name: goa.MissingField, Msg: leftCause.Error(), Field: "key"},
 				{Name: goa.InvalidFormat, Msg: rightCause.Error()},
 			}
 			require.Equal(t, expected, NewErrorResponse(merged).History)

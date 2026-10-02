@@ -155,8 +155,8 @@ func TestGeneratedDeclaredDynamicAndNonObject(t *testing.T) {
 	}
 }
 
-// TestGeneratedDeclaredOwnedCauseAndHistory preserves an owned declaration
-// with a typed status cause, and the current whole fields of merged errors.
+// TestGeneratedDeclaredOwnedCauseAndHistory returns an owned declaration with
+// a status cause, then checks a merged error's whole fields and original messages.
 func TestGeneratedDeclaredOwnedCauseAndHistory(t *testing.T) {
 	for _, joined := range []bool{false, true} {
 		for _, wrapped := range []bool{false, true} {
@@ -201,10 +201,10 @@ func TestGeneratedDeclaredOwnedCauseAndHistory(t *testing.T) {
 	decoded := requireGenericCause(t, err, codes.InvalidArgument)
 	require.Equal(t, left.Name, decoded.Name)
 	require.Equal(t, left.ID, decoded.ID)
-	require.Equal(t, left.Message, decoded.Message)
-	require.Equal(t, left.Timeout, decoded.Timeout)
-	require.Equal(t, left.Temporary, decoded.Temporary)
-	require.Equal(t, left.Fault, decoded.Fault)
+	require.Equal(t, left.Message+"; "+right.Message, decoded.Message)
+	require.Equal(t, left.Timeout && right.Timeout, decoded.Timeout)
+	require.Equal(t, left.Temporary && right.Temporary, decoded.Temporary)
+	require.Equal(t, left.Fault && right.Fault, decoded.Fault)
 	response := goagrpc.DecodeError(errors.Unwrap(err)).(*goapb.ErrorResponse)
 	require.Equal(t, []*goapb.ErrorField{
 		{Name: left.Name, Msg: left.Message, Field: "key"},

@@ -4,6 +4,70 @@ Goa, the examples, and the plugins require **Go 1.26 or later**. Go 1.27.1 is
 recommended. Upgrade the Go toolchain before updating these modules: the new
 dependency versions require Go 1.26.
 
+## Unreleased: merged errors preserve original contributions
+
+**This changes the mutation and pointer identity contract of `MergeErrors` and
+`ServiceError.History`.** For two nonnil inputs, `MergeErrors` now returns a
+fresh `*ServiceError` and leaves both inputs unchanged. Always store or return
+the result:
+
+```go
+err = goa.MergeErrors(err, next)
+```
+
+Code that ignored the return must change. Retained inputs and earlier merge
+results no longer gain later errors. For example, merging `first` with `second`
+leaves `first.Message` unchanged; only the returned result has
+`first.Message + "; " + second.Message`. Nil operands still return the other
+input exactly.
+
+The whole result keeps the selected left ID and Field pointer, the existing
+Name rule (`"error"` adopts the right Name), the full joined message and each
+trait's AND rule. Wrapped inputs still select a ServiceError through
+`errors.As`. The existing causes remain the same concrete objects in the same
+join order. `errors.As` to ServiceError now finds the fresh result.
+`errors.Is(result, left)` no longer succeeds merely because the result used to
+be `left`; it succeeds only when the original left object is actually reachable
+as a cause or matches through a cause's own methods. No pointer-equivalence
+methods have been added.
+
+History now returns detached entries, including a detached singleton for an
+unmerged error. It preserves original Name, ID, Message, traits, cause and
+copied Field values in order, including repeated contributions. Editing a
+returned slice, entry or Field value no longer changes future History reads or
+the whole result. Set an original error's Field before including it in a merge.
+A later whole-result Field assignment affects only that whole result.
+Consumers must read each History entry as an original contribution; do not
+recursively expand its History waiting for pointer equality with the entry.
+
+These ownership rules prevent a merge from making a cycle out of stable finite
+input causes, including wrappers that refer to an input. They do not repair
+previously cyclic graphs or freeze arbitrary external causes. Finish
+constructing public fields and causes before sharing an error with readers.
+The whole Field pointer remains shared with the selected left error; only
+History Field values are isolated.
+
+The default HTTP whole response and gRPC whole detail fields retain their
+values. Existing gRPC History details now carry each original message instead
+of accumulated text, with original field values and the same order. Custom
+formatters that read History observe the same correction. The protobuf shape
+is unchanged; decoded details still do not reconstruct local contribution
+IDs, traits, causes or History.
+
+Rebuild applications with the updated runtime and migrate their merge and
+History readers in the same application change. This runtime change alone
+requires no generator, protobuf or stored-data migration. Independently
+deployed peers can decode the unchanged wire shape, but per-entry text differs
+and must not be assumed equivalent. Roll back the runtime and dependent reader
+changes together. The gRPC selection changes below additionally require the
+matching generator and regenerated servers. Keep their runtime, generated code,
+and reader changes together during deployment and rollback.
+
+Goa remains on the `goa.design/goa/v3` module path under the release policy in
+[RELEASE.md](RELEASE.md). These are intentional breaking changes within v3.
+The release version has not been selected; this section does not designate a
+compatible patch release.
+
 ## Unreleased: generated packages and transport conversions
 
 Regenerate the complete `gen` tree after updating the generator. Generated
@@ -115,7 +179,8 @@ instead of `Canceled` with only the fault child's message and ID.
 An ordinary wrapper or a join with one non-nil cause remains one error chain.
 A status supplied explicitly on that outer chain keeps its code and ordered
 details. A Goa service error on that chain keeps its Name, ID, Message, traits,
-and merged history, including empty fields. Its single status cause retains
+and merged history, including empty fields. History contains the original
+contributions described above. Its single status cause retains
 the existing status precedence. When its cause contains several independent
 errors, status discovery stops at that join and its own name and traits
 determine the code.
