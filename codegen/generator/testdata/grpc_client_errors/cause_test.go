@@ -315,6 +315,7 @@ func newEncodingCatalogClient(t *testing.T, endpoint goa.Endpoint, options ...gr
 		Watch: endpoint, Upload: endpoint, Exchange: endpoint, Collect: endpoint,
 		WatchRaw: endpoint, CollectRaw: endpoint,
 		DeniedCanceled: endpoint, DeniedDeadline: endpoint,
+		InspectErrors: endpoint,
 	}, nil, nil))
 	return connectCatalogClient(t, server, options...)
 }

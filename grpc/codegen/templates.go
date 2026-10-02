@@ -21,6 +21,7 @@ const (
 	grpcServerInitT          = "server_init"
 	grpcServerGRPCInitT      = "server_grpc_init"
 	grpcServerGRPCInterfaceT = "server_grpc_interface"
+	grpcServerErrorOwnerT    = "server_error_owner"
 	grpcServerGRPCRegisterT  = "server_grpc_register"
 	grpcServerGRPCStartT     = "server_grpc_start"
 	grpcServerGRPCEndT       = "server_grpc_end"

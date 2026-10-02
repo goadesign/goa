@@ -20,6 +20,19 @@ import (
 // TestGenerateGRPCClientErrorIdentity checks error types through generated
 // endpoints. The generated tests themselves run with the race detector.
 func TestGenerateGRPCClientErrorIdentity(t *testing.T) {
+	generateGRPCClientErrors(t, ".")
+}
+
+// TestGenerateGRPCDeclaredErrorOwnership checks the changed declared selection
+// and its caller controls without replaying the unrelated generic join matrix.
+func TestGenerateGRPCDeclaredErrorOwnership(t *testing.T) {
+	generateGRPCClientErrors(t, "^TestGenerated(Declared|ResponseValidation|MergedResponseValidation|MetadataValidation|ViewValidation|WrongPayloadDoesNotCallRPC|InvalidResponseDoesNotTryAnotherReply|InvalidMetadataDoesNotRetry|RemoteValidationNameStillRetries|RetryReusesEncodedRequest|RetryReplacesFailedAttemptMetadata|CancellationAfterFailedRPCStopsRetry|BuildHelperPreservesRawErrors|CustomContextCodes|GenericStreamErrors|RawStreamErrors|EndedClientKeepsLocalCause)")
+}
+
+// generateGRPCClientErrors renders the actual service and transports, then
+// runs the selected handwritten tests against their generated RPC methods.
+func generateGRPCClientErrors(t *testing.T, pattern string) {
+	t.Helper()
 	root := codegen.RunDSL(t, grpcClientErrorsDSL)
 	plan := mustTestPlan(t, "generated.local/gen", []eval.Root{root}, planTransportData)
 	files, err := testServiceFiles(plan)
@@ -49,7 +62,7 @@ func TestGenerateGRPCClientErrorIdentity(t *testing.T) {
 	// this child command instruments the generated client, not just its generator.
 	ctx, cancel := context.WithTimeout(t.Context(), 90*time.Second)
 	defer cancel()
-	command := exec.CommandContext(ctx, "go", "test", "-mod=mod", "-race", "-count=1", "-v", "./...")
+	command := exec.CommandContext(ctx, "go", "test", "-mod=mod", "-race", "-count=1", "-v", "./...", "-run", pattern)
 	command.Dir = dir
 	command.Env = append(os.Environ(), "GOWORK=off")
 	output, err := command.CombinedOutput()
@@ -79,6 +92,16 @@ func grpcClientErrorsDSL() {
 		d.Field(1, "reason", d.String)
 		d.Required("reason")
 	})
+	missing := d.Type("Missing", func() {
+		d.Field(1, "key", d.String)
+		d.Required("key")
+	})
+	rejection := d.Type("Rejection", func() {
+		d.ErrorName(1, "name", d.String)
+		d.Field(2, "reason", d.String)
+		d.Required("name", "reason")
+	})
+	notice := d.Type("Notice", d.String)
 	metadataEntry := d.Type("MetadataEntry", func() {
 		d.Field(1, "state", d.String)
 		d.Field(2, "count", d.Int)
@@ -135,6 +158,22 @@ func grpcClientErrorsDSL() {
 			d.Payload(selection)
 			d.Result(d.Int)
 			d.GRPC(func() {})
+		})
+		d.Method("InspectErrors", func() {
+			d.Payload(selection)
+			d.Result(entry)
+			d.Error("missing", missing)
+			d.Error("limited", rejection, func() {
+				d.Temporary()
+			})
+			d.Error("locked", rejection)
+			d.Error("notice", notice)
+			d.GRPC(func() {
+				d.Response("missing", d.CodeNotFound)
+				d.Response("limited", d.CodeResourceExhausted)
+				d.Response("locked", d.CodeFailedPrecondition)
+				d.Response("notice", d.CodeAlreadyExists)
+			})
 		})
 		for _, name := range []string{"Metadata", "RetryMetadata"} {
 			d.Method(name, func() {

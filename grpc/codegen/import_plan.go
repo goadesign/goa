@@ -301,7 +301,10 @@ func planGRPCImports(generation *codegen.Generation, plan *Plan) error {
 			)
 		}
 		if facts.hasErrors {
-			serverFileRequired = append(serverFileRequired, codegen.SimpleImport("google.golang.org/grpc/codes"))
+			serverFileRequired = append(serverFileRequired,
+				codegen.SimpleImport("google.golang.org/grpc/codes"),
+				codegen.SimpleImport("google.golang.org/grpc/status"),
+			)
 		}
 		if facts.serverFileUsesErrors {
 			serverFileRequired = append(serverFileRequired, codegen.SimpleImport("errors"))

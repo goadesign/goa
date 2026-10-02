@@ -5,22 +5,67 @@ func (s *Server) MethodUnaryRPCWithErrors(ctx context.Context, message *service_
 	ctx = context.WithValue(ctx, goa.ServiceKey, "ServiceUnaryRPCWithErrors")
 	resp, err := s.MethodUnaryRPCWithErrorsH.Handle(ctx, message)
 	if err != nil {
-		var en goa.GoaErrorNamer
-		if errors.As(err, &en) {
+		en, owner, joined := errorOwner(err)
+		if en != nil {
 			switch en.GoaErrorName() {
 			case "timeout":
 				return nil, goagrpc.NewStatusError(codes.Canceled, err, goagrpc.NewErrorResponse(err))
 			case "internal":
 				var er *serviceunaryrpcwitherrors.AnotherError
-				errors.As(err, &er)
+				if joined {
+					// Several causes cannot supply this owner's fields.
+					// Use its direct value or its own explicit As method.
+					var found bool
+					er, found = owner.(*serviceunaryrpcwitherrors.AnotherError)
+					if !found {
+						if as, ok := owner.(interface{ As(any) bool }); ok {
+							found = as.As(&er)
+						}
+					}
+					if !found {
+						return nil, goagrpc.EncodeError(err)
+					}
+				} else {
+					errors.As(err, &er)
+				}
 				return nil, goagrpc.NewStatusError(codes.Unknown, err, NewMethodUnaryRPCWithErrorsInternalError(er))
 			case "bad_request":
 				var er *serviceunaryrpcwitherrors.AnotherError
-				errors.As(err, &er)
+				if joined {
+					// Several causes cannot supply this owner's fields.
+					// Use its direct value or its own explicit As method.
+					var found bool
+					er, found = owner.(*serviceunaryrpcwitherrors.AnotherError)
+					if !found {
+						if as, ok := owner.(interface{ As(any) bool }); ok {
+							found = as.As(&er)
+						}
+					}
+					if !found {
+						return nil, goagrpc.EncodeError(err)
+					}
+				} else {
+					errors.As(err, &er)
+				}
 				return nil, goagrpc.NewStatusError(codes.InvalidArgument, err, NewMethodUnaryRPCWithErrorsBadRequestError(er))
 			case "custom_error":
 				var er *serviceunaryrpcwitherrors.ErrorType
-				errors.As(err, &er)
+				if joined {
+					// Several causes cannot supply this owner's fields.
+					// Use its direct value or its own explicit As method.
+					var found bool
+					er, found = owner.(*serviceunaryrpcwitherrors.ErrorType)
+					if !found {
+						if as, ok := owner.(interface{ As(any) bool }); ok {
+							found = as.As(&er)
+						}
+					}
+					if !found {
+						return nil, goagrpc.EncodeError(err)
+					}
+				} else {
+					errors.As(err, &er)
+				}
 				return nil, goagrpc.NewStatusError(codes.Unknown, err, NewMethodUnaryRPCWithErrorsCustomErrorError(er))
 			}
 		}

@@ -105,7 +105,7 @@ It does not itself change raw stream errors, sends, half-closes, or header
 handling; the separate streaming corrections are described above. There is no
 wire or data migration, and independently deployed servers need no update.
 
-## Unreleased: generic gRPC encoding of independent joined errors
+## Unreleased: gRPC encoding selects complete returned errors
 
 Generic gRPC encoding no longer chooses a status from one independent joined
 error and Goa details from another. For example, joining a `Canceled` status
@@ -133,16 +133,56 @@ This intentionally changes code and metadata selection for independent joins.
 Consumers relying on a child's name, occurrence ID, shorter text, or retry
 traits must adjust those expectations. First-detail decoding remains unchanged,
 including unknown or malformed first details; later details are not searched.
-Declared generated errors still use their designed response code and typed
-details. A bare join containing a declared error may still select that child
-in generated code before generic encoding, so this change does not repair
-declared-error joins.
+Generated declared responses now follow this ownership rule too. Direct
+declarations, ordinary wrappers, and single effective causes keep their designed
+code and detail. An outer declared owner may retain independent causes without
+giving up its own fields. At a visible independent join, children cannot donate
+a declared name or custom fields. Fully single-chain custom `As` discovery and
+dynamic `ErrorName` fields keep their existing behavior. An outer named owner
+may explicitly supply its custom value through its own `As`; an As-only facade
+with independent visible causes cannot promote a child.
 
-Rebuild servers with the updated runtime to apply this behavior. No regeneration,
-dependency addition, protobuf or stored-data migration is required. Existing
-clients understand the generic fault format; independently deployed older
-servers retain the former join behavior. Rolling back the runtime restores
-the former code and detail selection.
+For example, a temporary `busy` ErrorResult joined with an independent Canceled
+status formerly sent Unavailable with the Busy child's name, ID, shorter message,
+and Temporary field. Updating the runtime alone already changes that shared
+detail to a whole fault with a fresh ID, complete original text, Fault true, and
+Timeout/Temporary false, even with old generated servers. An existing idempotent
+client whose temporary names include busy can consequently make one call instead
+of two. Regenerating the server also changes this disagreeing join's code to
+Unknown. Direct or wrapped owned Busy keeps its fields, designed code, and
+existing retry. This rule applies to one returned composite, not every Busy
+error or all work in a request. False Temporary is not a universal retry veto:
+an explicit whole temporary detail, a designed temporary name, or an exposed
+true Retryable trait still uses the existing retry policy.
+
+An unowned join containing a custom declaration now returns a generic complete
+error instead of one child's custom type and fields. Denied plus an independent
+failure no longer promises PermissionDenied or a decoded Denied.Reason. Message
+retains exactly the original Error text; separate fields absent from that text
+are not reconstructed. Direct custom declarations keep their concrete types,
+fields, designed codes, and existing constructors, including their lack of a
+retained RPC cause. Current generic clients retain the original RPC cause.
+
+A complete status directly implemented before or on a named owner takes
+precedence over the declared mapping and keeps its ordered detail prefix. A
+status retained only below an earlier declared owner does not replace that
+declaration. A nil status does not establish whole-status precedence, and the
+first nil status is not skipped to find a later status. Single-chain status
+exposure through As alone keeps existing declared precedence. First-detail
+decoding and validation remain authoritative, including a custom first detail;
+an unknown or malformed first detail does not cause a later-detail scan.
+
+Update runtime and generator together and regenerate servers for the complete
+behavior. Old generated servers with the new runtime apply the shared ErrorResult
+detail/retry change but keep their old declared-code/custom selection. A new
+generated server with the old runtime also does not establish complete selection.
+No dependency addition, protobuf or stored-data migration, or new client repair
+API is required. Current clients can read the same generic ErrorResponse format,
+but callers relying on old composite codes, custom types, fields, or retries must
+adjust before server deployment. Clients predating generic RPC-cause retention
+need their own runtime/generator update and regeneration for that guarantee.
+Mixed server versions return their respective outcomes. Roll back runtime and
+generated server together, keeping callers able to handle both during rollback.
 
 ## Already using v3.31.1?
 

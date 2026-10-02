@@ -10,6 +10,15 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
+type (
+	// serverErrorData supplies the planned private declarations shared by the
+	// methods that can return declared errors in one generated server package.
+	serverErrorData struct {
+		Owner *codegen.NameDeclaration
+		Next  *codegen.NameDeclaration
+	}
+)
+
 // serverFiles returns the planned server interfaces, encoders, and decoders.
 func serverFiles(services *ServicesData) []*codegen.File {
 	svcLen := len(services.servicePlans)
@@ -56,15 +65,33 @@ func serverFile(svc *expr.GRPCServiceExpr, services *ServicesData) *codegen.File
 			Source: grpcTemplates.Read(grpcServerInitT),
 			Data:   data,
 		})
+		var selector *codegen.NameDeclaration
+		if data.serverErrors != nil {
+			selector = data.serverErrors.Owner
+		}
+		// Templates parse every branch. Register the name lookup even for
+		// methods without declarations; only declared branches call it.
+		functions := map[string]any{
+			"hasCustomErrors": hasCustomErrors,
+			"errorOwner":      selector.Name,
+		}
 		for _, e := range data.Endpoints {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "grpc-handler-init",
 				Source: grpcTemplates.Read(grpcHandlerInitT),
 				Data:   e,
 			}, &codegen.SectionTemplate{
-				Name:   "server-grpc-interface",
-				Source: grpcTemplates.Read(grpcServerGRPCInterfaceT),
-				Data:   e,
+				Name:    "server-grpc-interface",
+				Source:  grpcTemplates.Read(grpcServerGRPCInterfaceT),
+				Data:    e,
+				FuncMap: functions,
+			})
+		}
+		if data.serverErrors != nil {
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:   "server-error-owner",
+				Source: grpcTemplates.Read(grpcServerErrorOwnerT),
+				Data:   data.serverErrors,
 			})
 		}
 		for _, e := range data.Endpoints {
@@ -143,6 +170,17 @@ func serverEncodeDecode(svc *expr.GRPCServiceExpr, services *ServicesData) *code
 		}
 	}
 	return &codegen.File{Path: fpath, SectionTemplates: sections}
+}
+
+// hasCustomErrors checks whether a method has a custom object error. Only
+// those methods need generated code to find the value containing its fields.
+func hasCustomErrors(errors []*ErrorData) bool {
+	for _, err := range errors {
+		if err.Response.ServerConvert != nil {
+			return true
+		}
+	}
+	return false
 }
 
 // transTmplFuncs returns the type formatter used by metadata templates for one

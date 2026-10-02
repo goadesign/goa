@@ -7,8 +7,8 @@ func (s *Server) MethodUnaryRPCWithOverridingErrors(ctx context.Context, message
 	ctx = context.WithValue(ctx, goa.ServiceKey, "ServiceUnaryRPCWithOverridingErrors")
 	resp, err := s.MethodUnaryRPCWithOverridingErrorsH.Handle(ctx, message)
 	if err != nil {
-		var en goa.GoaErrorNamer
-		if errors.As(err, &en) {
+		en, _, _ := errorOwner(err)
+		if en != nil {
 			switch en.GoaErrorName() {
 			case "overridden":
 				return nil, goagrpc.NewStatusError(codes.Unknown, err, goagrpc.NewErrorResponse(err))

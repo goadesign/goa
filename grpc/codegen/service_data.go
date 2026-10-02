@@ -121,6 +121,9 @@ type (
 		// validations contain the data to generate the validation functions to
 		// validate the initialized type.
 		validations []*ValidationData
+		// serverErrors holds the private names used to select a complete declared
+		// error before the server writes its status and response details.
+		serverErrors *serverErrorData
 	}
 
 	// EndpointData contains the data used to render the code related to
@@ -831,6 +834,9 @@ func (d *ServicesData) analyze(servicePlan *grpcServicePlan) *ServiceData {
 		protobuf:                planned.catalog,
 	}
 	sd.protobuf.packageName = clientProtobufPackage
+	if symbols.errorOwner != nil {
+		sd.serverErrors = &serverErrorData{Owner: symbols.errorOwner, Next: symbols.errorNext}
+	}
 	finishProtobufPackage(sd)
 	protobufMessages := planned.messages
 	for index, e := range gs.GRPCEndpoints {

@@ -182,10 +182,9 @@ func TestGeneratedWholeOperationEncoding(t *testing.T) {
 	}
 }
 
-// TestGeneratedDeclaredJoinsRemainDeclared records the scope limit: generated
-// name matching selects a declared child before calling the generic encoder.
-// Its designed code and typed details still reach the client.
-func TestGeneratedDeclaredJoinsRemainDeclared(t *testing.T) {
+// TestGeneratedDeclaredJoinsUseCompleteResult keeps direct declared errors
+// typed, while independent joins return the full text and original RPC cause.
+func TestGeneratedDeclaredJoinsUseCompleteResult(t *testing.T) {
 	for _, reverse := range []bool{false, true} {
 		for _, wrap := range []bool{false, true} {
 			for _, joined := range []bool{false, true} {
@@ -212,13 +211,23 @@ func TestGeneratedDeclaredJoinsRemainDeclared(t *testing.T) {
 						return original
 					}))
 					_, err := client.ReadErrors()(catalogContext(t), &gencatalog.Selection{Key: "book"})
-					require.Equal(t, codes.PermissionDenied, status.Code(original))
+					code := codes.PermissionDenied
+					if joined {
+						code = codes.Unknown
+					}
+					require.Equal(t, code, status.Code(original))
 					require.Equal(t, input.Error(), status.Convert(original).Message())
-					denied, ok := err.(*gencatalog.Denied)
-					require.True(t, ok)
-					require.Equal(t, "catalog access rejected", denied.Reason)
-					require.NotContains(t, denied.Error(), "independent operation stopped")
-					require.Nil(t, errors.Unwrap(err))
+					if joined {
+						decoded := requireGenericCause(t, err, code)
+						require.Equal(t, input.Error(), decoded.Message)
+						require.Equal(t, "fault", decoded.Name)
+						require.Same(t, original, errors.Unwrap(err))
+					} else {
+						denied, ok := err.(*gencatalog.Denied)
+						require.True(t, ok)
+						require.Equal(t, "catalog access rejected", denied.Reason)
+						require.Nil(t, errors.Unwrap(err))
+					}
 					require.EqualValues(t, 1, calls.Load())
 				})
 			}
