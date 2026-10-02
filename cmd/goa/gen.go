@@ -162,23 +162,12 @@ func (g *Generator) Write(_ bool) error {
 
 // Compile compiles the generator.
 func (g *Generator) Compile(debug bool) error {
-	// We first need to go get the generated package to make sure that all
-	// dependencies are added to go.sum prior to compiling.
-	startLoad := time.Now()
-	pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedName}, g.tmpDir)
-	if err != nil {
-		return err
-	}
-	if len(pkgs) != 1 {
-		return fmt.Errorf("expected to find one package in %s", g.tmpDir)
-	}
-	if debug {
-		fmt.Fprintf(os.Stderr, "[TIMING]   packages.Load (temp dir) took %v\n", time.Since(startLoad))
-	}
-
+	// The temporary generator imports more packages than the design alone.
+	// Resolve its dependencies before loading or building it, so a module
+	// tidied for the design can compile the generator too.
 	if !g.hasVendorDirectory {
 		startGet := time.Now()
-		if err := g.runGoCmd("get", pkgs[0].PkgPath); err != nil {
+		if err := g.runGoCmd("get", "."); err != nil {
 			return err
 		}
 		if debug {
@@ -187,7 +176,7 @@ func (g *Generator) Compile(debug bool) error {
 	}
 
 	startBuild := time.Now()
-	err = g.runGoCmd("build", "-o", g.bin)
+	err := g.runGoCmd("build", "-o", g.bin)
 	if debug {
 		fmt.Fprintf(os.Stderr, "[TIMING]   go build took %v\n", time.Since(startBuild))
 	}
