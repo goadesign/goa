@@ -1496,7 +1496,11 @@ func (c *wireTypeCatalog) markInlineValidationCalls(attribute *expr.AttributeExp
 		c.markInlineValidationCalls(actual.ElemType, policy, pointer)
 	case *expr.Map:
 		c.markInlineValidationCalls(actual.KeyType, policy, false)
-		c.markInlineValidationCalls(actual.ElemType, policy, false)
+		valuePointer := pointer
+		if expr.IsPrimitive(actual.ElemType.Type) {
+			valuePointer = false
+		}
+		c.markInlineValidationCalls(actual.ElemType, policy, valuePointer)
 	case *expr.Union:
 		for _, branch := range actual.Values {
 			branchPointer := pointer && expr.IsObject(branch.Attribute.Type)
