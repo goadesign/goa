@@ -3091,11 +3091,8 @@ func (sds *ServicesData) buildResponses(e *expr.HTTPEndpointExpr, result *expr.A
 						break
 					}
 				}
-				variableView := viewed && origin == "" && clientResponseViewName(e, md) == ""
-				variableWire := variableView && !explicitBody
-				selectClientBodyByView := variableWire &&
-					!e.IsJSONRPC() &&
-					(!e.MethodExpr.IsStreaming() || e.MethodExpr.HasMixedResults())
+				variableWire := clientResponseBodyHasVariableView(e, resp)
+				selectClientBodyByView := clientSelectsResponseBodyByView(e, resp)
 				if needClientResponseInit(result.Type) && !variableWire {
 					init = sds.buildResponseResultInit(
 						e, resp, result, clientRespBody, origin,
@@ -4326,6 +4323,28 @@ func clientResponseViewNameExpr(e *expr.HTTPEndpointExpr, result *expr.ResultTyp
 		return result.Views[0].Name
 	}
 	return ""
+}
+
+// clientResponseBodyHasVariableView reports whether the client learns the view
+// of resp only from the response, so the body may hold any view of the result.
+// Bodies selected with Body("attr") or an explicit body have one fixed shape.
+func clientResponseBodyHasVariableView(e *expr.HTTPEndpointExpr, resp *expr.HTTPResponseExpr) bool {
+	result, ok := e.MethodExpr.Result.Type.(*expr.ResultTypeExpr)
+	if !ok || clientResponseViewNameExpr(e, result) != "" {
+		return false
+	}
+	_, origin := resp.Body.Meta["origin:attribute"]
+	_, explicitBody := resp.Body.Meta["http:body"]
+	return !origin && !explicitBody
+}
+
+// clientSelectsResponseBodyByView reports whether the unary client decoder of
+// resp reads the view header to choose the body type it decodes. Import
+// planning uses the same answer as the decoder template.
+func clientSelectsResponseBodyByView(e *expr.HTTPEndpointExpr, resp *expr.HTTPResponseExpr) bool {
+	return clientResponseBodyHasVariableView(e, resp) &&
+		!e.IsJSONRPC() &&
+		(!e.MethodExpr.IsStreaming() || e.MethodExpr.HasMixedResults())
 }
 
 func buildHTTPUnionTypeData(u *expr.Union, scope codegen.Attributor, record *wireUnionRecord) *service.UnionTypeData {
