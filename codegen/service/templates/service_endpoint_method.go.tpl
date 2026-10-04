@@ -138,7 +138,9 @@ func {{ .EndpointDeclaration.Name }}(s {{ .ServiceDeclaration.Name }}{{ range .S
 		vres := {{ $.ViewedResult.Init.Declaration.Name }}(res, view)
 				{{- end }}
 		if err := {{ .ViewedResult.ViewsPkg }}.{{ .ViewedResult.Validate.Declaration.Name }}(vres); err != nil {
-			return nil, err
+			// The returned fields failed the selected view. Report a server fault
+			// and keep the validation error available through errors.Unwrap.
+			return nil, goa.NewServiceError(err, "fault", false, false, true)
 		}
 		return vres, nil
 			{{- else }}
@@ -170,7 +172,9 @@ func {{ .EndpointDeclaration.Name }}(s {{ .ServiceDeclaration.Name }}{{ range .S
 	{{- end }}
 	vres := {{ $.ViewedResult.Init.Declaration.Name }}(res, {{ if .ViewedResult.ViewName }}{{ printf "%q" .ViewedResult.ViewName }}{{ else }}view{{ end }})
 	if err := {{ .ViewedResult.ViewsPkg }}.{{ .ViewedResult.Validate.Declaration.Name }}(vres); err != nil {
-		return nil, err
+		// The returned fields failed the selected view. Report a server fault
+		// and keep the validation error available through errors.Unwrap.
+		return nil, goa.NewServiceError(err, "fault", false, false, true)
 	}
 	return vres, nil
 	{{- else }}
@@ -188,7 +192,9 @@ func {{ .EndpointDeclaration.Name }}(s {{ .ServiceDeclaration.Name }}{{ range .S
 	{{- end }}
 	vres := {{ $.ViewedResult.Init.Declaration.Name }}(res, {{ if .ViewedResult.ViewName }}{{ printf "%q" .ViewedResult.ViewName }}{{ else }}view{{ end }})
 	if err := {{ .ViewedResult.ViewsPkg }}.{{ .ViewedResult.Validate.Declaration.Name }}(vres); err != nil {
-		return nil, err
+		// The returned fields failed the selected view. Report a server fault
+		// and keep the validation error available through errors.Unwrap.
+		return nil, goa.NewServiceError(err, "fault", false, false, true)
 	}
 	return vres, nil
 {{- else if .SkipResponseBodyEncodeDecode }}

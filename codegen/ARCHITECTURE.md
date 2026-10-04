@@ -498,6 +498,14 @@ families, endpoints, clients, constructors, validators, conversions,
 interceptors, errors, stream types, and package variables. It also collects the
 imports and exact output files those declarations require.
 
+Generated service endpoints validate the returned fields of a selected result
+view before a transport encodes them. Failed result validation returns a
+`goa.ServiceError` with name `fault` and `Fault` set, retaining the original
+validation error as its cause. HTTP and gRPC therefore report a server failure
+instead of blaming the request. A domain error returned by the service keeps
+its original meaning; validation errors from request decoding remain client
+input errors.
+
 The plan retains one package-backed attributor for each service and views
 package. HTTP, gRPC, JSON-RPC, example, and plugins use those attributors and
 canonical declaration records. No consumer recreates a service `NameScope`,

@@ -1,0 +1,49 @@
+// Endpoints wraps the "MixedResultsWithViewsEndpoint" service endpoints.
+type Endpoints struct {
+	MixedResultsWithViewsMethod goa.Endpoint
+}
+
+// MixedResultsWithViewsMethodEndpointInput holds both the payload and the
+// server stream of the "MixedResultsWithViewsMethod" method.
+type MixedResultsWithViewsMethodEndpointInput struct {
+	// Stream is the server stream used by the "MixedResultsWithViewsMethod" method
+	// to send data.
+	Stream MixedResultsWithViewsMethodServerStream
+}
+
+// NewEndpoints wraps the methods of the "MixedResultsWithViewsEndpoint"
+// service with endpoints.
+func NewEndpoints(s Service) *Endpoints {
+	return &Endpoints{
+		MixedResultsWithViewsMethod: NewMixedResultsWithViewsMethodEndpoint(s),
+	}
+}
+
+// Use applies the given middleware to all the "MixedResultsWithViewsEndpoint"
+// service endpoints.
+func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
+	e.MixedResultsWithViewsMethod = m(e.MixedResultsWithViewsMethod)
+}
+
+// NewMixedResultsWithViewsMethodEndpoint returns an endpoint function that
+// calls the method "MixedResultsWithViewsMethod" of service
+// "MixedResultsWithViewsEndpoint".
+func NewMixedResultsWithViewsMethodEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		ep := req.(*MixedResultsWithViewsMethodEndpointInput)
+		res, view, err := s.MixedResultsWithViewsMethod(ctx, ep.Stream)
+		if err != nil {
+			return nil, err
+		}
+		if res == nil {
+			return nil, goa.Fault("service returned a missing result")
+		}
+		vres := NewViewedMixedResult(res, view)
+		if err := mixedresultswithviewsendpointviews.ValidateMixedResult(vres); err != nil {
+			// The returned fields failed the selected view. Report a server fault
+			// and keep the validation error available through errors.Unwrap.
+			return nil, goa.NewServiceError(err, "fault", false, false, true)
+		}
+		return vres, nil
+	}
+}
