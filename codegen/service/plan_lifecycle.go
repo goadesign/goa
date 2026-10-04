@@ -242,7 +242,8 @@ func (p *Plan) StreamingResultLayout(method *expr.MethodExpr) (*codegen.GoTypePl
 // transport converts attribute for method. The supplied attribute may contain
 // only the fields selected by one result view; the returned plan keeps that
 // selection while binding each named value to the declaration already chosen
-// by service generation.
+// by service generation. Generated view fields retain their presence pointers;
+// ordinary service fields keep their required and default-value representation.
 func (p *Plan) MethodTypeLayout(method *expr.MethodExpr, attribute *expr.AttributeExpr) (*codegen.GoTypePlan, error) {
 	for _, service := range p.facts.services {
 		facts := service.methodByExpr[method]
@@ -273,6 +274,7 @@ func (p *Plan) MethodTypeLayout(method *expr.MethodExpr, attribute *expr.Attribu
 			Owner:            owner,
 			RetainNamedValue: true,
 			Policy: codegen.GoLayoutPolicy{
+				Pointer:    owner == service.viewsPath,
 				UseDefault: true,
 				SumType:    true,
 			},

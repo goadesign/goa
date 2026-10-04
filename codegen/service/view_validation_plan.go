@@ -79,9 +79,10 @@ func planServiceValidations(facts *serviceFacts, rootTypes *rootTypeSet, generat
 		policy := viewValidationPolicy()
 		policy.Pointer = pointer
 		return codegen.PlanGoType(attribute, codegen.GoTypePlanOptions{
-			Owner:  facts.viewsPath,
-			Policy: policy,
-			Bind:   binder,
+			Owner:            facts.viewsPath,
+			RetainNamedValue: true,
+			Policy:           policy,
+			Bind:             binder,
 		})
 	}
 	validator := func(request codegen.ValidatorBindingRequest) (*codegen.NameDeclaration, error) {
