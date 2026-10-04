@@ -114,7 +114,9 @@ func {{ .EndpointDeclaration.Name }}(s {{ .ServiceDeclaration.Name }}{{ range .S
 		{{- end }}
 	{{- end }}
 		if err != nil {
-			return nil, err
+			// All authentication alternatives failed. Keep the original error
+			// and report that the business method has not been called.
+			return nil, security.NewAuthenticationError(err)
 		}
 {{- end }}
 

@@ -491,6 +491,18 @@ contract.
 
 ## Service plan
 
+Generated endpoints mark a final authentication callback rejection with
+`security.AuthenticationError` before invoking the business method. The wrapper
+preserves the original error and its declared transport mapping; it adds no HTTP
+status, scope policy or retry permission. Successful alternatives still pass the
+returned context to the method, and errors returned by the method are unchanged.
+Authentication callbacks and outer middleware may perform their own work, so the
+marker promises only that the business method was not dispatched. Handwritten
+callers that compared the top-level authentication error by identity or asserted
+its concrete type must use `errors.Is` or `errors.As` after regeneration. Existing
+wire responses and unregenerated endpoints are unchanged; a consumer that needs
+this distinction must regenerate its service endpoints before adopting it.
+
 `service.Plan` owns every service and views package declaration for one root.
 Its constructor collects service declarations, normalized method wrappers,
 relocated authored types, projected view types, unions and their complete

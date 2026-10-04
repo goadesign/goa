@@ -1,0 +1,21 @@
+// NewSecureWithAPIKeyOverrideEndpoint returns an endpoint function that calls
+// the method "SecureWithAPIKeyOverride" of service
+// "EndpointWithAPIKeyOverride".
+func NewSecureWithAPIKeyOverrideEndpoint(s Service, authAPIKeyFn security.AuthAPIKeyFunc) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*SecureWithAPIKeyOverridePayload)
+		var err error
+		sc := security.APIKeyScheme{
+			Name:           "api_key",
+			Scopes:         []string{"api:read", "api:write", "api:admin"},
+			RequiredScopes: []string{},
+		}
+		ctx, err = authAPIKeyFn(ctx, string(p.Key), &sc)
+		if err != nil {
+			// All authentication alternatives failed. Keep the original error
+			// and report that the business method has not been called.
+			return nil, security.NewAuthenticationError(err)
+		}
+		return nil, s.SecureWithAPIKeyOverride(ctx, p)
+	}
+}

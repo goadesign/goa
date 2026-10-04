@@ -1,0 +1,32 @@
+// NewSecureWithOAuth2Endpoint returns an endpoint function that calls the
+// method "SecureWithOAuth2" of service "EndpointWithOAuth2".
+func NewSecureWithOAuth2Endpoint(s Service, authOAuth2Fn security.AuthOAuth2Func) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*SecureWithOAuth2Payload)
+		var err error
+		sc := security.OAuth2Scheme{
+			Name:           "authCode",
+			Scopes:         []string{"api:write", "api:read"},
+			RequiredScopes: []string{},
+			Flows: []*security.OAuthFlow{
+				&security.OAuthFlow{
+					Type:             "authorization_code",
+					AuthorizationURL: "/authorization",
+					TokenURL:         "/token",
+					RefreshURL:       "/refresh",
+				},
+			},
+		}
+		var token string
+		if p.Token != nil {
+			token = string(*p.Token)
+		}
+		ctx, err = authOAuth2Fn(ctx, token, &sc)
+		if err != nil {
+			// All authentication alternatives failed. Keep the original error
+			// and report that the business method has not been called.
+			return nil, security.NewAuthenticationError(err)
+		}
+		return nil, s.SecureWithOAuth2(ctx, p)
+	}
+}
