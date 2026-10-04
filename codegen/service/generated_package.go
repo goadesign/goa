@@ -716,6 +716,9 @@ func planViews(facts *rootFacts, generation *codegen.Generation) error {
 			}
 			projected, source := projectedResultRoot(generation, method)
 			pairs := projectTypePairs(projected, source, seenProjected)
+			// View copies are emitted in this service's views package. Remove the
+			// authored package locations before saving conversions and union identities.
+			removeMeta(projected)
 			projection := &projectionFacts{pairs: pairs}
 			serviceFacts.projections[method] = projection
 			serviceFacts.methodByExpr[method].projection = projection
@@ -757,7 +760,6 @@ func planViews(facts *rootFacts, generation *codegen.Generation) error {
 					}
 				}
 			}
-			removeMeta(projected)
 			projectedRoots = append(projectedRoots, projected)
 
 			if resultType, ok := method.Result.Type.(*expr.ResultTypeExpr); ok {
@@ -820,8 +822,14 @@ func collectValidationFacts(projected *expr.AttributeExpr) []*validationFacts {
 	userType := projected.Type.(expr.UserType)
 	resultType, viewed := userType.(*expr.ResultTypeExpr)
 	if !viewed {
+		attribute := userType.Attribute()
+		// A defined union type does not inherit its underlying union's methods.
+		// Keep the named value so validation can call the actual union receiver.
+		if expr.IsUnion(projected.Type) {
+			attribute = projected
+		}
 		return []*validationFacts{{
-			attribute: userType.Attribute(),
+			attribute: attribute,
 			alias:     expr.IsAlias(userType),
 			pointer:   !expr.IsPrimitive(projected.Type),
 		}}

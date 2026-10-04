@@ -127,6 +127,11 @@ func {{ .EndpointDeclaration.Name }}(s {{ .ServiceDeclaration.Name }}{{ range .S
 			return nil, err
 		}
 			{{- if .ViewedResult }}
+				{{- if not .ViewedResult.IsCollection }}
+		if res == nil {
+			return nil, goa.Fault("service returned a missing result")
+		}
+				{{- end }}
 				{{- if .ViewedResult.ViewName }}
 		vres := {{ $.ViewedResult.Init.Declaration.Name }}(res, {{ printf "%q" .ViewedResult.ViewName }})
 				{{- else }}
@@ -158,6 +163,11 @@ func {{ .EndpointDeclaration.Name }}(s {{ .ServiceDeclaration.Name }}{{ range .S
 	if err != nil {
 		return nil, err
 	}
+	{{- if not .ViewedResult.IsCollection }}
+	if res == nil {
+		return nil, goa.Fault("service returned a missing result")
+	}
+	{{- end }}
 	vres := {{ $.ViewedResult.Init.Declaration.Name }}(res, {{ if .ViewedResult.ViewName }}{{ printf "%q" .ViewedResult.ViewName }}{{ else }}view{{ end }})
 	if err := {{ .ViewedResult.ViewsPkg }}.{{ .ViewedResult.Validate.Declaration.Name }}(vres); err != nil {
 		return nil, err
@@ -171,6 +181,11 @@ func {{ .EndpointDeclaration.Name }}(s {{ .ServiceDeclaration.Name }}{{ range .S
 	if err != nil {
 		return nil, err
 	}
+	{{- if not .ViewedResult.IsCollection }}
+	if res == nil {
+		return nil, goa.Fault("service returned a missing result")
+	}
+	{{- end }}
 	vres := {{ $.ViewedResult.Init.Declaration.Name }}(res, {{ if .ViewedResult.ViewName }}{{ printf "%q" .ViewedResult.ViewName }}{{ else }}view{{ end }})
 	if err := {{ .ViewedResult.ViewsPkg }}.{{ .ViewedResult.Validate.Declaration.Name }}(vres); err != nil {
 		return nil, err

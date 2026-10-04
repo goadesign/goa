@@ -143,4 +143,10 @@ func TestMethodTypeLayoutKeepsSourceAndProjectedDeclarations(t *testing.T) {
 	require.Len(t, projectedChild, 1)
 	require.Equal(t, "goa.design/goa/example/view_bindings/views", projectedChild[0].Owner())
 	require.Equal(t, "SharedDeclarationChildView", projectedChild[0].TypeDeclaration().Name())
+	originalValue := plainLayout.PlansForOccurrence(plain.Payload.Find("child").Type.(expr.UserType).Attribute().Find("value"))
+	require.Len(t, originalValue, 1)
+	require.False(t, originalValue[0].IsPointer())
+	projectedValue := projectedLayout.PlansForOccurrence(projected.Find("child").Type.(expr.UserType).Attribute().Find("value"))
+	require.Len(t, projectedValue, 1)
+	require.True(t, projectedValue[0].IsPointer())
 }
