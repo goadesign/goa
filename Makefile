@@ -26,7 +26,7 @@ GOARCH=$(shell go env GOARCH)
 GO_FILES=$(shell find . -type f -name '*.go')
 GOPATH=$(shell go env GOPATH)
 GOBIN_DIR=$(GOPATH)/bin
-GOLANGCI_LINT_VERSION?=v2.13.2
+GOLANGCI_LINT_VERSION?=v2.14.0
 GOLANGCI_LINT=$(GOBIN_DIR)/golangci-lint
 PROTOC_BIN=protoc
 PROTOC_DEST=$(GOBIN_DIR)/$(PROTOC_BIN)
@@ -50,7 +50,7 @@ all-tests: lint test integration-test
 ci: depend all
 
 # Install protoc
-PROTOC_VERSION=25.0
+PROTOC_VERSION=36.2
 UNZIP=unzip
 ifeq ($(GOOS),linux)
 	PROTOC=protoc-$(PROTOC_VERSION)-linux-x86_64
