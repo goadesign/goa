@@ -1,0 +1,63 @@
+// Endpoints wraps the "WithResultMultipleViews" service endpoints.
+type Endpoints struct {
+	A goa.Endpoint
+	B goa.Endpoint
+}
+
+// NewEndpoints wraps the methods of the "WithResultMultipleViews" service with
+// endpoints.
+func NewEndpoints(s Service) *Endpoints {
+	return &Endpoints{
+		A: NewAEndpoint(s),
+		B: NewBEndpoint(s),
+	}
+}
+
+// Use applies the given middleware to all the "WithResultMultipleViews"
+// service endpoints.
+func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
+	e.A = m(e.A)
+	e.B = m(e.B)
+}
+
+// NewAEndpoint returns an endpoint function that calls the method "A" of
+// service "WithResultMultipleViews".
+func NewAEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		res, err := s.A(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if res == nil {
+			return nil, goa.Fault("service returned a missing result")
+		}
+		vres := NewViewedViewtype(res, "tiny")
+		if err := withresultmultipleviewsviews.ValidateViewtype(vres); err != nil {
+			// The returned fields failed the selected view. Report a server fault
+			// and keep the validation error available through errors.Unwrap.
+			return nil, goa.NewServiceError(err, "fault", false, false, true)
+		}
+		return vres, nil
+	}
+}
+
+// NewBEndpoint returns an endpoint function that calls the method "B" of
+// service "WithResultMultipleViews".
+func NewBEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		res, err := s.B(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if res == nil {
+			return nil, goa.Fault("service returned a missing result")
+		}
+		vres := NewViewedViewtype(res, "default")
+		if err := withresultmultipleviewsviews.ValidateViewtype(vres); err != nil {
+			// The returned fields failed the selected view. Report a server fault
+			// and keep the validation error available through errors.Unwrap.
+			return nil, goa.NewServiceError(err, "fault", false, false, true)
+		}
+		return vres, nil
+	}
+}

@@ -11,31 +11,34 @@ import (
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/service/testdata"
+	"goa.design/goa/v3/codegen/testutil"
 )
 
 func TestEndpoint(t *testing.T) {
 	cases := []struct {
-		Name string
-		DSL  func()
-		Code string
+		Name   string
+		DSL    func()
+		Code   string
+		Golden bool
 	}{
-		{"endpoint-single", testdata.SingleEndpointDSL, testdata.SingleEndpoint},
-		{"endpoint-use", testdata.UseEndpointDSL, testdata.UseEndpoint},
-		{"endpoint-multiple", testdata.MultipleEndpointsDSL, testdata.MultipleEndpoints},
-		{"endpoint-no-payload", testdata.NoPayloadEndpointDSL, testdata.NoPayloadEndpoint},
-		{"endpoint-with-result", testdata.WithResultEndpointDSL, testdata.WithResultEndpoint},
-		{"endpoint-with-result-multiple-views", testdata.WithResultMultipleViewsEndpointDSL, testdata.WithResultMultipleViewsEndpoint},
-		{"endpoint-streaming-result", testdata.StreamingResultEndpointDSL, testdata.StreamingResultMethodEndpoint},
-		{"endpoint-mixed-results", testdata.MixedResultsEndpointDSL, testdata.MixedResultsMethodEndpoint},
-		{"endpoint-streaming-result-no-payload", testdata.StreamingResultNoPayloadEndpointDSL, testdata.StreamingResultNoPayloadMethodEndpoint},
-		{"endpoint-streaming-result-with-views", testdata.StreamingResultWithViewsMethodDSL, testdata.StreamingResultWithViewsMethodEndpoint},
-		{"endpoint-streaming-payload", testdata.StreamingPayloadEndpointDSL, testdata.StreamingPayloadMethodEndpoint},
-		{"endpoint-streaming-payload-no-payload", testdata.StreamingPayloadNoPayloadMethodDSL, testdata.StreamingPayloadNoPayloadMethodEndpoint},
-		{"endpoint-streaming-payload-no-result", testdata.StreamingPayloadNoResultMethodDSL, testdata.StreamingPayloadNoResultMethodEndpoint},
-		{"endpoint-bidirectional-streaming", testdata.BidirectionalStreamingEndpointDSL, testdata.BidirectionalStreamingMethodEndpoint},
-		{"endpoint-bidirectional-streaming-no-payload", testdata.BidirectionalStreamingNoPayloadMethodDSL, testdata.BidirectionalStreamingNoPayloadMethodEndpoint},
-		{"endpoint-with-server-interceptor", testdata.EndpointWithServerInterceptorDSL, testdata.EndpointWithServerInterceptor},
-		{"endpoint-with-multiple-interceptors", testdata.EndpointWithMultipleInterceptorsDSL, testdata.EndpointWithMultipleInterceptors},
+		{"endpoint-single", testdata.SingleEndpointDSL, testdata.SingleEndpoint, false},
+		{"endpoint-use", testdata.UseEndpointDSL, testdata.UseEndpoint, false},
+		{"endpoint-multiple", testdata.MultipleEndpointsDSL, testdata.MultipleEndpoints, false},
+		{"endpoint-no-payload", testdata.NoPayloadEndpointDSL, testdata.NoPayloadEndpoint, false},
+		{"endpoint-with-result", testdata.WithResultEndpointDSL, "", true},
+		{"endpoint-with-result-multiple-views", testdata.WithResultMultipleViewsEndpointDSL, "", true},
+		{"endpoint-streaming-result", testdata.StreamingResultEndpointDSL, testdata.StreamingResultMethodEndpoint, false},
+		{"endpoint-mixed-results", testdata.MixedResultsEndpointDSL, testdata.MixedResultsMethodEndpoint, false},
+		{"endpoint-mixed-results-with-views", testdata.MixedResultsWithViewsEndpointDSL, "", true},
+		{"endpoint-streaming-result-no-payload", testdata.StreamingResultNoPayloadEndpointDSL, testdata.StreamingResultNoPayloadMethodEndpoint, false},
+		{"endpoint-streaming-result-with-views", testdata.StreamingResultWithViewsMethodDSL, testdata.StreamingResultWithViewsMethodEndpoint, false},
+		{"endpoint-streaming-payload", testdata.StreamingPayloadEndpointDSL, testdata.StreamingPayloadMethodEndpoint, false},
+		{"endpoint-streaming-payload-no-payload", testdata.StreamingPayloadNoPayloadMethodDSL, testdata.StreamingPayloadNoPayloadMethodEndpoint, false},
+		{"endpoint-streaming-payload-no-result", testdata.StreamingPayloadNoResultMethodDSL, testdata.StreamingPayloadNoResultMethodEndpoint, false},
+		{"endpoint-bidirectional-streaming", testdata.BidirectionalStreamingEndpointDSL, testdata.BidirectionalStreamingMethodEndpoint, false},
+		{"endpoint-bidirectional-streaming-no-payload", testdata.BidirectionalStreamingNoPayloadMethodDSL, testdata.BidirectionalStreamingNoPayloadMethodEndpoint, false},
+		{"endpoint-with-server-interceptor", testdata.EndpointWithServerInterceptorDSL, testdata.EndpointWithServerInterceptor, false},
+		{"endpoint-with-multiple-interceptors", testdata.EndpointWithMultipleInterceptorsDSL, testdata.EndpointWithMultipleInterceptors, false},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -52,7 +55,11 @@ func TestEndpoint(t *testing.T) {
 			require.NoError(t, err, buf.String())
 			code := string(bs)
 			code = strings.ReplaceAll(code, "\r\n", "\n")
-			assert.Equal(t, c.Code, code)
+			if c.Golden {
+				testutil.AssertGo(t, "testdata/golden/"+c.Name+".go.golden", code)
+			} else {
+				assert.Equal(t, c.Code, code)
+			}
 		})
 	}
 }
