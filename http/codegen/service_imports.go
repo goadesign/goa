@@ -740,6 +740,12 @@ func httpCodecUsesGoa(service *expr.HTTPServiceExpr, client bool) bool {
 					return true
 				}
 			}
+			for _, response := range endpoint.Responses {
+				// An unknown view in the response header is an enum error.
+				if clientSelectsResponseBodyByView(endpoint, response) {
+					return true
+				}
+			}
 			continue
 		}
 		if endpoint.Body != nil && endpoint.Body.Type != expr.Empty ||
