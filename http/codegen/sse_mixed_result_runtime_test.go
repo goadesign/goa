@@ -155,6 +155,8 @@ func runGeneratedMixedSSEClientTest(t *testing.T, files []*codegen.File) {
 
 // runGeneratedMixedSSECompile renders files in an isolated module and compiles
 // the requested generated package.
+//
+//nolint:unparam // Callers choose which generated packages to compile.
 func runGeneratedMixedSSECompile(t *testing.T, files []*codegen.File, packagePath string) {
 	t.Helper()
 	directory := t.TempDir()
