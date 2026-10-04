@@ -1,0 +1,21 @@
+// NewSecureWithRequiredScopesEndpoint returns an endpoint function that calls
+// the method "SecureWithRequiredScopes" of service
+// "EndpointWithRequiredScopes".
+func NewSecureWithRequiredScopesEndpoint(s Service, authJWTFn security.AuthJWTFunc) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*SecureWithRequiredScopesPayload)
+		var err error
+		sc := security.JWTScheme{
+			Name:           "jwt",
+			Scopes:         []string{"api:read", "api:write", "api:admin"},
+			RequiredScopes: []string{"api:read", "api:write"},
+		}
+		ctx, err = authJWTFn(ctx, string(p.Token), &sc)
+		if err != nil {
+			// All authentication alternatives failed. Keep the original error
+			// and report that the business method has not been called.
+			return nil, security.NewAuthenticationError(err)
+		}
+		return nil, s.SecureWithRequiredScopes(ctx, p)
+	}
+}

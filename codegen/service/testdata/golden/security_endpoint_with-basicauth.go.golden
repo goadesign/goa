@@ -1,0 +1,29 @@
+// NewEndpointWithSkipRequestBodyEncodeDecodeEndpoint returns an endpoint
+// function that calls the method "EndpointWithSkipRequestBodyEncodeDecode" of
+// service "EndpointWithSkipRequestBodyEncodeDecode".
+func NewEndpointWithSkipRequestBodyEncodeDecodeEndpoint(s Service, authBasicFn security.AuthBasicFunc) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		ep := req.(*EndpointWithSkipRequestBodyEncodeDecodeRequestData)
+		var err error
+		sc := security.BasicScheme{
+			Name:           "basic",
+			Scopes:         []string{"api:read", "api:write", "api:admin"},
+			RequiredScopes: []string{},
+		}
+		var user string
+		if ep.Payload.User != nil {
+			user = string(*ep.Payload.User)
+		}
+		var pass string
+		if ep.Payload.Pass != nil {
+			pass = string(*ep.Payload.Pass)
+		}
+		ctx, err = authBasicFn(ctx, user, pass, &sc)
+		if err != nil {
+			// All authentication alternatives failed. Keep the original error
+			// and report that the business method has not been called.
+			return nil, security.NewAuthenticationError(err)
+		}
+		return nil, s.EndpointWithSkipRequestBodyEncodeDecode(ctx, ep.Payload, ep.Body)
+	}
+}

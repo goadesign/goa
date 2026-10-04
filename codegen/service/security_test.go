@@ -8,6 +8,7 @@ import (
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/service/testdata"
+	"goa.design/goa/v3/codegen/testutil"
 )
 
 func TestSecureEndpointInit(t *testing.T) {
@@ -40,13 +41,12 @@ func TestSecureEndpoint(t *testing.T) {
 	cases := []struct {
 		Name string
 		DSL  func()
-		Code string
 	}{
-		{"with-required-scopes", testdata.EndpointWithRequiredScopesDSL, testdata.EndpointWithRequiredScopesCode},
-		{"with-optional-required-scopes", testdata.EndpointWithOptionalRequiredScopesDSL, testdata.EndpointWithOptionalRequiredScopesCode},
-		{"with-api-key-override", testdata.EndpointWithAPIKeyOverrideDSL, testdata.EndpointWithAPIKeyOverrideCode},
-		{"with-bearer", testdata.EndpointWithBearerDSL, testdata.EndpointWithBearerCode},
-		{"with-oauth2", testdata.EndpointWithOAuth2DSL, testdata.EndpointWithOAuth2Code},
+		{"with-required-scopes", testdata.EndpointWithRequiredScopesDSL},
+		{"with-optional-required-scopes", testdata.EndpointWithOptionalRequiredScopesDSL},
+		{"with-api-key-override", testdata.EndpointWithAPIKeyOverrideDSL},
+		{"with-bearer", testdata.EndpointWithBearerDSL},
+		{"with-oauth2", testdata.EndpointWithOAuth2DSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -57,7 +57,7 @@ func TestSecureEndpoint(t *testing.T) {
 			require.NotNil(t, fs)
 			sections := fs.SectionTemplates
 			code := codegen.SectionCode(t, sections[4])
-			assert.Equal(t, c.Code, code)
+			testutil.AssertGo(t, "testdata/golden/security_endpoint_"+c.Name+".go.golden", code)
 		})
 	}
 }
@@ -66,9 +66,8 @@ func TestSecureWithSkipRequestBodyEncodeDecode(t *testing.T) {
 	cases := []struct {
 		Name string
 		DSL  func()
-		Code string
 	}{
-		{"with-basicauth", testdata.EndpointWithBasicAuthAndSkipRequestBodyEncodeDecodeDSL, testdata.EndpointWithBasicAuthAndSkipRequestBodyEncodeDecodeCode},
+		{"with-basicauth", testdata.EndpointWithBasicAuthAndSkipRequestBodyEncodeDecodeDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -79,7 +78,7 @@ func TestSecureWithSkipRequestBodyEncodeDecode(t *testing.T) {
 			require.NotNil(t, fs)
 			sections := fs.SectionTemplates
 			code := codegen.SectionCode(t, sections[5])
-			assert.Equal(t, c.Code, code)
+			testutil.AssertGo(t, "testdata/golden/security_endpoint_"+c.Name+".go.golden", code)
 		})
 	}
 }
