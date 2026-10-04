@@ -148,6 +148,9 @@ func NewAEndpoint(s Service) goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
+		if res == nil {
+			return nil, goa.Fault("service returned a missing result")
+		}
 		vres := NewViewedRtype(res, "default")
 		if err := withresultviews.ValidateRtype(vres); err != nil {
 			return nil, err
@@ -187,6 +190,9 @@ func NewAEndpoint(s Service) goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
+		if res == nil {
+			return nil, goa.Fault("service returned a missing result")
+		}
 		vres := NewViewedViewtype(res, "tiny")
 		if err := withresultmultipleviewsviews.ValidateViewtype(vres); err != nil {
 			return nil, err
@@ -202,6 +208,9 @@ func NewBEndpoint(s Service) goa.Endpoint {
 		res, err := s.B(ctx)
 		if err != nil {
 			return nil, err
+		}
+		if res == nil {
+			return nil, goa.Fault("service returned a missing result")
 		}
 		vres := NewViewedViewtype(res, "default")
 		if err := withresultmultipleviewsviews.ValidateViewtype(vres); err != nil {
