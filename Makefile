@@ -15,7 +15,7 @@
 # - "all" is the default target, it runs "lint" and "test"
 #
 MAJOR=3
-MINOR=32
+MINOR=33
 BUILD=0
 PREVIEW_NUMBER?=
 

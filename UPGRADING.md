@@ -1,10 +1,35 @@
-# Upgrading to Goa v3.32.0
+# Upgrading to Goa v3.33.0
 
-Goa, the examples, and the plugins require **Go 1.26 or later**. Go 1.27.1 is
-recommended. Upgrade the Go toolchain before updating these modules: the new
-dependency versions require Go 1.26.
+Select the exact versions below only after their tags are available. Publication
+of the Goa tag does not itself publish the plugins or examples tags.
 
-## Unreleased: merged errors preserve original contributions
+Goa's root and nested JSON-RPC module files retain **Go 1.26.0** as their
+declared minimum, without a toolchain directive. Go 1.27.1 is recommended.
+Core preparation passed on Go 1.27.1. The merged generator changes also passed
+CI on Go 1.26.8 and 1.27.1 on Ubuntu and Windows; Windows does not run the nested
+JSON-RPC suite. Go 1.26.0 itself was not tested during this preparation.
+A declared minimum is not a claim that every dependency graph was tested on
+that version.
+
+The v3.33.0 sections below describe the current upgrade. Earlier v3.31/v3.32
+behavioral migrations are retained as historical guidance; the installation
+and regeneration sections select the current target after publication.
+
+## v3.33.0: parameters within HTTP path segments
+
+Routes now recognize every parameter within a segment, including prefixes,
+suffixes, and several parameters together. For example, `/files/{name}.json`
+with name `report` produces `/files/report.json`; `/{month}-{day}-{year}`
+recognizes all three parameters. Previously, prefixed parameters could be
+missed and only the first parameter in a segment could be recognized.
+
+Regenerate clients, servers, and OpenAPI v2/v3 when using these patterns.
+Existing whole-segment and catch-all routes remain supported. No persisted-data
+migration or coordinated peer rollout is required by this route-generation
+capability; peers still need to call the route declared by the design.
+See [#3994](https://github.com/goadesign/goa/pull/3994).
+
+## v3.33.0: merged errors preserve original contributions
 
 **This changes the mutation and pointer identity contract of `MergeErrors` and
 `ServiceError.History`.** For two nonnil inputs, `MergeErrors` now returns a
@@ -65,10 +90,10 @@ and reader changes together during deployment and rollback.
 
 Goa remains on the `goa.design/goa/v3` module path under the release policy in
 [RELEASE.md](RELEASE.md). These are intentional breaking changes within v3.
-The release version has not been selected; this section does not designate a
-compatible patch release.
+The selected target is v3.33.0 under that fixed-major policy. These changes
+are breaking; the minor version does not make them backward compatible.
 
-## Unreleased: generated packages and transport conversions
+## v3.33.0: generated packages and transport conversions
 
 Regenerate the complete `gen` tree after updating the generator. Generated
 declarations, conversion methods, transport references, and imports now use the
@@ -131,7 +156,35 @@ The header and collection corrections do not change the DSL or protobuf field
 numbers and require no wire or stored-data migration. Independently deployed
 servers do not need a matching regeneration for clients to use these fixes.
 
-## Unreleased: generic gRPC errors retain their cause
+## v3.33.0: result views and generated validation
+
+Result views containing required named unions from another generated package
+could fail generation or produce validation that did not compile. Authored
+service types now keep their declared package, while the view copies belong to
+the service's views package. Validation calls union methods through the type
+that owns them. `MethodTypeLayout` returns the pointer fields actually used by
+views to retain presence; plugins consuming those layouts must use the returned
+representation. Ordinary service fields keep their representation.
+
+A service returning a missing object without an error now receives a Goa
+internal fault before view conversion instead of a panic. Empty result
+collections remain valid. Regenerate affected services and plugin output, then
+compile and test valid and invalid results. No persisted-data migration,
+wire-format change, or coordinated peer rollout is required. Regenerating with
+an earlier generator restores its defects.
+See [#4017](https://github.com/goadesign/goa/pull/4017).
+
+HTTP clients whose response header selects a result view now include the Goa
+import needed to report an unknown view. Map values whose object types have
+only required fields now receive the nested validators expected by the
+validation plan, including HTTP-backed JSON-RPC and server-sent events.
+Regenerate affected code. Required fields stay required, gRPC map generation is
+unaffected by the HTTP validator correction, and neither fix requires a wire
+or stored-data migration.
+See [#4016](https://github.com/goadesign/goa/pull/4016) and
+[#4014](https://github.com/goadesign/goa/pull/4014).
+
+## v3.33.0: generic gRPC errors retain their cause
 
 Regenerated clients decode a generic protobuf `ErrorResponse` into the same
 `*goa.ServiceError` as before, preserving its Name, ID, Message, Timeout,
@@ -169,7 +222,7 @@ It does not itself change raw stream errors, sends, half-closes, or header
 handling; the separate streaming corrections are described above. There is no
 wire or data migration, and independently deployed servers need no update.
 
-## Unreleased: gRPC encoding selects complete returned errors
+## v3.33.0: gRPC encoding selects complete returned errors
 
 Generic gRPC encoding no longer chooses a status from one independent joined
 error and Goa details from another. For example, joining a `Canceled` status
@@ -249,7 +302,63 @@ need their own runtime/generator update and regeneration for that guarantee.
 Mixed server versions return their respective outcomes. Roll back runtime and
 generated server together, keeping callers able to handle both during rollback.
 
-## Already using v3.31.1?
+## v3.33.0: upgrade order and rollback
+
+1. After publication, install the same exact version of the Goa module and
+   command as shown below. Update official plugins in the same application
+   change when used. Regenerate the complete design and inspect moved type
+   imports, keyed plugin literals, generated validation, and transport code.
+2. Store or return the `MergeErrors` result whenever both inputs are nonnil.
+   Read each detached History entry once, including singleton entries; remove
+   recursive expansion that waits for pointer equality. Update these readers
+   with the runtime.
+3. Regenerate and rebuild servers with the matching runtime for complete
+   joined-error selection. Before deployment, check callers against both old
+   and new codes, names, IDs, custom types/fields, history text, and retries.
+   Test direct and wrapped declared errors as well as independent joins.
+4. Regenerate clients with the matching runtime for generic RPC-cause retention
+   and local codec/retry fixes. These client corrections do not require a server
+   update. Old and new server binaries may return their respective composite
+   outcomes during rollout; unchanged protobuf shape is not unchanged meaning.
+5. Keep previous binaries, design, dependency versions, generated tree, and
+   reader/plugin changes. Roll back runtime, generated server, and dependent
+   readers together, keeping callers able to handle both server outcomes.
+
+No protobuf field-number, wire-shape, or stored-data migration is required by
+the v3.33.0 range. Generator compile fixes, HTTP/JSON-RPC body mappings,
+collection/header conversions, and local client error corrections require no
+coordinated peer rollout. Documentation and CI-only changes require no
+application action. Older protocol migrations below retain their own
+coordinated-deployment requirements.
+
+## v3.33.0: dependency changes and validation limits
+
+The root module changes direct `golang.org/x/tools` v0.50.0 to v0.51.0 and
+`google.golang.org/genproto/googleapis/rpc`
+v0.0.0-20260918162117-cecb64721679 to
+v0.0.0-20260928230214-8a89bd6388cc. The nested JSON-RPC module changes only
+its indirect tools requirement and adds checksums matching the root.
+The root also updates `github.com/getkin/kin-openapi` v0.144.0 to v0.149.0,
+indirect `github.com/go-openapi/jsonpointer` v0.22.5 to v1.0.2, and indirect
+`github.com/santhosh-tekuri/jsonschema/v6` v6.0.2 to v6.0.3. The indirect
+`github.com/go-openapi/swag/jsonname` requirement is removed. Other requirement
+versions and direct/indirect roles stay the same. The root has no replacement;
+the nested module retains its local Goa replacement.
+The RPC module's extracted source files are identical across these
+revisions; this update introduces no protobuf wire-definition change.
+
+The tools update can affect package loading and generated import cleanup.
+The OpenAPI dependency updates affect schema and document processing.
+Compile and test the application with its resulting graph. The complete
+selected graph was not separately captured. Goa's owning make, including lint
+and root/nested tests, passed before and after the updates on Go 1.27.1 macOS.
+Go 1.26.0 is a declared minimum, not a tested-minimum claim.
+
+## Earlier migrations: already using v3.31.1?
+
+The behavioral sections from here describe earlier v3.31/v3.32 changes carried
+forward. They do not designate new v3.33.0 protocol changes. Current-target
+installation and regeneration instructions below apply after publication.
 
 v3.32.0 fixes missing client-interceptor imports in generated HTTP, gRPC, and
 JSON-RPC clients and command starters. For example, applying a client
@@ -296,7 +405,7 @@ preview.
 | Required gRPC scalar fields | Regenerate protobuf code and update direct message literals. Coordinate peers when required zero or empty values matter. |
 | JSON-RPC errors, selected views, or server streams | Update both generated peers and custom clients for the changed envelopes and stream lifecycle. JSON-RPC WebSocket generation has been removed. |
 | Dynamic gRPC views or optional primitive HTTP SSE data | Regenerate and deploy both peers together for the cases listed under coordinated deployment. |
-| Code-generation plugins | Upgrade `goa.design/plugins/v3` to v3.32.0 and migrate custom plugins that declare names or call removed generator APIs. |
+| Code-generation plugins | Upgrade `goa.design/plugins/v3` to v3.33.0 and migrate custom plugins that declare names or call removed generator APIs. |
 
 There is no persisted-data migration. Keep the previous binaries, dependency
 versions, design, and generated tree available for rollback.
@@ -354,14 +463,15 @@ Review the matching migration sections if your project has any of these characte
 Test ordinary HTTP-only services as well. Review the generated diff even when
 none of the specialized migrations below applies.
 
-## Install v3.32.0
+## Install v3.33.0 after publication
 
-Start from a branch with the current generated tree committed. Install both the
-Goa module and the `goa` command from the same release version:
+After the exact tags are published and verified, start from a branch with the
+current generated tree committed. Install both the Goa module and the `goa`
+command from the same release version:
 
 ```bash
-go get goa.design/goa/v3@v3.32.0
-go install goa.design/goa/v3/cmd/goa@v3.32.0
+go get goa.design/goa/v3@v3.33.0
+go install goa.design/goa/v3/cmd/goa@v3.33.0
 goa version
 ```
 
@@ -369,7 +479,7 @@ The Go command records the same release version in `go.mod`. The installed
 command reports the same version:
 
 ```text
-Goa version v3.32.0
+Goa version v3.33.0
 ```
 
 Do not use an older `goa` command with the new module. Also install the
@@ -386,10 +496,12 @@ If your design imports the official plugins, update that module in the same
 application change:
 
 ```bash
-go get goa.design/plugins/v3@v3.32.0
+go get goa.design/plugins/v3@v3.33.0
 ```
 
-Use matching release tags when copying examples. Custom plugins must complete
+Wait for the matching plugins/examples tags before selecting them; their
+publication is not implied by the Goa tag. Use v3.33.0 when copying examples
+for this target. Custom plugins must complete
 the generator-library migration below before regenerating an application.
 
 ## Regenerate and test an application
