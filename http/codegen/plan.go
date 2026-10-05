@@ -361,8 +361,9 @@ type (
 		Headers []JSONRPCHeaderData
 		// Cookies contains the HTTP request cookies read by shared JSON code.
 		Cookies []JSONRPCCookieData
-		// QueryParams is empty because JSON-RPC parameters are carried in the JSON request.
-		QueryParams []any
+		// QueryParams contains explicitly mapped HTTP query inputs. These values
+		// remain outside the JSON-RPC params member.
+		QueryParams []*ParamData
 		// PathParams is empty because every JSON-RPC method uses the service route.
 		PathParams []any
 		// PayloadAttr is the payload field encoded as the JSON request body.
