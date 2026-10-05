@@ -115,7 +115,7 @@ func httpFixedFileImports(service *expr.HTTPServiceExpr, client bool, kind httpF
 		if httpCodecUsesGoa(service, client) {
 			paths = append(paths, codegen.GoaImport("").Path)
 		}
-		if httpCodecUsesFmt(service) {
+		if httpCodecUsesFmt(service, client) {
 			paths = append(paths, "fmt")
 		}
 		if client && httpServiceSkipsRequestBody(service) {
@@ -807,10 +807,17 @@ func attributeHasNonRequiredValidation(attribute *expr.AttributeExpr, seen map[e
 
 // httpCodecUsesFmt reports whether a generated conversion formats a value
 // whose HTTP text form is not a direct primitive conversion.
-func httpCodecUsesFmt(service *expr.HTTPServiceExpr) bool {
+func httpCodecUsesFmt(service *expr.HTTPServiceExpr, client bool) bool {
 	for _, endpoint := range service.HTTPEndpoints {
 		if endpoint.MapQueryParams != nil {
 			return true
+		}
+		if client {
+			for _, field := range *expr.AsObject(endpoint.QueryParams().Type) {
+				if expr.AsMap(field.Attribute.Type) != nil {
+					return true
+				}
+			}
 		}
 	}
 	return false

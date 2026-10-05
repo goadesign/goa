@@ -255,6 +255,7 @@ func copyJSONRPCPayload(payload *PayloadData) *JSONRPCPayloadData {
 			ClientBody:           copyJSONRPCBody(request.ClientBody),
 			ServerBody:           copyJSONRPCBody(request.ServerBody),
 			PayloadInit:          copyInitData(request.PayloadInit),
+			QueryParams:          copyJSONRPCQueryParams(request.QueryParams),
 			Headers:              copyJSONRPCHeaders(request.Headers),
 			Cookies:              copyJSONRPCCookies(request.Cookies),
 			PayloadAttr:          request.PayloadAttr,
@@ -444,6 +445,31 @@ func copyDataType(dataType expr.DataType) expr.DataType {
 		return nil
 	}
 	return expr.Dup(dataType)
+}
+
+// copyJSONRPCQueryParams retains the planned query conversions without sharing
+// mutable types, defaults or examples. Command-line parsing remains owned by
+// the original HTTP plan and is not needed by JSON-RPC request templates.
+func copyJSONRPCQueryParams(source []*ParamData) []*ParamData {
+	result := make([]*ParamData, len(source))
+	for index, parameter := range source {
+		copy := *parameter
+		element := *parameter.Element
+		attribute := *parameter.AttributeData
+		attribute.Type = copyDataType(attribute.Type)
+		attribute.FieldType = copyDataType(attribute.FieldType)
+		attribute.DefaultValue = cloneRenderData(attribute.DefaultValue)
+		attribute.Example = cloneRenderData(attribute.Example)
+		attribute.CLIPlan = nil
+		element.AttributeData = &attribute
+		copy.Element = &element
+		if parameter.MapQueryParams != nil {
+			name := *parameter.MapQueryParams
+			copy.MapQueryParams = &name
+		}
+		result[index] = &copy
+	}
+	return result
 }
 
 // copyJSONRPCHeaders returns header values that do not share default data with source.

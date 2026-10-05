@@ -104,6 +104,23 @@ func paramsRuntimeDSL() {
 		})
 	})
 	dsl.Service("Param Shapes", func() {
+		dsl.Method("query", func() {
+			dsl.Payload(func() {
+				dsl.Attribute("domain", dsl.String, "Domain value carried in JSON-RPC parameters")
+				dsl.Attribute("credential", alias, "Optional named query value", func() { dsl.Meta("struct:field:name", "QueryValue") })
+				dsl.Attribute("count", dsl.Int, "Required query count")
+				dsl.Attribute("labels", dsl.ArrayOf(dsl.String), "Repeated query values")
+				dsl.Attribute("pairs", dsl.MapOf(dsl.String, dsl.Int), "Query entries keyed by name")
+				dsl.Required("domain", "count")
+			})
+			dsl.Result(dsl.String)
+			dsl.JSONRPC(func() {
+				dsl.Param("credential:key")
+				dsl.Param("count")
+				dsl.Param("labels")
+				dsl.Param("pairs")
+			})
+		})
 		dsl.JSONRPC(func() {
 			dsl.POST("/rpc")
 		})
