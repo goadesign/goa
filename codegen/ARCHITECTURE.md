@@ -696,6 +696,14 @@ expressions again or rebuild a service path from its name. Public plan snapshots
 return detached nested values, so changing a snapshot cannot change a later
 read or rendered file.
 
+JSON-RPC request snapshots retain path and query inputs as `[]*ParamData`,
+including each method's conversions, validation and service field selectors.
+A shared route does not give every method the same payload type. URL inputs
+stay outside protocol `params`; the selected method's generated decoder builds
+its service payload from both sources. Path constructors for both transports
+reserve their imports before names become final. Generator plugins that wrote
+`JSONRPCRequestData.PathParams` as `[]any` must use the typed parameter records.
+
 A method with separate ordinary and streamed results plans the streamed SSE
 body independently. When the retained service value and HTTP body have the
 same Go layout, the client assigns the decoded value directly. When their Go
