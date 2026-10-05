@@ -106,7 +106,7 @@ func (s *rpcProbe) Run(ctx context.Context, _ *genrpc.RunPayload) (string, error
 
 func (s *nestedProbe) Basic(ctx context.Context, _ *genprobe.BasicPayload) (string, error) {
 	s.dispatches++
-	_, err := genprobe.NewEndpoints(s.inner).Oauth(ctx, &genprobe.OauthPayload{Token: "nested-token"})
+	_, err := genprobe.NewEndpoints(s.inner).Oauth(ctx, &genprobe.OauthPayload{AuthToken: "nested-token"})
 	return "", err
 }
 
@@ -114,7 +114,7 @@ func TestNestedAuthenticationPreservesOriginalError(t *testing.T) {
 	failure := goa.PermanentError("denied", "inner credential rejected")
 	inner := &authProbe{failures: map[string]error{"oauth": failure}}
 	outer := &nestedProbe{inner: inner}
-	_, err := genprobe.NewEndpoints(outer).Basic(t.Context(), &genprobe.BasicPayload{User: "user", Pass: "pass"})
+	_, err := genprobe.NewEndpoints(outer).Basic(t.Context(), &genprobe.BasicPayload{AuthUser: "user", AuthPass: "pass"})
 	require.Equal(t, 1, outer.dispatches)
 	require.Zero(t, inner.dispatches)
 	require.ErrorIs(t, err, failure)
@@ -132,11 +132,11 @@ func TestMiddlewareAuthenticationPreservesOriginalError(t *testing.T) {
 			if err != nil {
 				return result, err
 			}
-			_, err = genprobe.NewEndpoints(inner).Oauth(ctx, &genprobe.OauthPayload{Token: "nested-token"})
+			_, err = genprobe.NewEndpoints(inner).Oauth(ctx, &genprobe.OauthPayload{AuthToken: "nested-token"})
 			return result, err
 		}
 	})
-	_, err := endpoints.Basic(t.Context(), &genprobe.BasicPayload{User: "user", Pass: "pass"})
+	_, err := endpoints.Basic(t.Context(), &genprobe.BasicPayload{AuthUser: "user", AuthPass: "pass"})
 	require.Equal(t, 1, outer.dispatches)
 	require.Zero(t, inner.dispatches)
 	require.ErrorIs(t, err, failure)
@@ -154,19 +154,19 @@ func TestAuthenticationErrorsAndDispatch(t *testing.T) {
 	}{
 		{"basic", func(e *genprobe.Endpoints) goa.Endpoint {
 			return e.Basic
-		}, &genprobe.BasicPayload{User: "user", Pass: "pass"}, []string{"basic"}, []string{"user/pass"}},
+		}, &genprobe.BasicPayload{AuthUser: "user", AuthPass: "pass"}, []string{"basic"}, []string{"user/pass"}},
 		{"key", func(e *genprobe.Endpoints) goa.Endpoint {
 			return e.Key
-		}, &genprobe.KeyPayload{Key: "key-value"}, []string{"key"}, []string{"key-value"}},
+		}, &genprobe.KeyPayload{AuthKey: "key-value"}, []string{"key"}, []string{"key-value"}},
 		{"bearer", func(e *genprobe.Endpoints) goa.Endpoint {
 			return e.Bearer
-		}, &genprobe.BearerPayload{Token: "bearer-value"}, []string{"bearer"}, []string{"bearer-value"}},
+		}, &genprobe.BearerPayload{AuthToken: "bearer-value"}, []string{"bearer"}, []string{"bearer-value"}},
 		{"jwt", func(e *genprobe.Endpoints) goa.Endpoint {
 			return e.JWT
-		}, &genprobe.JWTPayload{Token: "jwt-value"}, []string{"jwt"}, []string{"jwt-value"}},
+		}, &genprobe.JWTPayload{AuthToken: "jwt-value"}, []string{"jwt"}, []string{"jwt-value"}},
 		{"oauth", func(e *genprobe.Endpoints) goa.Endpoint {
 			return e.Oauth
-		}, &genprobe.OauthPayload{Token: "access-value"}, []string{"oauth"}, []string{"access-value"}},
+		}, &genprobe.OauthPayload{AuthToken: "access-value"}, []string{"oauth"}, []string{"access-value"}},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			for _, cause := range []error{failure, fmt.Errorf("wrapped: %w", failure), errors.Join(failure)} {
@@ -213,10 +213,10 @@ func TestRequirementsAndAlternatives(t *testing.T) {
 			s := &authProbe{failures: test.failures}
 			e := genprobe.NewEndpoints(s)
 			endpoint := e.Alternative
-			var payload any = &genprobe.AlternativePayload{User: "user", Pass: "pass", Token: "jwt-value"}
+			var payload any = &genprobe.AlternativePayload{AuthUser: "user", AuthPass: "pass", AuthToken: "jwt-value"}
 			if test.combined {
 				endpoint = e.Combined
-				payload = &genprobe.CombinedPayload{User: "user", Pass: "pass", Token: "jwt-value"}
+				payload = &genprobe.CombinedPayload{AuthUser: "user", AuthPass: "pass", AuthToken: "jwt-value"}
 			}
 			result, err := endpoint(t.Context(), payload)
 			require.Equal(t, test.calls, s.calls)
@@ -263,7 +263,7 @@ func TestConfiguredAuthenticationCallback(t *testing.T) {
 			}
 			return ctx, nil
 		})
-		result, err := endpoint(t.Context(), &genprobe.OauthPayload{Token: "access-value"})
+		result, err := endpoint(t.Context(), &genprobe.OauthPayload{AuthToken: "access-value"})
 		require.Equal(t, 1, calls)
 		require.Empty(t, s.calls)
 		if reject {
@@ -288,7 +288,7 @@ func TestHTTPDeclaredErrorMapping(t *testing.T) {
 		} else {
 			s.methodError = failure
 		}
-		_, err := genprobe.NewEndpoints(s).Basic(t.Context(), &genprobe.BasicPayload{User: "user", Pass: "pass"})
+		_, err := genprobe.NewEndpoints(s).Basic(t.Context(), &genprobe.BasicPayload{AuthUser: "user", AuthPass: "pass"})
 		require.ErrorIs(t, err, failure)
 		response := httptest.NewRecorder()
 		require.NoError(t, genhttp.EncodeBasicError(goahttp.ResponseEncoder, nil)(t.Context(), response, err))
@@ -341,4 +341,41 @@ func TestJSONRPCDeclaredErrorMapping(t *testing.T) {
 		}
 	}
 }
+
+func TestHTTPAuthenticationUsesRenamedFields(t *testing.T) {
+    for _, test := range []struct {
+        name string
+        header string
+        credential string
+    }{
+        {"basic", "", "user/pass"},
+        {"key", "key-value", "key-value"},
+        {"bearer", "Bearer bearer-value", "bearer-value"},
+        {"jwt", "Bearer jwt-value", "jwt-value"},
+        {"oauth", "Bearer access-value", "access-value"},
+    } {
+        t.Run(test.name, func(t *testing.T) {
+            service := &authProbe{}
+            mux := goahttp.NewMuxer()
+            server := genhttp.New(genprobe.NewEndpoints(service), mux, goahttp.RequestDecoder, goahttp.ResponseEncoder, nil, nil)
+            genhttp.Mount(mux, server)
+            request := httptest.NewRequest(http.MethodPost, "/"+test.name, strings.NewReader("{}"))
+            request.Header.Set("Content-Type", "application/json")
+            if test.name == "basic" {
+                request.SetBasicAuth("user", "pass")
+            } else {
+                request.Header.Set("Authorization", test.header)
+            }
+            response := httptest.NewRecorder()
+            mux.ServeHTTP(response, request)
+            require.Equal(t, http.StatusOK, response.Code, response.Body.String())
+            require.Equal(t, []string{test.name}, service.calls)
+            require.Equal(t, []string{test.credential}, service.credentials)
+            require.Equal(t, [][]string{{"read"}}, service.scopes)
+            require.Equal(t, 1, service.dispatches)
+            require.Equal(t, test.name, service.methodContext.Value(authContextKey{}))
+        })
+    }
+}
+
 `

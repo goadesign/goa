@@ -1,4 +1,6 @@
-// This file formats evaluated security schemes and authorization attributes for service templates.
+// This file reads evaluated security schemes and their credential fields for
+// service and transport generators. Authentication calls use the same authored
+// Go field names, string types and presence rules as the generated payload.
 package service
 
 import (
@@ -6,7 +8,9 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
-// BuildSchemeData builds the scheme data for the given scheme and method expr.
+// BuildSchemeData reads one method's annotated credentials and security scheme.
+// Service and transport generators receive the payload's actual Go field names,
+// requiredness and scopes, including names changed by field metadata.
 func BuildSchemeData(s *expr.SchemeExpr, m *expr.MethodExpr) *SchemeData {
 	if !expr.IsObject(m.Payload.Type) {
 		return nil
@@ -18,11 +22,11 @@ func BuildSchemeData(s *expr.SchemeExpr, m *expr.MethodExpr) *SchemeData {
 			Type:             s.Kind.String(),
 			SchemeName:       s.SchemeName,
 			UsernameAttr:     userAtt,
-			UsernameField:    codegen.Goify(userAtt, true),
+			UsernameField:    codegen.GoifyAtt(m.Payload.Find(userAtt), userAtt, true),
 			UsernamePointer:  m.Payload.IsPrimitivePointer(userAtt, true),
 			UsernameRequired: m.Payload.IsRequired(userAtt),
 			PasswordAttr:     passAtt,
-			PasswordField:    codegen.Goify(passAtt, true),
+			PasswordField:    codegen.GoifyAtt(m.Payload.Find(passAtt), passAtt, true),
 			PasswordPointer:  m.Payload.IsPrimitivePointer(passAtt, true),
 			PasswordRequired: m.Payload.IsRequired(passAtt),
 			Scopes:           schemeScopes(s),
@@ -51,7 +55,7 @@ func BuildSchemeData(s *expr.SchemeExpr, m *expr.MethodExpr) *SchemeData {
 		Type:         s.Kind.String(),
 		Name:         s.Name,
 		SchemeName:   s.SchemeName,
-		CredField:    codegen.Goify(keyAtt, true),
+		CredField:    codegen.GoifyAtt(m.Payload.Find(keyAtt), keyAtt, true),
 		CredPointer:  m.Payload.IsPrimitivePointer(keyAtt, true),
 		CredRequired: m.Payload.IsRequired(keyAtt),
 		KeyAttr:      keyAtt,
