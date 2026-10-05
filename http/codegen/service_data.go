@@ -1093,9 +1093,14 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 						patt := pathParamsObj.Attribute(arg)
 						att := makeHTTPType(patt)
 						pointer := httpEndpoint.Params.IsPrimitivePointer(arg, true)
+						fieldName := codegen.Goify(arg, true)
 						if expr.IsObject(httpEndpoint.MethodExpr.Payload.Type) {
-							// Path params may override requiredness, need to check payload.
-							pointer = httpEndpoint.MethodExpr.Payload.IsPrimitivePointer(arg, true)
+							// URL inputs are required, but the service field may be optional.
+							// Use the service's field name so authored renames reach the URL.
+							payload := httpEndpoint.MethodExpr.Payload
+							pointer = payload.IsPrimitivePointer(arg, true)
+							payloadContext := sds.serviceTypeContext(sd, "client").Enter(payload)
+							fieldName = payloadContext.Scope.Field(payload.Find(arg), arg, true)
 						}
 						name := sd.Scope.Name(codegen.Goify(arg, false))
 						var vcode string
@@ -1109,7 +1114,7 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 								Name:        arg,
 								VarName:     name,
 								Description: att.Description,
-								FieldName:   codegen.Goify(arg, true),
+								FieldName:   fieldName,
 								FieldType:   patt.Type,
 								TypeName:    sd.Scope.GoTypeName(att),
 								TypeRef:     sd.Scope.GoTypeRef(att),

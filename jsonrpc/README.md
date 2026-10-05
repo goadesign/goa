@@ -27,8 +27,15 @@ var _ = Service("calc", func() {
 })
 ```
 
-Every JSON-RPC method in the service shares the service route. The `method`
-property inside the JSON-RPC request selects the Goa method:
+Every JSON-RPC method in the service shares the service route. Named route
+parameters, such as `/organizations/{organization_id}/rpc`, are decoded into
+the matching payload field for the selected method. Each method retains its
+field type and validation. Generated clients put these values in the URL;
+they remain outside `params`, along with mapped query, header and cookie inputs.
+A method whose entire payload comes from these inputs omits `params`.
+Service base paths are included in generated client URLs and mounted routes.
+
+The `method` property inside the JSON-RPC request selects the Goa method:
 
 ```json
 {"jsonrpc":"2.0","id":"sum-1","method":"add","params":{"a":2,"b":3}}

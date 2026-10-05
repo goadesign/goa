@@ -1,9 +1,4 @@
 {{- if not (hasMixedTransports) }}
-// ServeHTTP handles JSON-RPC requests.
-func (s *{{ .ServerStructDeclaration.Name }}) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	s.handleHTTP(w, r)
-}
-
 {{ comment "handleHTTP reads one JSON-RPC request object or one array of requests." }}
 func (s *{{ .ServerStructDeclaration.Name }}) handleHTTP(w http.ResponseWriter, r *http.Request) {
 	originalBody := r.Body

@@ -118,7 +118,7 @@ func serveStreamText(body string) (*httptest.ResponseRecorder, int, error, int, 
 	request := httptest.NewRequest(http.MethodPost, "/rpc", strings.NewReader(body))
 	request.Header.Set("Accept", "text/event-stream")
 	response := httptest.NewRecorder()
-	server.ServeHTTP(response, request)
+	server.handleMixed(response, request)
 	return response, calls, sendErr, encodes, reported
 }
 `
