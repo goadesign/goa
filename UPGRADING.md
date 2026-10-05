@@ -15,6 +15,21 @@ The v3.33.0 sections below describe the current upgrade. Earlier v3.31/v3.32
 behavioral migrations are retained as historical guidance; the installation
 and regeneration sections select the current target after publication.
 
+## Mapped URL parameters (unreleased)
+
+An authored `Param("organization_id:organization")` now binds the payload's
+`organization_id` field to `{organization}` in HTTP and JSON-RPC routes.
+Previously, route preparation and validation could treat `organization` as a
+second payload field, reject the design, or classify the mapped field as a query
+parameter. Generated clients and servers now use the URL name for addressing
+and the payload name for types, field selectors, and validation. An independent
+payload field named `organization` keeps its own body or query binding.
+
+Regenerate clients and servers that use mapped URL parameters. Existing routes
+with identical payload and URL names keep their behavior. The accepted wire
+format does not change, so this correction requires no stored-data migration
+or coordinated peer rollout.
+
 ## v3.33.0: parameters within HTTP path segments
 
 Routes now recognize every parameter within a segment, including prefixes,

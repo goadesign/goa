@@ -71,6 +71,20 @@ it does not repeat collection or allocate another name. Render performs no
 expression mutation, graph analysis, declaration discovery, name allocation,
 or import allocation.
 
+## HTTP attribute copies for transport generators
+
+`http/codegen.WireAttribute` copies an authored attribute into the value shape
+used by HTTP codecs. Named scalar and collection aliases become their underlying
+value types with inherited validation. The copy drops service package placement,
+keeps custom Go field type metadata, and leaves the authored graph unchanged.
+HTTP and JSON-RPC use this same implementation. Other transport generators can
+use it with the HTTP parsing templates instead of reimplementing alias handling.
+
+Create and retain these copies during planning, before names freeze. Plan each
+copy's Go layout and conversions alongside the original service attribute. After
+linking, render from those retained layouts; do not copy or analyze attributes
+again to obtain a type name.
+
 ## Fresh run objects
 
 Registration stores immutable factories, not mutable generator or plugin

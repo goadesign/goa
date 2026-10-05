@@ -248,7 +248,7 @@ func TestHTTPUnionBranchTypesDoNotDependOnSurroundingFieldOrder(t *testing.T) {
 	testutil.AssertGo(t, "testdata/golden/http_union_branch_order.go.golden", code)
 }
 
-func TestMakeHTTPTypeRemovesServicePackageOwnershipFromWireCopy(t *testing.T) {
+func TestWireAttributeRemovesServicePackageOwnershipFromWireCopy(t *testing.T) {
 	nested := &expr.UserTypeExpr{
 		TypeName: "Nested",
 		AttributeExpr: &expr.AttributeExpr{
@@ -268,7 +268,7 @@ func TestMakeHTTPTypeRemovesServicePackageOwnershipFromWireCopy(t *testing.T) {
 		},
 	}
 
-	wire := makeHTTPType(&expr.AttributeExpr{Type: outer})
+	wire := WireAttribute(&expr.AttributeExpr{Type: outer})
 	wireOuter := wire.Type.(expr.UserType)
 	wireNested := expr.AsObject(wireOuter.Attribute().Type).Attribute("nested").Type.(expr.UserType)
 

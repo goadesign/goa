@@ -11,7 +11,7 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
-func TestMakeHTTPTypeResolvesNamedScalarChains(t *testing.T) {
+func TestWireAttributeResolvesNamedScalarChains(t *testing.T) {
 	for _, depth := range []int{0, 1, 2, 3} {
 		t.Run(fmt.Sprintf("depth_%d", depth), func(t *testing.T) {
 			minimum, maximum := 4, 8
@@ -54,7 +54,7 @@ func TestMakeHTTPTypeResolvesNamedScalarChains(t *testing.T) {
 			}}
 
 			for attempt := range 2 {
-				wire := makeHTTPType(body)
+				wire := WireAttribute(body)
 				for _, name := range []string{"first", "second"} {
 					value := expr.AsObject(wire.Type).Attribute(name)
 					require.Equal(t, expr.String, value.Type, "attempt %d field %s", attempt, name)
@@ -78,7 +78,7 @@ func TestMakeHTTPTypeResolvesNamedScalarChains(t *testing.T) {
 	}
 }
 
-func TestMakeHTTPTypePreservesNamedScalarDefaultAndExamples(t *testing.T) {
+func TestWireAttributePreservesNamedScalarDefaultAndExamples(t *testing.T) {
 	baseExample := &expr.ExampleExpr{Value: "base-example"}
 	outerExample := &expr.ExampleExpr{Value: "outer-example"}
 	base := &expr.UserTypeExpr{
@@ -97,7 +97,7 @@ func TestMakeHTTPTypePreservesNamedScalarDefaultAndExamples(t *testing.T) {
 	}
 	field := &expr.AttributeExpr{Type: outer, DefaultValue: "field-default"}
 
-	wire := makeHTTPType(field)
+	wire := WireAttribute(field)
 
 	require.Equal(t, expr.String, wire.Type)
 	require.Equal(t, "outer-default", wire.DefaultValue, "retain the existing definition-level selection")
