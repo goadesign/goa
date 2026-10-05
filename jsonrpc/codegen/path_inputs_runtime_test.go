@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -18,6 +19,26 @@ import (
 // TestGeneratedJSONRPCPathInputs generates and runs real clients and servers
 // so URL decoding, validation and endpoint delivery are checked together.
 func TestGeneratedJSONRPCPathInputs(t *testing.T) {
+	for _, mapped := range []bool{false, true} {
+		name := "same names"
+		design := pathInputsDesign
+		if mapped {
+			name = "mapped names"
+			design = strings.ReplaceAll(design, "{organization_id}", "{organization}")
+			design = strings.ReplaceAll(design, " JSONRPC(func() {", " JSONRPC(func() { Param(\"organization_id:organization\");")
+			design = strings.Replace(design, "JSONRPC(func() { Param(\"organization_id:organization\");\n  Path", "JSONRPC(func() {\n  Path", 1)
+			design = strings.ReplaceAll(design, "HTTP(func() { GET(", "HTTP(func() { Param(\"organization_id:organization\"); GET(")
+		}
+		t.Run(name, func(t *testing.T) {
+			runGeneratedPathInputs(t, design)
+		})
+	}
+}
+
+// runGeneratedPathInputs generates each authored transport and runs its clients
+// against mounted servers, so a successful render alone cannot pass this test.
+func runGeneratedPathInputs(t *testing.T, design string) {
+	t.Helper()
 	directory := t.TempDir()
 	repository, err := filepath.Abs(filepath.Join("..", ".."))
 	require.NoError(t, err)
@@ -25,7 +46,7 @@ func TestGeneratedJSONRPCPathInputs(t *testing.T) {
 	require.NoError(t, os.Mkdir(filepath.Join(directory, "design"), 0o700))
 	for name, source := range map[string]string{
 		"go.mod":              module,
-		"design/design.go":    pathInputsDesign,
+		"design/design.go":    design,
 		"path_inputs_test.go": pathInputsRuntimeTest,
 	} {
 		require.NoError(t, os.WriteFile(filepath.Join(directory, name), []byte(source), 0o600))
@@ -90,6 +111,22 @@ var _ = Service("route", func() {
   })
   Result(String)
   JSONRPC(func() {})
+ })
+ Method("collision", func() {
+  Payload(func() {
+   Field(1, "organization_id", organization, "Organization selected by the address")
+   Field(2, "organization", String, "Independent domain value with the URL name")
+   Field(3, "query_value", String, "Value carried by the query")
+   Field(4, "header_value", String, "Value carried by a header")
+   Field(5, "cookie_value", String, "Value carried by a cookie")
+   Required("organization_id", "organization", "query_value", "header_value", "cookie_value")
+  })
+  Result(String)
+  JSONRPC(func() {
+   Param("query_value:query")
+   Header("header_value:X-Value")
+   Cookie("cookie_value:value")
+  })
  })
  Method("identified", func() {
   Payload(func() {
@@ -202,6 +239,7 @@ func (d *recordingDoer) Do(request *http.Request) (*http.Response, error) {
 // and invalid wire requests through the mounted server to check their outcomes.
 func TestNamedRouteInputsReachConfiguredEndpoints(t *testing.T) {
  var calls atomic.Int64
+ var nativeCalls atomic.Int64
  invoked := func(ctx context.Context) error {
   if ctx.Value(routeContext{}) != "installed" {
    return errors.New("mounted middleware context missing")
@@ -228,6 +266,13 @@ func TestNamedRouteInputsReachConfiguredEndpoints(t *testing.T) {
    }
    payload := raw.(*genroute.BodyPayload)
    return string(payload.OrganizationID) + "/" + payload.Value, nil
+  },
+  Collision: func(ctx context.Context, raw any) (any, error) {
+   if err := invoked(ctx); err != nil {
+    return nil, err
+   }
+   payload := raw.(*genroute.CollisionPayload)
+   return string(payload.OrganizationID) + "/" + payload.Organization + "/" + payload.QueryValue + "/" + payload.HeaderValue + "/" + payload.CookieValue, nil
   },
   Identified: func(ctx context.Context, raw any) (any, error) {
    if err := invoked(ctx); err != nil {
@@ -271,6 +316,7 @@ func TestNamedRouteInputsReachConfiguredEndpoints(t *testing.T) {
  server.Mount(mux)
  native := genhttpserver.New(&gennativehttp.Endpoints{
   Echo: func(_ context.Context, raw any) (any, error) {
+   nativeCalls.Add(1)
    return string(raw.(*gennativehttp.EchoPayload).Organization), nil
   },
  }, mux, goahttp.RequestDecoder, goahttp.ResponseEncoder, nil, nil)
@@ -292,6 +338,12 @@ func TestNamedRouteInputsReachConfiguredEndpoints(t *testing.T) {
  nativeResult, err := nativeClient.Echo()(t.Context(), &gennativehttp.EchoPayload{Organization: "green"})
  require.NoError(t, err)
  require.Equal(t, "green", nativeResult)
+ require.Equal(t, int64(1), nativeCalls.Load())
+ invalidNative, err := peer.Client().Get(peer.URL + "/http/prefix/organizations/BAD")
+ require.NoError(t, err)
+ require.NoError(t, invalidNative.Body.Close())
+ require.Equal(t, http.StatusBadRequest, invalidNative.StatusCode)
+ require.Equal(t, int64(1), nativeCalls.Load())
  // Generated clients must send route values only in the URL.
  tests := []struct {
   name string
@@ -303,6 +355,7 @@ func TestNamedRouteInputsReachConfiguredEndpoints(t *testing.T) {
   {"numeric lower bound", client.Number(), &genroute.NumberPayload{OrganizationID: 1}, "1", "1", ""},
   {"numeric other value", client.Number(), &genroute.NumberPayload{OrganizationID: 42}, "42", "42", ""},
   {"body", client.Body(), &genroute.BodyPayload{OrganizationID: "blue", Value: "domain"}, "blue/domain", "blue", ` + "`" + `"params":{"value":"domain"}` + "`" + `},
+  {"separate domain and transport names", client.Collision(), &genroute.CollisionPayload{OrganizationID: "blue", Organization: "domain", QueryValue: "query", HeaderValue: "header", CookieValue: "cookie"}, "blue/domain/query/header/cookie", "blue", ` + "`" + `"params":{"organization":"domain"}` + "`" + `},
   {"mapped identity", client.Identified(), &genroute.IdentifiedPayload{OrganizationID: "blue", RequestID: "chosen-id"}, "blue/chosen-id", "blue", ""},
   {"optional service field", client.Optional(), &genroute.OptionalPayload{OrganizationID: &organization}, "blue", "blue", ""},
   {"numeric array", client.List(), &genroute.ListPayload{OrganizationID: []int{1, 2}}, "[1 2]", "1,2", ""},

@@ -18,16 +18,16 @@ func TestWireTypeCatalogIdentity(t *testing.T) {
 	second := wireCatalogType("Shared", "same", "second", false)
 
 	catalog, generation := testWireTypeCatalog(t)
-	firstBody := makeHTTPType(&expr.AttributeExpr{Type: first})
+	firstBody := WireAttribute(&expr.AttributeExpr{Type: first})
 	catalog.collect(firstBody, wireRequestBody, request)
-	catalog.collect(makeHTTPType(&expr.AttributeExpr{Type: first}), wireRequestBody, request)
-	catalog.collect(makeHTTPType(&expr.AttributeExpr{Type: second}), wireRequestBody, request)
-	catalog.collect(makeHTTPType(&expr.AttributeExpr{Type: first}), wireResponseBody, response)
+	catalog.collect(WireAttribute(&expr.AttributeExpr{Type: first}), wireRequestBody, request)
+	catalog.collect(WireAttribute(&expr.AttributeExpr{Type: second}), wireRequestBody, request)
+	catalog.collect(WireAttribute(&expr.AttributeExpr{Type: first}), wireResponseBody, response)
 	linkTestWireTypeCatalog(t, generation, catalog)
 	firstRecord := catalog.lookupUser(firstBody, wireRequestBody, request)
-	reusedRecord := catalog.lookupUser(makeHTTPType(&expr.AttributeExpr{Type: first}), wireRequestBody, request)
-	secondRecord := catalog.lookupUser(makeHTTPType(&expr.AttributeExpr{Type: second}), wireRequestBody, request)
-	responseRecord := catalog.lookupUser(makeHTTPType(&expr.AttributeExpr{Type: first}), wireResponseBody, response)
+	reusedRecord := catalog.lookupUser(WireAttribute(&expr.AttributeExpr{Type: first}), wireRequestBody, request)
+	secondRecord := catalog.lookupUser(WireAttribute(&expr.AttributeExpr{Type: second}), wireRequestBody, request)
+	responseRecord := catalog.lookupUser(WireAttribute(&expr.AttributeExpr{Type: first}), wireResponseBody, response)
 
 	require.Same(t, firstRecord, reusedRecord)
 	require.Len(t, map[string]struct{}{
@@ -42,7 +42,7 @@ func TestWireTypeCatalogRecursiveIdentityTerminates(t *testing.T) {
 	object.Set("next", &expr.AttributeExpr{Type: recursive})
 
 	catalog, generation := testWireTypeCatalog(t)
-	body := makeHTTPType(&expr.AttributeExpr{Type: recursive})
+	body := WireAttribute(&expr.AttributeExpr{Type: recursive})
 	policy := wireTypePolicy{request: true, pointer: true}
 	catalog.collect(body, wireRequestBody, policy)
 	linkTestWireTypeCatalog(t, generation, catalog)

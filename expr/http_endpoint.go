@@ -181,16 +181,20 @@ func (e *HTTPEndpointExpr) HasAbsoluteRoutes() bool {
 func (e *HTTPEndpointExpr) PathParams() *MappedAttributeExpr {
 	obj := Object{}
 	v := &ValidationExpr{}
-	pat := e.Params.Attribute() // need "attribute:name" style keys
 	for _, r := range e.Routes {
 		for _, p := range r.Params() {
-			att := pat.Find(p)
+			name := e.Params.KeyName(p)
+			att := e.Params.Find(name)
 			if att == nil {
 				continue
 			}
-			obj.Set(p, att)
-			if e.Params.IsRequired(p) {
-				v.AddRequired(p)
+			key := name
+			if name != p {
+				key += ":" + p
+			}
+			obj.Set(key, att)
+			if e.Params.IsRequired(name) {
+				v.AddRequired(name)
 			}
 		}
 	}
@@ -211,21 +215,13 @@ func (e *HTTPEndpointExpr) QueryParams() *MappedAttributeExpr {
 	}
 	pat := e.Params.Attribute() // need "attribute:name" style keys
 	for _, at := range *(pat.Type.(*Object)) {
-		found := false
-		for n := range pp {
-			if n == at.Name {
-				found = true
-				break
-			}
+		name := strings.Split(at.Name, ":")[0]
+		if _, found := pp[e.Params.ElemName(name)]; found {
+			continue
 		}
-		if !found {
-			obj.Set(at.Name, at.Attribute)
-			// when looking for required attributes we need the unmapped keys
-			// (i.e. without the "attribute:name" syntax)
-			attName := strings.Split(at.Name, ":")[0]
-			if e.Params.IsRequired(attName) {
-				v.AddRequired(attName)
-			}
+		obj.Set(at.Name, at.Attribute)
+		if e.Params.IsRequired(name) {
+			v.AddRequired(name)
 		}
 	}
 	at := &AttributeExpr{Type: &obj, Validation: v}
@@ -301,9 +297,13 @@ func (e *HTTPEndpointExpr) Prepare() {
 	e.Cookies = cookies
 	e.Params = params
 
-	// Initialize path params that are not defined explicitly in
+	// For each URL wildcard without an explicit Param mapping, infer its
+	// payload field by the same name. Mapped wildcards keep their authored field.
 	for _, r := range e.Routes {
 		for _, p := range r.Params() {
+			if _, mapped := params.reverseMap[p]; mapped {
+				continue
+			}
 			if a := params.Find(p); a == nil {
 				params.Merge(NewMappedAttributeExpr(&AttributeExpr{
 					Type: &Object{
@@ -1178,7 +1178,7 @@ func (r *RouteExpr) Validate() *eval.ValidationErrors {
 				verr.Add(r, "Route parameters are defined, but method payload is a map. Method payload must be a primitive or an object.")
 			case *Object, UserType:
 				for _, p := range rparams {
-					if r.Endpoint.MethodExpr.Payload.Find(p) == nil {
+					if r.Endpoint.MethodExpr.Payload.Find(r.Endpoint.Params.KeyName(p)) == nil {
 						verr.Add(r, "Route param %q not found in method payload", p)
 					}
 				}

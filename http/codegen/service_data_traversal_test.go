@@ -10,7 +10,7 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
-func TestMakeHTTPTypeDistinguishesEqualUIDOrigins(t *testing.T) {
+func TestWireAttributeDistinguishesEqualUIDOrigins(t *testing.T) {
 	first := locatedHTTPTraversalType("First", "shared", "first/types")
 	second := locatedHTTPTraversalType("Second", "shared", "second/types")
 	body := &expr.AttributeExpr{Type: &expr.Object{
@@ -18,7 +18,7 @@ func TestMakeHTTPTypeDistinguishesEqualUIDOrigins(t *testing.T) {
 		{Name: "second", Attribute: &expr.AttributeExpr{Type: second}},
 	}}
 
-	wire := makeHTTPType(body)
+	wire := WireAttribute(body)
 	object := expr.AsObject(wire.Type)
 	wireFirst := object.Attribute("first").Type.(expr.UserType)
 	wireSecond := object.Attribute("second").Type.(expr.UserType)
@@ -26,7 +26,7 @@ func TestMakeHTTPTypeDistinguishesEqualUIDOrigins(t *testing.T) {
 	require.NotContains(t, wireSecond.Attribute().Meta, "struct:pkg:path")
 }
 
-func TestMakeHTTPTypeStopsRecursiveUnionBranches(t *testing.T) {
+func TestWireAttributeStopsRecursiveUnionBranches(t *testing.T) {
 	node := &expr.UserTypeExpr{TypeName: "Node", UID: "node"}
 	next := &expr.Union{
 		TypeName: "Next",
@@ -42,7 +42,7 @@ func TestMakeHTTPTypeStopsRecursiveUnionBranches(t *testing.T) {
 		Meta: expr.MetaExpr{"struct:pkg:path": {"service/types"}},
 	}
 
-	wire := makeHTTPType(&expr.AttributeExpr{Type: node})
+	wire := WireAttribute(&expr.AttributeExpr{Type: node})
 	wireNode := wire.Type.(expr.UserType)
 	wireNext := expr.AsObject(wireNode).Attribute("next").Type.(*expr.Union)
 	wireRecursiveNode := wireNext.Values[1].Attribute.Type.(expr.UserType)

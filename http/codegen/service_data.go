@@ -1086,12 +1086,14 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 				)
 				{
 					initArgs := make([]*InitArgData, len(params))
-					pathParamsObj := expr.AsObject(httpEndpoint.PathParams().Type)
+					pathParams := httpEndpoint.PathParams()
+					pathParamsObj := expr.AsObject(pathParams.Type)
 					declaration := endpointSymbols.serverPaths[pathCount]
 					name := declaration.Name()
-					for j, arg := range params {
+					for j, parameter := range params {
+						arg := pathParams.KeyName(parameter)
 						patt := pathParamsObj.Attribute(arg)
-						att := makeHTTPType(patt)
+						att := WireAttribute(patt)
 						pointer := httpEndpoint.Params.IsPrimitivePointer(arg, true)
 						fieldName := codegen.Goify(arg, true)
 						if expr.IsObject(httpEndpoint.MethodExpr.Payload.Type) {
@@ -2086,71 +2088,6 @@ func collectReleasedWireNames(current, released expr.DataType, names map[expr.Us
 	}
 }
 
-// makeHTTPType traverses the attribute recursively and performs these actions:
-//
-// * removes aliased user type by replacing them with the underlying type.
-// * keeps unions as generated values with one selected branch.
-func makeHTTPType(att *expr.AttributeExpr) *expr.AttributeExpr {
-	att = expr.DupAtt(att)
-	return makeHTTPTypeRecursive(att, make(map[expr.UserType]struct{}))
-}
-
-func makeHTTPTypeRecursive(att *expr.AttributeExpr, seen map[expr.UserType]struct{}) *expr.AttributeExpr {
-	delete(att.Meta, "struct:pkg:path")
-	switch dt := att.Type.(type) {
-	case expr.UserType:
-		if dt == expr.Empty {
-			// Empty is a shared sentinel that expr.Dup deliberately never
-			// duplicates: rewriting its attribute would mutate global design
-			// state. There is nothing to flatten in it anyway.
-			return att
-		}
-		_, resultType := dt.(*expr.ResultTypeExpr)
-		alias := !resultType && !expr.IsObject(dt)
-		if alias {
-			// Keep the existing default/example choice from this definition.
-			att.DefaultValue = dt.Attribute().DefaultValue
-			att.UserExamples = dt.Attribute().UserExamples
-		}
-		origin := dt.Origin()
-		if _, ok := seen[origin]; !ok {
-			seen[origin] = struct{}{}
-			dt.SetAttribute(makeHTTPTypeRecursive(dt.Attribute(), seen))
-		}
-		if alias {
-			// Resolve the base first: RequestID -> UUID -> string must expose
-			// string to HTTP codecs, with the inherited UUID validation intact.
-			// Repeated references also need this already-shaped definition.
-			att.Type = dt.Attribute().Type
-			if v := dt.Attribute().Validation; v != nil {
-				if att.Validation == nil {
-					att.Validation = v
-				} else {
-					att.Validation.Merge(v)
-				}
-			}
-		}
-	case *expr.Array:
-		dt.ElemType = makeHTTPTypeRecursive(dt.ElemType, seen)
-	case *expr.Map:
-		dt.KeyType = makeHTTPTypeRecursive(dt.KeyType, seen)
-		dt.ElemType = makeHTTPTypeRecursive(dt.ElemType, seen)
-	case *expr.Object:
-		obj := make(expr.Object, len(*dt))
-		for i, nat := range *dt {
-			obj[i] = &expr.NamedAttributeExpr{Name: nat.Name, Attribute: makeHTTPTypeRecursive(nat.Attribute, seen)}
-		}
-		att.Type = &obj
-	case *expr.Union:
-		// Prepare every branch before the HTTP package catalog assigns the union's
-		// request, streaming request, response, or response-view name.
-		for _, branch := range dt.Values {
-			branch.Attribute = makeHTTPTypeRecursive(branch.Attribute, seen)
-		}
-	}
-	return att
-}
-
 // request returns the shaped HTTP request body for the given endpoint. The
 // returned attribute is a detached copy of the design body: aliased user
 // types are flattened and marshal tag meta may be added to it without
@@ -2162,7 +2099,7 @@ func (b *shapedBodies) request(e *expr.HTTPEndpointExpr) *expr.AttributeExpr {
 	if b.requests == nil {
 		b.requests = make(map[*expr.HTTPEndpointExpr]*expr.AttributeExpr)
 	}
-	att := makeHTTPType(e.Body)
+	att := WireAttribute(e.Body)
 	b.requests[e] = att
 	return att
 }
@@ -2194,7 +2131,7 @@ func (b *shapedBodies) streamingResult(e *expr.HTTPEndpointExpr) *expr.Attribute
 	if b.streamResults == nil {
 		b.streamResults = make(map[*expr.HTTPEndpointExpr]*expr.AttributeExpr)
 	}
-	att := makeHTTPType(e.MethodExpr.StreamingResult)
+	att := WireAttribute(e.MethodExpr.StreamingResult)
 	b.streamResults[e] = att
 	return att
 }
@@ -2208,7 +2145,7 @@ func (b *shapedBodies) response(resp *expr.HTTPResponseExpr) *expr.AttributeExpr
 	if b.responses == nil {
 		b.responses = make(map[*expr.HTTPResponseExpr]*expr.AttributeExpr)
 	}
-	att := makeHTTPType(resp.Body)
+	att := WireAttribute(resp.Body)
 	b.responses[resp] = att
 	return att
 }
@@ -2222,7 +2159,7 @@ func (b *shapedBodies) errorResponse(v *expr.HTTPErrorExpr) *expr.AttributeExpr 
 	if b.errors == nil {
 		b.errors = make(map[*expr.HTTPErrorExpr]*expr.AttributeExpr)
 	}
-	att := makeHTTPType(v.Response.Body)
+	att := WireAttribute(v.Response.Body)
 	b.errors[v] = att
 	return att
 }
@@ -4044,7 +3981,7 @@ func (sds *ServicesData) extractElements(kind httpElementKind, a *expr.MappedAtt
 				stringSlice = arr.ElemType.Type.Kind() == expr.StringKind
 			}
 		}
-		att := makeHTTPType(attr)
+		att := WireAttribute(attr)
 		layout, err := svcCtx.Scope.(codegen.GoTypeLayoutResolver).GoTypeLayout(att, svcCtx.LayoutPolicy())
 		if err != nil {
 			sds.recordLinkError(err)
