@@ -30,6 +30,8 @@ func TestGeneratedAuthenticationRejection(t *testing.T) {
 
 // authenticationRuntimeDSL gives each scheme its own method, then exercises
 // combined requirements and alternatives with their applicable credentials.
+// Every credential has a renamed Go field; authentication must use that field
+// while HTTP headers and JSON-RPC parameter names keep their authored names.
 func authenticationRuntimeDSL() {
 	dsl.API("authentication rejection", func() {})
 	basic := dsl.BasicAuthSecurity("basic", func() {
@@ -91,21 +93,21 @@ func authenticationRuntimeDSL() {
 					dsl.Payload(func() {
 						switch name {
 						case "basic", "combined", "alternative":
-							dsl.Username("user", dsl.String)
-							dsl.Password("pass", dsl.String)
+							dsl.Username("user", dsl.String, func() { dsl.Meta("struct:field:name", "AuthUser") })
+							dsl.Password("pass", dsl.String, func() { dsl.Meta("struct:field:name", "AuthPass") })
 							dsl.Required("user", "pass")
 						case "key":
-							dsl.APIKey("key", "key", dsl.String)
+							dsl.APIKey("key", "key", dsl.String, func() { dsl.Meta("struct:field:name", "AuthKey") })
 							dsl.Required("key")
 						case "bearer":
-							dsl.BearerToken("token", dsl.String)
+							dsl.BearerToken("token", dsl.String, func() { dsl.Meta("struct:field:name", "AuthToken") })
 							dsl.Required("token")
 						case "oauth":
-							dsl.AccessToken("token", dsl.String)
+							dsl.AccessToken("token", dsl.String, func() { dsl.Meta("struct:field:name", "AuthToken") })
 							dsl.Required("token")
 						}
 						if name == "jwt" || name == "combined" || name == "alternative" {
-							dsl.Token("token", dsl.String)
+							dsl.Token("token", dsl.String, func() { dsl.Meta("struct:field:name", "AuthToken") })
 							dsl.Required("token")
 						}
 					})
@@ -128,7 +130,7 @@ func authenticationRuntimeDSL() {
 				dsl.Scope("read")
 			})
 			dsl.Payload(func() {
-				dsl.AccessToken("access", dsl.String)
+				dsl.AccessToken("access", dsl.String, func() { dsl.Meta("struct:field:name", "AuthAccess") })
 				dsl.Required("access")
 			})
 			dsl.Result(dsl.String)
