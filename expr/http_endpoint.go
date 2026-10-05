@@ -696,7 +696,7 @@ func (e *HTTPEndpointExpr) Validate() error {
 	}
 
 	// Make sure parameters and headers use compatible types
-	verr.Merge(e.validateParams())
+	verr.Merge(e.ValidateParams())
 	verr.Merge(e.validateHeadersAndCookies())
 
 	// Validate body attribute (required fields exist etc.)
@@ -1005,86 +1005,6 @@ func (e *HTTPEndpointExpr) Finalize() {
 	for _, herr := range e.HTTPErrors {
 		herr.Finalize(e)
 	}
-}
-
-// validateParams checks the endpoint parameters are of an allowed type and the
-// method payload contains the parameters.
-func (e *HTTPEndpointExpr) validateParams() *eval.ValidationErrors {
-	if e.Params.IsEmpty() {
-		return nil
-	}
-
-	var (
-		pparams = DupMappedAtt(e.PathParams())
-		qparams = DupMappedAtt(e.QueryParams())
-	)
-	// We have to figure out the actual type for the params because the actual
-	// type is initialized only during the finalize phase. In the validation
-	// phase, all param types are string type by default unless specified
-	// explicitly.
-	initAttr(pparams, e.MethodExpr.Payload)
-	initAttr(qparams, e.MethodExpr.Payload)
-
-	invalidTypeErr := func(verr *eval.ValidationErrors, e *HTTPEndpointExpr, name string) {
-		verr.Add(e, "path parameter %s cannot be an object, path parameter types must be primitive, array or map (query string only)", name)
-	}
-	verr := new(eval.ValidationErrors)
-	WalkMappedAttr(pparams, func(name, _ string, a *AttributeExpr) error { // nolint: errcheck
-		switch {
-		case IsObject(a.Type), IsMap(a.Type), IsUnion(a.Type):
-			invalidTypeErr(verr, e, name)
-		case IsArray(a.Type):
-			arr := AsArray(a.Type)
-			if !IsPrimitive(arr.ElemType.Type) {
-				verr.Add(e, "elements of array path parameter %q must be primitive", name)
-			}
-		default:
-			ctx := fmt.Sprintf("path parameter %s", name)
-			verr.Merge(a.Validate(ctx, e))
-		}
-		return nil
-	})
-	WalkMappedAttr(qparams, func(name, _ string, a *AttributeExpr) error { // nolint: errcheck
-		switch {
-		case IsObject(a.Type), IsUnion(a.Type):
-			invalidTypeErr(verr, e, name)
-		case IsArray(a.Type):
-			arr := AsArray(a.Type)
-			if !IsPrimitive(arr.ElemType.Type) {
-				verr.Add(e, "elements of array query parameter %q must be primitive", name)
-			}
-		default:
-			ctx := fmt.Sprintf("query parameter %s", name)
-			verr.Merge(a.Validate(ctx, e))
-		}
-		return nil
-	})
-	if e.MethodExpr.Payload != nil {
-		switch e.MethodExpr.Payload.Type.(type) {
-		case *Object, UserType:
-			WalkMappedAttr(pparams, func(name, _ string, _ *AttributeExpr) error { // nolint: errcheck
-				if e.MethodExpr.Payload.Find(name) == nil {
-					verr.Add(e, "Path parameter %q not found in payload.", name)
-				}
-				return nil
-			})
-			WalkMappedAttr(qparams, func(name, _ string, _ *AttributeExpr) error { // nolint: errcheck
-				if e.MethodExpr.Payload.Find(name) == nil {
-					verr.Add(e, "Query string parameter %q not found in payload.", name)
-				}
-				return nil
-			})
-		case *Array:
-			if len(*AsObject(pparams.Type))+len(*AsObject(qparams.Type)) > 1 {
-				verr.Add(e, "Payload type is array but HTTP endpoint defines multiple parameters. At most one parameter must be defined and it must be an array.")
-			}
-		case *Map:
-			if len(*AsObject(pparams.Type))+len(*AsObject(qparams.Type)) > 1 {
-				verr.Add(e, "Payload type is map but HTTP endpoint defines multiple parameters. At most one query string parameter must be defined and it must be a map.")
-			}
-		}
-	}
-	return verr
 }
 
 // validateHeadersAndCookies makes sure headers and cookies are of an allowed
