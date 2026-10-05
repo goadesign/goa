@@ -152,9 +152,12 @@ func planGRPCImports(generation *codegen.Generation, plan *Plan) error {
 		if facts.hasEndpoints {
 			clientFileRequired = append(clientFileRequired,
 				codegen.SimpleImport("context"),
+				codegen.SimpleImport("errors"),
 				codegen.GoaImport(""),
 				codegen.GoaNamedImport("grpc", "goagrpc"),
 				codegen.GoaNamedImport("grpc/pb", "goapb"),
+				codegen.SimpleImport("google.golang.org/grpc/codes"),
+				codegen.SimpleImport("google.golang.org/grpc/status"),
 			)
 		}
 		clientFileGenerated := []*codegen.ImportSpec{protobufImport}

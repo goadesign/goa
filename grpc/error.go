@@ -176,8 +176,19 @@ func NewStatusError(code codes.Code, err error, details ...protoiface.MessageV1)
 // chain of wrappers keeps its code and ordered details. Otherwise a Goa
 // ServiceError's name and traits determine the code. Status discovery stops
 // at an independent join: unowned branches must agree on the code, or the caller receives Unknown.
-// Joined branches do not supply details for the whole result.
+// Joined branches do not supply details for the whole result. A single raw
+// context cancellation or deadline without a Goa error or explicit status
+// returns its native code and full error text, without service-error details.
 func EncodeError(err error) error {
+	scope := scopeError(err)
+	if scope.service == nil && !scope.explicit && len(scope.causes) == 0 {
+		// A single context stop has a standard transport code. Return that code
+		// without labeling the stopped operation as a service fault.
+		st := status.FromContextError(err)
+		if st.Code() == codes.Canceled || st.Code() == codes.DeadlineExceeded {
+			return st.Err()
+		}
+	}
 	st := encodingStatus(err)
 	if s, err := st.WithDetails(NewErrorResponse(err)); err == nil {
 		return s.Err()
@@ -250,8 +261,10 @@ func scopeError(err error) errorScope {
 		}
 	}
 	// Without independent branches, retain errors.As support for wrappers
-	// that expose a Goa error through their own As method.
+	// that expose Goa fields or an explicit gRPC status through their As method.
 	errors.As(err, &scope.service)
+	var statusOwner interface{ GRPCStatus() *status.Status }
+	scope.explicit = scope.explicit || errors.As(err, &statusOwner)
 	return scope
 }
 

@@ -37,35 +37,47 @@ func (c *{{ .ClientStructDeclaration.Name }}) {{ .Method.VarName }}() goa.Endpoi
 					{{- end }}
 					case *goapb.ErrorResponse:
 						return nil, goagrpc.NewServiceErrorWithCause(err, message)
-					default:
-						if ctxErr := goagrpc.ContextError(ctx, err); ctxErr != nil {
-							return nil, ctxErr
-						}
-						{{- if $retry }}
-						return nil, goagrpc.NewTransportError(err)
-						{{- else }}
-						return nil, goa.Fault("%s", err.Error())
-						{{- end }}
 					}
 				{{- else }}
-					{{- if $retry }}
-					// Decode a Goa error detail before returning a matching context error or preserving the transport error.
-					{{- else }}
-					// Decode a Goa error detail before returning a matching context error or falling back to Fault.
-					{{- end }}
-					resp := goagrpc.DecodeError(err)
-					if eresp, ok := resp.(*goapb.ErrorResponse); ok {
-						return nil, goagrpc.NewServiceErrorWithCause(err, eresp)
+					// Decode service fields before considering a native context stop.
+					if message, ok := goagrpc.DecodeError(err).(*goapb.ErrorResponse); ok {
+						return nil, goagrpc.NewServiceErrorWithCause(err, message)
 					}
+				{{- end }}
 					if ctxErr := goagrpc.ContextError(ctx, err); ctxErr != nil {
 						return nil, ctxErr
+					}
+					// Inspect one cause chain so an independent failure cannot select
+					// a child's cancellation code for the complete returned error.
+					singleCause := true
+					for cause := err; cause != nil && singleCause; {
+						if joined, ok := cause.(interface{ Unwrap() []error }); ok {
+							cause = nil
+							for _, child := range joined.Unwrap() {
+								if child != nil {
+									if cause != nil {
+										singleCause = false
+										break
+									}
+									cause = child
+								}
+							}
+						} else {
+							cause = errors.Unwrap(cause)
+						}
+					}
+					if singleCause {
+						// A remote stop keeps its status while the caller is still active.
+						switch status.Code(err) {
+						case codes.Canceled, codes.DeadlineExceeded:
+							return nil, err
+						}
 					}
 					{{- if $retry }}
 					return nil, goagrpc.NewTransportError(err)
 					{{- else }}
 					return nil, goa.Fault("%s", err.Error())
 					{{- end }}
-				{{- end }}
 				}
 				return res, nil
 				{{- if $retry }}
