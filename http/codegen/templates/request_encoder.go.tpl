@@ -1,4 +1,8 @@
 {{- $returnsID := and .IsJSONRPC (not .IsJSONRPCNotification) }}
+{{- $usesPayload := or (not .IsJSONRPC) .Payload.Request.ClientBody .Payload.Request.Headers .Payload.Request.Cookies .Payload.Request.QueryParams .BasicScheme }}
+{{- with .JSONRPCRequestID }}
+{{- if .Attribute }}{{- $usesPayload = true }}{{- end }}
+{{- end }}
 {{- $omitSelectedBody := .Payload.Request.BodyFieldCanBeAbsent }}
 {{- if .IsJSONRPC }}
 	{{- $omitSelectedBody = and $omitSelectedBody .Payload.Request.Params.OmitAbsent }}
@@ -20,7 +24,7 @@ func {{ .RequestEncoderDeclaration.Name }}(encoder func(*http.Request) goahttp.E
 		}
 		p := data.Payload
 		{{- else }}
-		p, ok := v.({{ .Payload.Ref }})
+		{{ if $usesPayload }}p{{ else }}_{{ end }}, ok := v.({{ .Payload.Ref }})
 		if !ok {
 			return {{ if $returnsID }}"", {{ end }}goahttp.ErrInvalidType("{{ .ServiceName }}", "{{ .Method.Name }}", "{{ .Payload.Ref }}", v)
 		}

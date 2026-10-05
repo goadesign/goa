@@ -255,7 +255,8 @@ func copyJSONRPCPayload(payload *PayloadData) *JSONRPCPayloadData {
 			ClientBody:           copyJSONRPCBody(request.ClientBody),
 			ServerBody:           copyJSONRPCBody(request.ServerBody),
 			PayloadInit:          copyInitData(request.PayloadInit),
-			QueryParams:          copyJSONRPCQueryParams(request.QueryParams),
+			PathParams:           copyJSONRPCParamBindings(request.PathParams),
+			QueryParams:          copyJSONRPCParamBindings(request.QueryParams),
 			Headers:              copyJSONRPCHeaders(request.Headers),
 			Cookies:              copyJSONRPCCookies(request.Cookies),
 			PayloadAttr:          request.PayloadAttr,
@@ -447,10 +448,10 @@ func copyDataType(dataType expr.DataType) expr.DataType {
 	return expr.Dup(dataType)
 }
 
-// copyJSONRPCQueryParams retains the planned query conversions without sharing
-// mutable types, defaults or examples. Command-line parsing remains owned by
-// the original HTTP plan and is not needed by JSON-RPC request templates.
-func copyJSONRPCQueryParams(source []*ParamData) []*ParamData {
+// copyJSONRPCParamBindings copies planned path or query conversions so callers
+// can change types, defaults and examples without changing the HTTP plan.
+// Command-line parsing stays with the original HTTP plan.
+func copyJSONRPCParamBindings(source []*ParamData) []*ParamData {
 	result := make([]*ParamData, len(source))
 	for index, parameter := range source {
 		copy := *parameter

@@ -349,7 +349,8 @@ type (
 		DecoderReturnValue string
 	}
 
-	// JSONRPCRequestData contains the request body values read by JSON-RPC files.
+	// JSONRPCRequestData contains HTTP inputs and protocol parameters read by
+	// JSON-RPC request files.
 	JSONRPCRequestData struct {
 		// ClientBody describes the request body encoded by the client.
 		ClientBody *JSONRPCBodyData
@@ -364,8 +365,9 @@ type (
 		// QueryParams contains explicitly mapped HTTP query inputs. These values
 		// remain outside the JSON-RPC params member.
 		QueryParams []*ParamData
-		// PathParams is empty because every JSON-RPC method uses the service route.
-		PathParams []any
+		// PathParams contains typed inputs decoded from the shared service route.
+		// These values remain outside the JSON-RPC params member.
+		PathParams []*ParamData
 		// PayloadAttr is the payload field encoded as the JSON request body.
 		PayloadAttr string
 		// MustHaveBody reports whether an empty JSON request is invalid.
@@ -1357,11 +1359,11 @@ func planImports(generation *codegen.Generation, transport transportKind, plans 
 				fileKinds := []httpGeneratedFile{
 					{kind: httpCodecFile, name: "encode_decode.go"},
 					{kind: httpTypesFile, name: "types.go"},
+					{kind: httpPathsFile, name: "paths.go"},
 				}
 				if transport == httpTransport {
 					fileKinds = append(fileKinds,
 						httpGeneratedFile{kind: httpTransportFile, name: side + ".go"},
-						httpGeneratedFile{kind: httpPathsFile, name: "paths.go"},
 					)
 				}
 				if index == 0 && httpServiceHasPayloadBuilder(transportService) {
