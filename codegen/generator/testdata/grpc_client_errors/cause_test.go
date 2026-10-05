@@ -146,7 +146,7 @@ func TestGeneratedGenericOrderedDetails(t *testing.T) {
 }
 
 // TestGeneratedGenericFirstDetail keeps undecodable first details on the
-// existing fallback path, even when a valid generic detail follows.
+// received transport status, even when a valid generic detail follows.
 func TestGeneratedGenericFirstDetail(t *testing.T) {
 	generic, err := anypb.New(&goapb.ErrorResponse{Name: "rejected", Id: "remote-id"})
 	require.NoError(t, err)
@@ -169,19 +169,14 @@ func TestGeneratedGenericFirstDetail(t *testing.T) {
 				ctx := catalogContext(t)
 				_, err := method.endpoint(client)(ctx, &gencatalog.Selection{Key: "book"})
 				var decoded *goa.ServiceError
-				require.ErrorAs(t, err, &decoded)
-				require.Equal(t, "fault", decoded.Name)
-				require.True(t, decoded.Fault)
-				require.False(t, decoded.Timeout)
-				require.False(t, decoded.Temporary)
-				require.NotEqual(t, "remote-id", decoded.ID)
+				require.False(t, errors.As(err, &decoded), "undecodable details must not invent a service fault")
+				require.Equal(t, codes.Canceled, status.Code(err))
 				require.NoError(t, ctx.Err())
-				if method.idempotent {
-					require.Equal(t, codes.Canceled, status.Code(err))
-					require.NotNil(t, errors.Unwrap(err))
-				} else {
-					require.Equal(t, codes.Unknown, status.Code(err))
-					require.Nil(t, errors.Unwrap(err))
+				require.NotErrorIs(t, err, context.Canceled)
+				received := status.Convert(err).Proto().Details
+				require.Len(t, received, 3, "the server still appends its generic detail to an explicit status")
+				for i, detail := range status.Convert(original).Proto().Details {
+					require.True(t, proto.Equal(detail, received[i]))
 				}
 			})
 		}

@@ -132,9 +132,15 @@ func TestGeneratedWholeOperationEncoding(t *testing.T) {
 							require.True(t, proto.Equal(response, goagrpc.NewErrorResponse(decoded)))
 							require.Equal(t, response.Msg, err.Error())
 							require.Same(t, original, errors.Unwrap(err))
-						} else if method == "Watch" {
+						} else if method == "Watch" || test.code == codes.Canceled || test.code == codes.DeadlineExceeded {
+							// A streaming error or received native stop keeps its code and details.
+							// The server's joined causes are not a client-side error join.
 							require.Same(t, original, err)
 							require.Equal(t, original.Error(), err.Error())
+							require.Equal(t, test.code, status.Code(err))
+							require.Equal(t, raw.Proto(), status.Convert(err).Proto())
+							var serviceError *goa.ServiceError
+							require.False(t, errors.As(err, &serviceError))
 						} else {
 							decoded, ok := err.(*goa.ServiceError)
 							require.True(t, ok)
@@ -307,6 +313,16 @@ func rpcEncodingCases(t *testing.T) []rpcEncodingCase {
 			{TypeUrl: "type.googleapis.com/example.Unknown"}, later,
 		},
 	})
+	deadlineWhole := status.FromProto(&statuspb.Status{
+		Code:    int32(codes.DeadlineExceeded),
+		Message: "explicit complete deadline with opaque details",
+		Details: whole.Proto().Details,
+	})
+	deniedWhole := status.FromProto(&statuspb.Status{
+		Code:    int32(codes.PermissionDenied),
+		Message: "explicit complete denial with opaque details",
+		Details: whole.Proto().Details,
+	})
 	owner := goa.NewServiceError(canceled, "bad_request", false, false, false)
 	owner.ID, owner.Message = "request-id", "catalog selection rejected"
 	cases := []rpcEncodingCase{
@@ -331,6 +347,8 @@ func rpcEncodingCases(t *testing.T) []rpcEncodingCase {
 			{"timeout join", join(goa.PermanentTimeoutError("expired", "read expired"), goa.TemporaryTimeoutError("wait_expired", "wait expired")), codes.DeadlineExceeded, nil, nil},
 			{"owned join", owned, codes.Internal, owned, nil},
 			{"explicit whole join", &operationStatus{join(canceled, fault), whole}, codes.Canceled, nil, whole},
+			{"explicit opaque deadline", &operationStatus{join(canceled, fault), deadlineWhole}, codes.DeadlineExceeded, nil, deadlineWhole},
+			{"explicit opaque denial", &operationStatus{join(canceled, fault), deniedWhole}, codes.PermissionDenied, nil, deniedWhole},
 			{"explicit generic whole", &operationStatus{join(canceled, fault), wholeGeneric}, codes.DeadlineExceeded, nil, wholeGeneric},
 			{"malformed first whole", &operationStatus{join(canceled, fault), malformed}, codes.Canceled, nil, malformed},
 			{"unknown first whole", &operationStatus{join(canceled, fault), unknown}, codes.Canceled, nil, unknown},
