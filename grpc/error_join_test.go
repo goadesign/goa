@@ -178,8 +178,6 @@ func encodingCases(t *testing.T) []encodingCase {
 	require.NoError(t, err)
 	cases := []encodingCase{
 		{"ordinary", errors.New("catalog failed"), codes.Unknown, nil, nil},
-		{"raw canceled", context.Canceled, codes.Unknown, nil, nil},
-		{"raw deadline", context.DeadlineExceeded, codes.Unknown, nil, nil},
 		{"raw duplicate", errors.Join(context.Canceled, context.Canceled), codes.Unknown, nil, nil},
 		{"raw deadline duplicate", errors.Join(context.DeadlineExceeded, context.DeadlineExceeded), codes.Unknown, nil, nil},
 		{"fault", fault, codes.Internal, fault, nil},

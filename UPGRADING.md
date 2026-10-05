@@ -199,6 +199,44 @@ or stored-data migration.
 See [#4016](https://github.com/goadesign/goa/pull/4016) and
 [#4014](https://github.com/goadesign/goa/pull/4014).
 
+## Native gRPC cancellation and deadline results
+
+`grpc.EncodeError` now maps a single cause matching `context.Canceled` or
+`context.DeadlineExceeded` through `errors.Is` to the matching native gRPC
+status, using the same matching rules as gRPC. Ordinary
+wrappers and joins with one non-nil cause keep the same result and full error
+text. No generic `ErrorResponse` is fabricated for that stop: a canceled
+operation is no longer described as a service fault. Previously these errors
+returned `Unknown` with fault details.
+
+A named `*goa.ServiceError`, a generated declared error response, or an explicit
+gRPC status still owns its response.
+The server still encodes independent joined failures with their existing
+complete-error code and metadata, including two separate context failures.
+Provider or domain errors that wrap a context cause retain their declared meaning.
+
+Regenerated clients preserve an otherwise undecoded `Canceled` or
+`DeadlineExceeded` response while the local caller remains active. They retain
+its text and any undecodable details without searching later details or
+inventing a service-error name. When the local context has ended and its code
+matches, existing caller-context matching also exposes that local context
+cause. Decodable service details still take precedence. This also preserves an
+explicit status supplied for a server error with several joined causes: the
+client receives one status and keeps its code and details. If a client
+interceptor joins the received status with a separate local error, the existing
+complete-error handling still applies. Receiving a remote stop does not establish
+that the caller canceled, that side effects were undone, or that replay is safe.
+Native stops do not introduce automatic retries. Existing explicit retry traits
+remain governed by the application's retry policy.
+
+Upgrade the runtime and generator together and regenerate clients. An older
+ordinary unary client may replace a new native stop with a fault; regenerated
+clients continue to read older generic service details. Server-runtime upgrades
+change raw context encoding without regeneration, so deploy matching clients
+before or with servers. There is no protobuf, request, or stored-data migration.
+Rollback runtime and generated clients together to restore the previous raw
+context behavior.
+
 ## v3.33.0: generic gRPC errors retain their cause
 
 Regenerated clients decode a generic protobuf `ErrorResponse` into the same
@@ -258,9 +296,10 @@ generic rules. Unanimous branch codes become the result code; disagreement
 becomes `Unknown`, regardless of join order. Details describe the complete
 result: Name `fault`, a fresh ID, the exact original error text, Fault true,
 Timeout false, and Temporary false. No child's status details, Name, ID,
-history, timeout, or retry trait describe the whole join. Raw Go context errors,
-including duplicates, still encode as `Unknown` unless a caller has supplied
-an explicit status for the complete result. No context origin is inferred.
+history, timeout, or retry trait describe the whole join. Independent raw Go
+context errors, including duplicates, still encode as `Unknown` unless a caller
+has supplied an explicit status for the complete result. No context origin is
+inferred. Single context stops are described above.
 
 This intentionally changes code and metadata selection for independent joins.
 Consumers relying on a child's name, occurrence ID, shorter text, or retry
