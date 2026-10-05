@@ -1,6 +1,7 @@
 // These sources run beside generated services. Authentication callbacks record
-// their inputs and the business methods record dispatch, so the tests can prove
-// the origin of an error rather than infer it from a status or message.
+// their inputs and the business methods record dispatch. The same error can
+// arrive before or after a method runs, so transport retries cannot infer
+// dispatch from the returned error, its name or its response status.
 package generator
 
 const authenticationRuntimeTest = `package gen_test
@@ -40,7 +41,11 @@ type (
 		methodError   error
 		methodContext context.Context
 	}
-	rpcProbe struct{ authProbe }
+	rpcProbe    struct{ authProbe }
+	nestedProbe struct {
+		authProbe
+		inner *authProbe
+	}
 )
 
 func (s *authProbe) authenticate(ctx context.Context, name, credential string, scopes []string) (context.Context, error) {
@@ -99,7 +104,46 @@ func (s *rpcProbe) Run(ctx context.Context, _ *genrpc.RunPayload) (string, error
 	return s.finish(ctx)
 }
 
-func TestAuthenticationOrigin(t *testing.T) {
+func (s *nestedProbe) Basic(ctx context.Context, _ *genprobe.BasicPayload) (string, error) {
+	s.dispatches++
+	_, err := genprobe.NewEndpoints(s.inner).Oauth(ctx, &genprobe.OauthPayload{Token: "nested-token"})
+	return "", err
+}
+
+func TestNestedAuthenticationPreservesOriginalError(t *testing.T) {
+	failure := goa.PermanentError("denied", "inner credential rejected")
+	inner := &authProbe{failures: map[string]error{"oauth": failure}}
+	outer := &nestedProbe{inner: inner}
+	_, err := genprobe.NewEndpoints(outer).Basic(t.Context(), &genprobe.BasicPayload{User: "user", Pass: "pass"})
+	require.Equal(t, 1, outer.dispatches)
+	require.Zero(t, inner.dispatches)
+	require.ErrorIs(t, err, failure)
+	require.Same(t, failure, err)
+}
+
+func TestMiddlewareAuthenticationPreservesOriginalError(t *testing.T) {
+	failure := goa.PermanentError("denied", "inner credential rejected")
+	inner := &authProbe{failures: map[string]error{"oauth": failure}}
+	outer := &authProbe{}
+	endpoints := genprobe.NewEndpoints(outer)
+	endpoints.Use(func(next goa.Endpoint) goa.Endpoint {
+		return func(ctx context.Context, payload any) (any, error) {
+			result, err := next(ctx, payload)
+			if err != nil {
+				return result, err
+			}
+			_, err = genprobe.NewEndpoints(inner).Oauth(ctx, &genprobe.OauthPayload{Token: "nested-token"})
+			return result, err
+		}
+	})
+	_, err := endpoints.Basic(t.Context(), &genprobe.BasicPayload{User: "user", Pass: "pass"})
+	require.Equal(t, 1, outer.dispatches)
+	require.Zero(t, inner.dispatches)
+	require.ErrorIs(t, err, failure)
+	require.Same(t, failure, err)
+}
+
+func TestAuthenticationErrorsAndDispatch(t *testing.T) {
 	failure := goa.PermanentError("denied", "credential rejected")
 	for _, test := range []struct {
 		name        string
@@ -129,9 +173,7 @@ func TestAuthenticationOrigin(t *testing.T) {
 				s := &authProbe{failures: map[string]error{test.name: cause}}
 				result, err := test.endpoint(genprobe.NewEndpoints(s))(t.Context(), test.payload)
 				require.Nil(t, result)
-				var rejection *security.AuthenticationError
-				require.ErrorAs(t, err, &rejection)
-				require.Same(t, cause, errors.Unwrap(rejection))
+				require.Same(t, cause, err)
 				require.ErrorIs(t, err, failure)
 				require.Equal(t, cause.Error(), err.Error())
 				require.Zero(t, s.dispatches)
@@ -142,7 +184,6 @@ func TestAuthenticationOrigin(t *testing.T) {
 				s = &authProbe{methodError: cause}
 				_, err = test.endpoint(genprobe.NewEndpoints(s))(t.Context(), test.payload)
 				require.Same(t, cause, err)
-				require.False(t, errors.As(err, &rejection))
 				require.Equal(t, 1, s.dispatches)
 				require.Equal(t, test.name, s.methodContext.Value(authContextKey{}))
 			}
@@ -187,8 +228,6 @@ func TestRequirementsAndAlternatives(t *testing.T) {
 				require.Equal(t, want, scopes)
 			}
 			if test.cause != nil {
-				var rejection *security.AuthenticationError
-				require.ErrorAs(t, err, &rejection)
 				require.ErrorIs(t, err, test.cause)
 				require.Nil(t, result)
 				require.Zero(t, s.dispatches)
@@ -228,8 +267,6 @@ func TestConfiguredAuthenticationCallback(t *testing.T) {
 		require.Equal(t, 1, calls)
 		require.Empty(t, s.calls)
 		if reject {
-			var rejection *security.AuthenticationError
-			require.ErrorAs(t, err, &rejection)
 			require.ErrorIs(t, err, failure)
 			require.Nil(t, result)
 			require.Zero(t, s.dispatches)

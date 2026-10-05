@@ -12,9 +12,7 @@ func NewSecureWithAPIKeyOverrideEndpoint(s Service, authAPIKeyFn security.AuthAP
 		}
 		ctx, err = authAPIKeyFn(ctx, string(p.Key), &sc)
 		if err != nil {
-			// All authentication alternatives failed. Keep the original error
-			// and report that the business method has not been called.
-			return nil, security.NewAuthenticationError(err)
+			return nil, err
 		}
 		return nil, s.SecureWithAPIKeyOverride(ctx, p)
 	}

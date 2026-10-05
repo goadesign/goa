@@ -20,9 +20,7 @@ func NewEndpointWithSkipRequestBodyEncodeDecodeEndpoint(s Service, authBasicFn s
 		}
 		ctx, err = authBasicFn(ctx, user, pass, &sc)
 		if err != nil {
-			// All authentication alternatives failed. Keep the original error
-			// and report that the business method has not been called.
-			return nil, security.NewAuthenticationError(err)
+			return nil, err
 		}
 		return nil, s.EndpointWithSkipRequestBodyEncodeDecode(ctx, ep.Payload, ep.Body)
 	}
