@@ -21,13 +21,13 @@ func {{ .ServerInitDeclaration.Name }}(
 	}
 	// Install the request handler required by this service's methods.
 	{{- if hasMixedTransports }}
-	s.Handler = http.HandlerFunc(s.ServeHTTP)
+	s.Handler = http.HandlerFunc(s.handleMixed)
 	{{- else if isSSEEndpoint (index .Endpoints 0) }}
 	// handleSSE writes each result as a server-sent event.
 	s.Handler = http.HandlerFunc(s.handleSSE)
 	{{- else }}
-	// ServeHTTP handles ordinary JSON-RPC request bodies.
-	s.Handler = http.HandlerFunc(s.ServeHTTP)
+	// handleHTTP handles ordinary JSON-RPC request bodies.
+	s.Handler = http.HandlerFunc(s.handleHTTP)
 	{{- end }}
 	return s
 }

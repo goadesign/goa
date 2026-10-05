@@ -1,5 +1,5 @@
-// ServeHTTP decodes one request and uses the response type designed for its method.
-func (s *{{ .ServerStructDeclaration.Name }}) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+// handleMixed decodes one request and uses the response type designed for its method.
+func (s *{{ .ServerStructDeclaration.Name }}) handleMixed(w http.ResponseWriter, r *http.Request) {
 	acceptJSON := false
 	acceptSSE := false
 	acceptValues := r.Header.Values("Accept")

@@ -203,7 +203,7 @@ func New(
 		errhandler: errhandler,
 	}
 	// Install the request handler required by this service's methods.
-	s.Handler = http.HandlerFunc(s.ServeHTTP)
+	s.Handler = http.HandlerFunc(s.handleMixed)
 	return s
 }
 
@@ -222,11 +222,17 @@ func (s *Server) Use(m func(http.Handler) http.Handler) {
 	s.Handler = m(s.Handler)
 }
 
+// ServeHTTP sends each HTTP request through the installed middleware before
+// the generated handler writes its JSON-RPC response or stream.
+func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	s.Handler.ServeHTTP(w, r)
+}
+
 // MethodNames returns the methods served.
 func (s *Server) MethodNames() []string { return feed.MethodNames[:] }
 
-// ServeHTTP decodes one request and uses the response type designed for its method.
-func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+// handleMixed decodes one request and uses the response type designed for its method.
+func (s *Server) handleMixed(w http.ResponseWriter, r *http.Request) {
 	acceptJSON := false
 	acceptSSE := false
 	acceptValues := r.Header.Values("Accept")
@@ -537,7 +543,8 @@ func (s *Server) processSSERequest(ctx context.Context, r *http.Request, req *js
 
 // Mount configures the mux to serve the JSON-RPC Feed service methods.
 func Mount(mux goahttp.Muxer, h *Server) {
-	// ServeHTTP chooses ordinary JSON-RPC handling or server-sent events.
+	// Mounted requests pass through the configured HTTP middleware before the
+	// server sends a JSON-RPC response or a stream of events.
 	mux.Handle("POST", "/feed", h.ServeHTTP)
 }
 

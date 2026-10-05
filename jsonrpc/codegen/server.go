@@ -96,10 +96,10 @@ func serverFile(planned *servicePlan) *codegen.File {
 	// Add the request handlers needed by this service.
 	switch {
 	case planned.hasHTTP && planned.hasSSE:
-		// ServeHTTP chooses an ordinary JSON-RPC response or server-sent events
+		// handleMixed chooses an ordinary JSON-RPC response or server-sent events
 		// from the request's Accept header.
 		sections = append(sections, &codegen.SectionTemplate{Name: "jsonrpc-mixed-server-handler", Source: jsonrpcTemplates.Read(mixedServerHandlerT), FuncMap: funcs, Data: renderData})
-		// Add both handlers called by ServeHTTP.
+		// Write the ordinary and streaming request processors used by handleMixed.
 		sections = append(sections, &codegen.SectionTemplate{Name: "jsonrpc-server-handler", Source: jsonrpcTemplates.Read(serverHandlerT), FuncMap: funcs, Data: renderData})
 		sections = append(sections, &codegen.SectionTemplate{Name: "jsonrpc-sse-server-handler", Source: jsonrpcTemplates.Read(sseServerHandlerT), FuncMap: funcs, Data: renderData})
 	case planned.hasSSE:
@@ -108,19 +108,8 @@ func serverFile(planned *servicePlan) *codegen.File {
 		sections = append(sections, &codegen.SectionTemplate{Name: "jsonrpc-server-handler", Source: jsonrpcTemplates.Read(serverHandlerT), FuncMap: funcs, Data: renderData})
 	}
 
-	// Record which request handlers this service needs.
-	mountData := struct {
-		httpcodegen.JSONRPCServiceSnapshot
-		HasSSE   bool
-		HasMixed bool
-	}{
-		JSONRPCServiceSnapshot: data,
-		HasSSE:                 planned.hasSSE,
-		HasMixed:               planned.hasHTTP && planned.hasSSE,
-	}
-
 	sections = append(sections,
-		&codegen.SectionTemplate{Name: "jsonrpc-server-mount", Source: jsonrpcTemplates.Read(serverMountT), Data: mountData},
+		&codegen.SectionTemplate{Name: "jsonrpc-server-mount", Source: jsonrpcTemplates.Read(serverMountT), Data: renderData},
 	)
 
 	for _, e := range planned.endpoints {
