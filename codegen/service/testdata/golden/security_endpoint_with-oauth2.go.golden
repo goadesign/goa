@@ -23,9 +23,7 @@ func NewSecureWithOAuth2Endpoint(s Service, authOAuth2Fn security.AuthOAuth2Func
 		}
 		ctx, err = authOAuth2Fn(ctx, token, &sc)
 		if err != nil {
-			// All authentication alternatives failed. Keep the original error
-			// and report that the business method has not been called.
-			return nil, security.NewAuthenticationError(err)
+			return nil, err
 		}
 		return nil, s.SecureWithOAuth2(ctx, p)
 	}

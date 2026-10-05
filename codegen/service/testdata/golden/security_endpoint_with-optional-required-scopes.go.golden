@@ -16,9 +16,7 @@ func NewSecureWithOptionalRequiredScopesEndpoint(s Service, authBasicFn security
 		}
 		ctx, err = authBasicFn(ctx, string(p.User), pass, &sc)
 		if err != nil {
-			// All authentication alternatives failed. Keep the original error
-			// and report that the business method has not been called.
-			return nil, security.NewAuthenticationError(err)
+			return nil, err
 		}
 		return nil, s.SecureWithOptionalRequiredScopes(ctx, p)
 	}

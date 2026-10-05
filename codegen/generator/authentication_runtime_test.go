@@ -1,6 +1,6 @@
 // These tests compile service endpoints and native transports together. They
-// distinguish authentication rejection from the same error returned after the
-// business method runs, without changing credentials, scopes or wire responses.
+// verify exact callback errors, credentials, scopes and contexts. Dispatch counts
+// show when authentication fails, while native transport responses stay unchanged.
 package generator
 
 import (
