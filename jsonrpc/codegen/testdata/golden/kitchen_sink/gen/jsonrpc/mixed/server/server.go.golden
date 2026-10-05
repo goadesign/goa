@@ -80,8 +80,8 @@ func New(
 		errhandler: errhandler,
 	}
 	// Install the request handler required by this service's methods.
-	// ServeHTTP handles ordinary JSON-RPC request bodies.
-	s.Handler = http.HandlerFunc(s.ServeHTTP)
+	// handleHTTP handles ordinary JSON-RPC request bodies.
+	s.Handler = http.HandlerFunc(s.handleHTTP)
 	return s
 }
 
@@ -100,13 +100,14 @@ func (s *Server) Use(m func(http.Handler) http.Handler) {
 	s.Handler = m(s.Handler)
 }
 
+// ServeHTTP sends each HTTP request through the installed middleware before
+// the generated handler writes its JSON-RPC response or stream.
+func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	s.Handler.ServeHTTP(w, r)
+}
+
 // MethodNames returns the methods served.
 func (s *Server) MethodNames() []string { return mixed.MethodNames[:] }
-
-// ServeHTTP handles JSON-RPC requests.
-func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	s.handleHTTP(w, r)
-}
 
 // handleHTTP reads one JSON-RPC request object or one array of requests.
 func (s *Server) handleHTTP(w http.ResponseWriter, r *http.Request) {
@@ -271,7 +272,8 @@ func (rb *batchWriter) Write(data []byte) (int, error) {
 
 // Mount configures the mux to serve the JSON-RPC Mixed service methods.
 func Mount(mux goahttp.Muxer, h *Server) {
-	// This server handles ordinary JSON-RPC request bodies.
+	// Mounted requests pass through the configured HTTP middleware before the
+	// server sends a JSON-RPC response or a stream of events.
 	mux.Handle("POST", "/mixed/rpc/mixed/rpc", h.ServeHTTP)
 }
 

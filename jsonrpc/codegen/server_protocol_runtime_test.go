@@ -361,7 +361,7 @@ func serveProtocolBodyWithDecoder(body io.ReadCloser, accept string, decoder fun
 	request.Body = body
 	request.Header.Set("Accept", accept)
 	response := httptest.NewRecorder()
-	server.ServeHTTP(response, request)
+	server.handleMixed(response, request)
 	return response, calls, reported
 }
 `
