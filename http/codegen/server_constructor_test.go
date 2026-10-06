@@ -47,7 +47,9 @@ func TestJSONRPCConstructorDependenciesAreIndependent(t *testing.T) {
 		})
 	})
 	plan, generation, servicePlan := plannedHTTPPlan(t, root, true)
-	_, err := plan.DeclareServerConstructorDependency(root.API.JSONRPC.Services[0], "client", constructorTestType(t), "NewClient", extensionNameOrder("client"))
+	_, err := plan.DeclareServerConstructorDependency(root.API.JSONRPC.Services[0], "http", constructorTestType(t), "NewHTTP", extensionNameOrder("http"))
+	require.ErrorContains(t, err, "conflicts with the HTTP package")
+	_, err = plan.DeclareServerConstructorDependency(root.API.JSONRPC.Services[0], "client", constructorTestType(t), "NewClient", extensionNameOrder("client"))
 	require.NoError(t, err)
 	require.NoError(t, generation.Freeze())
 	require.NoError(t, servicePlan.Link())
@@ -62,7 +64,7 @@ func TestJSONRPCConstructorDependenciesAreIndependent(t *testing.T) {
 }
 
 func TestPlanRejectsInvalidServerConstructorDependencies(t *testing.T) {
-	for _, name := range []string{"", "Public", "_", "bad-name", "e", "endpoints", "mux", "decoder", "encoder", "errhandler", "formatter", "upgrader", "configurer", "s"} {
+	for _, name := range []string{"", "Public", "_", "bad-name", "e", "endpoints", "mux", "decoder", "encoder", "errhandler", "formatter", "upgrader", "configurer", "s", "http"} {
 		t.Run(name, func(t *testing.T) {
 			root := extensionRoot(t)
 			plan, _, _ := plannedHTTPPlan(t, root, false)

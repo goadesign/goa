@@ -52,6 +52,9 @@ func (p *Plan) DeclareServerConstructorDependency(service *expr.HTTPServiceExpr,
 	if slices.Contains([]string{"e", "endpoints", "mux", "decoder", "encoder", "errhandler", "formatter", "upgrader", "configurer", "s"}, name) {
 		return nil, fmt.Errorf("server constructor dependency %q conflicts with a built-in constructor parameter or field", name)
 	}
+	if name == "http" && (p.transport == jsonrpcTransport || len(service.FileServers) > 0) {
+		return nil, fmt.Errorf("server constructor dependency %q conflicts with the HTTP package used by this constructor", name)
+	}
 	if dependencyType == nil {
 		return nil, fmt.Errorf("server constructor dependency %q requires a retained Go type", name)
 	}

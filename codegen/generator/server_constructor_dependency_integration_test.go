@@ -27,6 +27,7 @@ func TestServerConstructorDependenciesCompileWithExamples(t *testing.T) {
 	for _, test := range []struct {
 		mode           string
 		beforeExamples bool
+		clientName     string
 	}{
 		{mode: "http"},
 		{mode: "jsonrpc"},
@@ -38,8 +39,13 @@ func TestServerConstructorDependenciesCompileWithExamples(t *testing.T) {
 		{mode: "http", beforeExamples: true},
 		{mode: "jsonrpc", beforeExamples: true},
 		{mode: "mixed", beforeExamples: true},
+		{mode: "http", clientName: "http"},
 	} {
 		mode := test.mode
+		clientName := test.clientName
+		if clientName == "" {
+			clientName = "client"
+		}
 		t.Run(mode, func(t *testing.T) {
 			root := codegen.RunDSL(t, func() {
 				dsl.API("records", func() {})
@@ -107,7 +113,7 @@ func TestServerConstructorDependenciesCompileWithExamples(t *testing.T) {
 					if _, err := transport.DeclareServerConstructorDependency(service, "location", locationType, "NewRecords", constructorDependencyOrder("http location")); err != nil {
 						return err
 					}
-					if _, err := transport.DeclareServerConstructorDependency(service, "client", dependencyType, "NewRecords", constructorDependencyOrder("http")); err != nil {
+					if _, err := transport.DeclareServerConstructorDependency(service, clientName, dependencyType, "NewRecords", constructorDependencyOrder("http")); err != nil {
 						return err
 					}
 				}
@@ -116,7 +122,7 @@ func TestServerConstructorDependenciesCompileWithExamples(t *testing.T) {
 					if _, err := transport.DeclareServerConstructorDependency(service, "location", locationType, "NewRecords", constructorDependencyOrder("jsonrpc location")); err != nil {
 						return err
 					}
-					if _, err := transport.DeclareServerConstructorDependency(service, "client", dependencyType, "NewRecords", constructorDependencyOrder("jsonrpc")); err != nil {
+					if _, err := transport.DeclareServerConstructorDependency(service, clientName, dependencyType, "NewRecords", constructorDependencyOrder("jsonrpc")); err != nil {
 						return err
 					}
 				}
@@ -144,7 +150,10 @@ func TestServerConstructorDependenciesCompileWithExamples(t *testing.T) {
 					SectionTemplates: []*codegen.SectionTemplate{{
 						Name:   "dependency-value-test",
 						Source: constructorDependencyCheck,
-						Data:   struct{ HTTP, Mixed bool }{HTTP: dialect == "http", Mixed: mode == "mixed"},
+						Data: struct {
+							HTTP, Mixed bool
+							ClientName  string
+						}{HTTP: dialect == "http", Mixed: mode == "mixed", ClientName: clientName},
 					}},
 				}
 				checks = append(checks, check)
@@ -191,7 +200,7 @@ func TestConstructorRetainsDependency(t *testing.T) {
     if server.location != location {
         t.Error("constructor changed the supplied location")
     }
-    if server.client != client {
+    if server.{{ .ClientName }} != client {
         t.Error("constructor changed the supplied dependency")
     }
 }
