@@ -62,7 +62,7 @@ func exampleServer(server *example.Data, services *ServicesData) *codegen.File {
 	var svcdata []*ServiceData
 	for _, svc := range server.Services {
 		if data := services.Get(svc); data != nil {
-			copy := exampleServiceDataForOutput(data, services, outputPackage)
+			copy := exampleServerServiceDataForOutput(data, services, outputPackage)
 			copy.ServerPkgName = services.PackageImport(
 				outputPackage,
 				path.Join(genpkg, "http", data.Service.PathName, "server"),
@@ -164,7 +164,7 @@ func combinedExampleServer(server *example.Data, jsonrpc, application *ServicesD
 			if data == nil {
 				continue
 			}
-			copy := exampleServiceDataForOutput(data, application, outputPackage)
+			copy := exampleServerServiceDataForOutput(data, application, outputPackage)
 			copy.ServerPkgName = application.PackageImport(
 				outputPackage,
 				path.Join(application.GenPkg(), "http", data.Service.PathName, "server"),
@@ -183,7 +183,7 @@ func combinedExampleServer(server *example.Data, jsonrpc, application *ServicesD
 		if data == nil {
 			continue
 		}
-		copy := exampleServiceDataForOutput(data, jsonrpc, outputPackage)
+		copy := exampleServerServiceDataForOutput(data, jsonrpc, outputPackage)
 		copy.ServerPkgName = jsonrpc.PackageImport(
 			outputPackage,
 			path.Join(jsonrpc.GenPkg(), "jsonrpc", data.Service.PathName, "server"),

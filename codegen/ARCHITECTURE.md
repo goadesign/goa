@@ -822,6 +822,22 @@ the declared handler wrappers. Both declarations must happen before generation
 freezes; later calls, JSON-RPC plans, foreign services, missing route fields,
 and changes to the linked declarations are generation errors.
 
+Plugins may also declare required server constructor dependencies on the HTTP
+or JSON-RPC plan. Each declaration retains one `GoTypePlan`, a distinct private
+parameter and field name, and an application factory name. Linking orders these
+arguments by private name after the native transport arguments. The server
+constructor stores exactly the supplied value. The dependency does not become
+an optional argument, a runtime type selector, or a second server startup path.
+
+The transport that writes `server.go` owns its dependency imports. Goa's normal
+package planner resolves factory collisions in the application package.
+`goa example` emits separate application factory files and calls those factories
+from its existing server startup code; it does not add dependency calls to client
+commands. Factory bodies initially panic with a configuration message. The
+application must implement construction before running the server. As with other
+example files, existing files are preserved. Services without dependencies keep
+their original constructor signatures and example calls.
+
 MCP generation therefore attaches its generated service expressions during
 prepare and later consumes `Plan.Service(root)`. Agent tool specifications use
 one retained typed specification plan for each output package; public specs and

@@ -11,4 +11,7 @@ type {{ .ServerStructDeclaration.Name }} struct {
 	decoder func(*http.Request) goahttp.Decoder
 	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder
 	errhandler func(context.Context, http.ResponseWriter, error)
+    {{- range .ConstructorDependencies }}
+    {{ .Name }} {{ .TypeRef }}
+    {{- end }}
 }

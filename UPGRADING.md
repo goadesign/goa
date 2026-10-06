@@ -15,6 +15,22 @@ The v3.33.0 sections below describe the current upgrade. Earlier v3.31/v3.32
 behavioral migrations are retained as historical guidance; the installation
 and regeneration sections select the current target after publication.
 
+## Plugin-declared server dependencies (unreleased)
+
+HTTP and JSON-RPC generator plugins can declare a required typed dependency
+before generation freezes. Generated server constructors take the dependency
+after their native arguments and retain it in a private field. Generated example
+servers call an application factory for each declared dependency. The initial
+factory stops startup with a configuration message until the application
+implements it; it never supplies an insecure default.
+
+Applications using such a plugin must regenerate and update constructor calls
+and implement the new factory. Existing example startup files are not overwritten
+by `goa example`; update their constructor calls explicitly. Applications and
+plugins that declare no dependency keep their existing signatures and behavior.
+This generation capability changes no wire format or stored data. Deploy and
+roll back a plugin, its regenerated code, and its application wiring together.
+
 ## Mapped URL parameters (unreleased)
 
 An authored `Param("organization_id:organization")` now binds the payload's

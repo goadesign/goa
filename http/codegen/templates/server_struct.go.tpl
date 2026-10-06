@@ -7,4 +7,7 @@ type {{ .ServerStructDeclaration.Name }} struct {
 	{{- range .FileServers }}
 	{{ .VarName }} http.Handler
 	{{- end }}
+    {{- range .ConstructorDependencies }}
+    {{ .Name }} {{ .TypeRef }}
+    {{- end }}
 }

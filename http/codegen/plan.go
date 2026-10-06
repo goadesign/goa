@@ -113,9 +113,11 @@ type (
 	// Generation.Freeze chooses their Go names. Link copies these values into
 	// template data.
 	serverExtensions struct {
-		handlerWrappers         []*codegen.NameDeclaration
-		endpointHandlerWrappers map[*expr.HTTPEndpointExpr][]*codegen.NameDeclaration
-		mounts                  []*ServerMount
+		handlerWrappers          []*codegen.NameDeclaration
+		endpointHandlerWrappers  map[*expr.HTTPEndpointExpr][]*codegen.NameDeclaration
+		mounts                   []*ServerMount
+		dependencies             []ServerConstructorDependency
+		dependencyExampleImports []*codegen.GeneratedImportPlan
 	}
 
 	// JSONRPCServiceSnapshot holds a separate copy of the HTTP service data used to write
@@ -124,6 +126,8 @@ type (
 	JSONRPCServiceSnapshot struct {
 		// Service is a copy of the generated Goa service description.
 		Service JSONRPCServiceData
+		// ConstructorDependencies lists the required values retained by this server.
+		ConstructorDependencies []ServerConstructorDependency
 		// Endpoints contains the JSON-RPC method data in design order.
 		Endpoints []JSONRPCEndpointSnapshot
 		// ClientStruct is the client type name kept for existing plugins. Goa
@@ -860,6 +864,22 @@ func planExampleFileImports(transport, application *Plan, root *example.Root) er
 			return err
 		}
 
+		serverImports := transport.fileImports[path.Join("cmd", server.Dir, "http.go")]
+		if ordinary != nil {
+			for _, service := range configuredTransportServices(ordinary, server.Services) {
+				if err := ordinary.retainDependencyExampleImports(service, serverImports); err != nil {
+					return err
+				}
+			}
+		}
+		if transport != ordinary {
+			for _, service := range configuredTransportServices(transport, server.Services) {
+				if err := transport.retainDependencyExampleImports(service, serverImports); err != nil {
+					return err
+				}
+			}
+		}
+
 		services := configuredTransportClientServices(transport, server.Services)
 		if len(services) == 0 {
 			continue
@@ -1146,7 +1166,7 @@ func (p *Plan) ClientCLIFiles() []*codegen.File {
 // ServerFiles builds runnable HTTP servers from the copied server data.
 func (p *ExamplePlan) ServerFiles() []*codegen.File {
 	p.transport.requireLinked()
-	return exampleServerFiles(p.root, p.transport.services)
+	return append(exampleServerFiles(p.root, p.transport.services), p.transport.dependencyExampleFiles()...)
 }
 
 // CLIFiles builds runnable HTTP clients from the copied server data.
@@ -1171,7 +1191,12 @@ func (p *ExamplePlan) CombinedServerFiles(application *Plan) []*codegen.File {
 		}
 		applicationServices = application.services
 	}
-	return combinedExampleServerFiles(p.root, p.transport.services, applicationServices)
+	files := combinedExampleServerFiles(p.root, p.transport.services, applicationServices)
+	files = append(files, p.transport.dependencyExampleFiles()...)
+	if application != nil {
+		files = append(files, application.dependencyExampleFiles()...)
+	}
+	return files
 }
 
 // ViewedResult returns copied HTTP response data for the named method's result
@@ -1237,6 +1262,7 @@ func (p *Plan) JSONRPCService(name string) (JSONRPCServiceSnapshot, bool) {
 		ClientInitDeclaration:   planned.data.ClientInitDeclaration,
 		ServerStruct:            planned.data.ServerStructDeclaration.Name(),
 		ServerStructDeclaration: planned.data.ServerStructDeclaration,
+		ConstructorDependencies: append([]ServerConstructorDependency(nil), planned.data.ConstructorDependencies...),
 		ServerInit:              planned.data.ServerInitDeclaration.Name(),
 		ServerInitDeclaration:   planned.data.ServerInitDeclaration,
 		MountServer:             planned.data.MountServerDeclaration.Name(),
@@ -2021,6 +2047,9 @@ func (p *Plan) link() error {
 			fileServer.ServerHandlerWrappers = append([]*codegen.NameDeclaration(nil), extensions.handlerWrappers...)
 		}
 		data.ServerMounts = copyServerMounts(extensions.mounts)
+		if err := p.linkConstructorDependencies(transportService, data); err != nil {
+			return err
+		}
 		services.HTTPData[transportService.Name()] = data
 	}
 	for _, planned := range p.wireTypes {

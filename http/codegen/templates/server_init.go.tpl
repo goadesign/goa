@@ -18,6 +18,9 @@ func {{ .ServerInitDeclaration.Name }}(
 	{{- range .FileServers }}
 	{{ .ArgName }} http.FileSystem,
 	{{- end }}
+    {{- range .ConstructorDependencies }}
+    {{ .Name }} {{ .TypeRef }},
+    {{- end }}
 ) *{{ .ServerStructDeclaration.Name }} {
 {{- if hasWebSocket . }}
 	if configurer == nil {
@@ -35,6 +38,9 @@ func {{ .ServerInitDeclaration.Name }}(
 		{{ .ArgName }} = {{ $.AppendPrefixDeclaration.Name }}({{ .ArgName }}, "{{ $prefix }}")
 	{{- end }}
 	return &{{ .ServerStructDeclaration.Name }}{
+    {{- range .ConstructorDependencies }}
+    {{ .Name }}: {{ .Name }},
+    {{- end }}
 		Mounts: []*{{ .MountPointStructDeclaration.Name }}{
 			{{- range $e := .Endpoints }}
 				{{- range $e.Routes }}
