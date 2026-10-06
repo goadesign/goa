@@ -78,6 +78,8 @@ type (
 		ServerPkgName string
 		// Endpoints describes the endpoint data for this service.
 		Endpoints []*EndpointData
+		// ConstructorDependencies lists the required values retained by this server.
+		ConstructorDependencies []ServerConstructorDependency
 		// FileServers lists the file servers for this service.
 		FileServers []*FileServerData
 		// ServerHandlerWrappers lists the planned wrapper declarations copied into

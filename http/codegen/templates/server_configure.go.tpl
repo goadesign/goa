@@ -18,14 +18,14 @@
 	{{- end }}
 	{{- range $svc := .Services }}
 		{{-  if .Endpoints }}
-		{{ .Service.VarName }}Server = {{ .ServerPkgName }}.{{ .ServerInitDeclaration.Name }}({{ .Service.VarName }}Endpoints, mux, dec, enc, eh, nil{{ if hasWebSocket $svc }}, upgrader, nil{{ end }}{{ range .Endpoints }}{{ if .MultipartRequestDecoder }}, {{ $.APIPkg }}.{{ .MultipartRequestDecoder.FuncDeclaration.Name }}{{ end }}{{ end }}{{ range .FileServers }}, nil{{ end }})
+		{{ .Service.VarName }}Server = {{ .ServerPkgName }}.{{ .ServerInitDeclaration.Name }}({{ .Service.VarName }}Endpoints, mux, dec, enc, eh, nil{{ if hasWebSocket $svc }}, upgrader, nil{{ end }}{{ range .Endpoints }}{{ if .MultipartRequestDecoder }}, {{ $.APIPkg }}.{{ .MultipartRequestDecoder.FuncDeclaration.Name }}{{ end }}{{ end }}{{ range .FileServers }}, nil{{ end }}{{ range .ConstructorDependencies }}, {{ .ExampleConstructorRef }}(){{ end }})
 		{{-  else }}
-		{{ .Service.VarName }}Server = {{ .ServerPkgName }}.{{ .ServerInitDeclaration.Name }}(nil, mux, dec, enc, eh, nil{{ range .FileServers }}, nil{{ end }})
+		{{ .Service.VarName }}Server = {{ .ServerPkgName }}.{{ .ServerInitDeclaration.Name }}(nil, mux, dec, enc, eh, nil{{ range .FileServers }}, nil{{ end }}{{ range .ConstructorDependencies }}, {{ .ExampleConstructorRef }}(){{ end }})
 		{{-  end }}
 	{{- end }}
 		{{- range .JSONRPCServices }}
 			{{-  if .Endpoints }}
-			{{ .Service.VarName }}JSONRPCServer = {{ .ServerPkgName }}.{{ .ServerInitDeclaration.Name }}({{ .Service.VarName }}Endpoints, mux, dec, enc, eh)
+			{{ .Service.VarName }}JSONRPCServer = {{ .ServerPkgName }}.{{ .ServerInitDeclaration.Name }}({{ .Service.VarName }}Endpoints, mux, dec, enc, eh{{ range .ConstructorDependencies }}, {{ .ExampleConstructorRef }}(){{ end }})
 			{{-  end }}
 		{{- end }}
 	}
