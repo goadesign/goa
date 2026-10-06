@@ -264,15 +264,17 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 	// request body
 	var requestBody *RequestBodyRef
 	if e.Body.Type != expr.Empty {
-		ct := "application/json" // TBD: need a way to specify method media type in design...
+		ct := "application/json"
 		if e.MultipartRequest {
 			ct = "multipart/form-data"
+		} else if e.FormRequest {
+			ct = "application/x-www-form-urlencoded"
 		}
 		mt := &MediaType{Schema: bodies.RequestBody}
 		initExamples(mt, e.Body, rand.At(expr.RequestBodyExampleIdentity(e)), values)
 		requestBody = &RequestBodyRef{Value: &RequestBody{
 			Description: requestBodyDescription(e, values),
-			Required:    e.Body.Type != expr.Empty,
+			Required:    e.RequestBodyRequired(),
 			Content:     map[string]*MediaType{ct: mt},
 			Extensions:  openapi.ExtensionsFromExpr(e.Body.Meta),
 		}}

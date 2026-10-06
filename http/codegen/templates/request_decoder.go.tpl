@@ -81,7 +81,11 @@ func {{ .RequestDecoderDeclaration.Name }}(mux goahttp.Muxer, decoder func(*http
 			body {{ if .Payload.Request.OptionalBody }}{{ (index .Payload.Request.PayloadInit.ServerArgs 0).TypeRef }}{{ else if .Payload.Request.ServerBody.Declaration }}{{ .Payload.Request.ServerBody.Declaration.Name }}{{ else }}{{ .Payload.Request.ServerBody.VarName }}{{ end }}
 			err  error
 		)
+		{{- if and (not .IsJSONRPC) .Payload.Request.ServerBody.FormFields }}
+		{{- template "partial_form_request_decoder" .Payload.Request }}
+		{{- else }}
 		err = decoder(r).Decode(&body)
+		{{- end }}
 		if err != nil {
 	{{- if .Payload.Request.MustHaveBody }}
 			if errors.Is(err, io.EOF) {

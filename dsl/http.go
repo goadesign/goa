@@ -810,6 +810,27 @@ func MultipartRequest() {
 	e.MultipartRequest = true
 }
 
+// FormRequest makes the endpoint accept application/x-www-form-urlencoded bodies.
+// Goa generates the form encoder and decoder from the authored body fields. Path,
+// query, header and cookie mappings still remove their fields from the body.
+// The remaining body must be an object of primitive fields or primitive arrays;
+// arrays use repeated form keys and bytes use standard base64. Required arrays
+// need at least one transmitted value. Scalar keys may appear only once.
+// Present empty strings remain distinct from absent fields.
+// Generated validation runs before the service payload is constructed.
+//
+// FormRequest must appear in an ordinary HTTP endpoint expression. It cannot be
+// combined with MultipartRequest or SkipRequestBodyEncodeDecode. Custom Go field
+// types require another transport representation and fail design evaluation.
+func FormRequest() {
+	e, ok := eval.Current().(*expr.HTTPEndpointExpr)
+	if !ok {
+		eval.IncompatibleDSL()
+		return
+	}
+	e.FormRequest = true
+}
+
 // SkipRequestBodyEncodeDecode prevents Goa from generating the request encoding
 // (client) and decoding (server) code. Instead the service method gets direct
 // access to the HTTP body reader. The client method provides a reader from

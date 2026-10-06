@@ -79,6 +79,8 @@ type (
 		// MultipartRequest indicates that the request content type for
 		// the endpoint is a multipart type.
 		MultipartRequest bool
+		// FormRequest selects generated URL-encoded codecs for the request body.
+		FormRequest bool
 		// Redirect defines a redirect for the endpoint.
 		Redirect *HTTPRedirectExpr
 		// SSE defines the Server-Sent Events configuration for this endpoint if it's
@@ -226,6 +228,19 @@ func (e *HTTPEndpointExpr) QueryParams() *MappedAttributeExpr {
 	}
 	at := &AttributeExpr{Type: &obj, Validation: v}
 	return NewMappedAttributeExpr(at)
+}
+
+// RequestBodyRequired reports whether a finalized endpoint rejects an absent
+// request body. Body("name") permits absence when that payload field is optional;
+// every other nonempty body is required, regardless of its individual fields.
+func (e *HTTPEndpointExpr) RequestBodyRequired() bool {
+	if e.Body.Type == Empty {
+		return false
+	}
+	if origin, selected := e.Body.Meta["origin:attribute"]; selected {
+		return e.MethodExpr.Payload.IsRequired(origin[0])
+	}
+	return true
 }
 
 // Prepare computes the request path and query string parameters as well as the
@@ -750,6 +765,9 @@ func (e *HTTPEndpointExpr) Validate() error {
 		if e.MultipartRequest {
 			verr.Add(e, "MultipartRequest is set but Payload is not defined")
 		}
+		if e.FormRequest {
+			verr.Add(e, "FormRequest requires a nonempty object request body.")
+		}
 		if !e.Params.IsEmpty() {
 			verr.Add(e, "Params are set but Payload is not defined.")
 		}
@@ -863,6 +881,9 @@ func (e *HTTPEndpointExpr) Validate() error {
 	}
 
 	body := httpRequestBody(e)
+	if e.FormRequest {
+		e.validateFormBody(body, verr)
+	}
 	if e.MultipartRequest && body.Type == Empty {
 		verr.Add(e, "MultipartRequest requires a request body.")
 	}

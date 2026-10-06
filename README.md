@@ -170,7 +170,7 @@ For a guided walkthrough, follow the **[HTTP quickstart](https://goa.design/docs
 | Design in Goa | Get from the generator |
 | --- | --- |
 | Types, methods, validation, and errors | Typed service interfaces, endpoints, clients, and boundary validation |
-| HTTP routes, parameters, headers, and bodies | Server handlers, encoders/decoders, Go clients, CLI commands, and OpenAPI specifications |
+| HTTP routes, parameters, headers, JSON and form bodies | Server handlers, encoders/decoders, Go clients, CLI commands, and OpenAPI specifications |
 | gRPC messages, metadata, and status mappings | Protocol Buffer definitions, server/client adapters, serialization, and CLI commands |
 | JSON-RPC methods and error mappings | Server/client code, request dispatch, batches, and notifications |
 | Streaming methods | WebSocket and SSE support for HTTP, SSE for JSON-RPC, and gRPC streams |
