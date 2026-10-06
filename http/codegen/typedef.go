@@ -1,3 +1,6 @@
+// This file generates HTTP and JSON-RPC body structs from their transport
+// attributes. Body fields use the designed HTTP names unless a complete struct
+// tag overrides them; internal JSON names remain on the service structs.
 package codegen
 
 import (
@@ -96,7 +99,8 @@ func goTypeDefForContext(att *expr.AttributeExpr, ctx *codegen.AttributeContext)
 	}
 }
 
-// attributeTags computes the struct field tags.
+// attributeTags uses explicit complete tags when supplied and otherwise names
+// body fields from the HTTP design, including optional-field omission.
 func attributeTags(att *expr.AttributeExpr, t string, optional bool) string {
 	if tags := codegen.AttributeTags(att); tags != "" {
 		return tags
@@ -105,11 +109,5 @@ func attributeTags(att *expr.AttributeExpr, t string, optional bool) string {
 	if optional {
 		o = ",omitempty"
 	}
-	jsonName := t
-	if att != nil && att.Meta != nil {
-		if v := att.Meta["struct:tag:json:name"]; len(v) > 0 && v[0] != "" {
-			jsonName = strings.Join(v, ",")
-		}
-	}
-	return fmt.Sprintf(" `form:\"%s%s\" json:\"%s%s\" xml:\"%s%s\"`", t, o, jsonName, o, t, o)
+	return fmt.Sprintf(" `form:\"%s%s\" json:\"%s%s\" xml:\"%s%s\"`", t, o, t, o, t, o)
 }

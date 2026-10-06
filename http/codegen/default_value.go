@@ -125,23 +125,20 @@ func httpDefaultMapKey(attribute *expr.AttributeExpr, value reflect.Value) strin
 	return fmt.Sprint(value.Interface())
 }
 
-// httpDefaultFieldName applies the same name precedence as the generated JSON
-// struct tag: a complete json tag, then a json name override, then the name
-// mapped by the HTTP body design.
+// httpDefaultFieldName reads a complete JSON tag override or the HTTP body
+// name so generated command-line defaults match the body structs. Internal
+// service JSON names do not change the transmitted fields.
 func httpDefaultFieldName(attribute *expr.AttributeExpr, mappedName string) (string, bool) {
-	for _, key := range []string{"struct:tag:json", "struct:tag:json:name"} {
-		values := attribute.Meta[key]
-		if len(values) == 0 {
-			continue
-		}
-		name := strings.SplitN(strings.Join(values, ","), ",", 2)[0]
-		if name == "-" {
-			return "", false
-		}
-		if name != "" {
-			return name, true
-		}
+	values := attribute.Meta["struct:tag:json"]
+	if len(values) == 0 {
 		return mappedName, true
+	}
+	name := strings.SplitN(strings.Join(values, ","), ",", 2)[0]
+	if name == "-" {
+		return "", false
+	}
+	if name != "" {
+		return name, true
 	}
 	return mappedName, true
 }
