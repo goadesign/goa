@@ -145,7 +145,11 @@ const DefaultProtoc = expr.DefaultProtoc
 // `json` struct tag for non-transport types (e.g., service types in gen/<svc>/service.go).
 // Goa appends ",omitempty" automatically when the attribute is not required by
 // its parent object. If "struct:tag:json" is also set, it takes precedence and
-// overrides the tag entirely.
+// overrides the tag entirely. This name-only metadata does not rename HTTP or
+// JSON-RPC body fields or command-line JSON defaults. Those fields use the
+// names declared by the transport design, matching OpenAPI. Use the designed
+// attribute name to select a public JSON name and "struct:field:name" when its
+// Go field must keep a different name.
 //
 // - "proto:tag:json" sets the JSON name emitted in the generated protobuf
 // field option. Applicable to attributes only.

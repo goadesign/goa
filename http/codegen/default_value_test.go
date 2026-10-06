@@ -125,7 +125,7 @@ func TestClientBodyDefaultUsesHTTPFieldNamesAndJSONBytes(t *testing.T) {
 
 	encoded, err := json.Marshal(got)
 	require.NoError(t, err)
-	require.JSONEq(t, `{"full_name":"first","encoded_bytes":"cGxhaW4gYnl0ZXM=","mapped_plain":"third"}`, string(encoded))
+	require.JSONEq(t, `{"full_name":"first","mapped_bytes":"cGxhaW4gYnl0ZXM=","mapped_plain":"third"}`, string(encoded))
 }
 
 func TestClientBodyDefaultUsesRawTextForTopLevelBytes(t *testing.T) {
@@ -178,10 +178,10 @@ func TestClientBodyDefaultIsUsedOnlyByClientCLIPlanning(t *testing.T) {
 
 	service := linkedHTTPPlanForRoot(t, root).services.Get("defaults")
 	object := service.Endpoint("object").Payload.Request.PayloadInit
-	require.Equal(t, map[string]any{"encoded_content": []byte("plain bytes")}, object.ClientArgs[0].DefaultValue)
+	require.Equal(t, map[string]any{"content": []byte("plain bytes")}, object.ClientArgs[0].DefaultValue)
 	require.Equal(t, map[string]any{"content": "plain bytes"}, object.ServerArgs[0].DefaultValue)
 	objectFlags, _ := buildFlags(service, service.Endpoint("object"))
-	require.Equal(t, `{"encoded_content":"cGxhaW4gYnl0ZXM="}`, objectFlags[0].DefaultValue)
+	require.Equal(t, `{"content":"cGxhaW4gYnl0ZXM="}`, objectFlags[0].DefaultValue)
 	bytes := service.Endpoint("bytes").Payload.Request.PayloadInit
 	require.Equal(t, "plain bytes", bytes.ClientArgs[0].DefaultValue)
 	require.Equal(t, "plain bytes", bytes.ServerArgs[0].DefaultValue)

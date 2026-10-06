@@ -15,6 +15,30 @@ The v3.33.0 sections below describe the current upgrade. Earlier v3.31/v3.32
 behavioral migrations are retained as historical guidance; the installation
 and regeneration sections select the current target after publication.
 
+## Internal JSON names and HTTP bodies (unreleased)
+
+`Meta("struct:tag:json:name", "stored_name")` now affects only JSON tags on
+non-transport Go types, as documented. Previously, HTTP and JSON-RPC body
+structs and HTTP command-line defaults also used that name, while OpenAPI
+described the attribute's designed name. For example, an attribute named
+`displayName` with this metadata now sends `displayName` over HTTP; directly
+marshaling the service value still writes `stored_name`. Required fields,
+optional-field omission, and complete `struct:tag:json` overrides keep their
+existing behavior.
+
+Regenerate clients and servers that use this metadata. If existing peers rely
+on the old transmitted name, declare that name as the attribute name before
+regenerating; `struct:field:name` can retain the Go field name. For example,
+an attribute named `stored_name` with `Meta("struct:field:name", "DisplayName")`
+keeps the public JSON name and the Go selector independently. Update design
+references such as `Required` when renaming an attribute.
+
+Changing the transmitted names requires coordinating independently deployed
+clients and servers; roll back their generated code together. Existing
+compiled programs do not change until regenerated and rebuilt. Direct service
+JSON and stored data retain their names, so this correction requires no
+stored-data migration.
+
 ## Plugin-declared server dependencies (unreleased)
 
 HTTP and JSON-RPC generator plugins can declare a required typed dependency
