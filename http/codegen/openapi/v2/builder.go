@@ -592,9 +592,16 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 		var consumes []string
 		if endpoint.MultipartRequest {
 			consumes = []string{"multipart/form-data"}
+		} else if endpoint.FormRequest {
+			consumes = []string{"application/x-www-form-urlencoded"}
 		}
 
-		if endpoint.Body.Type != expr.Empty {
+		if endpoint.FormRequest {
+			mapped := expr.NewMappedAttributeExpr(endpoint.Body)
+			for _, field := range *expr.AsObject(mapped.Type) {
+				params = append(params, paramFor(field.Attribute, mapped.ElemName(field.Name), "formData", endpoint.RequestBodyRequired() && mapped.IsRequiredNoDefault(field.Name), values))
+			}
+		} else if endpoint.Body.Type != expr.Empty {
 			in := "body"
 			if endpoint.MultipartRequest {
 				in = "formData"
@@ -603,7 +610,7 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 				Name:        endpoint.Body.Type.Name(),
 				In:          in,
 				Description: values.Description(endpoint.Body.AuthoredAttribute(), endpoint.Body.Description),
-				Required:    true,
+				Required:    endpoint.RequestBodyRequired(),
 				Schema: schemas.attributeTypeSchemaWithPrefix(
 					root.API,
 					endpoint.Body,

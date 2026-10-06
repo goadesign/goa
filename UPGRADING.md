@@ -15,6 +15,42 @@ The v3.33.0 sections below describe the current upgrade. Earlier v3.31/v3.32
 behavioral migrations are retained as historical guidance; the installation
 and regeneration sections select the current target after publication.
 
+## Generated URL-encoded form requests (unreleased)
+
+Add `FormRequest()` inside an endpoint's `HTTP` block to generate clients and
+servers for `application/x-www-form-urlencoded` request bodies. The remaining
+body after path, query, header and cookie mappings must be a nonempty object
+whose fields are primitives or arrays of primitives. Nested objects, maps,
+`Any`, custom Go field types, JSON-RPC and alternate body codecs are rejected
+during design evaluation. Existing JSON and multipart endpoints keep their
+codecs and constructor signatures.
+
+Body mappings such as `Attribute("clientId:client_id")` select the form key;
+`struct:field:name` selects the Go field independently. Generated codecs retain
+Goa's body constructors, default handling, aliases and validation. Repeated
+keys encode arrays. A scalar key must occur once. Byte values use standard
+base64. Present empty strings remain distinct from omitted fields. Required
+arrays need at least one transmitted value; forms cannot represent a present
+array with zero values. Use `MinLength(1)` to state that constraint explicitly.
+
+The server reads only the body and never supplies body values from the query
+string. It rejects malformed URL escapes, invalid UTF-8, invalid typed values,
+duplicate scalar values and an incorrect body media type before invoking the
+service. The application continues to own request body size limits.
+
+An optional field selected with `Body("name")` may be absent. OpenAPI 3 now
+records that existing behavior for both JSON and forms. OpenAPI 2 marks an
+optional form's individual fields optional because that format cannot express
+fields that become required only when the body is present; generated server
+validation still enforces their authored constraints.
+
+Regenerate after adding `FormRequest()` and update both peers together: a form
+endpoint accepts forms rather than JSON. Roll back the generated clients and
+servers together. Existing compiled applications retain their old codecs;
+there is no stored-data migration. Applications that do not select forms need
+no runtime migration. Regenerated OpenAPI may now correctly describe their
+existing optional selected bodies as optional.
+
 ## Internal JSON names and HTTP bodies (unreleased)
 
 `Meta("struct:tag:json:name", "stored_name")` now affects only JSON tags on

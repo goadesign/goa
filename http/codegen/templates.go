@@ -92,6 +92,9 @@ const (
 	cliUsageT     = "cli_usage"
 
 	// Partial templates
+	formRequestEncoderP     = "form_request_encoder"
+	formRequestDecoderP     = "form_request_decoder"
+	formValueDecoderP       = "form_value_decoder"
 	sseFormatP              = "sse_format"
 	sseParseP               = "sse_parse"
 	websocketUpgradeP       = "websocket_upgrade"

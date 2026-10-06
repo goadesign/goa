@@ -133,6 +133,7 @@ func httpFixedFileImports(service *expr.HTTPServiceExpr, client bool, kind httpF
 		if serviceHasMultipartRequest(service) {
 			paths = append(paths, "mime/multipart")
 		}
+		paths = append(paths, formCodecImportPaths(service, client)...)
 	case httpTypesFile:
 		if httpServiceHasUnion(service) {
 			paths = append(paths, "bytes", "encoding/json", "fmt", codegen.GoaImport("").Path)

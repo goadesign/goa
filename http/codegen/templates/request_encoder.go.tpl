@@ -189,9 +189,13 @@ func {{ .RequestEncoderDeclaration.Name }}(encoder func(*http.Request) goahttp.E
 			{{- else }}
 			body := {{ if .Payload.Request.BodyFieldPointer }}*{{ end }}p.{{ .Payload.Request.PayloadAttr }}
 			{{- end }}
+		{{- if and (not .IsJSONRPC) .Payload.Request.ClientBody.FormFields }}
+		{{- template "partial_form_request_encoder" .Payload.Request.ClientBody }}
+		{{- else }}
 		if err := encoder(req).Encode(&body); err != nil {
 			return {{ if $returnsID }}"", {{ end }}goahttp.ErrEncodingError("{{ .ServiceName }}", "{{ .Method.Name }}", err)
 		}
+		{{- end }}
 		}
 		{{- else }}
 		{{- if .Payload.Request.ClientBody.Init }}
@@ -202,9 +206,13 @@ func {{ .RequestEncoderDeclaration.Name }}(encoder func(*http.Request) goahttp.E
 		{{- if .IsJSONRPC }}
 		{{- template "partial_jsonrpc_request_envelope" . }}
 		{{- end }}
+		{{- if and (not .IsJSONRPC) .Payload.Request.ClientBody.FormFields }}
+		{{- template "partial_form_request_encoder" .Payload.Request.ClientBody }}
+		{{- else }}
 		if err := encoder(req).Encode(&body); err != nil {
 			return {{ if $returnsID }}"", {{ end }}goahttp.ErrEncodingError("{{ .ServiceName }}", "{{ .Method.Name }}", err)
 		}
+		{{- end }}
 		{{- end }}
 	{{- else if .IsJSONRPC }}
 		{{- template "partial_jsonrpc_request_envelope" . }}

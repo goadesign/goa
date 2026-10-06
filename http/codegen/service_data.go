@@ -844,6 +844,9 @@ type (
 		// declaration points to the one request or response type record that the HTTP
 		// plan uses for this generated type.
 		declaration *wireTypeRecord
+		// FormFields selects generated form codecs for this request body. Fields
+		// retain the body layout already chosen by the native HTTP planner.
+		FormFields []*formFieldData
 		// attribute is the copied HTTP type whose generated names produced Def and
 		// Ref. Example generators use it to qualify nested request body types.
 		attribute *expr.AttributeExpr
@@ -2240,7 +2243,7 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 			headersData    = sds.extractHeaders(e.Headers, payload, svcsvrctx, sd.Scope, payloadOwner)
 			cookiesData    = sds.extractCookies(e.Cookies, payload, svcsvrctx, sd.Scope, payloadOwner)
 			mustValidate   bool
-			mustHaveBody   = true
+			mustHaveBody   = e.RequestBodyRequired()
 		)
 		if e.MapQueryParams != nil {
 			var (
@@ -2324,9 +2327,6 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 				origin = o[0]
 				originAttribute = expr.AsObject(payload.Type).Attribute(origin)
 				bodyDefault = payload.GetDefault(origin)
-				if !payload.IsRequired(o[0]) {
-					mustHaveBody = false
-				}
 			}
 		}
 		bodyIsUnion := originAttribute != nil && expr.AsUnion(originAttribute.Type) != nil
@@ -3624,6 +3624,14 @@ func (sds *ServicesData) buildRequestBodyType(body, att *expr.AttributeExpr, e *
 		ValidationTarget:  validationTarget,
 		Example:           sds.Example(body, bodyOwner),
 		attribute:         body,
+	}
+	if e.FormRequest {
+		formContext, err := httpctx.WithGoTypeLayout(bodyLayout)
+		if err != nil {
+			sds.recordLinkError(err)
+			return nil
+		}
+		data.FormFields = formBodyFields(body, att, formContext)
 	}
 	if record == nil || data.Def == "" && data.ValidateDef == "" {
 		return data

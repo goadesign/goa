@@ -51,7 +51,7 @@ func clientEncodeDecodeFile(svc *expr.HTTPServiceExpr, services *ServicesData) *
 		if e.RequestEncoderDeclaration != nil && (e.Payload.Ref != "" || e.IsJSONRPC) {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "request-encoder",
-				Source: httpTemplates.Read(requestEncoderT, clientTypeExpressionP, clientTypeConversionP, clientMapConversionP, jsonrpcRequestEnvelopeP),
+				Source: httpTemplates.Read(requestEncoderT, clientTypeExpressionP, clientTypeConversionP, clientMapConversionP, jsonrpcRequestEnvelopeP, formRequestEncoderP),
 				FuncMap: map[string]any{
 					"typeConversionData": typeConversionData,
 					"mapConversionData":  mapConversionData,

@@ -145,7 +145,7 @@ func serverEncodeDecodeFile(svc *expr.HTTPServiceExpr, services *ServicesData) *
 			fm["mapQueryDecodeData"] = mapQueryDecodeData
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:    "request-decoder",
-				Source:  httpTemplates.Read(requestDecoderT, requestElementsP, sliceItemConversionP, elementSliceConversionP, querySliceConversionP, queryTypeConversionP, queryMapConversionP, pathConversionP),
+				Source:  httpTemplates.Read(requestDecoderT, requestElementsP, sliceItemConversionP, elementSliceConversionP, querySliceConversionP, queryTypeConversionP, queryMapConversionP, pathConversionP, formRequestDecoderP, formValueDecoderP),
 				FuncMap: fm,
 				Data:    e,
 			})
