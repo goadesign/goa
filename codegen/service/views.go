@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/internal/uniontemplate"
 )
 
 type viewedType struct {
@@ -47,7 +48,7 @@ func viewsFile(plan *Plan, facts *serviceFacts) *codegen.File {
 	for _, u := range svc.viewUnions {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "projected-union-type",
-			Source: serviceTemplates.Read(unionTypeT),
+			Source: uniontemplate.Source,
 			Data:   u,
 		})
 	}

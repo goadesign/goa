@@ -404,6 +404,7 @@ func validateGeneratedUnionEmission(left, right *generatedUnionEmissionFacts) er
 		left.union.identity != right.union.identity ||
 		left.union.typeKey != right.union.typeKey ||
 		left.union.valueKey != right.union.valueKey ||
+		left.union.flatten != right.union.flatten ||
 		generatedLocationPath(left.union.location) != generatedLocationPath(right.union.location) ||
 		!sameGeneratedUnionBranches(left.union.branches, right.union.branches) ||
 		!slices.Equal(left.union.imports.Paths(), right.union.imports.Paths()) {

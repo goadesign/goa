@@ -300,6 +300,7 @@ func (a *AttributeExpr) validate(
 		verr.Merge(mapped.KeyType.validate(ctx, a, visited, childDefaults))
 		verr.Merge(mapped.ElemType.validate(ctx, a, visited, childDefaults))
 	} else if u := AsUnion(a.Type); u != nil {
+		verr.Merge(validateUnionJSON(u, parent))
 		for _, ut := range u.Values {
 			verr.Merge(ut.Attribute.validate(ctx, parent, visited, childDefaults))
 		}

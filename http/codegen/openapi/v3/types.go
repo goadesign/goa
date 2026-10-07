@@ -398,6 +398,16 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 
 		s.Type = openapi.Object
 		for _, val := range t.Values {
+			if t.Flatten {
+				branch := expr.DupAtt(val.Attribute)
+				branch.Validation = expr.EffectiveValidation(val.Attribute)
+				branch.Type = expr.AsObject(branch.Type)
+				member := sf.unionMember(val.Name).schemafy(branch)
+				member.Properties[typeKey] = &openapi.Schema{Type: openapi.String, Enum: []any{val.Name}}
+				member.Required = append(member.Required, typeKey)
+				s.AnyOf = append(s.AnyOf, member)
+				continue
+			}
 			s.AnyOf = append(s.AnyOf, &openapi.Schema{
 				Type: openapi.Object,
 				Properties: map[string]*openapi.Schema{

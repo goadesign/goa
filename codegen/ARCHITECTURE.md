@@ -337,6 +337,16 @@ union in the same role and view reuse that family. If those copies would emit
 different definitions, generation fails and the design must use separate
 `OneOf` declarations.
 
+Union JSON mapping is retained separately from its domain expression hash.
+`expr.Union.Flatten` distinguishes an object whose fields sit beside the
+selected branch discriminator from a tagged union with a nested value.
+Copies, wire identities and emission checks retain this fact before freeze.
+Service types, result views and HTTP types render the same
+`internal/uniontemplate` source; the template emits only the selected mapping.
+A selected HTTP response body aliases its planned native union, retaining its
+branch methods and JSON codec instead of defining another union implementation.
+Protobuf continues to use its native oneof mapping.
+
 A preferred symbol is generated from a semantic role. It may receive a stable
 numeric suffix when another declaration already owns the preferred spelling.
 Examples include a generated `ValidatePayload` or protobuf request message.

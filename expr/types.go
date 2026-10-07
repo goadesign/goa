@@ -65,6 +65,8 @@ type (
 		TypeKey string
 		// ValueKey is the value field name for JSON marshaling (defaults to "value")
 		ValueKey string
+		// Flatten writes an object branch beside the discriminator instead of under ValueKey.
+		Flatten bool
 	}
 
 	// UserType is the interface implemented by all user type
@@ -652,7 +654,7 @@ func (u *Union) Hash() string {
 // IsCompatible returns true if u describes the (Go) type of val.
 func (u *Union) IsCompatible(val any) bool {
 	envelope, ok := val.(map[string]any)
-	if !ok || len(envelope) != 2 {
+	if !ok || (!u.Flatten && len(envelope) != 2) {
 		return false
 	}
 	tag, ok := envelope[u.GetTypeKey()].(string)
@@ -660,6 +662,15 @@ func (u *Union) IsCompatible(val any) bool {
 		return false
 	}
 	value, ok := envelope[u.GetValueKey()]
+	if u.Flatten {
+		fields := make(map[string]any, len(envelope)-1)
+		for name, field := range envelope {
+			if name != u.GetTypeKey() {
+				fields[name] = field
+			}
+		}
+		value, ok = fields, true
+	}
 	if !ok {
 		return false
 	}
@@ -671,7 +682,7 @@ func (u *Union) IsCompatible(val any) bool {
 	return false
 }
 
-// Example returns a canonical tagged-envelope example.
+// Example returns the selected branch using the union's declared JSON mapping.
 func (u *Union) Example(r *ExampleGenerator) any {
 	if len(u.Values) == 0 {
 		return nil
@@ -679,9 +690,26 @@ func (u *Union) Example(r *ExampleGenerator) any {
 	// Derive the member value stream from the member name so the example
 	// only changes when the chosen member changes.
 	nat := u.Values[r.Int()%len(u.Values)]
+	value := nat.Attribute.Example(r.UnionMember(nat.Name))
+	if u.Flatten {
+		branchValue, ok := concreteDefaultValue(reflect.ValueOf(value))
+		if !ok {
+			panic("flattened OneOf example must be a non-null object")
+		}
+		fields, invalidKeys := defaultObjectFields(branchValue, AsObject(nat.Attribute.Type))
+		if len(invalidKeys) > 0 {
+			panic("flattened OneOf example must have string object keys")
+		}
+		result := make(map[string]any, len(fields)+1)
+		result[u.GetTypeKey()] = nat.Name
+		for name, field := range fields {
+			result[name] = field.Interface()
+		}
+		return result
+	}
 	return map[string]any{
 		u.GetTypeKey():  nat.Name,
-		u.GetValueKey(): nat.Attribute.Example(r.UnionMember(nat.Name)),
+		u.GetValueKey(): value,
 	}
 }
 

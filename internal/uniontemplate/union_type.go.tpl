@@ -81,7 +81,11 @@ func (u {{ .TypeDeclaration.Name }}) Validate() error {
 	}
 }
 
+{{- if .Flatten }}
+// MarshalJSON writes the selected object branch beside its discriminator.
+{{- else }}
 // MarshalJSON marshals the union into the canonical {type,value} JSON shape.
+{{- end }}
 func (u {{ .TypeDeclaration.Name }}) MarshalJSON() ([]byte, error) {
 	if err := u.Validate(); err != nil {
 		return nil, err
@@ -97,6 +101,28 @@ func (u {{ .TypeDeclaration.Name }}) MarshalJSON() ([]byte, error) {
 	default:
 		return nil, fmt.Errorf("unexpected {{ .TypeDeclaration.Name }} kind %q", u.kind)
 	}
+	{{- if .Flatten }}
+	data, err := json.Marshal(value)
+	if err != nil {
+		return nil, err
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(data, &fields); err != nil {
+		return nil, err
+	}
+	if fields == nil {
+		return nil, goa.InvalidFieldTypeError({{ printf "%q" .TypeKey }}, nil, "non-null JSON object")
+	}
+	if _, exists := fields[{{ printf "%q" .TypeKey }}]; exists {
+		return nil, fmt.Errorf("{{ .TypeDeclaration.Name }} branch already contains discriminator %q", {{ printf "%q" .TypeKey }})
+	}
+	tag, err := json.Marshal(string(u.kind))
+	if err != nil {
+		return nil, err
+	}
+	fields[{{ printf "%q" .TypeKey }}] = tag
+	return json.Marshal(fields)
+	{{- else }}
 	return json.Marshal(struct {
 		Type  string {{ printf "`json:\"%s\"`" .TypeKey }}
 		Value any    {{ printf "`json:\"%s\"`" .ValueKey }}
@@ -104,10 +130,41 @@ func (u {{ .TypeDeclaration.Name }}) MarshalJSON() ([]byte, error) {
 		Type:  string(u.kind),
 		Value: value,
 	})
+	{{- end }}
 }
 
+{{- if .Flatten }}
+// UnmarshalJSON reads the discriminator and decodes its declared object branch.
+{{- else }}
 // UnmarshalJSON unmarshals the union from the canonical {type,value} JSON shape.
+{{- end }}
 func (u *{{ .TypeDeclaration.Name }}) UnmarshalJSON(data []byte) error {
+	{{- if .Flatten }}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(data, &fields); err != nil {
+		return err
+	}
+	tag, exists := fields[{{ printf "%q" .TypeKey }}]
+	if !exists {
+		return goa.MissingFieldError({{ printf "%q" .TypeKey }}, "{{ .TypeDeclaration.Name }}")
+	}
+	if bytes.Equal(bytes.TrimSpace(tag), []byte("null")) {
+		return goa.InvalidFieldTypeError({{ printf "%q" .TypeKey }}, nil, "JSON string")
+	}
+	var raw struct {
+		Type string
+		Value json.RawMessage
+	}
+	if err := json.Unmarshal(tag, &raw.Type); err != nil {
+		return err
+	}
+	delete(fields, {{ printf "%q" .TypeKey }})
+	value, err := json.Marshal(fields)
+	if err != nil {
+		return err
+	}
+	raw.Value = value
+	{{- else }}
 	var raw struct {
 		Type  string          {{ printf "`json:\"%s\"`" .TypeKey }}
 		Value json.RawMessage {{ printf "`json:\"%s\"`" .ValueKey }}
@@ -121,6 +178,7 @@ func (u *{{ .TypeDeclaration.Name }}) UnmarshalJSON(data []byte) error {
 	if bytes.Equal(bytes.TrimSpace(raw.Value), []byte("null")) {
 		return goa.InvalidFieldTypeError({{ printf "%q" .ValueKey }}, nil, "non-null JSON value")
 	}
+	{{- end }}
 	switch raw.Type {
 	{{- range .Fields }}
 	case string({{ .KindDeclaration.Name }}):

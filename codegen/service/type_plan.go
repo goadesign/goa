@@ -128,6 +128,7 @@ func planUnionRenderFacts(facts *unionFacts, binder codegen.GoTypeBinder, genera
 	facts.identity = codegen.NewUnionDeclarationID(facts.attribute)
 	facts.typeKey = facts.union.GetTypeKey()
 	facts.valueKey = facts.union.GetValueKey()
+	facts.flatten = facts.union.Flatten
 	facts.branches = make([]*unionBranchFacts, len(facts.union.Values))
 	storageNames := codegen.NewNameScope()
 	// Reserve kind for the selector so a branch named kind uses another field.
