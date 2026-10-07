@@ -124,7 +124,7 @@ go get goa.design/goa/v3@latest
 mkdir design
 ```
 
-Save the design above as `design/design.go`. For all three transports, install the [Protocol Buffer compiler](https://protobuf.dev/installation/) and the [Go protobuf generators](UPGRADING.md#install-v3320). For an HTTP-only first run, omit both `JSONRPC` blocks and the `GRPC` block.
+Save the design above as `design/design.go`. For all three transports, install the [Protocol Buffer compiler](https://protobuf.dev/installation/) and the [Go protobuf generators](UPGRADING.md#install-v3340-after-publication). For an HTTP-only first run, omit both `JSONRPC` blocks and the `GRPC` block.
 
 Generate the code and starter application:
 
@@ -193,9 +193,9 @@ You implement the planner and application behavior; Goa-AI generates contracts, 
 
 ## Upgrading to v3.32.0
 
-v3.32.0 fixes client-interceptor imports in generated transport clients and command starters, exposes the corresponding generation-plan query to plugins, and updates dependencies. Goa now requires Go 1.26 or later.
+v3.34.0 adds generated clients and servers for URL-encoded form requests, lets transport plugins reuse Goa's URL parameter validation and declare server dependencies, reports gRPC cancellation with native status codes, and fixes generation for viewed collection bodies, mapped URL parameters, explicit object bodies, and JSON-RPC bindings. Goa requires Go 1.26 or later.
 
-Projects upgrading from v3.30.x must also account for the intentional source and transport changes introduced in v3.31. Read the **[upgrade guide](UPGRADING.md)** before regenerating; it separates those migrations from the v3.32 changes. The [release notes](https://github.com/goadesign/goa/releases/tag/v3.32.0) explain the benefits and fixes.
+Projects upgrading from v3.30.x must also account for the intentional source and transport changes introduced in v3.31. Read the **[upgrade guide](UPGRADING.md)** before regenerating; it keeps the current v3.34.0 changes separate from those earlier migrations. The [release notes](https://github.com/goadesign/goa/releases/tag/v3.34.0) explain the benefits and fixes.
 
 ## Keep exploring
 

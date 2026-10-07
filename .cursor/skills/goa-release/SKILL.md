@@ -118,8 +118,15 @@ For each repository:
 
 ## Preparation Workflow
 
-1. In the Goa repository, run `make`. Fix failures before continuing.
-2. In the Goa repository, run:
+1. In the Goa repository, read `UPGRADING.md` against the diff since the previous release tag.
+   Retitle it to the target version, replace every `(unreleased)` section marker with a
+   `v3.x.y:` heading, add a `v3.x.y: upgrade order and rollback` summary when the range needs
+   one, update the installation commands and the official plugins version to the target, and fix
+   the README links and paragraph that describe the current release. Merge those edits through a
+   normal pull request before creating any preparation commit; `make release` does not update
+   this guide.
+2. In the Goa repository, run `make`. Fix failures before continuing.
+3. In the Goa repository, run:
 
    ```bash
    go get -u -v ./...
@@ -132,7 +139,7 @@ For each repository:
    `make` so `integration-test` does not fail on stale module metadata. `go get` should only update
    `go.mod` and `go.sum`. If other files changed in any repository, review why before committing.
 
-3. In the examples repository, run:
+4. In the examples repository, run:
 
    ```bash
    go list -m -f '{{if .Main}}{{.Dir}}{{end}}' all | while IFS= read -r mod; do
@@ -145,7 +152,7 @@ For each repository:
    module. Update and tidy every example module before running `make`. If files changed, commit them
    with `Prepare v3.x.y`. Do not push; `make release-examples` pushes the branch.
 
-4. In the plugins repository, run:
+5. In the plugins repository, run:
 
    ```bash
    go get -u -v ./...
@@ -156,13 +163,13 @@ For each repository:
    If files changed, commit them with `Prepare v3.x.y`. Do not push; `make release-plugins`
    pushes the branch.
 
-5. In the Goa repository, edit only `MINOR`, `BUILD`, and the preview marker in `Makefile` for the
+6. In the Goa repository, edit only `MINOR`, `BUILD`, and the preview marker in `Makefile` for the
    target version. Leave `MAJOR=3`. For a stable release, `PREVIEW_NUMBER` must be empty. The stable
    release target clears the suffix in `pkg/version.go`; do not edit that generated version value
    by hand.
-6. If Goa files changed from dependency updates or the version bump, commit them with
+7. If Goa files changed from dependency updates or the version bump, commit them with
    `Prepare v3.x.y`.
-7. Re-check all three repositories are clean. They may be ahead of upstream by their preparation
+8. Re-check all three repositories are clean. They may be ahead of upstream by their preparation
    commits; that is expected because `make release` pushes them.
 
 ## Final Pre-Release Check

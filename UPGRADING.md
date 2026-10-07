@@ -1,21 +1,21 @@
-# Upgrading to Goa v3.33.0
+# Upgrading to Goa v3.34.0
 
 Select the exact versions below only after their tags are available. Publication
 of the Goa tag does not itself publish the plugins or examples tags.
 
 Goa's root and nested JSON-RPC module files retain **Go 1.26.0** as their
 declared minimum, without a toolchain directive. Go 1.27.1 is recommended.
-Core preparation passed on Go 1.27.1. The merged generator changes also passed
-CI on Go 1.26.8 and 1.27.1 on Ubuntu and Windows; Windows does not run the nested
-JSON-RPC suite. Go 1.26.0 itself was not tested during this preparation.
-A declared minimum is not a claim that every dependency graph was tested on
-that version.
+The code changes merged for v3.34.0 each passed CI on Go 1.26.8 and 1.27.1 on
+Ubuntu and Windows; Windows does not run the nested JSON-RPC suite. Go 1.26.0 itself
+was not tested. A declared minimum is not a claim that every dependency graph
+was tested on that version.
 
-The v3.33.0 sections below describe the current upgrade. Earlier v3.31/v3.32
-behavioral migrations are retained as historical guidance; the installation
-and regeneration sections select the current target after publication.
+The v3.34.0 sections below describe the current upgrade. The v3.33.0 sections
+and the earlier v3.31/v3.32 migrations are retained as historical guidance;
+the installation and regeneration sections select the current target after
+publication.
 
-## Generated URL-encoded form requests (unreleased)
+## v3.34.0: generated URL-encoded form requests
 
 Add `FormRequest()` inside an endpoint's `HTTP` block to generate clients and
 servers for `application/x-www-form-urlencoded` request bodies. The remaining
@@ -52,7 +52,7 @@ there is no stored-data migration. Applications that do not select forms need
 no runtime migration. Regenerated OpenAPI may now correctly describe their
 existing optional selected bodies as optional.
 
-## Explicit object request bodies (unreleased)
+## v3.34.0: explicit object request bodies
 
 An explicit `Body(func() { ... })` now receives a generated HTTP body type and
 client constructor, just like a computed object body. Previously, a body with
@@ -73,7 +73,7 @@ client/server deployment order for valid requests. Requests missing a designed
 required mapped field are now rejected instead of reaching construction with a
 missing value. Rollback restores the previous generated helpers and validation.
 
-## Internal JSON names and HTTP bodies (unreleased)
+## v3.34.0: internal JSON names and HTTP bodies
 
 `Meta("struct:tag:json:name", "stored_name")` now affects only JSON tags on
 non-transport Go types, as documented. Previously, HTTP and JSON-RPC body
@@ -97,7 +97,7 @@ compiled programs do not change until regenerated and rebuilt. Direct service
 JSON and stored data retain their names, so this correction requires no
 stored-data migration.
 
-## Plugin-declared server dependencies (unreleased)
+## v3.34.0: plugin-declared server dependencies
 
 HTTP and JSON-RPC generator plugins can declare a required typed dependency
 before generation freezes. Generated server constructors take the dependency
@@ -113,7 +113,7 @@ plugins that declare no dependency keep their existing signatures and behavior.
 This generation capability changes no wire format or stored data. Deploy and
 roll back a plugin, its regenerated code, and its application wiring together.
 
-## Mapped URL parameters (unreleased)
+## v3.34.0: mapped URL parameters
 
 An authored `Param("organization_id:organization")` now binds the payload's
 `organization_id` field to `{organization}` in HTTP and JSON-RPC routes.
@@ -127,6 +127,63 @@ Regenerate clients and servers that use mapped URL parameters. Existing routes
 with identical payload and URL names keep their behavior. The accepted wire
 format does not change, so this correction requires no stored-data migration
 or coordinated peer rollout.
+
+## v3.34.0: native gRPC cancellation and deadline results
+
+`grpc.EncodeError` now maps a single cause matching `context.Canceled` or
+`context.DeadlineExceeded` through `errors.Is` to the matching native gRPC
+status, using the same matching rules as gRPC. Ordinary
+wrappers and joins with one non-nil cause keep the same result and full error
+text. No generic `ErrorResponse` is fabricated for that stop: a canceled
+operation is no longer described as a service fault. Previously these errors
+returned `Unknown` with fault details.
+
+A named `*goa.ServiceError`, a generated declared error response, or an explicit
+gRPC status still owns its response.
+The server still encodes independent joined failures with their existing
+complete-error code and metadata, including two separate context failures.
+Provider or domain errors that wrap a context cause retain their declared meaning.
+
+Regenerated clients preserve an otherwise undecoded `Canceled` or
+`DeadlineExceeded` response while the local caller remains active. They retain
+its text and any undecodable details without searching later details or
+inventing a service-error name. When the local context has ended and its code
+matches, existing caller-context matching also exposes that local context
+cause. Decodable service details still take precedence. This also preserves an
+explicit status supplied for a server error with several joined causes: the
+client receives one status and keeps its code and details. If a client
+interceptor joins the received status with a separate local error, the existing
+complete-error handling still applies. Receiving a remote stop does not establish
+that the caller canceled, that side effects were undone, or that replay is safe.
+Native stops do not introduce automatic retries. Existing explicit retry traits
+remain governed by the application's retry policy.
+
+Upgrade the runtime and generator together and regenerate clients. An older
+ordinary unary client may replace a new native stop with a fault; regenerated
+clients continue to read older generic service details. Server-runtime upgrades
+change raw context encoding without regeneration, so deploy matching clients
+before or with servers. There is no protobuf, request, or stored-data migration.
+Rollback runtime and generated clients together to restore the previous raw
+context behavior.
+
+## v3.34.0: upgrade order and rollback
+
+1. After publication, install the same exact version of the Goa module and
+   command as shown in the installation section below, update official plugins
+   in the same application change when used, and regenerate the complete
+   design.
+2. Endpoints that adopt `FormRequest()`, designs that relied on the old
+   transmitted name of a `struct:tag:json:name` attribute, and applications
+   adopting a plugin-declared server dependency change what peers exchange or
+   how servers are constructed. Regenerate, deploy, and roll back both peers
+   of each such endpoint together.
+3. gRPC cancellation and deadline results change on the server runtime
+   without regeneration. Deploy regenerated clients before or with upgraded
+   servers so a native stop is not reported as a fault, and roll back runtime
+   and clients together.
+4. Explicit object bodies and mapped URL parameters keep their accepted wire
+   formats. Regenerate and rebuild; no deployment order or stored-data
+   migration applies.
 
 ## v3.33.0: parameters within HTTP path segments
 
@@ -296,44 +353,6 @@ unaffected by the HTTP validator correction, and neither fix requires a wire
 or stored-data migration.
 See [#4016](https://github.com/goadesign/goa/pull/4016) and
 [#4014](https://github.com/goadesign/goa/pull/4014).
-
-## Native gRPC cancellation and deadline results
-
-`grpc.EncodeError` now maps a single cause matching `context.Canceled` or
-`context.DeadlineExceeded` through `errors.Is` to the matching native gRPC
-status, using the same matching rules as gRPC. Ordinary
-wrappers and joins with one non-nil cause keep the same result and full error
-text. No generic `ErrorResponse` is fabricated for that stop: a canceled
-operation is no longer described as a service fault. Previously these errors
-returned `Unknown` with fault details.
-
-A named `*goa.ServiceError`, a generated declared error response, or an explicit
-gRPC status still owns its response.
-The server still encodes independent joined failures with their existing
-complete-error code and metadata, including two separate context failures.
-Provider or domain errors that wrap a context cause retain their declared meaning.
-
-Regenerated clients preserve an otherwise undecoded `Canceled` or
-`DeadlineExceeded` response while the local caller remains active. They retain
-its text and any undecodable details without searching later details or
-inventing a service-error name. When the local context has ended and its code
-matches, existing caller-context matching also exposes that local context
-cause. Decodable service details still take precedence. This also preserves an
-explicit status supplied for a server error with several joined causes: the
-client receives one status and keeps its code and details. If a client
-interceptor joins the received status with a separate local error, the existing
-complete-error handling still applies. Receiving a remote stop does not establish
-that the caller canceled, that side effects were undone, or that replay is safe.
-Native stops do not introduce automatic retries. Existing explicit retry traits
-remain governed by the application's retry policy.
-
-Upgrade the runtime and generator together and regenerate clients. An older
-ordinary unary client may replace a new native stop with a fault; regenerated
-clients continue to read older generic service details. Server-runtime upgrades
-change raw context encoding without regeneration, so deploy matching clients
-before or with servers. There is no protobuf, request, or stored-data migration.
-Rollback runtime and generated clients together to restore the previous raw
-context behavior.
 
 ## v3.33.0: generic gRPC errors retain their cause
 
@@ -557,7 +576,7 @@ preview.
 | Required gRPC scalar fields | Regenerate protobuf code and update direct message literals. Coordinate peers when required zero or empty values matter. |
 | JSON-RPC errors, selected views, or server streams | Update both generated peers and custom clients for the changed envelopes and stream lifecycle. JSON-RPC WebSocket generation has been removed. |
 | Dynamic gRPC views or optional primitive HTTP SSE data | Regenerate and deploy both peers together for the cases listed under coordinated deployment. |
-| Code-generation plugins | Upgrade `goa.design/plugins/v3` to v3.33.0 and migrate custom plugins that declare names or call removed generator APIs. |
+| Code-generation plugins | Upgrade `goa.design/plugins/v3` to v3.34.0 and migrate custom plugins that declare names or call removed generator APIs. |
 
 There is no persisted-data migration. Keep the previous binaries, dependency
 versions, design, and generated tree available for rollback.
@@ -615,15 +634,15 @@ Review the matching migration sections if your project has any of these characte
 Test ordinary HTTP-only services as well. Review the generated diff even when
 none of the specialized migrations below applies.
 
-## Install v3.33.0 after publication
+## Install v3.34.0 after publication
 
 After the exact tags are published and verified, start from a branch with the
 current generated tree committed. Install both the Goa module and the `goa`
 command from the same release version:
 
 ```bash
-go get goa.design/goa/v3@v3.33.0
-go install goa.design/goa/v3/cmd/goa@v3.33.0
+go get goa.design/goa/v3@v3.34.0
+go install goa.design/goa/v3/cmd/goa@v3.34.0
 goa version
 ```
 
@@ -631,7 +650,7 @@ The Go command records the same release version in `go.mod`. The installed
 command reports the same version:
 
 ```text
-Goa version v3.33.0
+Goa version v3.34.0
 ```
 
 Do not use an older `goa` command with the new module. Also install the
@@ -648,11 +667,11 @@ If your design imports the official plugins, update that module in the same
 application change:
 
 ```bash
-go get goa.design/plugins/v3@v3.33.0
+go get goa.design/plugins/v3@v3.34.0
 ```
 
 Wait for the matching plugins/examples tags before selecting them; their
-publication is not implied by the Goa tag. Use v3.33.0 when copying examples
+publication is not implied by the Goa tag. Use v3.34.0 when copying examples
 for this target. Custom plugins must complete
 the generator-library migration below before regenerating an application.
 
