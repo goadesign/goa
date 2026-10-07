@@ -1,0 +1,28 @@
+// ItemResponseCollection is the type of the "ServiceViewedBodyCollection"
+// service "MethodViewedBodyCollection" endpoint HTTP response body.
+type ItemResponseCollection []*ItemResponse
+
+// ItemResponse is used to define fields on response body types.
+type ItemResponse struct {
+	ID   *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+}
+
+// NewMethodViewedBodyCollectionItemsOK builds a "ServiceViewedBodyCollection"
+// service "MethodViewedBodyCollection" endpoint result from a HTTP "OK"
+// response.
+func NewMethodViewedBodyCollectionItemsOK(body ItemResponseCollection) *serviceviewedbodycollectionviews.ItemsView {
+	v := make([]*serviceviewedbodycollectionviews.ItemView, len(body))
+	for i, val := range body {
+		if val == nil {
+			v[i] = nil
+			continue
+		}
+		v[i] = unmarshalItemResponseToServiceviewedbodycollectionviewsItemView(val)
+	}
+	res := &serviceviewedbodycollectionviews.ItemsView{
+		Items: v,
+	}
+
+	return res
+}

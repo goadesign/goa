@@ -147,6 +147,27 @@ func TestIsPrimitivePointer(t *testing.T) {
 			Expected: false,
 		},
 		{
+			Test:     "pointer context with array attribute",
+			Context:  &AttributeContext{Pointer: true},
+			Attr:     newObj("foo", &expr.Array{ElemType: &expr.AttributeExpr{Type: expr.String}}, false),
+			Name:     "foo",
+			Expected: false,
+		},
+		{
+			Test:     "pointer context with map attribute",
+			Context:  &AttributeContext{Pointer: true},
+			Attr:     newObj("foo", &expr.Map{KeyType: &expr.AttributeExpr{Type: expr.String}, ElemType: &expr.AttributeExpr{Type: expr.String}}, false),
+			Name:     "foo",
+			Expected: false,
+		},
+		{
+			Test:     "pointer context with object attribute",
+			Context:  &AttributeContext{Pointer: true},
+			Attr:     newObj("foo", &expr.Object{}, false),
+			Name:     "foo",
+			Expected: false,
+		},
+		{
 			Test:     "ignore required context with pointer attribute",
 			Context:  &AttributeContext{IgnoreRequired: true},
 			Attr:     newObj("foo", expr.String, false),

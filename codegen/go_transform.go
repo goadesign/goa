@@ -995,7 +995,7 @@ func wrappedPrimitivePointer(wrapper *expr.AttributeExpr, context *AttributeCont
 		panic("transform wrapper must contain exactly one field")
 	}
 	field := (*object)[0]
-	return expr.IsPrimitive(field.Attribute.Type) && context.IsPrimitivePointer(field.Name, wrapper)
+	return context.IsPrimitivePointer(field.Name, wrapper)
 }
 
 // transformObject generates Go code to transform source object to target
@@ -1195,7 +1195,7 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 		if !guarded {
 			var checkNil bool
 			{
-				isRef := !expr.IsPrimitive(srcc.Type) && !srcMatt.IsRequired(n) || ta.SourceCtx.IsPrimitivePointer(n, srcMatt.AttributeExpr) && expr.IsPrimitive(srcc.Type)
+				isRef := !expr.IsPrimitive(srcc.Type) && !srcMatt.IsRequired(n) || ta.SourceCtx.IsPrimitivePointer(n, srcMatt.AttributeExpr)
 				marshalNonPrimitive := !expr.IsPrimitive(srcc.Type) && ta.SourceCtx.UseDefault && ta.TargetCtx.UseDefault
 				checkNil = isRef || marshalNonPrimitive
 			}
