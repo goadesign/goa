@@ -122,6 +122,32 @@ func formRequestDSL() {
 				d.Response(200)
 			})
 		})
+		for _, transport := range []struct {
+			name string
+			form bool
+		}{
+			{"MappedFlat", true}, {"MappedFlatJSON", false},
+		} {
+			d.Method(transport.name, func() {
+				d.Payload(func() {
+					d.Attribute("label", d.String)
+					d.Attribute("tags", d.ArrayOf(d.String))
+					d.Required("label", "tags")
+				})
+				d.HTTP(func() {
+					d.POST("/" + transport.name)
+					d.Body(func() {
+						d.Attribute("label:display_name", d.String)
+						d.Attribute("tags:tag", d.ArrayOf(d.String))
+						d.Required("label", "tags")
+					})
+					if transport.form {
+						d.FormRequest()
+					}
+					d.Response(204)
+				})
+			})
+		}
 		d.Method("OptionalJSON", func() {
 			d.Payload(func() {
 				d.Attribute("body", details)

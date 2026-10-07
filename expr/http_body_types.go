@@ -86,6 +86,18 @@ func httpRequestBody(a *HTTPEndpointExpr) *AttributeExpr {
 		renameType(a.Body, name)
 		if ut, ok := a.Body.Type.(UserType); ok {
 			a.Body.Type = generatedUserType(ut, RequestBodyExampleIdentity(a))
+		} else if IsObject(a.Body.Type) {
+			// An explicit object body can use different fields from the service
+			// payload. Give it a transport type so generated clients construct
+			// that body before encoding it and servers validate it before use.
+			body := a.Body
+			a.Body = &AttributeExpr{
+				Type:         NewGeneratedUserType(name, body, RequestBodyExampleIdentity(a)),
+				Validation:   body.Validation,
+				UserExamples: body.UserExamples,
+				Meta:         body.Meta,
+				authored:     body.AuthoredAttribute(),
+			}
 		}
 		return a.Body
 	}

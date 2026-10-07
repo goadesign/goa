@@ -23,7 +23,8 @@ body after path, query, header and cookie mappings must be a nonempty object
 whose fields are primitives or arrays of primitives. Nested objects, maps,
 `Any`, custom Go field types, JSON-RPC and alternate body codecs are rejected
 during design evaluation. Existing JSON and multipart endpoints keep their
-codecs and constructor signatures.
+selected media types. Explicit object bodies now use the generated transport
+types described below.
 
 Body mappings such as `Attribute("clientId:client_id")` select the form key;
 `struct:field:name` selects the Go field independently. Generated codecs retain
@@ -50,6 +51,27 @@ servers together. Existing compiled applications retain their old codecs;
 there is no stored-data migration. Applications that do not select forms need
 no runtime migration. Regenerated OpenAPI may now correctly describe their
 existing optional selected bodies as optional.
+
+## Explicit object request bodies (unreleased)
+
+An explicit `Body(func() { ... })` now receives a generated HTTP body type and
+client constructor, just like a computed object body. Previously, a body with
+only primitive fields could bypass construction; a form client then referenced
+transport field selectors on the service payload and failed to compile.
+
+Mapped fields such as `Attribute("label:display_name", String)` now retain their
+logical names for validation and transport names for generated selectors.
+Required scalar and array fields are checked before the server constructs the
+service payload. Valid requests retain their declared wire names. Present empty
+strings remain valid, and a required JSON array may still contain zero elements.
+
+Regenerate and rebuild when upgrading. Generated HTTP payload constructors that
+previously accepted an inline body struct now accept the generated body type;
+update handwritten calls to these transport helpers if any exist. Generated
+service interfaces do not change. There is no stored-data migration or required
+client/server deployment order for valid requests. Requests missing a designed
+required mapped field are now rejected instead of reaching construction with a
+missing value. Rollback restores the previous generated helpers and validation.
 
 ## Internal JSON names and HTTP bodies (unreleased)
 
