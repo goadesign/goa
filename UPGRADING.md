@@ -1,3 +1,29 @@
+# Unreleased: selected result views inside union branches
+
+A result type used in a `OneOf` branch now respects its declared `View`.
+For example, a receipt branch with `View("public")` sends only the receipt's
+public fields. Previously the generated response could send fields from the
+receipt's default view, including fields the public view excluded. The same
+selection applies to nested objects, array elements, and map values.
+
+Goa's shared service conversion, view validation, and transport projection
+use the selected fields. Tagged and flattened JSON union mappings keep their
+existing discriminators and envelopes. Service signatures and union accessors
+are unchanged.
+
+Regenerate affected services and transports, and deploy generated clients and
+servers together. Older clients may reject a corrected response if their default-
+view validators required the excluded fields. A client expecting only the authored
+public fields works with the corrected server. There is no stored-data migration.
+Rolling back server code can expose excluded fields again; prefer correcting the
+authored view if the API intentionally includes them.
+
+Generators that reuse a conversion already owned by their output package can call
+`TransformPlan.UseExistingHelperDefinition` before binding contexts. The existing
+function must accept the planned source Go type and return the planned target Go
+type. The transform plan writes its calls and excludes its body and children that
+have no other caller. Existing `BindHelperDefinition` behavior is unchanged.
+
 # Unreleased: object unions with a flat JSON discriminator
 
 Inside a `OneOf` declaration, add `Meta("oneof:json:flatten")` to encode the

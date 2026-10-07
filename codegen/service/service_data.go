@@ -809,13 +809,6 @@ type (
 		IsRequired bool
 	}
 
-	// constructorFieldData associates one child result field with the private
-	// constructor called by its parent conversion.
-	constructorFieldData struct {
-		VarName     string
-		Declaration *codegen.NameDeclaration
-	}
-
 	// unionDataKey selects one Goa OneOf definition by its generated definition
 	// key and Go package path.
 	unionDataKey struct {

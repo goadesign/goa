@@ -515,10 +515,11 @@ func newRetainedValidationCall(declaration *codegen.NameDeclaration, view string
 // sourceCtx and targetCtx provide the package names, pointer rules, and field
 // names used to read the source value and write the target value.
 //
-// sourceVar and targetVar contains the variable name that holds the source and
+// sourceVar and targetVar contain the variable names that hold the source and
 // target data structures in the transformation code.
 //
-// view is used to generate the constructor function name.
+// Existing result constructors own their bodies; only other helper bodies
+// are returned.
 func buildConstructorCode(facts *viewConversionFacts, sourceVar, targetVar string, sourceCtx, targetCtx *codegen.AttributeContext, targetType string) (string, []*codegen.TransformFunctionData) {
 	var (
 		helpers []*codegen.TransformFunctionData
@@ -540,9 +541,6 @@ func buildConstructorCode(facts *viewConversionFacts, sourceVar, targetVar strin
 		return buf.String(), helpers
 	}
 
-	data["Source"] = sourceVar
-	data["Target"] = targetVar
-
 	if err := facts.plan.BindContexts(sourceCtx, targetCtx); err != nil {
 		panic(err) // bug
 	}
@@ -551,15 +549,6 @@ func buildConstructorCode(facts *viewConversionFacts, sourceVar, targetVar strin
 		panic(err) // bug
 	}
 	data["Code"] = code
-
-	fields := make([]*constructorFieldData, 0, len(facts.fields))
-	for _, field := range facts.fields {
-		fields = append(fields, &constructorFieldData{
-			VarName:     codegen.Goify(field.name, true),
-			Declaration: field.call,
-		})
-	}
-	data["Fields"] = fields
 
 	if err := initTypeCodeTmpl.Execute(&buf, data); err != nil {
 		panic(err) // bug

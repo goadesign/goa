@@ -957,6 +957,7 @@ func collectViewConversionFacts(projected, service *expr.AttributeExpr, toResult
 			Views:      views,
 			Identifier: service.Type.(*expr.ResultTypeExpr).Identifier,
 		}}
+		narrowed.Meta = expr.MetaExpr{expr.ViewMetaKey: {view.Name}}
 		source, target := service, narrowed
 		if toResult {
 			source, target = narrowed, service
@@ -968,26 +969,7 @@ func collectViewConversionFacts(projected, service *expr.AttributeExpr, toResult
 			target:   target,
 		}
 		if projectedArray == nil {
-			conversion.transformTarget = expr.DupAtt(target)
-			targetObject := expr.AsObject(conversion.transformTarget.Type)
-			for _, field := range *targetObject {
-				if _, nested := field.Attribute.Type.(*expr.ResultTypeExpr); !nested {
-					continue
-				}
-				nestedView := ""
-				if selected := source.Type.(*expr.ResultTypeExpr).View(view.Name).Find(field.Name); selected != nil {
-					if explicit, ok := selected.Meta.Last(expr.ViewMetaKey); ok && explicit != expr.DefaultView {
-						nestedView = explicit
-					}
-				}
-				conversion.fields = append(conversion.fields, &viewConversionFieldFacts{
-					name:      field.Name,
-					attribute: field.Attribute,
-					view:      nestedView,
-				})
-				targetObject.Delete(field.Name)
-			}
-			plan, err := codegen.NewTransformPlan(source, conversion.transformTarget, "", nil)
+			plan, err := codegen.NewTransformPlan(source, target, "", viewTransformHooks(toResult))
 			if err != nil {
 				return nil, err
 			}

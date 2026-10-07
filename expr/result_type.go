@@ -461,12 +461,45 @@ func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, s
 		return at, nil
 	}
 
+	if union := AsUnion(at.Type); union != nil {
+		viewUnion := AsUnion(vat.Attribute.Type)
+		for _, branch := range union.Values {
+			selected := branch
+			if viewUnion != nil {
+				for _, candidate := range viewUnion.Values {
+					if candidate.Name == branch.Name {
+						selected = candidate
+						break
+					}
+				}
+			}
+			projected, err := projectRecursive(branch.Attribute, selected, view, seen)
+			if err != nil {
+				return nil, err
+			}
+			branch.Attribute = projected
+		}
+		return at, nil
+	}
+
 	if ar := AsArray(at.Type); ar != nil {
 		pat, err := projectRecursive(ar.ElemType, vat, view, seen)
 		if err != nil {
 			return nil, err
 		}
 		ar.ElemType = pat
+	}
+
+	if mapping := AsMap(at.Type); mapping != nil {
+		key, err := projectRecursive(mapping.KeyType, vat, view, seen)
+		if err != nil {
+			return nil, err
+		}
+		value, err := projectRecursive(mapping.ElemType, vat, view, seen)
+		if err != nil {
+			return nil, err
+		}
+		mapping.KeyType, mapping.ElemType = key, value
 	}
 
 	return at, nil

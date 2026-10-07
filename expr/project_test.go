@@ -89,6 +89,32 @@ func TestProject(t *testing.T) {
 	}
 }
 
+func TestProjectUnionBranchViews(t *testing.T) {
+	for _, flatten := range []bool{false, true} {
+		t.Run(fmt.Sprintf("flatten=%t", flatten), func(t *testing.T) {
+			choice := &Union{
+				TypeName: "Outcome", TypeKey: "resultType", ValueKey: "data", Flatten: flatten,
+				Values: []*NamedAttributeExpr{
+					{Name: "public", Attribute: &AttributeExpr{Type: simpleResult, Meta: MetaExpr{ViewMetaKey: {"link"}}}},
+					{Name: "full", Attribute: &AttributeExpr{Type: simpleResult}},
+				},
+			}
+			source := resultType("choice", choice, view("default", "choice", choice))
+			projected, err := Project(source, DefaultView)
+			require.NoError(t, err)
+			union := AsUnion(projected.Find("choice").Type)
+			require.NotSame(t, choice, union)
+			require.Equal(t, flatten, union.Flatten)
+			require.Equal(t, "resultType", union.TypeKey)
+			require.Equal(t, "data", union.ValueKey)
+			require.Len(t, *AsObject(union.Values[0].Attribute.Type), 1)
+			require.Len(t, *AsObject(union.Values[1].Attribute.Type), 2)
+			require.Len(t, *AsObject(choice.Values[0].Attribute.Type), 2)
+			require.Equal(t, "link", union.Values[0].Attribute.Meta[ViewMetaKey][0])
+		})
+	}
+}
+
 func TestProjectPreservesGeneratedExampleIdentity(t *testing.T) {
 	source := resultType("value", String, view("default", "value", String))
 	owner := MethodResultExampleIdentity(&MethodExpr{

@@ -31,10 +31,5 @@
 	return {{ .ReturnVar }}
 {{- else -}}
 	{{ .Code }}
-	{{- range .Fields }}
-		if {{ $.Source }}.{{ .VarName }} != nil {
-			{{ $.Target }}.{{ .VarName }} = {{ .Declaration.Name }}({{ $.Source }}.{{ .VarName }})
-		}
-	{{- end }}
 	return {{ .ReturnVar }}
 {{- end -}}
