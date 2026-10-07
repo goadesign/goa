@@ -5,13 +5,44 @@ description: Design and evolve Goa application services. Use for Goa DSL changes
 
 # Goa Service Designer
 
-Use this skill when working in an application repository that uses Goa. If the task is about changing
-Goa's own compiler, runtime, templates, or generators, follow that repository's contributor
-instructions instead.
+Use this skill for applications and plugins that declare or consume Goa contracts. Repository
+instructions govern implementation. For changes to Goa's own compiler, runtime, templates, or
+generators, use Goa's contributor workflow instead of the application workflow below; still use the
+reference and capability checks below when deciding what the DSL or generated transport supports.
 
 Let Goa generate the mechanical code. Use the relevant design and generated service interface as
 the working context; inspect transport output when the task changes wire behavior. Implement the
 application's decisions outside `gen/`.
+
+## Consult The Relevant Reference Before Designing
+
+Read the relevant reference before a non-trivial design or implementation decision. Do not wait
+until generation fails, and do not treat the links as optional background reading:
+
+- For HTTP, gRPC, or JSON-RPC mappings, streaming, errors, security, or interceptor behavior, read
+  [transport guidance](references/transport-errors-interceptors.md).
+- For named types, aliases, pointers, defaults, unions, views, or validation, read
+  [modeling guidance](references/modeling-and-validation.md).
+- For generated signatures, constructors, codecs, imports, or downstream implementation changes,
+  read [generated-code guidance](references/generated-code-and-implementation.md).
+- When observed output or behavior contradicts the design, also read
+  [troubleshooting](references/troubleshooting.md).
+
+Before introducing a transport workaround or claiming that Goa cannot express a requirement:
+
+1. Check the existing DSL mechanism in the reference and the selected Goa version's source. For
+   example, `Param("attributeName:url_name")` separates a payload field from its URL parameter name;
+   inspect that mapping before renaming path tokens or adding transport-only replacement fields.
+2. Trace the authored mapping through generated payloads, client encoding, server decoding, and
+   endpoint invocation. Distinguish the payload name, HTTP element name, and generated Go selector.
+3. Verify the disputed capability with a minimal authored design and generated client/server check
+   before editing its replacement. A reference states the intended contract; it does not prove the
+   selected generator implements it correctly. Keep a failing result and trace its owning layer
+   rather than assuming the DSL lacks the feature.
+
+Reuse a working native mechanism. If it fails, explain the exact generator gap and why a change
+belongs in Goa or the consuming plugin before implementing it. Read only the references relevant
+to the decision; routine mechanical edits do not require loading every reference.
 
 ## Default Workflow
 
@@ -94,7 +125,7 @@ These are authoring conventions, not requirements imposed by Goa.
 
 ## What To Read Next
 
-Load these references only when the task needs them:
+Use the decision triggers above to select references; the details below describe their scope:
 
 - `references/modeling-and-validation.md`: type modeling, primitive aliases, required fields,
   pointer/default semantics, views, presence, and compatibility.
@@ -115,4 +146,5 @@ Before finishing, verify:
 - Service code trusts established validation boundaries and handles real dependency failures.
 - Compatibility choices are represented in the design and tests, not hidden in service fallbacks.
 - Affected downstream consumers are updated; unaffected artifacts are left alone.
+- New transport workarounds and capability claims have evidence from the native generated path.
 - Test coverage matches the risk of the contract change.
