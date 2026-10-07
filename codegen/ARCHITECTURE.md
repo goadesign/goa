@@ -634,6 +634,15 @@ difference cannot change the function body. gRPC uses this for protobuf field
 numbers: a field number changes the serialized position, not the Go code that
 copies the field value.
 
+When an existing function in the output package already owns a conversion,
+select it with `UseExistingHelperDefinition` before binding contexts. Its source
+and target Go signature must match the planned conversion. The plan writes calls
+to that function, but does not write its body or declare helpers reached only
+through that body. A child still needed by another caller remains in `Helpers`
+and `HelperDefinitions`. Bind names only after selecting these existing owners.
+This is how service view conversion reuses each result type's selected-view
+constructor through direct fields, collections, and union branches.
+
 When several `TransformPlan` values write helpers to the same Go package, the
 caller collects them in one `TransformHelperRegistry` before package names are
 final. Each plan is supplied with the source and target `GoTypePlan` values that

@@ -84,9 +84,6 @@ func newMultipleViewsTiny(vres *resultwithotherresultviews.MultipleViewsView) *M
 	if vres.A != nil {
 		res.A = *vres.A
 	}
-	if vres.B != nil {
-		res.B = newMultipleViews2(vres.B)
-	}
 	return res
 }
 

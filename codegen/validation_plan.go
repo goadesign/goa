@@ -327,7 +327,21 @@ func (p *validationPlanner) plan(attribute *expr.AttributeExpr, layout *GoTypePl
 	}
 	policy := layout.Policy()
 	if userType, named := attribute.Type.(expr.UserType); named && !alias && nested {
-		if !userTypeNeedsValidation(userType, policy, make(map[expr.UserType]struct{})) {
+		validatedType := userType
+		view := ""
+		if result, ok := userType.(*expr.ResultTypeExpr); ok {
+			if selected, ok := attribute.Meta.Last(expr.ViewMetaKey); ok {
+				projected, err := expr.Project(result, selected)
+				if err != nil {
+					return nil, fmt.Errorf("plan validation for %s: %w", path, err)
+				}
+				validatedType = projected
+				if selected != expr.DefaultView {
+					view = selected
+				}
+			}
+		}
+		if !userTypeNeedsValidation(validatedType, policy, make(map[expr.UserType]struct{})) {
 			return &validationPlanNode{occurrence: attribute, layout: layout}, nil
 		}
 		if p.bind == nil {
@@ -336,7 +350,7 @@ func (p *validationPlanner) plan(attribute *expr.AttributeExpr, layout *GoTypePl
 		declaration, err := p.bind(ValidatorBindingRequest{
 			Attribute: attribute,
 			Layout:    layout,
-			View:      "",
+			View:      view,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("plan validation for %s: %w", path, err)

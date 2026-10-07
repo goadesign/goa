@@ -221,24 +221,25 @@ type (
 	// by Helpers cannot change the private expressions Render uses. Render caches
 	// each exact argument set, so repeated calls return the first generated code.
 	TransformPlan struct {
-		source         *expr.AttributeExpr
-		target         *expr.AttributeExpr
-		rootSource     *expr.AttributeExpr
-		rootTarget     *expr.AttributeExpr
-		wrappers       map[TransformHelperDefinitionLocation]transformLayoutWrapper
-		sourceBaseline *expr.AttributeExpr
-		targetBaseline *expr.AttributeExpr
-		sourceCopier   *expr.AttributeGraphCopier
-		targetCopier   *expr.AttributeGraphCopier
-		prefix         string
-		program        *TransformProgram
-		hooks          *TransformHooks
-		sourceCtx      *AttributeContext
-		targetCtx      *AttributeContext
-		helpers        []TransformHelper
-		definitions    []TransformHelperDefinition
-		operations     []*transformOperation
-		renders        map[transformRenderRequest]transformRenderResult
+		source          *expr.AttributeExpr
+		target          *expr.AttributeExpr
+		rootSource      *expr.AttributeExpr
+		rootTarget      *expr.AttributeExpr
+		wrappers        map[TransformHelperDefinitionLocation]transformLayoutWrapper
+		sourceBaseline  *expr.AttributeExpr
+		targetBaseline  *expr.AttributeExpr
+		sourceCopier    *expr.AttributeGraphCopier
+		targetCopier    *expr.AttributeGraphCopier
+		prefix          string
+		program         *TransformProgram
+		hooks           *TransformHooks
+		sourceCtx       *AttributeContext
+		targetCtx       *AttributeContext
+		helpers         []TransformHelper
+		definitions     []TransformHelperDefinition
+		existingHelpers map[TransformHelperID]struct{}
+		operations      []*transformOperation
+		renders         map[transformRenderRequest]transformRenderResult
 	}
 
 	// transformLayoutWrapper records the field selected inside a generated

@@ -4,6 +4,7 @@
 package service
 
 import (
+	"fmt"
 	"path"
 	"strings"
 
@@ -250,8 +251,6 @@ type (
 		viewName        string
 		source          *expr.AttributeExpr
 		target          *expr.AttributeExpr
-		transformTarget *expr.AttributeExpr
-		fields          []*viewConversionFieldFacts
 		plan            *codegen.TransformPlan
 		targetLayout    *codegen.GoTypePlan
 		collection      bool
@@ -261,15 +260,6 @@ type (
 		elementIdentity codegen.DerivedTypeID
 		constructor     *codegen.NameDeclaration
 		elementCall     *codegen.NameDeclaration
-	}
-
-	// viewConversionFieldFacts stores one child result constructor call emitted
-	// separately from the general type conversion.
-	viewConversionFieldFacts struct {
-		name      string
-		attribute *expr.AttributeExpr
-		view      string
-		call      *codegen.NameDeclaration
 	}
 
 	// viewedResultFacts stores the wrapper type and selected view written for one
@@ -732,37 +722,6 @@ func collectViewNames(facts *serviceFacts, servicePackage, viewsPackage *codegen
 				if err != nil {
 					return err
 				}
-				if conversion.plan == nil {
-					continue
-				}
-				for _, definition := range conversion.plan.HelperDefinitions() {
-					sourceName, sourceID := transformDataTypeName(definition.Source.Type)
-					targetName, targetID := transformDataTypeName(definition.Target.Type)
-					sourcePreferred := sourceName
-					targetPreferred := targetName
-					viewsPackageName := strings.ToLower(codegen.Goify(facts.service.Name, false)) + "views"
-					if conversion.toResult {
-						sourcePreferred = viewsPackageName + codegen.Goify(sourceName, true)
-					} else {
-						targetPreferred = viewsPackageName + codegen.Goify(targetName, true)
-					}
-					declaration, err := facts.names.declareForAPI(servicePackage, serviceSymbolID{
-						role:       serviceTransformHelperNameRole,
-						service:    facts.service.Name,
-						subject:    pair.source.ID(),
-						view:       canonicalValidatorView(conversion.viewName),
-						source:     sourceID,
-						target:     targetID,
-						side:       side,
-						definition: definition.Location,
-					}, "transform"+codegen.Goify(sourcePreferred, true)+"To"+codegen.Goify(targetPreferred, true), facts.apiName)
-					if err != nil {
-						return err
-					}
-					if err := conversion.plan.BindHelperDefinition(definition.ID, declaration); err != nil {
-						return err
-					}
-				}
 			}
 		}
 		resultType, hasViews := method.Result.Type.(*expr.ResultTypeExpr)
@@ -839,13 +798,16 @@ func collectViewNames(facts *serviceFacts, servicePackage, viewsPackage *codegen
 			viewedFacts.validationCalls = append(viewedFacts.validationCalls, declaration)
 		}
 	}
-	linkViewConversionCalls(facts)
+	if err := linkViewConversionCalls(facts, servicePackage); err != nil {
+		return err
+	}
 	return planServiceValidations(facts, rootTypes, generation)
 }
 
-// linkViewConversionCalls gives collection and child constructor calls the Go
-// function names chosen for their result type and view.
-func linkViewConversionCalls(facts *serviceFacts) {
+// linkViewConversionCalls binds collection and nested result conversions to
+// their existing view constructors. Other types receive transform helpers, so
+// each result type and view has one generated conversion implementation.
+func linkViewConversionCalls(facts *serviceFacts, servicePackage *codegen.GeneratedPackage) error {
 	lookup := make(map[viewConversionCallKey]*codegen.NameDeclaration)
 	for _, method := range facts.methods {
 		projection := facts.projections[method]
@@ -885,17 +847,74 @@ func linkViewConversionCalls(facts *serviceFacts) {
 						toResult: conversion.toResult,
 					}]
 				}
-				for _, field := range conversion.fields {
-					userType := field.attribute.Type.(expr.UserType)
-					field.call = lookup[viewConversionCallKey{
-						origin:   userType.Origin(),
-						view:     canonicalValidatorView(field.view),
-						toResult: conversion.toResult,
-					}]
+
+				if conversion.plan == nil {
+					continue
+				}
+				side := "to-projected"
+				if conversion.toResult {
+					side = "to-result"
+				}
+				for _, definition := range conversion.plan.HelperDefinitions() {
+					viewAttribute := definition.Target
+					if conversion.toResult {
+						viewAttribute = definition.Source
+					}
+					if resultType, ok := viewAttribute.Type.(*expr.ResultTypeExpr); ok {
+						view := expr.DefaultView
+						if selected, ok := viewAttribute.Meta.Last(expr.ViewMetaKey); ok {
+							view = selected
+						}
+						origin := resultType.Origin()
+						if conversion.toResult {
+							origin = definition.Target.Type.(expr.UserType).Origin()
+						}
+						constructor := lookup[viewConversionCallKey{
+							origin:   origin,
+							view:     canonicalValidatorView(view),
+							toResult: conversion.toResult,
+						}]
+						if constructor == nil {
+							return fmt.Errorf("result type %q view %q has no retained conversion", resultType.Name(), view)
+						}
+						if err := conversion.plan.UseExistingHelperDefinition(definition.ID, constructor); err != nil {
+							return err
+						}
+						continue
+					}
+				}
+				for _, definition := range conversion.plan.HelperDefinitions() {
+					sourceName, sourceID := transformDataTypeName(definition.Source.Type)
+					targetName, targetID := transformDataTypeName(definition.Target.Type)
+					sourcePreferred := sourceName
+					targetPreferred := targetName
+					viewsPackageName := strings.ToLower(codegen.Goify(facts.service.Name, false)) + "views"
+					if conversion.toResult {
+						sourcePreferred = viewsPackageName + codegen.Goify(sourceName, true)
+					} else {
+						targetPreferred = viewsPackageName + codegen.Goify(targetName, true)
+					}
+					declaration, err := facts.names.declareForAPI(servicePackage, serviceSymbolID{
+						role:       serviceTransformHelperNameRole,
+						service:    facts.service.Name,
+						subject:    projected.pair.source.ID(),
+						view:       canonicalValidatorView(conversion.viewName),
+						source:     sourceID,
+						target:     targetID,
+						side:       side,
+						definition: definition.Location,
+					}, "transform"+codegen.Goify(sourcePreferred, true)+"To"+codegen.Goify(targetPreferred, true), facts.apiName)
+					if err != nil {
+						return err
+					}
+					if err := conversion.plan.BindHelperDefinition(definition.ID, declaration); err != nil {
+						return err
+					}
 				}
 			}
 		}
 	}
+	return nil
 }
 
 // interceptorHasStreamingAccess reports whether interceptor causes a wrapped

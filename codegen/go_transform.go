@@ -420,35 +420,56 @@ func newTransformPlan(source, target *expr.AttributeExpr, prefix string, program
 	return plan, nil
 }
 
-// Helpers returns the recursive conversion functions selected by the plan so a
+// Helpers returns the recursive conversion functions owned by the plan so a
 // generator can declare their names before writing code. Changing the returned
 // slice or its Source and Target attributes does not change the plan. Source
 // and Target identify the caller attributes that the plan copied; Render keeps
 // and uses separate private attributes.
 func (p *TransformPlan) Helpers() []TransformHelper {
-	helpers := slices.Clone(p.helpers)
-	for index := range helpers {
+	reachable := p.reachableHelpers()
+	helpers := make([]TransformHelper, 0, len(p.helpers))
+	for _, helper := range p.helpers {
+		if _, called := reachable[helper.ID]; !called {
+			continue
+		}
+		if _, existing := p.existingHelpers[helper.ID]; existing {
+			continue
+		}
 		sourceCopier := expr.NewAttributeGraphCopier()
 		targetCopier := expr.NewAttributeGraphCopier()
-		helpers[index].Source = sourceCopier.Copy(helpers[index].Source)
-		helpers[index].Target = targetCopier.Copy(helpers[index].Target)
+		helper.Source = sourceCopier.Copy(helper.Source)
+		helper.Target = targetCopier.Copy(helper.Target)
+		helpers = append(helpers, helper)
 	}
 	return helpers
 }
 
 // HelperDefinitions returns the distinct recursive conversion function bodies
-// selected by the plan. Calls with the same retained source and target facts
-// share one definition even when one call is required and another is optional.
+// still owned by the plan after existing functions have been selected. Calls
+// with the same retained source and target facts share one definition even
+// when one call is required and another is optional.
 // Changing the returned slice or its Source and Target attributes does not
 // change the plan.
 func (p *TransformPlan) HelperDefinitions() []TransformHelperDefinition {
-	definitions := slices.Clone(p.definitions)
-	for index := range definitions {
+	reachable := p.reachableHelpers()
+	definitions := make([]TransformHelperDefinition, 0, len(p.definitions))
+	for _, definition := range p.definitions {
+		needed := false
+		for _, index := range definition.helpers {
+			id := p.helpers[index].ID
+			_, called := reachable[id]
+			_, existing := p.existingHelpers[id]
+			needed = needed || called && !existing
+		}
+		if !needed {
+			continue
+		}
 		sourceCopier := expr.NewAttributeGraphCopier()
 		targetCopier := expr.NewAttributeGraphCopier()
-		definitions[index].Source = sourceCopier.Copy(definitions[index].Source)
-		definitions[index].Target = targetCopier.Copy(definitions[index].Target)
-		definitions[index].helpers = nil
+		definition.Source = sourceCopier.Copy(definition.Source)
+		definition.Target = targetCopier.Copy(definition.Target)
+		definition.helpers = nil
+		definitions = append(definitions, definition)
 	}
 	return definitions
 }
@@ -569,8 +590,12 @@ func (p *TransformPlan) Render(sourceVar, targetVar string, newVar bool) (code s
 	if err != nil {
 		return "", nil, err
 	}
-	renderAttrs.helpers = make(map[TransformHelperID]TransformHelper, len(p.helpers))
+	reachable := p.reachableHelpers()
+	renderAttrs.helpers = make(map[TransformHelperID]TransformHelper, len(reachable))
 	for _, planned := range p.helpers {
+		if _, called := reachable[planned.ID]; !called {
+			continue
+		}
 		if planned.Declaration == nil {
 			return "", nil, fmt.Errorf("transform helper occurrence %d has no declaration", planned.Occurrence)
 		}
@@ -587,6 +612,12 @@ func (p *TransformPlan) Render(sourceVar, targetVar string, newVar bool) (code s
 	helpers = make([]*TransformFunctionData, 0, len(p.helpers))
 	definitions := make(map[*NameDeclaration]*TransformFunctionData, len(p.helpers))
 	for index, planned := range p.helpers {
+		if _, called := reachable[planned.ID]; !called {
+			continue
+		}
+		if _, existing := p.existingHelpers[planned.ID]; existing {
+			continue
+		}
 		entered := renderAttrs
 		entered.SourceCtx, err = p.helperContext(renderAttrs.SourceCtx, planned, false)
 		if err != nil {
