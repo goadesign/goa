@@ -573,8 +573,12 @@ func planValidationRules(attribute *expr.AttributeExpr, layout *GoTypePlan, poin
 
 // generatedRequiredValidationNames retains required checks emitted for policy.
 func generatedRequiredValidationNames(attribute *expr.AttributeExpr, validation *expr.ValidationExpr, policy GoLayoutPolicy) []string {
-	object := expr.AsObject(attribute.Type)
 	var names []string
+	if len(validation.Required) == 0 {
+		return names
+	}
+	mapped := mappedObjectDefinition(attribute)
+	object := expr.AsObject(mapped.Type)
 	for _, name := range validation.Required {
 		required := object.Attribute(name)
 		if required == nil {
@@ -582,7 +586,7 @@ func generatedRequiredValidationNames(attribute *expr.AttributeExpr, validation 
 		}
 		if !policy.Pointer && expr.IsPrimitive(required.Type) &&
 			required.Type.Kind() != expr.BytesKind && required.Type.Kind() != expr.AnyKind &&
-			!attribute.IsPrimitivePointer(name, policy.UseDefault) {
+			!mapped.IsPrimitivePointer(name, policy.UseDefault) {
 			continue
 		}
 		if policy.IgnoreRequired && expr.IsPrimitive(required.Type) {

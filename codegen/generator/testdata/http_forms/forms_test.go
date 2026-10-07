@@ -176,6 +176,72 @@ func TestOptionalBodyMappedNamesAndJSON(t *testing.T) {
 	require.Equal(t, jsonInput, jsonPayload)
 }
 
+// TestMappedFlatBodies checks the same authored field mapping through forms
+// and JSON. Both clients must construct the transport body, and both servers
+// must reject a missing label before constructing the required service value.
+func TestMappedFlatBodies(t *testing.T) {
+	for _, test := range []struct {
+		name        string
+		contentType string
+		missing     []string
+		emptyBody   string
+		emptyInput  any
+		encode      func(*http.Request, any) error
+		decode      func(*http.Request) (any, error)
+		input       any
+	}{
+		{
+			name: "form", contentType: "application/x-www-form-urlencoded",
+			missing:    []string{"tag=go&tag=api", "display_name=ready"},
+			emptyBody:  "display_name=&tag=",
+			emptyInput: &genforms.MappedFlatPayload{Label: "", Tags: []string{""}},
+			encode:     genclient.EncodeMappedFlatRequest(nil),
+			decode: func(request *http.Request) (any, error) {
+				return genserver.DecodeMappedFlatRequest(goahttp.NewMuxer(), nil)(request)
+			},
+			input: &genforms.MappedFlatPayload{Label: "Hello Goa", Tags: []string{"go", "api"}},
+		},
+		{
+			name: "json", contentType: "application/json",
+			missing:    []string{`{"tag":["go","api"]}`, `{"display_name":"ready"}`},
+			emptyBody:  `{"display_name":"","tag":[]}`,
+			emptyInput: &genforms.MappedFlatJSONPayload{Label: "", Tags: []string{}},
+			encode:     genclient.EncodeMappedFlatJSONRequest(goahttp.RequestEncoder),
+			decode: func(request *http.Request) (any, error) {
+				return genserver.DecodeMappedFlatJSONRequest(goahttp.NewMuxer(), goahttp.RequestDecoder)(request)
+			},
+			input: &genforms.MappedFlatJSONPayload{Label: "Hello Goa", Tags: []string{"go", "api"}},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			request := httptest.NewRequest(http.MethodPost, "/mapped-flat", nil)
+			require.NoError(t, test.encode(request, test.input))
+			wire, err := io.ReadAll(request.Body)
+			require.NoError(t, err)
+			require.NoError(t, request.Body.Close())
+			require.Contains(t, string(wire), "display_name")
+			require.NotContains(t, string(wire), "label")
+			incoming := httptest.NewRequest(http.MethodPost, "/mapped-flat", strings.NewReader(string(wire)))
+			incoming.Header.Set("Content-Type", test.contentType)
+			payload, err := test.decode(incoming)
+			require.NoError(t, err)
+			require.Equal(t, test.input, payload)
+
+			for _, body := range test.missing {
+				missing := httptest.NewRequest(http.MethodPost, "/mapped-flat", strings.NewReader(body))
+				missing.Header.Set("Content-Type", test.contentType)
+				_, err = test.decode(missing)
+				require.Error(t, err)
+			}
+			empty := httptest.NewRequest(http.MethodPost, "/mapped-flat", strings.NewReader(test.emptyBody))
+			empty.Header.Set("Content-Type", test.contentType)
+			payload, err = test.decode(empty)
+			require.NoError(t, err)
+			require.Equal(t, test.emptyInput, payload)
+		})
+	}
+}
+
 func TestFormOpenAPI(t *testing.T) {
 	for _, name := range []string{"openapi3.json", "openapi3.2.json"} {
 		source, err := os.ReadFile("../http/" + name)

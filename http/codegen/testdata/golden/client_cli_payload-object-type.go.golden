@@ -2,9 +2,7 @@
 // ServiceBodyInlineObject MethodBodyInlineObject endpoint from CLI flags.
 func BuildMethodBodyInlineObjectPayload(serviceBodyInlineObjectMethodBodyInlineObjectBody *string) (*servicebodyinlineobject.MethodBodyInlineObjectPayload, error) {
 	var err error
-	var body struct {
-		A *string `form:"a" json:"a" xml:"a"`
-	}
+	var body MethodBodyInlineObjectRequestBody
 	{
 		if serviceBodyInlineObjectMethodBodyInlineObjectBody == nil {
 			return nil, fmt.Errorf("missing required flag --body")

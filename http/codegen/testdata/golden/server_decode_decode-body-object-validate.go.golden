@@ -4,10 +4,8 @@ func DecodeMethodBodyObjectValidateRequest(mux goahttp.Muxer, decoder func(*http
 	return func(r *http.Request) (*servicebodyobjectvalidate.MethodBodyObjectValidatePayload, error) {
 		var payload *servicebodyobjectvalidate.MethodBodyObjectValidatePayload
 		var (
-			body struct {
-				B *string `form:"b" json:"b" xml:"b"`
-			}
-			err error
+			body MethodBodyObjectValidateRequestBody
+			err  error
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
@@ -20,13 +18,11 @@ func DecodeMethodBodyObjectValidateRequest(mux goahttp.Muxer, decoder func(*http
 			}
 			return payload, goa.DecodePayloadError(err.Error())
 		}
-		if body.B != nil {
-			err = goa.MergeErrors(err, goa.ValidatePattern("body.b", *body.B, "pattern"))
-		}
+		err = ValidateMethodBodyObjectValidateRequestBody(&body)
 		if err != nil {
 			return payload, err
 		}
-		payload = NewMethodBodyObjectValidatePayload(body)
+		payload = NewMethodBodyObjectValidatePayload(&body)
 
 		return payload, nil
 	}

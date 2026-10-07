@@ -188,11 +188,17 @@ func renderValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *At
 		if isUT {
 			put = ut
 		}
-		for _, nat := range *(expr.AsObject(att.Type)) {
-			tgt := fmt.Sprintf("%s.%s", target, attCtx.Scope.Field(nat.Attribute, nat.Name, true))
+		// Mapped body fields keep their service names for constraints and their
+		// transport names for Go selectors. Read the original child expression
+		// so validation uses the same field layout as the conversion code.
+		mapped := mappedObjectDefinition(att)
+		originals := originalMappedFields(att)
+		for _, nat := range *(expr.AsObject(mapped.Type)) {
+			original := originals[nat.Name]
+			tgt := fmt.Sprintf("%s.%s", target, attCtx.Scope.Field(original, mapped.ElemName(nat.Name), true))
 			ctx := context.child("." + nat.Name)
 			required := att.IsRequired(nat.Name)
-			val := validateAttribute(attCtx, nat.Attribute, put, tgt, ctx, required, view, attCtx.IsUnionPointer(required), seen)
+			val := validateAttribute(attCtx, original, put, tgt, ctx, required, view, attCtx.IsUnionPointer(required), seen)
 			if val != "" {
 				newline()
 				buf.WriteString(val)
@@ -555,10 +561,14 @@ func validationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req, alia
 		}
 	}
 	reqs := generatedRequiredValidationNames(att, validation, attCtx.LayoutPolicy())
-	obj := expr.AsObject(att.Type)
+	if len(reqs) == 0 {
+		return strings.Join(res, "\n")
+	}
+	mapped := mappedObjectDefinition(att)
+	originals := originalMappedFields(att)
 	for _, r := range reqs {
-		reqAtt := obj.Attribute(r)
-		requiredTarget := target + "." + attCtx.Scope.Field(reqAtt, r, true)
+		reqAtt := originals[r]
+		requiredTarget := target + "." + attCtx.Scope.Field(reqAtt, mapped.ElemName(r), true)
 		unionKind := expr.IsUnion(reqAtt.Type) && attCtx.Scope.IsSumType() && !attCtx.IsUnionPointer(true)
 		if unionKind {
 			requiredTarget = unionMethodReceiver(reqAtt, attCtx, requiredTarget, false)
