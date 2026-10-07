@@ -1,0 +1,24 @@
+// ItemResponse is used to define fields on response body types.
+type ItemResponse struct {
+	ID   *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+}
+
+// NewMethodViewedBodyMapItemsbykeyOK builds a "ServiceViewedBodyMap" service
+// "MethodViewedBodyMap" endpoint result from a HTTP "OK" response.
+func NewMethodViewedBodyMapItemsbykeyOK(body map[string]*ItemResponse) *serviceviewedbodymapviews.ItemsbykeyView {
+	v := make(map[string]*serviceviewedbodymapviews.ItemView, len(body))
+	for key, val := range body {
+		tk := key
+		if val == nil {
+			v[tk] = nil
+			continue
+		}
+		v[tk] = unmarshalItemResponseToServiceviewedbodymapviewsItemView(val)
+	}
+	res := &serviceviewedbodymapviews.ItemsbykeyView{
+		Items: v,
+	}
+
+	return res
+}

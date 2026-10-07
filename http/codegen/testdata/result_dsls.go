@@ -1902,3 +1902,95 @@ var ResultBodyUnionCustomKeysMultiDSL = func() {
 		})
 	})
 }
+
+// ResultViewedBodyCollectionDSL defines a result type with several views whose
+// only response body attribute is a collection of another viewed result type.
+// The generated client result constructor must assign the decoded slice to the
+// view field directly because view types never wrap collections in a pointer.
+var ResultViewedBodyCollectionDSL = func() {
+	var Item = ResultType("application/vnd.item", func() {
+		Attributes(func() {
+			Attribute("id", String)
+			Attribute("name", String)
+		})
+		View("default", func() {
+			Attribute("id")
+			Attribute("name")
+		})
+		View("tiny", func() {
+			Attribute("id")
+		})
+	})
+	var Items = ResultType("application/vnd.items", func() {
+		Attributes(func() {
+			Attribute("items", CollectionOf(Item))
+		})
+		View("default", func() {
+			Attribute("items", CollectionOf(Item), func() {
+				View("default")
+			})
+		})
+		View("tiny", func() {
+			Attribute("items", CollectionOf(Item), func() {
+				View("tiny")
+			})
+		})
+	})
+	Service("ServiceViewedBodyCollection", func() {
+		Method("MethodViewedBodyCollection", func() {
+			Result(Items)
+			HTTP(func() {
+				GET("/")
+				Response(StatusOK, func() {
+					Body("items")
+				})
+			})
+		})
+	})
+}
+
+// ResultViewedBodyMapDSL defines a result type with several views whose only
+// response body attribute is a map of another viewed result type. The
+// generated client result constructor must assign the decoded map to the view
+// field directly because view types never wrap maps in a pointer.
+var ResultViewedBodyMapDSL = func() {
+	var Item = ResultType("application/vnd.item", func() {
+		Attributes(func() {
+			Attribute("id", String)
+			Attribute("name", String)
+		})
+		View("default", func() {
+			Attribute("id")
+			Attribute("name")
+		})
+		View("tiny", func() {
+			Attribute("id")
+		})
+	})
+	var ItemsByKey = ResultType("application/vnd.itemsbykey", func() {
+		Attributes(func() {
+			Attribute("items", MapOf(String, Item))
+		})
+		View("default", func() {
+			Attribute("items", MapOf(String, Item, func() {
+				View("default")
+			}))
+		})
+		View("tiny", func() {
+			Attribute("items", MapOf(String, Item, func() {
+				View("tiny")
+			}))
+		})
+	})
+	Service("ServiceViewedBodyMap", func() {
+		Method("MethodViewedBodyMap", func() {
+			Result(ItemsByKey)
+			HTTP(func() {
+				GET("/")
+				Response(StatusOK, func() {
+					Body("items")
+				})
+			})
+		})
+	})
+}

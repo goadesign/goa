@@ -484,14 +484,24 @@ func mapDepth(dt expr.DataType, depth int, seen ...map[expr.DataType]struct{}) i
 	return depth
 }
 
-// IsPrimitivePointer returns true if the attribute with the given name is a
-// primitive pointer in the given parent attribute.
+// IsPrimitivePointer reports whether the generated Go field for the named
+// primitive attribute of the given object attribute is a pointer in this
+// context. It mirrors the field declaration rule used when generating struct
+// types: Any and Bytes fields are never pointers, every other primitive is a
+// pointer when the context forces pointers (for example view types), and
+// otherwise the attribute's own required and default rules decide. Non
+// primitive attributes such as arrays, maps, objects, and unions always return
+// false; they are never wrapped in an extra pointer regardless of the context,
+// so callers can derive the Go selector or address-of operator without a
+// separate primitive check.
 func (a *AttributeContext) IsPrimitivePointer(name string, att *expr.AttributeExpr) bool {
-	if at := att.Find(name); at != nil && expr.IsPrimitive(at.Type) {
-		kind := unalias(at.Type).Kind()
-		if kind == expr.AnyKind || kind == expr.BytesKind {
-			return false
-		}
+	at := att.Find(name)
+	if at == nil || !expr.IsPrimitive(at.Type) {
+		return false
+	}
+	kind := unalias(at.Type).Kind()
+	if kind == expr.AnyKind || kind == expr.BytesKind {
+		return false
 	}
 	if a.Pointer {
 		return true
@@ -507,7 +517,7 @@ func (a *AttributeContext) IsFieldPointer(name string, att *expr.AttributeExpr) 
 		return a.IsUnionPointer(att.IsRequired(name))
 	}
 	if !a.Scope.IsSumType() {
-		return expr.IsPrimitive(field.Type) && a.IsPrimitivePointer(name, att)
+		return a.IsPrimitivePointer(name, att)
 	}
 	return goFieldIsPointer(att, name, a.Pointer, a.UseDefault)
 }

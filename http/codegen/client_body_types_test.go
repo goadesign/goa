@@ -111,6 +111,8 @@ func TestClientTypes(t *testing.T) {
 		{"client-status-tag-required", testdata.ResultStatusTagRequiredDSL},
 		{"client-with-result-collection", testdata.ResultWithResultCollectionDSL},
 		{"client-with-result-view", testdata.ResultWithResultViewDSL},
+		{"client-viewed-body-collection", testdata.ResultViewedBodyCollectionDSL},
+		{"client-viewed-body-map", testdata.ResultViewedBodyMapDSL},
 		{"client-empty-error-response-body", testdata.EmptyErrorResponseBodyDSL},
 		{"client-with-error-custom-pkg", testdata.WithErrorCustomPkgDSL},
 		{"client-body-custom-name", testdata.PayloadBodyCustomNameDSL},
