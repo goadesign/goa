@@ -68,6 +68,10 @@ func DecodeRunResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody
 					if err != nil {
 						return nil, goahttp.ErrDecodingError("Error Service", "run", err)
 					}
+					err = ValidateErrorServicerunResponseBody(&body)
+					if err != nil {
+						return nil, goahttp.ErrValidationError("Error Service", "run", err)
+					}
 					return nil, NewRunFirst(&body)
 				case "second":
 					resp.Body = io.NopCloser(bytes.NewReader(serviceErrorBody))

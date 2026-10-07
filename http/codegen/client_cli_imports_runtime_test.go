@@ -5,6 +5,7 @@ package codegen
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -16,6 +17,7 @@ import (
 	"goa.design/goa/v3/codegen/service"
 	"goa.design/goa/v3/dsl"
 	"goa.design/goa/v3/expr"
+	"goa.design/goa/v3/http/codegen/testdata"
 )
 
 func TestGeneratedMapQueryCLI(t *testing.T) {
@@ -77,6 +79,25 @@ func TestGeneratedCLICustomTypeAlias(t *testing.T) {
 		})
 	})
 	runGeneratedCLIImportTest(t, root, generatedCustomTypeCLITest)
+}
+
+// TestGeneratedCLIExplicitObjectBodies compiles the named body declarations
+// used by command-line builders and checks that body flags become service values.
+func TestGeneratedCLIExplicitObjectBodies(t *testing.T) {
+	cases := []struct {
+		name   string
+		design func()
+		value  string
+	}{
+		{"optional", testdata.PayloadBodyInlineObjectDSL, "*payload.A"},
+		{"defaulted", testdata.PayloadBodyInlineObjectDefaultDSL, "payload.A"},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			root := expr.RunDSL(t, test.design)
+			runGeneratedCLIImportTest(t, root, fmt.Sprintf(generatedExplicitObjectCLITest, test.value))
+		})
+	}
 }
 
 // runGeneratedCLIImportTest renders the service, HTTP client, and command
@@ -211,5 +232,24 @@ func TestCustomTypeFlag(t *testing.T) {
 	payload, err := genclient.BuildCreatePayload(&text)
 	require.NoError(t, err)
 	require.Equal(t, time.Date(2026, time.January, 2, 3, 4, 5, 0, time.UTC), payload.At)
+}
+`
+
+const generatedExplicitObjectCLITest = `package cli_test
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	genclient "generated.local/gen/http/service_body_inline_object/client"
+)
+
+func TestExplicitObjectFlag(t *testing.T) {
+	text := "{\"a\":\"hello\"}"
+	payload, err := genclient.BuildMethodBodyInlineObjectPayload(&text)
+	require.NoError(t, err)
+	assert.Equal(t, "hello", %s)
 }
 `
