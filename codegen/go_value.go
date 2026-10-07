@@ -300,6 +300,21 @@ func (r *goValueRenderer) renderUnion(attribute *expr.AttributeExpr, value refle
 		return "", fmt.Errorf("OneOf default field %q has Go type %s", union.GetTypeKey(), tagValue.Type())
 	}
 	branchValue, found := reflectedMapValue(value, union.GetValueKey())
+	if union.Flatten {
+		fields := make(map[string]any, value.Len()-1)
+		iterator := value.MapRange()
+		for iterator.Next() {
+			key, err := concreteGoValue(iterator.Key())
+			if err != nil || key.Kind() != reflect.String {
+				return "", fmt.Errorf("OneOf default must have string keys")
+			}
+			name := key.String()
+			if name != union.GetTypeKey() {
+				fields[name] = iterator.Value().Interface()
+			}
+		}
+		branchValue, found = reflect.ValueOf(fields), true
+	}
 	if !found {
 		return "", fmt.Errorf("OneOf default is missing %q", union.GetValueKey())
 	}

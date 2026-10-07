@@ -568,6 +568,8 @@ type (
 		TypeKey string
 		// ValueKey is the value field name for JSON marshaling (defaults to "value").
 		ValueKey string
+		// Flatten writes branch object fields beside TypeKey in JSON.
+		Flatten bool
 	}
 
 	// UnionFieldData describes a single branch of a union.

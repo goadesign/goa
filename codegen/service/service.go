@@ -13,6 +13,7 @@ import (
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
+	"goa.design/goa/v3/internal/uniontemplate"
 )
 
 type (
@@ -338,7 +339,7 @@ func generatedPackageFiles(analyses []*ServicesData) ([]*codegen.File, error) {
 			for _, union := range unions {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:   "service-union-type",
-					Source: serviceTemplates.Read(unionTypeT),
+					Source: uniontemplate.Source,
 					Data:   union,
 				})
 			}

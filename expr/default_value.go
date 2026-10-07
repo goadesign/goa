@@ -328,8 +328,8 @@ func defaultObjectFields(value reflect.Value, object *Object) (map[string]reflec
 	return values, nil
 }
 
-// validateUnion requires the canonical tagged envelope and validates only the
-// branch named by its discriminator.
+// validateUnion reads the declared JSON mapping and validates the object or
+// nested value selected by the discriminator, including its required fields.
 func (v *defaultValueValidator) validateUnion(attribute *AttributeExpr, value reflect.Value, path string) {
 	union := AsUnion(attribute.Type)
 	values, invalidKeys := defaultStringMap(value)
@@ -360,6 +360,16 @@ func (v *defaultValueValidator) validateUnion(attribute *AttributeExpr, value re
 	}
 	if branch == nil {
 		v.add("%s selects unknown OneOf branch %q", path, tag)
+		return
+	}
+	if union.Flatten {
+		fields := make(map[string]any, len(values)-1)
+		for name, field := range values {
+			if name != union.GetTypeKey() {
+				fields[name] = field.Interface()
+			}
+		}
+		v.validate(branch, reflect.ValueOf(fields), fmt.Sprintf("%s OneOf branch %q", path, tag))
 		return
 	}
 	if !hasValue {

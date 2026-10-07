@@ -16,14 +16,26 @@ func TestGenerateNamedUnionResultView(t *testing.T) {
 	runGeneratedPackageTests(t, dir, "./...")
 }
 
+func TestGenerateFlattenedNamedUnionResultView(t *testing.T) {
+	dir := generateViewedTransportModule(t, func() { namedUnionViewMappingDSL(true) })
+	writeGeneratedContractTest(t, dir, "checks", namedUnionViewTest)
+	runGeneratedPackageTests(t, dir, "./...")
+}
+
 func namedUnionViewDSL() {
+	namedUnionViewMappingDSL(false)
+}
+
+// namedUnionViewMappingDSL keeps the same located types and result views;
+// only the authored JSON mapping differs between the two generated callers.
+func namedUnionViewMappingDSL(flatten bool) {
 	d.API("named-union-view", func() { d.Description("Verify selected results with a located named union") })
 	text := d.Type("Text", func() {
 		d.Meta("struct:pkg:path", "content")
 		d.Field(1, "value", d.String, "The non-empty text selected by the service", func() { d.MinLength(1) })
 		d.Required("value")
 	})
-	choice := d.Type("Content", &expr.Union{TypeName: "Choice"}, func() {
+	choice := d.Type("Content", &expr.Union{TypeName: "Choice", Flatten: flatten}, func() {
 		d.Meta("struct:pkg:path", "content")
 		d.Attribute("text", text)
 	})

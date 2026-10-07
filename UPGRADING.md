@@ -1,3 +1,32 @@
+# Unreleased: object unions with a flat JSON discriminator
+
+Inside a `OneOf` declaration, add `Meta("oneof:json:flatten")` to encode the
+selected object's fields beside the discriminator. For example, selecting a
+`complete` branch with a `reference` field produces
+`{"type":"complete","reference":"123"}` instead of
+`{"type":"complete","value":{"reference":"123"}}`. Use
+`Meta("oneof:type:field", "resultType")` to select another discriminator name.
+The flag takes no arguments. Every branch must be an object and must leave the
+discriminator's JSON name unused. It cannot be combined with
+`oneof:value:field`. Goa rejects invalid declarations before generation.
+
+This mapping applies to generated service JSON, HTTP and JSON-RPC bodies,
+defaults, examples, result views and OpenAPI. The typed branch constructors and
+accessors are unchanged. Protobuf keeps its native `oneof` representation.
+Ordinary unions without this metadata keep their existing JSON envelopes.
+
+Regenerate after opting in. Update JSON clients and servers together: the old
+and flat mappings cannot read each other's branch values. Roll back both peers
+together. If service JSON is persisted, migrate that data before enabling the
+new mapping; Goa does not migrate application storage. Applications that do
+not select the metadata need no wire or stored-data migration.
+
+Required union fields selected with `Body("name")` now use the same native
+union conversion as ordinary object fields and optional selected bodies.
+Generated HTTP and JSON-RPC clients, servers and command builders compile with
+both union mappings. Regenerate affected transports; service interfaces and
+wire data for existing tagged unions remain unchanged.
+
 # Upgrading to Goa v3.34.0
 
 Select the exact versions below only after their tags are available. Publication

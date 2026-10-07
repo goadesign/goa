@@ -18,7 +18,7 @@ func {{ .Declaration.Name }}({{- range .ServerArgs }}{{ .VarName }} {{ .TypeRef 
 	{{ .ServerCode }}
 	{{- if .ReturnTypeAttribute }}
 		res := &{{ .ReturnTypeName }}{
-			{{ .ReturnTypeAttribute }}: {{ if .ReturnIsPrimitivePointer }}&{{ end }}v,
+			{{ .ReturnTypeAttribute }}: {{ if .ReturnIsPrimitivePointer }}&{{ else if .ReturnIsUnion }}*{{ end }}v,
 		}
 	{{- end }}
 {{- end }}

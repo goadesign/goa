@@ -187,6 +187,16 @@ func (b *schemaBuilder) typeSchemaWithPrefix(api *expr.APIExpr, t expr.DataType,
 		valueKey := actual.GetValueKey()
 		schema.Type = openapi.Object
 		for _, val := range actual.Values {
+			if actual.Flatten {
+				branch := expr.DupAtt(val.Attribute)
+				branch.Validation = expr.EffectiveValidation(val.Attribute)
+				branch.Type = expr.AsObject(branch.Type)
+				member := b.attributeTypeSchemaWithPrefix(api, branch, prefix, gen.UnionMember(val.Name))
+				member.Properties[typeKey] = &openapi.Schema{Type: openapi.String, Enum: []any{val.Name}}
+				member.Required = append(member.Required, typeKey)
+				schema.AnyOf = append(schema.AnyOf, member)
+				continue
+			}
 			valueSchema := b.typeSchemaWithPrefix(api, val.Attribute.Type, prefix, gen.UnionMember(val.Name))
 			initSchemaValidation(valueSchema, val.Attribute)
 			schema.AnyOf = append(schema.AnyOf, &openapi.Schema{

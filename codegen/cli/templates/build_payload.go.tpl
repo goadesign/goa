@@ -23,7 +23,7 @@ func {{ .Name }}({{ range $index, $param := .FormalParams }}{{ $param }} {{ form
 		{{ .Code }}
 		{{- if .ReturnTypeAttribute }}
 			res := &{{ .ReturnTypeName }}{
-				{{ .ReturnTypeAttribute }}: {{ if .ReturnTypeAttributePointer }}&{{ end }}v,
+				{{ .ReturnTypeAttribute }}: {{ if .ReturnTypeAttributePointer }}&{{ else if .ReturnTypeAttributeUnion }}*{{ end }}v,
 			}
 		{{- end }}
 	{{- end }}

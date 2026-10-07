@@ -37,7 +37,6 @@ const (
 
 	// Common templates
 	typeDeclT        = "type_decl"
-	unionTypeT       = "union_type"
 	validateT        = "validate"
 	transformHelperT = "transform_helper"
 	pathT            = "path"

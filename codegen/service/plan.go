@@ -314,6 +314,7 @@ type (
 		identity    codegen.UnionDeclarationID
 		typeKey     string
 		valueKey    string
+		flatten     bool
 		branches    []*unionBranchFacts
 		location    *codegen.Location
 		declaration *codegen.UnionDeclaration

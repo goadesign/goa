@@ -1310,6 +1310,9 @@ func protobufCLIExampleValue(attribute *expr.AttributeExpr, value any, plan *pro
 			panic("protobuf CLI union example has no branch name")
 		}
 		branchValue, ok := namedExampleValue(value, union.GetValueKey())
+		if union.Flatten {
+			branchValue, ok = value, true
+		}
 		if !ok {
 			panic("protobuf CLI union example has no branch value")
 		}

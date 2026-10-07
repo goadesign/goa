@@ -46,3 +46,28 @@ func unionAttribute() *expr.AttributeExpr {
 		},
 	}
 }
+
+// TestFlattenedUnionSchemaRetainsObjectValidation checks the advertised object
+// branch directly, including the required field inherited from its named type.
+func TestFlattenedUnionSchemaRetainsObjectValidation(t *testing.T) {
+	method := &expr.MethodExpr{Name: "finish", Service: &expr.ServiceExpr{Name: "operations"}}
+	generator := expr.NewExampleGenerator(expr.NewFakerRandomizerFactory("flat")).At(expr.MethodResultExampleIdentity(method))
+	complete := &expr.UserTypeExpr{TypeName: "Complete", AttributeExpr: &expr.AttributeExpr{
+		Type:       &expr.Object{{Name: "reference", Attribute: &expr.AttributeExpr{Type: expr.String}}},
+		Validation: &expr.ValidationExpr{Required: []string{"reference"}},
+	}}
+	attribute := &expr.AttributeExpr{Type: &expr.Union{
+		TypeName: "Outcome", TypeKey: "resultType", Flatten: true,
+		Values: []*expr.NamedAttributeExpr{{Name: "complete", Attribute: &expr.AttributeExpr{Type: complete}}},
+	}}
+	schema := (&schemafier{rand: generator}).schemafy(attribute)
+	require.Len(t, schema.AnyOf, 1)
+	branch := schema.AnyOf[0]
+	require.Empty(t, branch.Ref)
+	require.Equal(t, []string{"reference", "resultType"}, branch.Required)
+	require.Equal(t, []any{"complete"}, branch.Properties["resultType"].Enum)
+	require.Equal(t, openapi.Type(openapi.String), branch.Properties["reference"].Type)
+	require.NotContains(t, branch.Properties, "value")
+	require.Nil(t, complete.Attribute().Find("resultType"))
+	require.Equal(t, []string{"reference"}, complete.Attribute().AllRequired())
+}

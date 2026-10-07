@@ -93,6 +93,7 @@ func buildExternalUnion(dt *expr.DataType, t reflect.Type, ref expr.DataType, re
 		TypeName: t.Name(),
 		TypeKey:  authored.TypeKey,
 		ValueKey: authored.ValueKey,
+		Flatten:  authored.Flatten,
 		Values:   make([]*expr.NamedAttributeExpr, len(authored.Values)),
 	}
 	named := &expr.UserTypeExpr{

@@ -104,6 +104,11 @@ func projectHTTPUnionDefault(union *expr.Union, value reflect.Value) any {
 	if branch == nil {
 		panic(fmt.Sprintf("union default selects unknown branch %q", branchName)) // bug
 	}
+	if union.Flatten {
+		fields := projectHTTPDefault(branch, value, false).(map[string]any)
+		fields[union.GetTypeKey()] = branchName
+		return fields
+	}
 	branchValue, ok := defaultObjectField(value, union.GetValueKey(), branch)
 	if !ok {
 		panic(fmt.Sprintf("union default is missing %q", union.GetValueKey())) // bug

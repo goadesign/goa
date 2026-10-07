@@ -206,6 +206,12 @@ func Field(tag any, name string, args ...any) {
 //
 // OneOf may be used wherever Attribute can.
 //
+// Meta("oneof:json:flatten") writes object branch fields beside the
+// discriminator selected by Meta("oneof:type:field"), which defaults to "type".
+// All branches must be objects and cannot contain the discriminator JSON name.
+// This mapping cannot be combined with Meta("oneof:value:field").
+// Without this metadata, JSON keeps the discriminator and nested value fields.
+//
 // OneOf takes a name as first argument, a description as optional second
 // argument and a function that lists the union types as last argument.
 //
@@ -263,6 +269,18 @@ func OneOf(name string, args ...any) {
 	union, ok := attr.Type.(*expr.Union)
 	if !ok {
 		return
+	}
+
+	if values, ok := attr.Meta["oneof:json:flatten"]; ok {
+		if len(values) != 0 {
+			eval.ReportError("oneof:json:flatten meta takes no values")
+			return
+		}
+		union.Flatten = true
+		if _, ok := attr.Meta["oneof:value:field"]; ok {
+			eval.ReportError("oneof:json:flatten cannot be combined with oneof:value:field")
+			return
+		}
 	}
 
 	// Extract type key from meta

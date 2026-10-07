@@ -360,6 +360,7 @@ func buildRetainedUnionTypeData(facts *unionFacts, aliases *importAliases) *Unio
 		Loc:             facts.location,
 		TypeKey:         facts.typeKey,
 		ValueKey:        facts.valueKey,
+		Flatten:         facts.flatten,
 	}
 }
 

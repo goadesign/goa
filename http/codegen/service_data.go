@@ -3185,7 +3185,7 @@ func (sds *ServicesData) buildResponseResultInit(e *expr.HTTPEndpointExpr, resp 
 			pointer = svcctx.IsPrimitivePointer(origin, result)
 		}
 		ref := "body"
-		if expr.IsObject(clientBody.Type) {
+		if expr.IsObject(clientBody.Type) || expr.IsUnion(clientBody.Type) {
 			ref = "&body"
 			pointer = false
 		}
@@ -3248,6 +3248,7 @@ func (sds *ServicesData) buildResponseResultInit(e *expr.HTTPEndpointExpr, resp 
 		ReturnTypeAttribute:      codegen.Goify(origin, true),
 		ReturnTypePkg:            svcctx.Pkg(result),
 		ReturnIsPrimitivePointer: pointer,
+		ReturnIsUnion:            origin != "" && expr.IsUnion(result.Find(origin).Type) && !svcctx.IsFieldPointer(origin, result),
 		ClientCode:               code,
 	}
 }
@@ -3545,7 +3546,7 @@ func (sds *ServicesData) buildRequestBodyType(body, att *expr.AttributeExpr, e *
 			// whether each value was present.
 			body.Validation = nil
 		}
-		varname = httpctx.Scope.Ref(body, "")
+		varname = bodyLayout.RefWithPointer(false)
 		desc = body.Description
 	}
 	var init *InitData
@@ -3737,7 +3738,7 @@ func (sds *ServicesData) buildResponseBodyType(
 			}
 		}
 	} else if !expr.IsPrimitive(body.Type) && mustInit {
-		// Response body is an array or map type.
+		// A selected collection or union body keeps its transport declaration.
 		//
 		// Server-side code needs a named wrapper (scoped to the endpoint) so the
 		// generator can produce stable constructor identifiers (e.g.
@@ -3755,8 +3756,13 @@ func (sds *ServicesData) buildResponseBodyType(
 			desc = fmt.Sprintf("%s is the type of the %q service %q endpoint HTTP response body.",
 				varname, svc.Name, e.Name())
 			def = goTypeDefForContext(body, httpctx)
+			if expr.IsUnion(body.Type) {
+				// A selected union body uses the union's existing methods. An
+				// exact Go alias keeps its JSON encoding and branch accessors.
+				def = "= " + def
+			}
 		} else {
-			varname = httpctx.Scope.Ref(body, "")
+			varname = httpctx.Scope.Name(body, "", false, true)
 			desc = body.Description
 			def = ""
 		}
@@ -3788,14 +3794,8 @@ func (sds *ServicesData) buildResponseBodyType(
 			svc       = sd.Service
 		)
 		{
-			var rtname string
-			if _, ok := body.Type.(expr.UserType); !ok && !expr.IsPrimitive(body.Type) {
-				rtname = codegen.Goify(e.Name(), true) + "ResponseBody"
-				rtref = rtname
-			} else {
-				rtname = record.name
-				rtref = ref
-			}
+			rtname := record.name
+			rtref = ref
 			name = fmt.Sprintf("New%s", rtname)
 			desc = fmt.Sprintf("%s builds the HTTP response body from the result of the %q endpoint of the %q service.",
 				name, e.Name(), svc.Name)
@@ -4326,6 +4326,7 @@ func buildHTTPUnionTypeData(u *expr.Union, scope codegen.Attributor, record *wir
 		Fields:          fields,
 		TypeKey:         u.GetTypeKey(),
 		ValueKey:        u.GetValueKey(),
+		Flatten:         u.Flatten,
 	}
 }
 
