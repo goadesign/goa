@@ -227,6 +227,7 @@ func (c *effectiveErrorCopier) dataType(source DataType) DataType {
 			TypeKey:  actual.TypeKey,
 			ValueKey: actual.ValueKey,
 			Flatten:  actual.Flatten,
+			Untagged: actual.Untagged,
 			Values:   make([]*NamedAttributeExpr, len(actual.Values)),
 		}
 		for index, branch := range actual.Values {
@@ -340,6 +341,7 @@ func equivalentErrorAttributeNodes(first, second *AttributeExpr, seen map[attrib
 			firstType.GetTypeKey() != secondType.GetTypeKey() ||
 			firstType.GetValueKey() != secondType.GetValueKey() ||
 			firstType.Flatten != secondType.Flatten ||
+			firstType.Untagged != secondType.Untagged ||
 			len(firstType.Values) != len(secondType.Values) {
 			return false
 		}

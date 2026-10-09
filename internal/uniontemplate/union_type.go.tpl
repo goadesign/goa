@@ -81,7 +81,9 @@ func (u {{ .TypeDeclaration.Name }}) Validate() error {
 	}
 }
 
-{{- if .Flatten }}
+{{- if .Untagged }}
+// MarshalJSON writes the selected branch value without a discriminator or envelope.
+{{- else if .Flatten }}
 // MarshalJSON writes the selected object branch beside its discriminator.
 {{- else }}
 // MarshalJSON marshals the union into the canonical {type,value} JSON shape.
@@ -101,7 +103,9 @@ func (u {{ .TypeDeclaration.Name }}) MarshalJSON() ([]byte, error) {
 	default:
 		return nil, fmt.Errorf("unexpected {{ .TypeDeclaration.Name }} kind %q", u.kind)
 	}
-	{{- if .Flatten }}
+	{{- if .Untagged }}
+	return json.Marshal(value)
+	{{- else if .Flatten }}
 	data, err := json.Marshal(value)
 	if err != nil {
 		return nil, err
@@ -133,12 +137,43 @@ func (u {{ .TypeDeclaration.Name }}) MarshalJSON() ([]byte, error) {
 	{{- end }}
 }
 
-{{- if .Flatten }}
+{{- if .Untagged }}
+// UnmarshalJSON selects the branch by JSON kind and decodes its typed value.
+{{- else if .Flatten }}
 // UnmarshalJSON reads the discriminator and decodes its declared object branch.
 {{- else }}
 // UnmarshalJSON unmarshals the union from the canonical {type,value} JSON shape.
 {{- end }}
 func (u *{{ .TypeDeclaration.Name }}) UnmarshalJSON(data []byte) error {
+	{{- if .Untagged }}
+	data = bytes.Trim(data, " \t\r\n")
+	if len(data) == 0 {
+		return fmt.Errorf("{{ .TypeDeclaration.Name }} requires a non-null JSON value")
+	}
+	switch data[0] {
+	{{- range .Fields }}
+	{{- if eq .JSONKind 48 }}
+	case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+	{{- else if eq .JSONKind 116 }}
+	case 't', 'f':
+	{{- else }}
+	case {{ printf "%q" .JSONKind }}:
+	{{- end }}
+		var value {{ .FieldType }}
+		if err := json.Unmarshal(data, &value); err != nil {
+			return err
+		}
+		selected := {{ .ConstructorDeclaration.Name }}(value)
+		if err := selected.Validate(); err != nil {
+			return err
+		}
+		*u = selected
+		return nil
+	{{- end }}
+	default:
+		return fmt.Errorf("{{ .TypeDeclaration.Name }} has no branch for this JSON value")
+	}
+	{{- else }}
 	{{- if .Flatten }}
 	var fields map[string]json.RawMessage
 	if err := json.Unmarshal(data, &fields); err != nil {
@@ -199,4 +234,5 @@ func (u *{{ .TypeDeclaration.Name }}) UnmarshalJSON(data []byte) error {
 		})
 	}
 	return nil
+	{{- end }}
 }

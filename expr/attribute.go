@@ -5,6 +5,7 @@ package expr
 
 import (
 	"fmt"
+	"reflect"
 	"slices"
 	"strings"
 
@@ -300,7 +301,7 @@ func (a *AttributeExpr) validate(
 		verr.Merge(mapped.KeyType.validate(ctx, a, visited, childDefaults))
 		verr.Merge(mapped.ElemType.validate(ctx, a, visited, childDefaults))
 	} else if u := AsUnion(a.Type); u != nil {
-		verr.Merge(validateUnionJSON(u, parent))
+		verr.Merge(validateUnionJSON(a, parent))
 		for _, ut := range u.Values {
 			verr.Merge(ut.Attribute.validate(ctx, parent, visited, childDefaults))
 		}
@@ -741,6 +742,11 @@ func (a *AttributeExpr) debug(prefix string, seen map[*AttributeExpr]int, indent
 func (a *AttributeExpr) validateExamples(ctx string, parent eval.Expression) *eval.ValidationErrors {
 	verr := new(eval.ValidationErrors)
 	for _, ex := range a.UserExamples {
+		if union := AsUnion(a.Type); union != nil && union.Untagged {
+			validator := &defaultValueValidator{parent: parent, errors: verr}
+			validator.validate(a, reflect.ValueOf(ex.Value), ctx+"example value")
+			continue
+		}
 		if !a.Type.IsCompatible(ex.Value) { // DSL ensures ex.Value is not nil
 			verr.Add(parent, "%sexample value %#v is incompatible with type %s", ctx, ex.Value, a.Type.Name())
 		}

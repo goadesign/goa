@@ -305,6 +305,7 @@ type (
 		typeKey     string
 		valueKey    string
 		flatten     bool
+		untagged    bool
 		branches    []*unionBranchFacts
 		location    *codegen.Location
 		declaration *codegen.UnionDeclaration
@@ -323,6 +324,7 @@ type (
 		nilable            bool
 		emitPrimitiveAlias bool
 		primitiveAliasType string
+		jsonKind           byte
 	}
 
 	// validatorKey selects the validation function for one generated result type

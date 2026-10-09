@@ -129,6 +129,7 @@ func planUnionRenderFacts(facts *unionFacts, binder codegen.GoTypeBinder, genera
 	facts.typeKey = facts.union.GetTypeKey()
 	facts.valueKey = facts.union.GetValueKey()
 	facts.flatten = facts.union.Flatten
+	facts.untagged = facts.union.Untagged
 	facts.branches = make([]*unionBranchFacts, len(facts.union.Values))
 	storageNames := codegen.NewNameScope()
 	// Reserve kind for the selector so a branch named kind uses another field.
@@ -161,6 +162,7 @@ func planUnionRenderFacts(facts *unionFacts, binder codegen.GoTypeBinder, genera
 			nilable:            codegen.IsNilable(branch.Attribute.Type),
 			emitPrimitiveAlias: hasPrimitiveAlias && !isUserType && !hasCustomImport,
 			primitiveAliasType: primitiveAliasType,
+			jsonKind:           expr.JSONKind(branch.Attribute.Type),
 		}
 	}
 	return nil

@@ -4315,6 +4315,7 @@ func buildHTTPUnionTypeData(u *expr.Union, scope codegen.Attributor, record *wir
 			FieldType:              fieldType,
 			Nilable:                codegen.IsNilable(nat.Attribute.Type),
 			TypeTag:                nat.Name,
+			JSONKind:               expr.JSONKind(nat.Attribute.Type),
 		}
 	}
 
@@ -4327,6 +4328,7 @@ func buildHTTPUnionTypeData(u *expr.Union, scope codegen.Attributor, record *wir
 		TypeKey:         u.GetTypeKey(),
 		ValueKey:        u.GetValueKey(),
 		Flatten:         u.Flatten,
+		Untagged:        u.Untagged,
 	}
 }
 

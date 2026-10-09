@@ -391,6 +391,12 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 			s.AdditionalProperties = sf.mapValue(0).schemafy(t.ElemType)
 		}
 	case *expr.Union:
+		if t.Untagged {
+			for _, branch := range t.Values {
+				s.AnyOf = append(s.AnyOf, sf.unionMember(branch.Name).schemafy(branch.Attribute))
+			}
+			break
+		}
 		// Each branch owns both its discriminator literal and value schema so
 		// clients cannot combine one branch tag with another branch value.
 		typeKey := t.GetTypeKey()

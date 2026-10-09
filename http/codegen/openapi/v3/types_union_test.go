@@ -25,6 +25,22 @@ func TestSchemafyCorrelatesUnionDiscriminatorAndValue(t *testing.T) {
 	assert.Empty(t, schema.Properties)
 }
 
+func TestUntaggedUnionSchemaRetainsBranchValidation(t *testing.T) {
+	attribute := unionAttribute()
+	union := expr.AsUnion(attribute.Type)
+	union.Untagged = true
+	union.Values[0].Attribute.Validation = &expr.ValidationExpr{Values: []any{"dynamic"}}
+	method := &expr.MethodExpr{Name: "union", Service: &expr.ServiceExpr{Name: "test"}}
+	generator := expr.NewExampleGenerator(expr.NewFakerRandomizerFactory("test")).At(expr.MethodPayloadExampleIdentity(method))
+	schema := (&schemafier{rand: generator}).schemafy(attribute)
+	require.Len(t, schema.AnyOf, 2)
+	assert.Empty(t, schema.Type)
+	assert.Empty(t, schema.Properties)
+	assert.Equal(t, openapi.Type(openapi.String), schema.AnyOf[0].Type)
+	assert.Equal(t, []any{"dynamic"}, schema.AnyOf[0].Enum)
+	assert.Equal(t, openapi.Type(openapi.Integer), schema.AnyOf[1].Type)
+}
+
 func assertUnionSchemaBranch(t *testing.T, branch *openapi.Schema, tag string, valueType openapi.Type) {
 	t.Helper()
 	assert.Equal(t, openapi.Type(openapi.Object), branch.Type)

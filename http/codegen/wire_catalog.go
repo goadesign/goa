@@ -2203,7 +2203,7 @@ func wireAttributesEqual(left, right *expr.AttributeExpr, seen map[wireAttribute
 		return ok && wireAttributesEqual(ltype.KeyType, rtype.KeyType, seen) && wireAttributesEqual(ltype.ElemType, rtype.ElemType, seen)
 	case *expr.Union:
 		rtype, ok := right.Type.(*expr.Union)
-		if !ok || ltype.Name() != rtype.Name() || ltype.GetTypeKey() != rtype.GetTypeKey() || ltype.GetValueKey() != rtype.GetValueKey() || ltype.Flatten != rtype.Flatten || len(ltype.Values) != len(rtype.Values) {
+		if !ok || ltype.Name() != rtype.Name() || ltype.GetTypeKey() != rtype.GetTypeKey() || ltype.GetValueKey() != rtype.GetValueKey() || ltype.Flatten != rtype.Flatten || ltype.Untagged != rtype.Untagged || len(ltype.Values) != len(rtype.Values) {
 			return false
 		}
 		for index, branch := range ltype.Values {

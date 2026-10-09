@@ -122,8 +122,13 @@ func (v *defaultValueValidator) validate(attribute *AttributeExpr, value reflect
 			v.addTypeError(path, value, attribute.Type)
 			return
 		}
-	case IsMap(attribute.Type), IsUnion(attribute.Type):
+	case IsMap(attribute.Type):
 		if value.Kind() != reflect.Map {
+			v.addTypeError(path, value, attribute.Type)
+			return
+		}
+	case IsUnion(attribute.Type):
+		if !AsUnion(attribute.Type).Untagged && value.Kind() != reflect.Map {
 			v.addTypeError(path, value, attribute.Type)
 			return
 		}
@@ -328,10 +333,19 @@ func defaultObjectFields(value reflect.Value, object *Object) (map[string]reflec
 	return values, nil
 }
 
-// validateUnion reads the declared JSON mapping and validates the object or
-// nested value selected by the discriminator, including its required fields.
+// validateUnion selects the authored branch from its discriminator or raw
+// value, then validates that branch's fields and constraints.
 func (v *defaultValueValidator) validateUnion(attribute *AttributeExpr, value reflect.Value, path string) {
 	union := AsUnion(attribute.Type)
+	if union.Untagged {
+		branch := union.UntaggedBranch(value.Interface())
+		if branch == nil {
+			v.add("%s does not identify exactly one untagged OneOf branch", path)
+			return
+		}
+		v.validate(branch.Attribute, value, fmt.Sprintf("%s OneOf branch %q", path, branch.Name))
+		return
+	}
 	values, invalidKeys := defaultStringMap(value)
 	if len(invalidKeys) > 0 {
 		for _, keyType := range invalidKeys {

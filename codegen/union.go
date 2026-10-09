@@ -68,6 +68,7 @@ func writeUnionTypeID(key *strings.Builder, union *expr.Union, objects map[*expr
 	writeUnionIDPart(key, union.GetTypeKey())
 	writeUnionIDPart(key, union.GetValueKey())
 	writeUnionIDPart(key, strconv.FormatBool(union.Flatten))
+	writeUnionIDPart(key, strconv.FormatBool(union.Untagged))
 	for _, value := range union.Values {
 		writeUnionIDPart(key, value.Name)
 		writeUnionAttributeID(key, value.Attribute, objects, unions, userTypes)

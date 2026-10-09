@@ -183,6 +183,12 @@ func (b *schemaBuilder) typeSchemaWithPrefix(api *expr.APIExpr, t expr.DataType,
 			schema.AdditionalProperties = true
 		}
 	case *expr.Union:
+		if actual.Untagged {
+			for _, branch := range actual.Values {
+				schema.AnyOf = append(schema.AnyOf, b.attributeTypeSchemaWithPrefix(api, branch.Attribute, prefix, gen.UnionMember(branch.Name)))
+			}
+			break
+		}
 		typeKey := actual.GetTypeKey()
 		valueKey := actual.GetValueKey()
 		schema.Type = openapi.Object

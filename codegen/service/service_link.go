@@ -349,6 +349,7 @@ func buildRetainedUnionTypeData(facts *unionFacts, aliases *importAliases) *Unio
 			EmitPrimitiveAlias:     branch.emitPrimitiveAlias,
 			PrimitiveAliasType:     branch.primitiveAliasType,
 			TypeTag:                branch.name,
+			JSONKind:               branch.jsonKind,
 		}
 	}
 	return &UnionTypeData{
@@ -361,6 +362,7 @@ func buildRetainedUnionTypeData(facts *unionFacts, aliases *importAliases) *Unio
 		TypeKey:         facts.typeKey,
 		ValueKey:        facts.valueKey,
 		Flatten:         facts.flatten,
+		Untagged:        facts.untagged,
 	}
 }
 

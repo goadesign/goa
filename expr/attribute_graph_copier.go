@@ -146,6 +146,7 @@ func (c *AttributeGraphCopier) dataType(dataType DataType) DataType {
 			TypeKey:  actual.TypeKey,
 			ValueKey: actual.ValueKey,
 			Flatten:  actual.Flatten,
+			Untagged: actual.Untagged,
 			Values:   make([]*NamedAttributeExpr, len(actual.Values)),
 		}
 		c.types[dataType] = copied

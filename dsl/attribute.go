@@ -211,6 +211,9 @@ func Field(tag any, name string, args ...any) {
 // All branches must be objects and cannot contain the discriminator JSON name.
 // This mapping cannot be combined with Meta("oneof:value:field").
 // Without this metadata, JSON keeps the discriminator and nested value fields.
+// Meta("oneof:json:untagged") writes the branch value directly. Each branch must
+// have a different JSON kind: string, number, boolean, array, or object. Designs
+// with overlapping kinds or another JSON mapping fail expression validation.
 //
 // OneOf takes a name as first argument, a description as optional second
 // argument and a function that lists the union types as last argument.
@@ -269,6 +272,13 @@ func OneOf(name string, args ...any) {
 	union, ok := attr.Type.(*expr.Union)
 	if !ok {
 		return
+	}
+	if values, ok := attr.Meta["oneof:json:untagged"]; ok {
+		if len(values) != 0 {
+			eval.ReportError("oneof:json:untagged meta takes no values")
+			return
+		}
+		union.Untagged = true
 	}
 
 	if values, ok := attr.Meta["oneof:json:flatten"]; ok {

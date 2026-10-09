@@ -1305,6 +1305,15 @@ func protobufCLIExampleValue(attribute *expr.AttributeExpr, value any, plan *pro
 		return result
 	}
 	if union := expr.AsUnion(attribute.Type); union != nil {
+		if union.Untagged {
+			branch := union.UntaggedBranch(value)
+			if branch == nil {
+				panic("protobuf CLI example does not identify exactly one untagged union branch")
+			}
+			return map[string]any{
+				plan.sourceFieldName(branch.Attribute): protobufCLIExampleValue(branch.Attribute, value, plan, false),
+			}
+		}
 		branchName, ok := namedExampleValue(value, union.GetTypeKey())
 		if !ok {
 			panic("protobuf CLI union example has no branch name")
