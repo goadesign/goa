@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 
 	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/codegen/service"
 	"goa.design/goa/v3/expr"
-	"goa.design/goa/v3/internal/uniontemplate"
 )
 
 // serverTypeFiles builds the server request and response types read by Plan.Link.
@@ -262,7 +262,7 @@ func typesFile(svc *expr.HTTPServiceExpr, svr bool, services *ServicesData) *cod
 	for _, u := range unionTypes {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   unionSection,
-			Source: uniontemplate.Source,
+			Source: service.UnionTypeSource,
 			Data:   u,
 		})
 	}
