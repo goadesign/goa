@@ -35,3 +35,26 @@ func TestFlattenedUnionIdentityAndDefault(t *testing.T) {
 	require.Empty(t, value.Declarations)
 	require.Equal(t, `NewChoiceComplete(&Complete{Reference: "done"})`, value.Expression)
 }
+
+func TestUntaggedUnionIdentityAndDefault(t *testing.T) {
+	union := &expr.Union{TypeName: "Choice", Untagged: true, Values: []*expr.NamedAttributeExpr{
+		{Name: "manifest", Attribute: &expr.AttributeExpr{Type: &expr.Array{ElemType: &expr.AttributeExpr{Type: expr.String}}}},
+		{Name: "dynamic", Attribute: &expr.AttributeExpr{Type: expr.String}},
+	}}
+	tagged := expr.DupAtt(&expr.AttributeExpr{Type: union}).Type.(*expr.Union)
+	tagged.Untagged = false
+	require.Equal(t, tagged.Hash(), union.Hash())
+	require.NotEqual(t, NewUnionTypeID(tagged), NewUnionTypeID(union))
+	attribute := &expr.AttributeExpr{Type: union}
+	layout := goValueTestLayout(t, attribute, GoLayoutPolicy{UseDefault: true, SumType: true}, map[expr.DataType]GoTypeBinding{
+		union: goValueTestUnionBinding(t, attribute),
+	})
+	value, err := RenderGoValue(attribute, "dynamic", layout, false,
+		func(_ *expr.AttributeExpr, branch string) (string, error) {
+			require.Equal(t, "dynamic", branch)
+			return "NewChoiceDynamic", nil
+		}, "defaultValue")
+	require.NoError(t, err)
+	require.Empty(t, value.Declarations)
+	require.Equal(t, `NewChoiceDynamic("dynamic")`, value.Expression)
+}

@@ -89,6 +89,13 @@ func projectHTTPDefault(attribute *expr.AttributeExpr, value reflect.Value, topL
 // projectHTTPUnionDefault keeps the union keys defined by the DSL and
 // translates the selected branch value recursively.
 func projectHTTPUnionDefault(union *expr.Union, value reflect.Value) any {
+	if union.Untagged {
+		branch := union.UntaggedBranch(value.Interface())
+		if branch == nil {
+			panic("untagged union default does not identify exactly one branch") // bug
+		}
+		return projectHTTPDefault(branch.Attribute, value, false)
+	}
 	typeValue, ok := defaultObjectField(value, union.GetTypeKey(), nil)
 	if !ok {
 		panic(fmt.Sprintf("union default is missing %q", union.GetTypeKey())) // bug

@@ -132,6 +132,7 @@ func (d *dupper) DupType(t DataType) DataType {
 			TypeKey:  actual.TypeKey,
 			ValueKey: actual.ValueKey,
 			Flatten:  actual.Flatten,
+			Untagged: actual.Untagged,
 		}
 		for i, nat := range actual.Values {
 			dp.Values[i] = &NamedAttributeExpr{Name: nat.Name, Attribute: d.DupAttribute(nat.Attribute)}

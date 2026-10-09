@@ -575,6 +575,7 @@ func grpcViewAttribute(full, selected *expr.AttributeExpr, seen map[expr.UserTyp
 			TypeKey:  selectedType.TypeKey,
 			ValueKey: selectedType.ValueKey,
 			Flatten:  selectedType.Flatten,
+			Untagged: selectedType.Untagged,
 			Values:   make([]*expr.NamedAttributeExpr, 0, len(selectedType.Values)),
 		}
 		for index, branch := range selectedType.Values {

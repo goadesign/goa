@@ -287,10 +287,17 @@ func (r *goValueRenderer) renderUnion(attribute *expr.AttributeExpr, value refle
 	if r.resolveUnion == nil {
 		return "", fmt.Errorf("OneOf default requires a planned branch constructor")
 	}
+	union := expr.AsUnion(attribute.Type)
+	if union.Untagged {
+		branch := union.UntaggedBranch(value.Interface())
+		if branch == nil {
+			return "", fmt.Errorf("OneOf default does not identify exactly one untagged branch")
+		}
+		return r.renderUnionBranch(attribute, branch.Name, value, layout)
+	}
 	if value.Kind() != reflect.Map {
 		return "", fmt.Errorf("OneOf default has Go type %s", value.Type())
 	}
-	union := expr.AsUnion(attribute.Type)
 	tagValue, found := reflectedMapValue(value, union.GetTypeKey())
 	if !found {
 		return "", fmt.Errorf("OneOf default is missing %q", union.GetTypeKey())
@@ -318,6 +325,13 @@ func (r *goValueRenderer) renderUnion(attribute *expr.AttributeExpr, value refle
 	if !found {
 		return "", fmt.Errorf("OneOf default is missing %q", union.GetValueKey())
 	}
+	return r.renderUnionBranch(attribute, tag, branchValue, layout)
+}
+
+// renderUnionBranch renders the selected value using its retained layout and
+// constructor. Every JSON mapping uses the same typed Go construction.
+func (r *goValueRenderer) renderUnionBranch(attribute *expr.AttributeExpr, tag string, branchValue reflect.Value, layout LinkedGoType) (string, error) {
+	union := expr.AsUnion(attribute.Type)
 	var (
 		branch      *expr.NamedAttributeExpr
 		branchIndex int

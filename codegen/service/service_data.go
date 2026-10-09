@@ -570,6 +570,8 @@ type (
 		ValueKey string
 		// Flatten writes branch object fields beside TypeKey in JSON.
 		Flatten bool
+		// Untagged writes the selected branch directly and selects input by JSON kind.
+		Untagged bool
 	}
 
 	// UnionFieldData describes a single branch of a union.
@@ -605,6 +607,8 @@ type (
 		PrimitiveAliasType string
 		// TypeTag is the JSON "type" value that selects this branch.
 		TypeTag string
+		// JSONKind is the first-token category used by an untagged JSON branch.
+		JSONKind byte
 	}
 
 	// SchemeData describes a single security scheme.

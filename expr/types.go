@@ -67,6 +67,8 @@ type (
 		ValueKey string
 		// Flatten writes an object branch beside the discriminator instead of under ValueKey.
 		Flatten bool
+		// Untagged writes the selected branch value directly, without envelope keys.
+		Untagged bool
 	}
 
 	// UserType is the interface implemented by all user type
@@ -653,6 +655,9 @@ func (u *Union) Hash() string {
 
 // IsCompatible returns true if u describes the (Go) type of val.
 func (u *Union) IsCompatible(val any) bool {
+	if u.Untagged {
+		return u.UntaggedBranch(val) != nil
+	}
 	envelope, ok := val.(map[string]any)
 	if !ok || (!u.Flatten && len(envelope) != 2) {
 		return false
@@ -691,6 +696,9 @@ func (u *Union) Example(r *ExampleGenerator) any {
 	// only changes when the chosen member changes.
 	nat := u.Values[r.Int()%len(u.Values)]
 	value := nat.Attribute.Example(r.UnionMember(nat.Name))
+	if u.Untagged {
+		return value
+	}
 	if u.Flatten {
 		branchValue, ok := concreteDefaultValue(reflect.ValueOf(value))
 		if !ok {

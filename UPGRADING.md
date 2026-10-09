@@ -1,3 +1,31 @@
+# Unreleased: unions with distinct JSON kinds
+
+Inside a `OneOf` declaration, add `Meta("oneof:json:untagged")` to write the
+selected value directly. An array branch becomes `[{"uri":"file://record"}]`,
+and a string branch becomes `"dynamic"`, without a discriminator or value
+envelope. The generated service keeps its typed constructors, accessors, and
+branch validation.
+
+Goa rejects ambiguous declarations during DSL expression validation. Each
+branch must have a different JSON kind: string, number, boolean, array, or
+object. Integers and floats share the number kind; byte slices and strings share
+the string kind; objects and maps share the object kind. Open JSON, nested union
+branches, custom Go representations, and combinations with flattening or
+discriminator/value-field metadata are rejected. The flag takes no arguments.
+Defaults and examples use raw values and must identify exactly one branch;
+Goa checks that branch's type and validation rules during DSL evaluation.
+Byte slices select the string branch because JSON writes them as base64;
+use an integer array or slice to author a numeric array value.
+
+The mapping applies to service JSON, HTTP, JSON-RPC, result views, defaults,
+examples, and OpenAPI. Protobuf retains its typed `oneof` representation.
+Applications that do not select the metadata keep their existing behavior.
+
+Regenerate after opting in. Update JSON clients and servers together because
+the tagged and untagged wire values differ; roll back both peers together.
+Migrate persisted service JSON before changing its mapping. New APIs can use
+the mapping without a data migration. Goa does not migrate application storage.
+
 # Unreleased: selected result views inside union branches
 
 A result type used in a `OneOf` branch now respects its declared `View`.

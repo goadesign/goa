@@ -405,6 +405,7 @@ func validateGeneratedUnionEmission(left, right *generatedUnionEmissionFacts) er
 		left.union.typeKey != right.union.typeKey ||
 		left.union.valueKey != right.union.valueKey ||
 		left.union.flatten != right.union.flatten ||
+		left.union.untagged != right.union.untagged ||
 		generatedLocationPath(left.union.location) != generatedLocationPath(right.union.location) ||
 		!sameGeneratedUnionBranches(left.union.branches, right.union.branches) ||
 		!slices.Equal(left.union.imports.Paths(), right.union.imports.Paths()) {
@@ -437,6 +438,9 @@ func sameGeneratedUnionBranches(left, right []*unionBranchFacts) bool {
 			leftBranch.nilable != rightBranch.nilable ||
 			leftBranch.emitPrimitiveAlias != rightBranch.emitPrimitiveAlias ||
 			leftBranch.primitiveAliasType != rightBranch.primitiveAliasType {
+			return false
+		}
+		if leftBranch.jsonKind != rightBranch.jsonKind {
 			return false
 		}
 	}

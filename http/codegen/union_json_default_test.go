@@ -23,3 +23,13 @@ func TestFlattenedUnionHTTPDefault(t *testing.T) {
 	actual = projectHTTPUnionDefault(union, reflect.ValueOf(map[string]any{"resultType": "complete", "value": map[string]any{"reference": "done"}}))
 	require.Equal(t, map[string]any{"resultType": "complete", "value": map[string]any{"reference_id": "done"}}, actual)
 }
+
+func TestUntaggedUnionHTTPDefault(t *testing.T) {
+	branch := &expr.AttributeExpr{Type: &expr.Object{{Name: "reference:reference_id", Attribute: &expr.AttributeExpr{Type: expr.String}}}}
+	union := &expr.Union{TypeName: "Choice", Untagged: true, Values: []*expr.NamedAttributeExpr{
+		{Name: "complete", Attribute: branch},
+		{Name: "dynamic", Attribute: &expr.AttributeExpr{Type: expr.String}},
+	}}
+	require.Equal(t, "dynamic", projectHTTPUnionDefault(union, reflect.ValueOf("dynamic")))
+	require.Equal(t, map[string]any{"reference_id": "done"}, projectHTTPUnionDefault(union, reflect.ValueOf(map[string]any{"reference": "done"})))
+}
