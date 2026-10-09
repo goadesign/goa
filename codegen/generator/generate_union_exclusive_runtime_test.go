@@ -1,5 +1,6 @@
 // This file verifies that generated service and HTTP unions store only the
 // branch selected by their public constructors, setters, and JSON decoder.
+// The same selected value reaches Go templates, including zero-valued branches.
 package generator
 
 import (
@@ -26,8 +27,8 @@ func TestGeneratedUnionsStoreOnlyTheSelectedBranch(t *testing.T) {
 		t.Fatalf("generate exclusive unions: %v", err)
 	}
 
-	writeGeneratedTest(t, filepath.Join(generated, "exclusive_union", "union_storage_test.go"), serviceUnionStorageTest)
-	writeGeneratedTest(t, filepath.Join(generated, "http", "exclusive_union", "server", "union_storage_test.go"), httpUnionStorageTest)
+	writeGeneratedTest(t, filepath.Join(generated, "exclusive_union", "union_storage_test.go"), serviceUnionStorageTest+unionValueContractTest)
+	writeGeneratedTest(t, filepath.Join(generated, "http", "exclusive_union", "server", "union_storage_test.go"), httpUnionStorageTest+unionValueContractTest)
 	runGeneratedTests(t, generated)
 }
 
@@ -42,6 +43,7 @@ func exclusiveUnionDSL() {
 			dsl.TypeName("ExclusiveChoice")
 			dsl.Attribute("text", dsl.String)
 			dsl.Attribute("count", dsl.Int)
+			dsl.Attribute("enabled", dsl.Boolean)
 			dsl.Attribute("kind", kindValue)
 			dsl.Attribute("inactive", inactive)
 		})
@@ -70,12 +72,26 @@ func writeGeneratedTest(t *testing.T, path, source string) {
 const serviceUnionStorageTest = `package exclusiveunion
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
+	"reflect"
 	"testing"
+	"text/template"
 
 	goa "goa.design/goa/v3/pkg"
 )
+
+func TestUnionValue(t *testing.T) {
+	checkUnionValues(t, []unionValueCase{
+		{"empty text", NewExclusiveChoiceText(""), ExclusiveChoiceBranchText(""), "", ""},
+		{"zero", NewExclusiveChoiceCount(0), ExclusiveChoiceBranchCount(0), "0", ""},
+		{"false", NewExclusiveChoiceEnabled(false), ExclusiveChoiceBranchEnabled(false), "false", ""},
+		{"object", NewExclusiveChoiceInactive(&Inactive{}), &Inactive{}, "{}", ""},
+		{"unselected", ExclusiveChoice{}, nil, "", goa.InvalidEnumValue},
+		{"nil object", NewExclusiveChoiceInactive(nil), nil, "", goa.MissingField},
+	})
+}
 
 func TestUnionStorage(t *testing.T) {
 	var selected ExclusiveChoice
@@ -150,12 +166,26 @@ func assertServiceError(t *testing.T, err error, name, field string) {
 const httpUnionStorageTest = `package server
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
+	"reflect"
 	"testing"
+	"text/template"
 
 	goa "goa.design/goa/v3/pkg"
 )
+
+func TestUnionValue(t *testing.T) {
+	checkUnionValues(t, []unionValueCase{
+		{"empty text", NewExclusiveChoiceRequestBodyText(""), "", "", ""},
+		{"zero", NewExclusiveChoiceRequestBodyCount(0), 0, "0", ""},
+		{"false", NewExclusiveChoiceRequestBodyEnabled(false), false, "false", ""},
+		{"object", NewExclusiveChoiceRequestBodyInactive(&InactiveRequestBody{}), &InactiveRequestBody{}, "{}", ""},
+		{"unselected", ExclusiveChoiceRequestBody{}, nil, "", goa.InvalidEnumValue},
+		{"nil object", NewExclusiveChoiceRequestBodyInactive(nil), nil, "", goa.MissingField},
+	})
+}
 
 func TestUnionStorage(t *testing.T) {
 	var selected ExclusiveChoiceRequestBody
@@ -223,6 +253,55 @@ func assertServiceError(t *testing.T, err error, name, field string) {
 	}
 	if serviceError.Field == nil || *serviceError.Field != field {
 		t.Errorf("error field %#v, want %q", serviceError.Field, field)
+	}
+}
+`
+
+const unionValueContractTest = `
+type (
+	unionValueCase struct {
+		name string
+		selected interface { Value() (any, error) }
+		want any
+		rendered string
+		errorName string
+	}
+)
+
+// checkUnionValues reads each selected branch through Go and a Go template.
+// Invalid selections must also fail JSON encoding with the same Goa error.
+func checkUnionValues(t *testing.T, cases []unionValueCase) {
+	t.Helper()
+	renderer, err := template.New("value").Parse("{{.Value}}")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			value, valueError := test.selected.Value()
+			var output bytes.Buffer
+			templateError := renderer.Execute(&output, test.selected)
+			_, jsonError := json.Marshal(test.selected)
+			if test.errorName != "" {
+				field := "type"
+				if test.errorName == goa.MissingField {
+					field = "value"
+				}
+				assertServiceError(t, valueError, test.errorName, field)
+				assertServiceError(t, templateError, test.errorName, field)
+				assertServiceError(t, jsonError, test.errorName, field)
+				return
+			}
+			if valueError != nil || templateError != nil || jsonError != nil {
+				t.Errorf("valid selection failed: Value=%v, template=%v, JSON=%v", valueError, templateError, jsonError)
+			}
+			if !reflect.DeepEqual(test.want, value) {
+				t.Errorf("Value returned %#v, want %#v", value, test.want)
+			}
+			if output.String() != test.rendered {
+				t.Errorf("template returned %q, want %q", output.String(), test.rendered)
+			}
+		})
 	}
 }
 `

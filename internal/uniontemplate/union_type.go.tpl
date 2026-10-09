@@ -56,9 +56,16 @@ func (u *{{ $.TypeDeclaration.Name }}) Set{{ .FieldName }}(v {{ .FieldType }}) {
 
 // Validate ensures exactly one valid branch is selected.
 func (u {{ .TypeDeclaration.Name }}) Validate() error {
+	_, err := u.Value()
+	return err
+}
+
+// Value returns the selected branch value, or the same selection error as Validate.
+// Go templates can read this method directly; an invalid selection stops execution.
+func (u {{ .TypeDeclaration.Name }}) Value() (any, error) {
 	switch u.kind {
 	case "":
-		return goa.InvalidEnumValueError({{ printf "%q" .TypeKey }}, "", []any{
+		return nil, goa.InvalidEnumValueError({{ printf "%q" .TypeKey }}, "", []any{
 			{{- range .Fields }}
 			string({{ .KindDeclaration.Name }}),
 			{{- end }}
@@ -67,13 +74,13 @@ func (u {{ .TypeDeclaration.Name }}) Validate() error {
 	case {{ .KindDeclaration.Name }}:
 		{{- if .Nilable }}
 		if u.{{ .StorageName }} == nil {
-			return goa.MissingFieldError({{ printf "%q" $.ValueKey }}, "{{ $.TypeDeclaration.Name }}")
+			return nil, goa.MissingFieldError({{ printf "%q" $.ValueKey }}, "{{ $.TypeDeclaration.Name }}")
 		}
 		{{- end }}
-		return nil
+		return u.{{ .StorageName }}, nil
 	{{- end }}
 	default:
-		return goa.InvalidEnumValueError({{ printf "%q" $.TypeKey }}, u.kind, []any{
+		return nil, goa.InvalidEnumValueError({{ printf "%q" $.TypeKey }}, u.kind, []any{
 			{{- range .Fields }}
 			string({{ .KindDeclaration.Name }}),
 			{{- end }}
@@ -89,19 +96,9 @@ func (u {{ .TypeDeclaration.Name }}) Validate() error {
 // MarshalJSON marshals the union into the canonical {type,value} JSON shape.
 {{- end }}
 func (u {{ .TypeDeclaration.Name }}) MarshalJSON() ([]byte, error) {
-	if err := u.Validate(); err != nil {
+	value, err := u.Value()
+	if err != nil {
 		return nil, err
-	}
-	var (
-		value any
-	)
-	switch u.kind {
-	{{- range .Fields }}
-	case {{ .KindDeclaration.Name }}:
-		value = u.{{ .StorageName }}
-	{{- end }}
-	default:
-		return nil, fmt.Errorf("unexpected {{ .TypeDeclaration.Name }} kind %q", u.kind)
 	}
 	{{- if .Untagged }}
 	return json.Marshal(value)

@@ -98,18 +98,25 @@ func (u *Values) SetMetric(v alias.Alias) {
 
 // Validate ensures exactly one valid branch is selected.
 func (u Values) Validate() error {
+	_, err := u.Value()
+	return err
+}
+
+// Value returns the selected branch value, or the same selection error as Validate.
+// Go templates can read this method directly; an invalid selection stops execution.
+func (u Values) Value() (any, error) {
 	switch u.kind {
 	case "":
-		return goa.InvalidEnumValueError("type", "", []any{
+		return nil, goa.InvalidEnumValueError("type", "", []any{
 			string(ValuesKindDevice),
 			string(ValuesKindMetric),
 		})
 	case ValuesKindDevice:
-		return nil
+		return u.device, nil
 	case ValuesKindMetric:
-		return nil
+		return u.metric, nil
 	default:
-		return goa.InvalidEnumValueError("type", u.kind, []any{
+		return nil, goa.InvalidEnumValueError("type", u.kind, []any{
 			string(ValuesKindDevice),
 			string(ValuesKindMetric),
 		})
@@ -118,19 +125,9 @@ func (u Values) Validate() error {
 
 // MarshalJSON marshals the union into the canonical {type,value} JSON shape.
 func (u Values) MarshalJSON() ([]byte, error) {
-	if err := u.Validate(); err != nil {
+	value, err := u.Value()
+	if err != nil {
 		return nil, err
-	}
-	var (
-		value any
-	)
-	switch u.kind {
-	case ValuesKindDevice:
-		value = u.device
-	case ValuesKindMetric:
-		value = u.metric
-	default:
-		return nil, fmt.Errorf("unexpected Values kind %q", u.kind)
 	}
 	return json.Marshal(struct {
 		Type  string `json:"type"`
