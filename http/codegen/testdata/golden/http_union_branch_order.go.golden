@@ -108,24 +108,31 @@ func (u *RelationshipResponseBody) SetEditable(v *EditableResponseBody) {
 
 // Validate ensures exactly one valid branch is selected.
 func (u RelationshipResponseBody) Validate() error {
+	_, err := u.Value()
+	return err
+}
+
+// Value returns the selected branch value, or the same selection error as Validate.
+// Go templates can read this method directly; an invalid selection stops execution.
+func (u RelationshipResponseBody) Value() (any, error) {
 	switch u.kind {
 	case "":
-		return goa.InvalidEnumValueError("type", "", []any{
+		return nil, goa.InvalidEnumValueError("type", "", []any{
 			string(RelationshipResponseBodyKindNone),
 			string(RelationshipResponseBodyKindEditable),
 		})
 	case RelationshipResponseBodyKindNone:
 		if u.none == nil {
-			return goa.MissingFieldError("value", "RelationshipResponseBody")
+			return nil, goa.MissingFieldError("value", "RelationshipResponseBody")
 		}
-		return nil
+		return u.none, nil
 	case RelationshipResponseBodyKindEditable:
 		if u.editable == nil {
-			return goa.MissingFieldError("value", "RelationshipResponseBody")
+			return nil, goa.MissingFieldError("value", "RelationshipResponseBody")
 		}
-		return nil
+		return u.editable, nil
 	default:
-		return goa.InvalidEnumValueError("type", u.kind, []any{
+		return nil, goa.InvalidEnumValueError("type", u.kind, []any{
 			string(RelationshipResponseBodyKindNone),
 			string(RelationshipResponseBodyKindEditable),
 		})
@@ -134,19 +141,9 @@ func (u RelationshipResponseBody) Validate() error {
 
 // MarshalJSON marshals the union into the canonical {type,value} JSON shape.
 func (u RelationshipResponseBody) MarshalJSON() ([]byte, error) {
-	if err := u.Validate(); err != nil {
+	value, err := u.Value()
+	if err != nil {
 		return nil, err
-	}
-	var (
-		value any
-	)
-	switch u.kind {
-	case RelationshipResponseBodyKindNone:
-		value = u.none
-	case RelationshipResponseBodyKindEditable:
-		value = u.editable
-	default:
-		return nil, fmt.Errorf("unexpected RelationshipResponseBody kind %q", u.kind)
 	}
 	return json.Marshal(struct {
 		Type  string `json:"type"`

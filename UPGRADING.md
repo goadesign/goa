@@ -1,3 +1,19 @@
+# Unreleased: reading union values in Go templates
+
+Generated unions now provide `Value() (any, error)`. It returns the selected
+branch's original typed value, including an empty string, zero, or false. An
+unselected union or a selected nil branch returns the same error as `Validate`.
+Validation and JSON encoding use this same selection check.
+
+Go templates can use `{{.Value}}` or select a branch with `Kind` and read its
+fields with `{{with .Value}}{{.Reference}}{{end}}`. A selection error stops
+template execution. Use the existing typed `AsX` accessors in Go code.
+
+Regenerate to obtain the method. Existing methods, JSON mappings, stored data,
+and client/server wire contracts are unchanged. No coordinated deployment or
+data migration is required. Rolling back removes `Value`, so regenerate and
+update templates that use it before rolling back.
+
 # Unreleased: unions with distinct JSON kinds
 
 Inside a `OneOf` declaration, add `Meta("oneof:json:untagged")` to write the

@@ -110,24 +110,31 @@ func (u *Result) SetU(v *U) {
 
 // Validate ensures exactly one valid branch is selected.
 func (u Result) Validate() error {
+	_, err := u.Value()
+	return err
+}
+
+// Value returns the selected branch value, or the same selection error as Validate.
+// Go templates can read this method directly; an invalid selection stops execution.
+func (u Result) Value() (any, error) {
 	switch u.kind {
 	case "":
-		return goa.InvalidEnumValueError("type", "", []any{
+		return nil, goa.InvalidEnumValueError("type", "", []any{
 			string(ResultKindT),
 			string(ResultKindU),
 		})
 	case ResultKindT:
 		if u.t == nil {
-			return goa.MissingFieldError("value", "Result")
+			return nil, goa.MissingFieldError("value", "Result")
 		}
-		return nil
+		return u.t, nil
 	case ResultKindU:
 		if u.u == nil {
-			return goa.MissingFieldError("value", "Result")
+			return nil, goa.MissingFieldError("value", "Result")
 		}
-		return nil
+		return u.u, nil
 	default:
-		return goa.InvalidEnumValueError("type", u.kind, []any{
+		return nil, goa.InvalidEnumValueError("type", u.kind, []any{
 			string(ResultKindT),
 			string(ResultKindU),
 		})
@@ -136,19 +143,9 @@ func (u Result) Validate() error {
 
 // MarshalJSON marshals the union into the canonical {type,value} JSON shape.
 func (u Result) MarshalJSON() ([]byte, error) {
-	if err := u.Validate(); err != nil {
+	value, err := u.Value()
+	if err != nil {
 		return nil, err
-	}
-	var (
-		value any
-	)
-	switch u.kind {
-	case ResultKindT:
-		value = u.t
-	case ResultKindU:
-		value = u.u
-	default:
-		return nil, fmt.Errorf("unexpected Result kind %q", u.kind)
 	}
 	return json.Marshal(struct {
 		Type  string `json:"type"`
