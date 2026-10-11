@@ -428,17 +428,7 @@ func (e *GRPCEndpointExpr) Finalize() {
 				nat.Attribute.Meta.Merge(patt.Meta)
 			}
 		}
-		if ut, ok := e.MethodExpr.Payload.Type.(UserType); ok {
-			// propagate the user set protobuf struct name from the user type to
-			// the request message.
-			if proto, ok := ut.Attribute().Meta.Last("struct:name:proto"); ok {
-				if e.Request.Meta == nil {
-					e.Request.Meta = ut.Attribute().Meta
-				} else {
-					e.Request.Meta["struct:name:proto"] = []string{proto}
-				}
-			}
-		}
+		inheritGRPCMessageMeta(e.Request, e.MethodExpr.Payload)
 	} else {
 		// method payload is not an object type.
 		initAttrFromDesign(e.Request, e.MethodExpr.Payload)
@@ -454,6 +444,7 @@ func (e *GRPCEndpointExpr) Finalize() {
 			attr = ut.Attribute()
 		}
 		initAttrFromDesign(e.StreamingRequest, attr)
+		inheritGRPCMessageMeta(e.StreamingRequest, e.MethodExpr.StreamingPayload)
 		if msgObj := AsObject(e.StreamingRequest.Type); msgObj != nil {
 			for _, nat := range *msgObj {
 				if e.MethodExpr.StreamingPayload.IsRequired(nat.Name) {
@@ -469,6 +460,44 @@ func (e *GRPCEndpointExpr) Finalize() {
 	// Finalize errors
 	for _, gerr := range e.GRPCErrors {
 		gerr.Finalize(e)
+	}
+}
+
+// inheritGRPCMessageMeta copies the authored protobuf name and merges retired
+// field numbers and names into the transport message. The message owns its
+// metadata map and reservation slices, so using the same type in another method
+// cannot change an earlier message. Explicit Message metadata keeps its own
+// reservations, so generated schemas protect both declarations.
+func inheritGRPCMessageMeta(message, source *AttributeExpr) {
+	if message.Meta != nil {
+		message.Meta = message.Meta.Dup()
+	}
+	attributes := []*AttributeExpr{source}
+	if ut, ok := source.Type.(UserType); ok {
+		source = ut.Attribute()
+		attributes = append(attributes, source)
+		if proto, ok := source.Meta.Last("struct:name:proto"); ok {
+			if message.Meta == nil {
+				message.Meta = source.Meta.Dup()
+			} else {
+				message.Meta["struct:name:proto"] = []string{proto}
+			}
+		}
+	}
+	for _, key := range []string{"rpc:reserved:number", "rpc:reserved:name"} {
+		if values := message.Meta[key]; len(values) > 0 {
+			message.Meta[key] = slices.Clone(values)
+		}
+	}
+	for _, attribute := range attributes {
+		for _, key := range []string{"rpc:reserved:number", "rpc:reserved:name"} {
+			if values := attribute.Meta[key]; len(values) > 0 {
+				if message.Meta == nil {
+					message.Meta = make(MetaExpr)
+				}
+				message.Meta.Merge(MetaExpr{key: slices.Clone(values)})
+			}
+		}
 	}
 }
 
