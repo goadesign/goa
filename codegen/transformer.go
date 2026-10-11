@@ -226,6 +226,7 @@ type (
 		rootSource      *expr.AttributeExpr
 		rootTarget      *expr.AttributeExpr
 		wrappers        map[TransformHelperDefinitionLocation]transformLayoutWrapper
+		comparisonPairs map[transformAttributePair]struct{}
 		sourceBaseline  *expr.AttributeExpr
 		targetBaseline  *expr.AttributeExpr
 		sourceCopier    *expr.AttributeGraphCopier
