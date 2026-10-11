@@ -204,11 +204,20 @@ func sameGRPCHelperAttribute(first, next *expr.AttributeExpr, seen map[grpcHelpe
 		return false
 	}
 	if firstObject != nil {
-		firstMapped := expr.NewMappedAttributeExpr(first)
-		nextMapped := expr.NewMappedAttributeExpr(next)
+		// Mapped fields read validation from the occurrence when present,
+		// otherwise from its immediate named type. No field graph is changed.
+		firstRequired, nextRequired := first.Validation, next.Validation
+		if named, ok := first.Type.(expr.UserType); ok && firstRequired == nil {
+			firstRequired = named.Attribute().Validation
+		}
+		if named, ok := next.Type.(expr.UserType); ok && nextRequired == nil {
+			nextRequired = named.Attribute().Validation
+		}
 		for _, field := range *firstObject {
 			name := strings.SplitN(field.Name, ":", 2)[0]
-			if firstMapped.IsRequired(name) != nextMapped.IsRequired(name) {
+			firstHas := firstRequired != nil && slices.Contains(firstRequired.Required, name)
+			nextHas := nextRequired != nil && slices.Contains(nextRequired.Required, name)
+			if firstHas != nextHas {
 				return false
 			}
 		}
