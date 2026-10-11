@@ -308,18 +308,19 @@ func transformHelperClasses(candidates []*transformHelperCandidate, previous []i
 }
 
 // transformHelperCandidatesEqual compares the facts that determine one
-// function body, then compares its child calls using the previous pass.
+// function body, then compares its child calls using the previous pass. Different
+// Go types reject sharing before transport hooks walk source and target fields.
 func transformHelperCandidatesEqual(left, right *transformHelperCandidate, previous []int) bool {
 	if left.plan.program != right.plan.program {
-		return false
-	}
-	if left.plan.program != nil && !transformProgramHelpersEqual(left, right) {
 		return false
 	}
 	if !transformGoLayoutsEqual(left.sourceLayout, right.sourceLayout, true, make(map[transformGoLayoutPair]struct{})) {
 		return false
 	}
 	if !transformGoLayoutsEqual(left.targetLayout, right.targetLayout, true, make(map[transformGoLayoutPair]struct{})) {
+		return false
+	}
+	if left.plan.program != nil && !transformProgramHelpersEqual(left, right) {
 		return false
 	}
 	if !transformSemanticAttributesEqual(left.helper.Source, right.helper.Source, make(map[transformSemanticAttributePair]struct{})) {
@@ -415,14 +416,23 @@ func transformSemanticAttributesEqual(left, right *expr.AttributeExpr, seen map[
 		return false
 	}
 	if leftObject != nil {
-		leftMapped := expr.NewMappedAttributeExpr(left)
-		rightMapped := expr.NewMappedAttributeExpr(right)
+		// Mapped fields read validation from the occurrence when present,
+		// otherwise from its immediate named type. No field graph is changed.
+		leftRequired, rightRequired := left.Validation, right.Validation
+		if named, ok := left.Type.(expr.UserType); ok && leftRequired == nil {
+			leftRequired = named.Attribute().Validation
+		}
+		if named, ok := right.Type.(expr.UserType); ok && rightRequired == nil {
+			rightRequired = named.Attribute().Validation
+		}
 		if len(*leftObject) != len(*rightObject) {
 			return false
 		}
 		for _, field := range *leftObject {
 			name := strings.SplitN(field.Name, ":", 2)[0]
-			if leftMapped.IsRequired(name) != rightMapped.IsRequired(name) {
+			leftHas := leftRequired != nil && slices.Contains(leftRequired.Required, name)
+			rightHas := rightRequired != nil && slices.Contains(rightRequired.Required, name)
+			if leftHas != rightHas {
 				return false
 			}
 		}

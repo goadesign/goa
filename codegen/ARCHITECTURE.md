@@ -650,7 +650,9 @@ describe the actual generated parameter and result types. The caller also
 supplies the package name order for each exact helper location. After every plan
 has been collected, the registry groups functions only when those Go types, the
 conversion rules, and the ordered child function calls are equivalent. It
-repeats the child comparison until recursive call graphs stop changing. Each
+repeats the child comparison until recursive call graphs stop changing. Generated
+Go types are compared before transport rules, and required-field comparisons read
+retained validation without copying attribute graphs. Each
 group returns the complete order and definition from one real helper occurrence;
 it never combines the conversion identity from one occurrence with the location
 from another. The registry never compares rendered Go source, hashes, or
