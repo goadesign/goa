@@ -1,5 +1,5 @@
 // This file compiles generated service, views, and starter implementation
-// packages for nested validation collisions shaped like AURA tool contracts.
+// packages for nested validation and generated-name collisions.
 package service
 
 import (

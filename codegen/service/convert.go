@@ -41,7 +41,7 @@ func convertFiles(conversions []*externalConversionFileFacts) []*codegen.File {
 		sections := []*codegen.SectionTemplate{
 			codegen.Header(
 				"External type conversion functions",
-				codegen.Goify(path.Base(retained.owner.ImportPath()), false),
+				strings.ToLower(codegen.Goify(path.Base(retained.owner.ImportPath()), false)),
 				retained.imports.Imports(),
 			),
 		}
