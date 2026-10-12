@@ -46,6 +46,7 @@ type (
 	grpcConversion struct {
 		declaration           *codegen.NameDeclaration
 		transform             *codegen.TransformPlan
+		serviceLayout         *codegen.GoTypePlan
 		pkg                   *codegen.GeneratedPackage
 		order                 grpcSymbolOrder
 		preferredName         string
@@ -334,11 +335,7 @@ func planGRPCTransforms(
 				id.method = endpoint.Name()
 			}
 			if conversion == nil {
-				transform, err := newGRPCTransformPlan(source, target, proto, protobuf)
-				if err != nil {
-					return nil, err
-				}
-				sourceLayout, targetLayout, err := planGRPCTransformLayouts(
+				transform, sourceLayout, targetLayout, err := planGRPCConversion(
 					generation, input, endpoint.MethodExpr, source, target, proto, protobuf, pathName,
 				)
 				if err != nil {
@@ -358,8 +355,13 @@ func planGRPCTransforms(
 					}); err != nil {
 					return nil, err
 				}
+				serviceLayout := targetLayout
+				if proto {
+					serviceLayout = sourceLayout
+				}
 				conversion = &grpcConversion{
 					transform:     transform,
+					serviceLayout: serviceLayout,
 					pkg:           pkg,
 					order:         grpcSymbolOrder(id),
 					preferredName: preferred,
@@ -1106,62 +1108,48 @@ func grpcValidationNamePart(value string) string {
 	return name.String()
 }
 
-// newGRPCTransformPlan copies the protobuf input or output type, then records
-// every nested conversion function that the generated code will call.
-func newGRPCTransformPlan(source, target *expr.AttributeExpr, proto bool, protobuf *protobufServicePlan) (*codegen.TransformPlan, error) {
+// planGRPCConversion copies service and protobuf values before planning. The
+// conversion and service layout share the same saved service attributes, so
+// later design changes cannot alter field names or inherited package ownership.
+func planGRPCConversion(generation *codegen.Generation, input PlanInput, method *expr.MethodExpr, source, target *expr.AttributeExpr, proto bool, protobuf *protobufServicePlan, pathName string) (*codegen.TransformPlan, *codegen.GoTypePlan, *codegen.GoTypePlan, error) {
+	serviceAttribute, protobufAttribute := target, source
 	prefix := "protobuf"
 	if proto {
-		original := target
-		target = expr.DupAtt(target)
-		protobuf.bindAttributeCopy(original, target)
-		removeMeta(target)
-		prefix = "svc"
-	} else {
-		original := source
-		source = expr.DupAtt(source)
-		protobuf.bindAttributeCopy(original, source)
-		removeMeta(source)
-	}
-	return grpcTransformProgram(proto).Plan(source, target, prefix)
-}
-
-// planGRPCTransformLayouts records the exact service and protobuf Go types
-// supplied to one conversion. The helper registry compares these retained
-// declarations and field pointer rules before sharing a private function.
-func planGRPCTransformLayouts(
-	generation *codegen.Generation,
-	input PlanInput,
-	method *expr.MethodExpr,
-	source, target *expr.AttributeExpr,
-	proto bool,
-	protobuf *protobufServicePlan,
-	pathName string,
-) (*codegen.GoTypePlan, *codegen.GoTypePlan, error) {
-	serviceAttribute, protobufAttribute := target, source
-	if proto {
 		serviceAttribute, protobufAttribute = source, target
+		prefix = "svc"
 	}
+	serviceAttribute = copyGRPCServiceAttribute(serviceAttribute)
+	planned := expr.DupAtt(protobufAttribute)
+	protobuf.bindAttributeCopy(protobufAttribute, planned)
+	removeMeta(planned)
 	serviceLayout, err := input.Service.MethodTypeLayout(method, serviceAttribute)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
-	protobufLayout, err := planGRPCProtobufLayout(generation, protobuf, protobufAttribute, pathName)
+	protobufLayout, err := planGRPCProtobufLayout(generation, protobuf, planned, pathName)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
+	source, target = planned, serviceAttribute
+	sourceLayout, targetLayout := protobufLayout, serviceLayout
 	if proto {
-		return serviceLayout, protobufLayout, nil
+		source, target = serviceAttribute, planned
+		sourceLayout, targetLayout = serviceLayout, protobufLayout
 	}
-	return protobufLayout, serviceLayout, nil
+	transform, err := grpcTransformProgram(proto).Plan(source, target, prefix)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	return transform, sourceLayout, targetLayout, nil
 }
 
-// planGRPCProtobufLayout records the message, oneof, field, and pointer form
-// produced by protoc for attribute before those declarations receive names.
+// planGRPCProtobufLayout records message and oneof declarations and field
+// shapes for comparing helpers. The protobuf resolver owns rendered Go names
+// and primitive types, which can differ from the generic Go layout.
 func planGRPCProtobufLayout(generation *codegen.Generation, protobuf *protobufServicePlan, attribute *expr.AttributeExpr, pathName string) (*codegen.GoTypePlan, error) {
 	owner := path.Join(generation.GenPkg(), "grpc", pathName, pbPkgName)
 	planned := expr.DupAtt(attribute)
 	protobuf.bindAttributeCopy(attribute, planned)
-	removeMeta(planned)
 	if err := codegen.Walk(planned, func(candidate *expr.AttributeExpr) error {
 		for {
 			userType, ok := candidate.Type.(expr.UserType)
@@ -1177,7 +1165,7 @@ func planGRPCProtobufLayout(generation *codegen.Generation, protobuf *protobufSe
 	return codegen.PlanGoType(planned, codegen.GoTypePlanOptions{
 		Owner:            owner,
 		RetainNamedValue: true,
-		Policy:           codegen.GoLayoutPolicy{Pointer: true},
+		Policy:           codegen.GoLayoutPolicy{Pointer: true, IgnoreRequiredCollections: true},
 		Bind: func(request codegen.GoTypeBindingRequest) (codegen.GoTypeBinding, error) {
 			switch request.Kind {
 			case codegen.GoNamed:
