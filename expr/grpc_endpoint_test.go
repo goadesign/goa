@@ -92,12 +92,8 @@ service "Service" gRPC endpoint "Method": Response metadata attribute "choice" m
 			Errors: []string{`service "Service" gRPC endpoint "Method": attribute "version_ref" of the method payload must be a primitive or an array of primitives to satisfy the "grpc:stream:compat" meta`},
 		},
 		"endpoint-union-containing-any": {
-			DSL: testdata.GRPCEndpointWithUnionContainingAny,
-			Errors: []string{
-				`service "Service" method "MethodUnion": union type choice has array elements, not supported by gRPC
-service "Service" method "MethodUnion": union type choice has map elements, not supported by gRPC`,
-				// Any type error removed as Any is now supported
-			},
+			DSL:    testdata.GRPCEndpointWithUnionContainingAny,
+			Errors: []string{},
 		},
 	}
 	for name, c := range cases {

@@ -173,10 +173,16 @@ func makeProtoBufMessageR(att *expr.AttributeExpr, tname *string, owner expr.Exa
 		return
 	case isut:
 		switch {
-		case expr.IsArray(ut):
-			wrapAttr(ut.Attribute(), ut.Name(), false, expr.GRPCArrayWrapperExampleIdentity(ut))
-		case expr.IsMap(ut):
-			wrapAttr(ut.Attribute(), ut.Name(), false, expr.GRPCMapWrapperExampleIdentity(ut))
+		case expr.IsArray(ut), expr.IsMap(ut):
+			// A named collection owns its wrapper object directly. Adding
+			// another named type here would declare two protobuf messages.
+			attribute := ut.Attribute()
+			wrapper := protoBufWrapperAttribute(attribute, false)
+			wrapper.Description = attribute.Description
+			for name, values := range attribute.Meta {
+				wrapper.Meta[name] = append([]string(nil), values...)
+			}
+			ut.SetAttribute(wrapper)
 		}
 		makeProtoBufMessageR(ut.Attribute(), tname, owner, seen)
 	case expr.IsArray(att.Type):
@@ -203,43 +209,44 @@ func makeProtoBufMessageR(att *expr.AttributeExpr, tname *string, owner expr.Exa
 // wrapAttr makes the attribute type a user type by wrapping the given
 // attribute into an attribute named "field".
 func wrapAttr(att *expr.AttributeExpr, tname string, req bool, owner expr.ExampleIdentity) {
-	wrap := func(attr *expr.AttributeExpr) *expr.AttributeExpr {
-		res := &expr.AttributeExpr{
-			Type: &expr.Object{
-				&expr.NamedAttributeExpr{
-					Name: wrappedField,
-					Attribute: &expr.AttributeExpr{
-						Type:       attr.Type,
-						Meta:       expr.MetaExpr{"rpc:tag": []string{"1"}},
-						Validation: attr.Validation,
-					},
-				},
-			},
-			Meta: expr.MetaExpr{wrappedAttrMeta: []string{wrappedField}},
-		}
-		if req && !expr.IsArray(attr.Type) && !expr.IsMap(attr.Type) {
-			res.Validation = &expr.ValidationExpr{
-				Required: []string{wrappedField},
-			}
-		}
-		return res
-	}
 	switch dt := att.Type.(type) {
 	case expr.UserType:
 		// Don't change the original user type. Create a copy and wrap that.
-		att.Type = expr.NewGeneratedUserType(dt.Name(), wrap(expr.DupAtt(dt.Attribute())), owner)
+		att.Type = expr.NewGeneratedUserType(dt.Name(), protoBufWrapperAttribute(expr.DupAtt(dt.Attribute()), req), owner)
 	default:
-		att.Type = expr.NewGeneratedUserType(tname, wrap(att), owner)
+		att.Type = expr.NewGeneratedUserType(tname, protoBufWrapperAttribute(att, req), owner)
 	}
 	// Validation is moved to wrapped attribute.
 	att.Validation = nil
 }
 
-// isWrappedAttr reports whether att references a wrapper message synthesized
-// by wrapAttr: att.Type is a user type whose attribute carries the
-// wrappedAttrMeta marker. User type chains are followed because wrapAttr
-// nests the wrapper user type inside user defined array types (see
-// makeProtoBufMessageR).
+// protoBufWrapperAttribute puts a scalar or collection in one protobuf object
+// field. Collection rules stay on that field so empty values retain their
+// existing validation behavior.
+func protoBufWrapperAttribute(attr *expr.AttributeExpr, req bool) *expr.AttributeExpr {
+	res := &expr.AttributeExpr{
+		Type: &expr.Object{
+			&expr.NamedAttributeExpr{
+				Name: wrappedField,
+				Attribute: &expr.AttributeExpr{
+					Type:       attr.Type,
+					Meta:       expr.MetaExpr{"rpc:tag": []string{"1"}},
+					Validation: attr.Validation,
+				},
+			},
+		},
+		Meta: expr.MetaExpr{wrappedAttrMeta: []string{wrappedField}},
+	}
+	if req && !expr.IsArray(attr.Type) && !expr.IsMap(attr.Type) {
+		res.Validation = &expr.ValidationExpr{
+			Required: []string{wrappedField},
+		}
+	}
+	return res
+}
+
+// isWrappedAttr reports whether a named value contains a generated protobuf
+// wrapper. The marker distinguishes wrappers from authored one-field objects.
 func isWrappedAttr(att *expr.AttributeExpr) bool {
 	ut, ok := att.Type.(expr.UserType)
 	if !ok {

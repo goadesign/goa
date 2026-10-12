@@ -299,6 +299,49 @@ func TestMakeProtoBufMessageMarksWrappers(t *testing.T) {
 	}
 }
 
+func TestMakeProtoBufMessageNamedCollectionsOwnWrapperBodies(t *testing.T) {
+	cases := []struct {
+		name string
+		typ  expr.DataType
+	}{
+		{"array", &expr.Array{ElemType: &expr.AttributeExpr{Type: expr.String}}},
+		{"map", &expr.Map{KeyType: &expr.AttributeExpr{Type: expr.String}, ElemType: &expr.AttributeExpr{Type: expr.Int}}},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			minimum := 1
+			collection := &expr.UserTypeExpr{
+				TypeName: "Collection",
+				UID:      "collection",
+				AttributeExpr: &expr.AttributeExpr{
+					Type:        test.typ,
+					Description: "Selected collection values.",
+					Meta:        expr.MetaExpr{"struct:name:proto": {"SelectedValues"}},
+					Validation:  &expr.ValidationExpr{MinLength: &minimum},
+				},
+			}
+			message := makeProtoBufMessage(&expr.AttributeExpr{Type: &expr.Object{
+				{Name: "values", Attribute: &expr.AttributeExpr{Type: collection}},
+			}}, "Request", testGRPCMessageExampleIdentity("named-collection-body"))
+			values := expr.AsObject(message.Type).Attribute("values")
+			named := values.Type.(expr.UserType)
+			require.Same(t, collection, named.Origin())
+			body, ok := named.Attribute().Type.(*expr.Object)
+			require.True(t, ok, "the named collection must own its object body directly")
+			require.Len(t, *body, 1)
+			require.Equal(t, collection.Description, named.Attribute().Description)
+			require.Equal(t, []string{"SelectedValues"}, named.Attribute().Meta["struct:name:proto"])
+			require.Equal(t, []string{wrappedField}, named.Attribute().Meta[wrappedAttrMeta])
+			require.Nil(t, named.Attribute().Validation)
+			field := body.Attribute(wrappedField)
+			require.Equal(t, test.typ.Kind(), field.Type.Kind())
+			require.Equal(t, &minimum, field.Validation.MinLength)
+			require.Equal(t, []string{"1"}, field.Meta["rpc:tag"])
+			require.Equal(t, test.typ.Kind(), collection.Type.Kind(), "the service type must remain a collection")
+		})
+	}
+}
+
 func TestMakeProtoBufMessageDistinguishesEqualUIDOrigins(t *testing.T) {
 	first := protobufArrayTraversalType("First", "shared")
 	second := protobufArrayTraversalType("Second", "shared")
