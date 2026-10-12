@@ -75,3 +75,13 @@ func TestUntaggedBranchUsesOuterJSONKind(t *testing.T) {
 	union.Values = append(union.Values, &NamedAttributeExpr{Name: "text", Attribute: &AttributeExpr{Type: String}})
 	require.Nil(t, union.UntaggedBranch("ambiguous"))
 }
+
+func TestUntaggedUnionRejectsNamedCustomRepresentation(t *testing.T) {
+	raw := &UserTypeExpr{TypeName: "Raw", AttributeExpr: &AttributeExpr{Type: Bytes, Meta: MetaExpr{"struct:field:type": {"json.RawMessage", "encoding/json"}}}}
+	alias := &UserTypeExpr{TypeName: "Alias", AttributeExpr: &AttributeExpr{Type: raw}}
+	for _, branch := range []*AttributeExpr{raw.Attribute(), {Type: raw}, {Type: alias}} {
+		attribute := &AttributeExpr{Type: &Union{TypeName: "Choice", Untagged: true, Values: []*NamedAttributeExpr{{Name: "raw", Attribute: branch}}}}
+		failures := attribute.Validate("", attribute)
+		require.Contains(t, failures.Error(), "must have one known JSON kind")
+	}
+}

@@ -16,6 +16,7 @@ import (
 	"goa.design/goa/v3/codegen/cli"
 	"goa.design/goa/v3/codegen/service"
 	"goa.design/goa/v3/expr"
+	"goa.design/goa/v3/internal/jsonrepresentation"
 )
 
 var (
@@ -4316,6 +4317,7 @@ func buildHTTPUnionTypeData(u *expr.Union, scope codegen.Attributor, record *wir
 			Nilable:                codegen.IsNilable(nat.Attribute.Type),
 			TypeTag:                nat.Name,
 			JSONKind:               expr.JSONKind(nat.Attribute.Type),
+			RawJSON:                jsonrepresentation.IsRawJSON(nat.Attribute),
 		}
 	}
 

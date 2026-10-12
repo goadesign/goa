@@ -9,6 +9,7 @@ import (
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
+	"goa.design/goa/v3/internal/jsonrepresentation"
 )
 
 // planServiceTypeLayouts records every field, pointer, struct tag, package, and
@@ -163,6 +164,7 @@ func planUnionRenderFacts(facts *unionFacts, binder codegen.GoTypeBinder, genera
 			emitPrimitiveAlias: hasPrimitiveAlias && !isUserType && !hasCustomImport,
 			primitiveAliasType: primitiveAliasType,
 			jsonKind:           expr.JSONKind(branch.Attribute.Type),
+			rawJSON:            jsonrepresentation.IsRawJSON(branch.Attribute),
 		}
 	}
 	return nil
@@ -548,6 +550,7 @@ func makeUserTypeFacts(userType expr.UserType, servicePath string, location *cod
 		description:  userType.Attribute().Description,
 		errorName:    retainedErrorName(userType),
 		serviceError: expr.IsErrorResult(userType),
+		rawJSON:      jsonrepresentation.IsRawJSON(userType.Attribute()),
 		location:     typeLocation,
 		declaration:  declaration,
 	}, key, nil

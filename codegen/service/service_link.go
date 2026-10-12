@@ -284,6 +284,7 @@ func formatUserTypeFacts(facts []*userTypeFacts, aliases *importAliases) []*User
 			ErrorDescription: facts.description,
 			ErrorName:        facts.errorName,
 			IsServiceError:   facts.serviceError,
+			RawJSON:          facts.rawJSON,
 			Def:              linked.Def(),
 			Ref:              facts.declaration.Ref(facts.userType),
 			Loc:              facts.location,
@@ -349,6 +350,7 @@ func buildRetainedUnionTypeData(facts *unionFacts, aliases *importAliases) *Unio
 			EmitPrimitiveAlias:     branch.emitPrimitiveAlias,
 			PrimitiveAliasType:     branch.primitiveAliasType,
 			TypeTag:                branch.name,
+			RawJSON:                branch.rawJSON,
 			JSONKind:               branch.jsonKind,
 		}
 	}

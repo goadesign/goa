@@ -367,7 +367,8 @@ func sameGeneratedTypeEmissionContent(left, right *generatedTypeEmissionFacts) b
 			left.userType.name == right.userType.name &&
 			left.userType.description == right.userType.description &&
 			left.userType.errorName == right.userType.errorName &&
-			left.userType.serviceError == right.userType.serviceError
+			left.userType.serviceError == right.userType.serviceError &&
+			left.userType.rawJSON == right.userType.rawJSON
 	}
 	return left.service.packagePath == right.service.packagePath &&
 		left.method.name == right.method.name &&
@@ -436,6 +437,7 @@ func sameGeneratedUnionBranches(left, right []*unionBranchFacts) bool {
 			leftBranch.declaration != rightBranch.declaration ||
 			!leftBranch.layout.Equivalent(rightBranch.layout) ||
 			leftBranch.nilable != rightBranch.nilable ||
+			leftBranch.rawJSON != rightBranch.rawJSON ||
 			leftBranch.emitPrimitiveAlias != rightBranch.emitPrimitiveAlias ||
 			leftBranch.primitiveAliasType != rightBranch.primitiveAliasType {
 			return false

@@ -291,6 +291,7 @@ type (
 		description  string
 		errorName    string
 		serviceError bool
+		rawJSON      bool
 		location     *codegen.Location
 		declaration  *codegen.TypeDeclaration
 		layout       *codegen.GoTypePlan
@@ -325,6 +326,7 @@ type (
 		emitPrimitiveAlias bool
 		primitiveAliasType string
 		jsonKind           byte
+		rawJSON            bool
 	}
 
 	// validatorKey selects the validation function for one generated result type
