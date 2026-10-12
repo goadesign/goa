@@ -19,7 +19,11 @@ func NewListResult(message *wrapped_collectionpb.WrappedCollectionItemCollection
 // ValidateWrappedCollectionItemCollection runs the validations defined on
 // WrappedCollectionItemCollection.
 func ValidateWrappedCollectionItemCollection(message *wrapped_collectionpb.WrappedCollectionItemCollection) (err error) {
-	for _, e := range message.Field {
+	var messageField []*wrapped_collectionpb.WrappedCollectionItem
+	if message != nil {
+		messageField = message.Field
+	}
+	for _, e := range messageField {
 		if e != nil {
 			if err2 := validatetest_20_api_WrappedCollection_WrappedCollectionItem_At_elem(e); err2 != nil {
 				err = goa.MergeErrors(err, err2)

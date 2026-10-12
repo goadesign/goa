@@ -1241,25 +1241,6 @@ func addValidation(att *expr.AttributeExpr, sd *ServiceData, req bool) *Validati
 	return sd.protobuf.validation(att, kind)
 }
 
-// userTypeAttribute returns the attribute of the given user type.
-func userTypeAttribute(ut expr.UserType) *expr.AttributeExpr {
-	att := ut.Attribute()
-	if rt, ok := ut.(*expr.ResultTypeExpr); ok {
-		// Result type collections are wrapper user types themselves: the
-		// wrappedAttrMeta marker lives directly on their attribute when the
-		// collection was wrapped as a whole message (makeProtoBufMessage) and
-		// on a nested wrapper user type when the collection was wrapped in
-		// place as a field type (makeProtoBufMessageR).
-		if len(att.Meta[wrappedAttrMeta]) > 0 || isWrappedAttr(att) {
-			if expr.IsArray(unwrapAttr(att).Type) {
-				// result type collection
-				att = &expr.AttributeExpr{Type: expr.AsObject(rt)}
-			}
-		}
-	}
-	return att
-}
-
 // protobufCLIExample writes object field names exactly as they appear in the
 // protobuf file. For example, a Goa field named "tenantID" is shown as
 // "tenant_id" in command help.

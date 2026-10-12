@@ -321,7 +321,7 @@ func (p *protobufServicePlan) namingDescriptor(groups []*protobufNameGroup) (*de
 			message, keys := p.messageDescriptor(group.message)
 			for _, use := range group.message.uses {
 				useType := use.Type.(expr.UserType)
-				p.bindAttributeCopy(group.message.identity.attribute, userTypeAttribute(useType))
+				p.bindAttributeCopy(group.message.identity.attribute, useType.Attribute())
 			}
 			file.MessageType = append(file.MessageType, message)
 			for _, key := range keys {
