@@ -339,7 +339,8 @@ type (
 
 	// RequestData describes a gRPC request.
 	RequestData struct {
-		// ProtoMessageName is the message name written in the .proto method.
+		// ProtoMessageName includes the leading dot and protobuf package so the
+		// RPC type always selects its message instead of a same-named method.
 		ProtoMessageName string
 		// Description is the request description.
 		Description string
@@ -432,7 +433,8 @@ type (
 
 	// ResponseData describes a gRPC success or error response.
 	ResponseData struct {
-		// ProtoMessageName is the message name written in the .proto method.
+		// ProtoMessageName includes the leading dot and protobuf package so the
+		// RPC type always selects its message instead of a same-named method.
 		ProtoMessageName string
 		// StatusCode is the return code of the response.
 		StatusCode string
@@ -924,7 +926,7 @@ func (d *ServicesData) analyze(servicePlan *grpcServicePlan) *ServiceData {
 			transportRequest = requestEnvelope
 			record := collect(requestEnvelope)
 			request.Message = record.data
-			request.ProtoMessageName = record.protoName
+			request.ProtoMessageName = "." + planned.protoPackage + "." + record.protoName
 			request.StreamEnvelope = buildStreamEnvelopeData(requestEnvelope, sd)
 			if endpointPlan.legacyStream {
 				request.LegacyDecode = d.buildLegacyDecodeData(e, sd)
@@ -933,11 +935,11 @@ func (d *ServicesData) analyze(servicePlan *grpcServicePlan) *ServiceData {
 			transportRequest = streamingRequest
 			record := collect(streamingRequest)
 			request.Message = record.data
-			request.ProtoMessageName = record.protoName
+			request.ProtoMessageName = "." + planned.protoPackage + "." + record.protoName
 		default:
 			record := collect(requestMessage)
 			request.Message = record.data
-			request.ProtoMessageName = record.protoName
+			request.ProtoMessageName = "." + planned.protoPackage + "." + record.protoName
 		}
 		request.ClientMessageRef = protoBufGoFullTypeRef(transportRequest, sd.ClientProtobufPkgName, sd)
 		request.ServerMessageRef = protoBufGoFullTypeRef(transportRequest, sd.ServerProtobufPkgName, sd)
@@ -969,7 +971,7 @@ func (d *ServicesData) analyze(servicePlan *grpcServicePlan) *ServiceData {
 		if responseMessage.Type != expr.Empty || !e.MethodExpr.IsStreaming() {
 			record := collect(responseMessage)
 			response.Message = record.data
-			response.ProtoMessageName = record.protoName
+			response.ProtoMessageName = "." + planned.protoPackage + "." + record.protoName
 			response.ClientMessageRef = protoBufGoFullTypeRef(responseMessage, sd.ClientProtobufPkgName, sd)
 			response.ServerMessageRef = protoBufGoFullTypeRef(responseMessage, sd.ServerProtobufPkgName, sd)
 		}

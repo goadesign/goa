@@ -8,7 +8,7 @@ option go_package = "/method_with_acronympb";
 // Service is the MethodWithAcronym service interface.
 service MethodWithAcronym {
 	// MethodJWT implements method_jwt.
-	rpc MethodJWT (MethodJWTRequest) returns (MethodJWTResponse);
+	rpc MethodJWT (.method_with_acronym.MethodJWTRequest) returns (.method_with_acronym.MethodJWTResponse);
 }
 
 message MethodJWTRequest {

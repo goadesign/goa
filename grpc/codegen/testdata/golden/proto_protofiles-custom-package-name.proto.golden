@@ -8,7 +8,7 @@ option go_package = "/custompb";
 // Service is the ServiceWithPackageName service interface.
 service ServiceWithPackageName {
 	// Method implements method.
-	rpc Method (MethodRequest) returns (MethodResponse);
+	rpc Method (.custom.MethodRequest) returns (.custom.MethodResponse);
 }
 
 message MethodRequest {

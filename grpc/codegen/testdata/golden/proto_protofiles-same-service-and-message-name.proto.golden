@@ -8,7 +8,7 @@ option go_package = "/my_name_conflictspb";
 // Service is the MyNameConflicts service interface.
 service MyNameConflicts {
 	// MyNameConflictsMethod implements MyNameConflictsMethod.
-	rpc MyNameConflictsMethod (MyNameConflictsMethodRequest) returns (MyNameConflictsMethodResponse);
+	rpc MyNameConflictsMethod (.my_name_conflicts.MyNameConflictsMethodRequest) returns (.my_name_conflicts.MyNameConflictsMethodResponse);
 }
 
 message MyNameConflictsMethodRequest {

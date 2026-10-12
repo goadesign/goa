@@ -8,7 +8,7 @@ option go_package = "/service_unary_rpc_no_resultpb";
 // Service is the ServiceUnaryRPCNoResult service interface.
 service ServiceUnaryRPCNoResult {
 	// MethodUnaryRPCNoResult implements MethodUnaryRPCNoResult.
-	rpc MethodUnaryRPCNoResult (MethodUnaryRPCNoResultRequest) returns (MethodUnaryRPCNoResultResponse);
+	rpc MethodUnaryRPCNoResult (.service_unary_rpc_no_result.MethodUnaryRPCNoResultRequest) returns (.service_unary_rpc_no_result.MethodUnaryRPCNoResultResponse);
 }
 
 message MethodUnaryRPCNoResultRequest {

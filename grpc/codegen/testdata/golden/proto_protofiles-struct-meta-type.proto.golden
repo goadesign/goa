@@ -8,7 +8,7 @@ option go_package = "/using_meta_typespb";
 // Service is the UsingMetaTypes service interface.
 service UsingMetaTypes {
 	// Method implements Method.
-	rpc Method (MethodRequest) returns (MethodResponse);
+	rpc Method (.using_meta_types.MethodRequest) returns (.using_meta_types.MethodResponse);
 }
 
 message MethodRequest {

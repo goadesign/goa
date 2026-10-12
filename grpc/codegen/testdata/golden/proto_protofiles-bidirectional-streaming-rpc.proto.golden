@@ -8,7 +8,7 @@ option go_package = "/service_bidirectional_streaming_rpcpb";
 // Service is the ServiceBidirectionalStreamingRPC service interface.
 service ServiceBidirectionalStreamingRPC {
 	// MethodBidirectionalStreamingRPC implements MethodBidirectionalStreamingRPC.
-	rpc MethodBidirectionalStreamingRPC (stream MethodBidirectionalStreamingRPCStreamingRequest) returns (stream MethodBidirectionalStreamingRPCResponse);
+	rpc MethodBidirectionalStreamingRPC (stream .service_bidirectional_streaming_rpc.MethodBidirectionalStreamingRPCStreamingRequest) returns (stream .service_bidirectional_streaming_rpc.MethodBidirectionalStreamingRPCResponse);
 }
 
 message MethodBidirectionalStreamingRPCStreamingRequest {

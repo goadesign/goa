@@ -8,9 +8,9 @@ option go_package = "/multiple_methods_same_result_collectionpb";
 // Service is the MultipleMethodsSameResultCollection service interface.
 service MultipleMethodsSameResultCollection {
 	// MethodA implements method_a.
-	rpc MethodA (MethodARequest) returns (ResultTCollection);
+	rpc MethodA (.multiple_methods_same_result_collection.MethodARequest) returns (.multiple_methods_same_result_collection.ResultTCollection);
 	// MethodB implements method_b.
-	rpc MethodB (MethodBRequest) returns (ResultTCollection);
+	rpc MethodB (.multiple_methods_same_result_collection.MethodBRequest) returns (.multiple_methods_same_result_collection.ResultTCollection);
 }
 
 message MethodARequest {

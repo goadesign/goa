@@ -8,7 +8,7 @@ option go_package = "/default_fieldspb";
 // Service is the DefaultFields service interface.
 service DefaultFields {
 	// Method implements Method.
-	rpc Method (MethodRequest) returns (MethodResponse);
+	rpc Method (.default_fields.MethodRequest) returns (.default_fields.MethodResponse);
 }
 
 message MethodRequest {
