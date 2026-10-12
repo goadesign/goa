@@ -1,6 +1,6 @@
 {{ comment .Description }}
 type {{ .VarName }} {{ .Def }}
-{{ if .RawJSON }}
+{{- if .RawJSON }}
 // MarshalJSON writes the stored JSON value without base64 encoding it.
 func (v {{ .VarName }}) MarshalJSON() ([]byte, error) {
  return ({{ .Def }})(v).MarshalJSON()
@@ -15,4 +15,4 @@ func (v *{{ .VarName }}) UnmarshalJSON(data []byte) error {
  *v = {{ .VarName }}(raw)
  return nil
 }
-{{ end }}
+{{- end }}
