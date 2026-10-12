@@ -675,6 +675,14 @@ and sharing a function still requires complete definition and Go layout
 equivalence. This terminates planning for recursive type graphs; it does not
 detect cycles in runtime values.
 
+A named array or map owns its protobuf wrapper object directly. A union branch
+therefore refers to one message containing the collection, rather than a named
+alias to another wrapper message. The wrapper marker describes this transport
+shape; the authored collection identity still owns its declaration name.
+Collection validation remains on the contained field, and service values keep
+their authored array or map representation. Direct and inherited union branches
+follow the same conversion and validation path.
+
 Custom array and map renderers retain their existing inline collection calls
 and named-object helper rules, including `InlineCompositeElems`. When a transport
 stores a collection in a wrapper message, the transform plan retains the chosen

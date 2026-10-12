@@ -31,13 +31,13 @@ func transform() {
 		case *proto.EmbeddedOneOf_Array:
 			{
 				u := target.EmbeddedOneOf
-				u.SetArray(protobufProtoEmbeddedOneOfArray2ToProtoEmbeddedOneOfArray(val.Array))
+				u.SetArray(protobufProtoEmbeddedOneOfArrayToProtoEmbeddedOneOfArray(val.Array))
 				target.EmbeddedOneOf = u
 			}
 		case *proto.EmbeddedOneOf_Map_:
 			{
 				u := target.EmbeddedOneOf
-				u.SetMap(protobufProtoEmbeddedOneOfMap2ToProtoEmbeddedOneOfMap(val.Map_))
+				u.SetMap(protobufProtoEmbeddedOneOfMapToProtoEmbeddedOneOfMap(val.Map_))
 				target.EmbeddedOneOf = u
 			}
 		case *proto.EmbeddedOneOf_UserType:

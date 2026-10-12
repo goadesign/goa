@@ -1241,25 +1241,6 @@ func addValidation(att *expr.AttributeExpr, sd *ServiceData, req bool) *Validati
 	return sd.protobuf.validation(att, kind)
 }
 
-// userTypeAttribute returns the attribute of the given user type.
-func userTypeAttribute(ut expr.UserType) *expr.AttributeExpr {
-	att := ut.Attribute()
-	if rt, ok := ut.(*expr.ResultTypeExpr); ok {
-		// Result type collections are wrapper user types themselves: the
-		// wrappedAttrMeta marker lives directly on their attribute when the
-		// collection was wrapped as a whole message (makeProtoBufMessage) and
-		// on a nested wrapper user type when the collection was wrapped in
-		// place as a field type (makeProtoBufMessageR).
-		if len(att.Meta[wrappedAttrMeta]) > 0 || isWrappedAttr(att) {
-			if expr.IsArray(unwrapAttr(att).Type) {
-				// result type collection
-				att = &expr.AttributeExpr{Type: expr.AsObject(rt)}
-			}
-		}
-	}
-	return att
-}
-
 // protobufCLIExample writes object field names exactly as they appear in the
 // protobuf file. For example, a Goa field named "tenantID" is shown as
 // "tenant_id" in command help.
@@ -1567,11 +1548,8 @@ func (d *ServicesData) buildInitData(source, target *expr.AttributeExpr, sourceV
 		tgtCtx = pbCtx
 	}
 	isStruct := expr.IsObject(target.Type) || expr.IsUnion(target.Type)
-	if !conversion.bound {
-		if err := conversion.transform.BindContexts(srcCtx, tgtCtx); err != nil {
-			panic(err) // bug
-		}
-		conversion.bound = true
+	if err := conversion.bindContexts(srcCtx, tgtCtx, proto); err != nil {
+		panic(err) // bug
 	}
 	code, helpers, err := conversion.transform.Render(sourceVar, targetVar, true)
 	if err != nil {
@@ -1620,11 +1598,8 @@ func (d *ServicesData) buildCLIRequestTransform(
 	conversion := d.symbols[endpoint.Service].endpoints[endpoint].cliPayload
 	pbCtx := protoBufTypeContext(sd.ClientProtobufPkgName, sd)
 	svcCtx := d.serviceTypeContext(sd, "client").Enter(endpoint.MethodExpr.Payload)
-	if !conversion.bound {
-		if err := conversion.transform.BindContexts(pbCtx, svcCtx); err != nil {
-			panic(err) // bug
-		}
-		conversion.bound = true
+	if err := conversion.bindContexts(pbCtx, svcCtx, false); err != nil {
+		panic(err) // bug
 	}
 	code, helpers, err := conversion.transform.Render("message", "v", true)
 	if err != nil {

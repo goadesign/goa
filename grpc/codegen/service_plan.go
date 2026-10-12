@@ -8,7 +8,6 @@ import (
 	"sort"
 
 	"goa.design/goa/v3/codegen"
-	"goa.design/goa/v3/codegen/service"
 	"goa.design/goa/v3/expr"
 )
 
@@ -96,9 +95,6 @@ func collectGRPCServicePlans(plan *Plan) ([]*grpcServicePlan, error) {
 				return nil, fmt.Errorf("plan gRPC metadata for %q.%q: %w", service.expression.Name(), endpoint.expression.Name(), err)
 			}
 		}
-		if err := replaceGRPCTransforms(plan.service, source, service, plannedProtobuf, plannedSymbols); err != nil {
-			return nil, fmt.Errorf("copy gRPC conversions for service %q: %w", service.expression.Name(), err)
-		}
 		services[index] = service
 	}
 	return services, nil
@@ -180,120 +176,6 @@ func collectGRPCProtobufImports(protobuf *protobufServicePlan) ([]string, []*cod
 	return protoImports, goImports
 }
 
-// replaceGRPCTransforms rebuilds every conversion from the copied method. This
-// prevents later changes to the original design from changing generated code.
-func replaceGRPCTransforms(
-	servicePlan *service.Plan,
-	source *expr.GRPCServiceExpr,
-	grpcService *grpcServicePlan,
-	protobuf *protobufServicePlan,
-	symbols *grpcSymbols,
-) error {
-	if protobuf == nil || symbols == nil {
-		return fmt.Errorf("protobuf messages or Go names are missing")
-	}
-	replaced := make(map[*grpcConversion]struct{})
-	replace := func(conversion *grpcConversion, source, target *expr.AttributeExpr, proto bool) error {
-		if conversion == nil {
-			return nil
-		}
-		if _, ok := replaced[conversion]; ok {
-			return nil
-		}
-		transform, err := newGRPCTransformPlan(source, target, proto, protobuf)
-		if err != nil {
-			return err
-		}
-		oldHelpers := conversion.transform.Helpers()
-		newHelpers := transform.Helpers()
-		if len(oldHelpers) != len(newHelpers) {
-			return fmt.Errorf("saved conversion helper count changed from %d to %d", len(oldHelpers), len(newHelpers))
-		}
-		for index, helper := range newHelpers {
-			if err := transform.BindHelperDeclaration(helper.ID, oldHelpers[index].Declaration); err != nil {
-				return err
-			}
-		}
-		conversion.transform = transform
-		conversion.bound = false
-		replaced[conversion] = struct{}{}
-		return nil
-	}
-	for index, endpointPlan := range grpcService.endpoints {
-		endpoint := endpointPlan.expression
-		sourceEndpoint := source.GRPCEndpoints[index]
-		messages := protobuf.messages[index]
-		endpointSymbols := symbols.endpoints[endpoint]
-		result := endpoint.MethodExpr.Result
-		if _, viewed := sourceEndpoint.MethodExpr.Result.Type.(*expr.ResultTypeExpr); viewed {
-			projected, err := servicePlan.ProjectedResult(sourceEndpoint.MethodExpr)
-			if err != nil {
-				return err
-			}
-			result = expr.DupAtt(projected)
-		}
-		if endpoint.MethodExpr.Payload.Type != expr.Empty {
-			if err := replace(endpointSymbols.serverInits[grpcInitKey{role: grpcRequestInit}], messages.request, endpoint.MethodExpr.Payload, false); err != nil {
-				return err
-			}
-			if err := replace(endpointSymbols.cliPayload, messages.request, endpoint.MethodExpr.Payload, false); err != nil {
-				return err
-			}
-		}
-		if !(endpoint.MethodExpr.IsPayloadStreaming() && isEmpty(endpoint.Request.Type)) {
-			if err := replace(endpointSymbols.clientInits[grpcInitKey{role: grpcRequestInit}], endpoint.MethodExpr.Payload, messages.request, true); err != nil {
-				return err
-			}
-		}
-		if err := replace(endpointSymbols.serverInits[grpcInitKey{role: grpcResponseInit}], result, messages.response, true); err != nil {
-			return err
-		}
-		if endpoint.MethodExpr.Result.Type != expr.Empty && !endpoint.MethodExpr.IsStreaming() {
-			if err := replace(endpointSymbols.clientInits[grpcInitKey{role: grpcResponseInit}], messages.response, result, false); err != nil {
-				return err
-			}
-		}
-		if endpoint.MethodExpr.StreamingPayload.Type != expr.Empty {
-			key := grpcInitKey{role: grpcStreamingRequestInit}
-			if err := replace(endpointSymbols.serverInits[key], messages.streamingRequest, endpoint.MethodExpr.StreamingPayload, false); err != nil {
-				return err
-			}
-			if err := replace(endpointSymbols.clientInits[key], endpoint.MethodExpr.StreamingPayload, messages.streamingRequest, true); err != nil {
-				return err
-			}
-		}
-		if endpoint.MethodExpr.Result.Type != expr.Empty && endpoint.MethodExpr.IsStreaming() {
-			key := grpcInitKey{role: grpcStreamingResponseInit}
-			if err := replace(endpointSymbols.serverInits[key], result, messages.response, true); err != nil {
-				return err
-			}
-			if err := replace(endpointSymbols.clientInits[key], messages.response, result, false); err != nil {
-				return err
-			}
-		}
-		if endpointPlan.legacyStream && expr.IsObject(endpoint.MethodExpr.Payload.Type) {
-			key := grpcInitKey{role: grpcLegacyRequestInit}
-			if err := replace(endpointSymbols.serverInits[key], &expr.AttributeExpr{Type: expr.Empty}, endpoint.MethodExpr.Payload, false); err != nil {
-				return err
-			}
-		}
-		for _, grpcError := range endpoint.GRPCErrors {
-			message := messages.errors[grpcError.Name]
-			if message == nil {
-				continue
-			}
-			key := grpcInitKey{role: grpcErrorInit, subject: grpcError.Name}
-			if err := replace(endpointSymbols.serverInits[key], grpcError.AttributeExpr, message, true); err != nil {
-				return err
-			}
-			if err := replace(endpointSymbols.clientInits[key], message, grpcError.AttributeExpr, false); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
 // copyGRPCService makes a private copy of the service values read by gRPC
 // planning and rendering.
 func copyGRPCService(source *expr.GRPCServiceExpr) (*grpcServicePlan, error) {
@@ -306,7 +188,7 @@ func copyGRPCService(source *expr.GRPCServiceExpr) (*grpcServicePlan, error) {
 	for index, sourceError := range source.ServiceExpr.Errors {
 		serviceExpr.Errors[index] = &expr.ErrorExpr{
 			Name:          sourceError.Name,
-			AttributeExpr: copyGRPCErrorAttribute(sourceError.AttributeExpr),
+			AttributeExpr: copyGRPCServiceAttribute(sourceError.AttributeExpr),
 		}
 	}
 	service := &expr.GRPCServiceExpr{
@@ -388,15 +270,15 @@ func copyGRPCMethod(source *expr.MethodExpr, service *expr.ServiceExpr) *expr.Me
 	for index, sourceError := range source.Errors {
 		method.Errors[index] = &expr.ErrorExpr{
 			Name:          sourceError.Name,
-			AttributeExpr: copyGRPCErrorAttribute(sourceError.AttributeExpr),
+			AttributeExpr: copyGRPCServiceAttribute(sourceError.AttributeExpr),
 		}
 	}
 	return method
 }
 
-// copyGRPCErrorAttribute preserves Goa's built-in error type while copying
-// fields from a custom error type.
-func copyGRPCErrorAttribute(source *expr.AttributeExpr) *expr.AttributeExpr {
+// copyGRPCServiceAttribute copies a service value while preserving Goa's
+// built-in error type, which conversion code identifies by its shared value.
+func copyGRPCServiceAttribute(source *expr.AttributeExpr) *expr.AttributeExpr {
 	result := expr.DupAtt(source)
 	if expr.IsErrorResult(source.Type) {
 		result.Type = expr.ErrorResult

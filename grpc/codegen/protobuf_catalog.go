@@ -231,9 +231,9 @@ func (c *protobufPackageCatalog) freezeMessages(sd *ServiceData) []*service.User
 	for _, record := range c.messages {
 		identity := record.identity
 		userType := identity.userType
-		definition := protoBufMessageDef(userTypeAttribute(userType), sd)
+		definition := protoBufMessageDef(userType.Attribute(), sd)
 		for _, use := range record.uses[1:] {
-			other := protoBufMessageDef(userTypeAttribute(use.Type.(expr.UserType)), sd)
+			other := protoBufMessageDef(use.Type.(expr.UserType).Attribute(), sd)
 			if other != definition {
 				panic(fmt.Sprintf("protobuf declaration %q has one typed identity but different wire definitions", record.name))
 			}
@@ -328,7 +328,7 @@ func (c *protobufPackageCatalog) freezeValidations(sd *ServiceData) []*Validatio
 			)
 		} else {
 			definition = codegen.AttributeValidationCode(
-				userTypeAttribute(userType),
+				userType.Attribute(),
 				userType,
 				context,
 				true,
@@ -357,7 +357,7 @@ func (c *protobufPackageCatalog) freezeValidations(sd *ServiceData) []*Validatio
 // protobuf wrapper message. Authored one-field messages are not wrappers.
 func (c *protobufPackageCatalog) collectionWrapperField(attribute *expr.AttributeExpr) *expr.NamedAttributeExpr {
 	record := c.messageRecord(attribute)
-	if record == nil || record.identity.source.synthetic.role != protobufWrapperMessage {
+	if record == nil || len(record.identity.attribute.Meta[wrappedAttrMeta]) == 0 {
 		return nil
 	}
 	object := expr.AsObject(attribute.Type)
@@ -455,7 +455,9 @@ func (c *protobufPackageCatalog) collectMessageRecursive(attribute *expr.Attribu
 		if rootSource, ok := c.rootSources[origin]; ok {
 			identitySource = rootSource
 		}
-		if !root && len(actual.Attribute().Meta[wrappedAttrMeta]) > 0 {
+		// Named collections keep their authored declaration identity after their
+		// body becomes a wrapper. Other generated wrappers own new declarations.
+		if !root && len(actual.Attribute().Meta[wrappedAttrMeta]) > 0 && !expr.IsArray(origin) && !expr.IsMap(origin) {
 			identitySource = protobufMessageSource{synthetic: protobufSyntheticMessage{
 				role: protobufWrapperMessage,
 			}}
@@ -478,7 +480,7 @@ func (c *protobufPackageCatalog) collectMessageRecursive(attribute *expr.Attribu
 		record = &protobufMessageRecord{identity: identity, uses: []*expr.AttributeExpr{attribute}}
 		c.messages = append(c.messages, record)
 		c.messageUses[attribute] = record
-		return c.collectMessageRecursive(userTypeAttribute(actual), protobufMessageSource{}, false, record, "")
+		return c.collectMessageRecursive(actual.Attribute(), protobufMessageSource{}, false, record, "")
 	case *expr.Object:
 		for _, named := range *actual {
 			if err := c.collectMessageRecursive(named.Attribute, protobufMessageSource{}, false, owner, named.Name); err != nil {
@@ -576,7 +578,7 @@ func (c *protobufPackageCatalog) collectValidationRecursive(attribute *expr.Attr
 			return
 		}
 		policy := codegen.GoLayoutPolicy{Pointer: true}
-		if !codegen.NeedsValidation(userTypeAttribute(actual), policy) {
+		if !codegen.NeedsValidation(actual.Attribute(), policy) {
 			return
 		}
 		message := c.messageRecord(attribute)
@@ -600,7 +602,7 @@ func (c *protobufPackageCatalog) collectValidationRecursive(attribute *expr.Attr
 			return
 		}
 		seen[record] = struct{}{}
-		c.collectValidationRecursive(userTypeAttribute(actual), side, source, targetName, contextName, seen)
+		c.collectValidationRecursive(actual.Attribute(), side, source, targetName, contextName, seen)
 		delete(seen, record)
 	case *expr.Object:
 		for _, named := range *actual {
@@ -729,7 +731,7 @@ func walkProtobufCopy(original, copy *expr.AttributeExpr, visit func(*expr.Attri
 		switch originalType := original.Type.(type) {
 		case expr.UserType:
 			copyType := copy.Type.(expr.UserType)
-			walk(userTypeAttribute(originalType), userTypeAttribute(copyType))
+			walk(originalType.Attribute(), copyType.Attribute())
 		case *expr.Object:
 			copyType := copy.Type.(*expr.Object)
 			for index, field := range *originalType {
@@ -854,7 +856,7 @@ func protobufMessageIdentityFor(attribute *expr.AttributeExpr, source protobufMe
 		preferredName: preferred,
 		explicitName:  explicit,
 		userType:      userType,
-		attribute:     userTypeAttribute(userType),
+		attribute:     userType.Attribute(),
 	}, nil
 }
 

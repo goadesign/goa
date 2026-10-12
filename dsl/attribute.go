@@ -215,6 +215,10 @@ func Field(tag any, name string, args ...any) {
 // have a different JSON kind: string, number, boolean, array, or object. Designs
 // with overlapping kinds or another JSON mapping fail expression validation.
 //
+// For gRPC, array and map branches use a protobuf message with one collection
+// field. The generated service union keeps the authored array or map type. A
+// selected empty collection is valid unless its validation rules reject it.
+//
 // OneOf takes a name as first argument, a description as optional second
 // argument and a function that lists the union types as last argument.
 //
