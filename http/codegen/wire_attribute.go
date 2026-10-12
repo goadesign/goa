@@ -48,6 +48,16 @@ func copyWireAttribute(att *expr.AttributeExpr, seen map[expr.UserType]struct{})
 			// decoding then receives the underlying value type and all inherited
 			// validation, including when the same definition appears again.
 			att.Type = dt.Attribute().Type
+			// Keep the definition's custom Go representation after removing its
+			// name. A representation declared on this field takes precedence.
+			if _, overridden := att.Meta["struct:field:type"]; !overridden {
+				if representation, declared := dt.Attribute().Meta["struct:field:type"]; declared {
+					if att.Meta == nil {
+						att.Meta = make(expr.MetaExpr)
+					}
+					att.Meta["struct:field:type"] = append([]string(nil), representation...)
+				}
+			}
 			if v := dt.Attribute().Validation; v != nil {
 				if att.Validation == nil {
 					att.Validation = v

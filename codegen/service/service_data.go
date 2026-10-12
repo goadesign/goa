@@ -534,6 +534,8 @@ type (
 		ErrorName string
 		// IsServiceError reports whether this is Goa's built-in service error.
 		IsServiceError bool
+		// RawJSON emits JSON methods forwarding to the declared raw JSON type.
+		RawJSON bool
 		// Def is the type definition Go code.
 		Def string
 		// Ref is the reference to the type.
@@ -607,6 +609,8 @@ type (
 		PrimitiveAliasType string
 		// TypeTag is the JSON "type" value that selects this branch.
 		TypeTag string
+		// RawJSON permits a JSON null value in this explicitly raw JSON branch.
+		RawJSON bool
 		// JSONKind is the first-token category used by an untagged JSON branch.
 		JSONKind byte
 	}

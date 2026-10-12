@@ -113,7 +113,7 @@ func validateUnionJSON(attribute *AttributeExpr, parent eval.Expression) *eval.V
 		kinds := make(map[byte]string)
 		for _, branch := range union.Values {
 			kind := JSONKind(branch.Attribute.Type)
-			if _, custom := branch.Attribute.Meta["struct:field:type"]; custom {
+			if hasCustomJSONRepresentation(branch.Attribute) {
 				kind = 0
 			}
 			if kind == 0 {
@@ -166,4 +166,16 @@ func validateUnionJSON(attribute *AttributeExpr, parent eval.Expression) *eval.V
 		}
 	}
 	return errors
+}
+
+// hasCustomJSONRepresentation follows a named branch to its declared Go type.
+// An untagged union cannot choose this branch from the ordinary Goa JSON kind.
+func hasCustomJSONRepresentation(attribute *AttributeExpr) bool {
+	if _, custom := attribute.Meta["struct:field:type"]; custom {
+		return true
+	}
+	if named, ok := attribute.Type.(UserType); ok {
+		return hasCustomJSONRepresentation(named.Attribute())
+	}
+	return false
 }

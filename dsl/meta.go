@@ -89,6 +89,11 @@ const DefaultProtoc = expr.DefaultProtoc
 // only. The import path of the type should be passed in as the second
 // parameter, if needed.  If the default imported package name conflicts with
 // another, you can override that as well with the third parameter.
+// Bytes declared with json.RawMessage from encoding/json retain raw JSON when
+// used in named types and tagged OneOf branches. These branches accept JSON
+// null as a value; a missing value is still invalid. Ordinary Bytes keep base64
+// JSON encoding, and protobuf continues to carry both forms as bytes. Custom
+// representations cannot select an untagged OneOf branch by JSON kind.
 //
 //	var MyType = Type("BigOleMessage", func() {
 //	    Attribute("type", String, "Type of big payload")

@@ -1,4 +1,6 @@
 {{- /* Definition and helpers for a value that holds exactly one branch. */ -}}
+{{- $hasRawJSON := false -}}
+{{- range .Fields }}{{ if .RawJSON }}{{ $hasRawJSON = true }}{{ end }}{{ end -}}
 {{- range .Fields }}
 {{- if .EmitPrimitiveAlias }}
 type {{ .FieldType }} {{ .PrimitiveAliasType }}
@@ -207,13 +209,20 @@ func (u *{{ .TypeDeclaration.Name }}) UnmarshalJSON(data []byte) error {
 	if len(raw.Value) == 0 {
 		return goa.MissingFieldError({{ printf "%q" .ValueKey }}, "{{ .TypeDeclaration.Name }}")
 	}
+    {{- if not $hasRawJSON }}
 	if bytes.Equal(bytes.TrimSpace(raw.Value), []byte("null")) {
 		return goa.InvalidFieldTypeError({{ printf "%q" .ValueKey }}, nil, "non-null JSON value")
 	}
+    {{- end }}
 	{{- end }}
 	switch raw.Type {
 	{{- range .Fields }}
 	case string({{ .KindDeclaration.Name }}):
+        {{- if and $hasRawJSON (not .RawJSON) }}
+        if bytes.Equal(bytes.TrimSpace(raw.Value), []byte("null")) {
+            return goa.InvalidFieldTypeError({{ printf "%q" $.ValueKey }}, nil, "non-null JSON value")
+        }
+        {{- end }}
 		var v {{ .FieldType }}
 		if err := json.Unmarshal(raw.Value, &v); err != nil {
 			return err
