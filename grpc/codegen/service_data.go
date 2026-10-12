@@ -1567,11 +1567,8 @@ func (d *ServicesData) buildInitData(source, target *expr.AttributeExpr, sourceV
 		tgtCtx = pbCtx
 	}
 	isStruct := expr.IsObject(target.Type) || expr.IsUnion(target.Type)
-	if !conversion.bound {
-		if err := conversion.transform.BindContexts(srcCtx, tgtCtx); err != nil {
-			panic(err) // bug
-		}
-		conversion.bound = true
+	if err := conversion.bindContexts(srcCtx, tgtCtx, proto); err != nil {
+		panic(err) // bug
 	}
 	code, helpers, err := conversion.transform.Render(sourceVar, targetVar, true)
 	if err != nil {
@@ -1620,11 +1617,8 @@ func (d *ServicesData) buildCLIRequestTransform(
 	conversion := d.symbols[endpoint.Service].endpoints[endpoint].cliPayload
 	pbCtx := protoBufTypeContext(sd.ClientProtobufPkgName, sd)
 	svcCtx := d.serviceTypeContext(sd, "client").Enter(endpoint.MethodExpr.Payload)
-	if !conversion.bound {
-		if err := conversion.transform.BindContexts(pbCtx, svcCtx); err != nil {
-			panic(err) // bug
-		}
-		conversion.bound = true
+	if err := conversion.bindContexts(pbCtx, svcCtx, false); err != nil {
+		panic(err) // bug
 	}
 	code, helpers, err := conversion.transform.Render("message", "v", true)
 	if err != nil {

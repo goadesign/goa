@@ -115,6 +115,17 @@ func TestGRPCPlanKeepsEmptyPayloadResponseConversion(t *testing.T) {
 	require.Equal(t, baseline, actual)
 }
 
+// TestGRPCPlanKeepsServiceFieldNames checks that a later field rename cannot
+// change the service fields used by an already planned protobuf conversion.
+func TestGRPCPlanKeepsServiceFieldNames(t *testing.T) {
+	baseline := renderGRPCPlanRetentionFixture(t, grpcEmptyPayloadFixture(t), nil)
+	actual := renderGRPCPlanRetentionFixture(t, grpcEmptyPayloadFixture(t), func(f *grpcPlanRetentionFixture) {
+		field := expr.AsObject(f.method.Result.Type).Attribute("value")
+		field.Meta["struct:field:name"] = []string{"ChangedAfterPlanning"}
+	})
+	require.Equal(t, baseline, actual)
+}
+
 // grpcPlanRetentionDSL creates one streaming endpoint with request and
 // response metadata and message validation.
 func grpcPlanRetentionDSL(t *testing.T) *grpcPlanRetentionFixture {
