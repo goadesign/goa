@@ -9,9 +9,9 @@ import "google/protobuf/struct.proto";
 // Service is the RequiredPrimitivePresence service interface.
 service RequiredPrimitivePresence {
 	// Exchange implements Exchange.
-	rpc Exchange (ExchangeRequest) returns (ExchangeResponse);
+	rpc Exchange (.required_primitive_presence.ExchangeRequest) returns (.required_primitive_presence.ExchangeResponse);
 	// Echo implements Echo.
-	rpc Echo (StringAlias) returns (StringAlias);
+	rpc Echo (.required_primitive_presence.StringAlias) returns (.required_primitive_presence.StringAlias);
 }
 
 message ExchangeRequest {

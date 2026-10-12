@@ -8,7 +8,7 @@ option go_package = "/method_with_reserved_namepb";
 // Service is the MethodWithReservedName service interface.
 service MethodWithReservedName {
 	// String implements string.
-	rpc String (StringRequest) returns (StringResponse);
+	rpc String (.method_with_reserved_name.StringRequest) returns (.method_with_reserved_name.StringResponse);
 }
 
 message StringRequest {

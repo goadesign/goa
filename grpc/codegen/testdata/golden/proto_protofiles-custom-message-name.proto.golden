@@ -8,9 +8,9 @@ option go_package = "/custom_message_namepb";
 // Service is the CustomMessageName service interface.
 service CustomMessageName {
 	// Unary implements Unary.
-	rpc Unary (CustomType) returns (CustomType);
+	rpc Unary (.custom_message_name.CustomType) returns (.custom_message_name.CustomType);
 	// Stream implements Stream.
-	rpc Stream (stream CustomType) returns (stream CustomType);
+	rpc Stream (stream .custom_message_name.CustomType) returns (stream .custom_message_name.CustomType);
 }
 
 message CustomType {

@@ -8,9 +8,9 @@ option go_package = "/distinct_custom_message_namespb";
 // Service is the DistinctCustomMessageNames service interface.
 service DistinctCustomMessageNames {
 	// UseFirst implements UseFirst.
-	rpc UseFirst (Shared) returns (Shared);
+	rpc UseFirst (.distinct_custom_message_names.Shared) returns (.distinct_custom_message_names.Shared);
 	// UseSecond implements UseSecond.
-	rpc UseSecond (Shared2) returns (Shared2);
+	rpc UseSecond (.distinct_custom_message_names.Shared2) returns (.distinct_custom_message_names.Shared2);
 }
 
 message Shared {

@@ -8,9 +8,9 @@ option go_package = "/service_unary_rp_cspb";
 // Service is the ServiceUnaryRPCs service interface.
 service ServiceUnaryRPCs {
 	// MethodUnaryRPCA implements MethodUnaryRPCA.
-	rpc MethodUnaryRPCA (MethodUnaryRPCARequest) returns (MethodUnaryRPCAResponse);
+	rpc MethodUnaryRPCA (.service_unary_rp_cs.MethodUnaryRPCARequest) returns (.service_unary_rp_cs.MethodUnaryRPCAResponse);
 	// MethodUnaryRPCB implements MethodUnaryRPCB.
-	rpc MethodUnaryRPCB (MethodUnaryRPCBRequest) returns (MethodUnaryRPCBResponse);
+	rpc MethodUnaryRPCB (.service_unary_rp_cs.MethodUnaryRPCBRequest) returns (.service_unary_rp_cs.MethodUnaryRPCBResponse);
 }
 
 message MethodUnaryRPCARequest {

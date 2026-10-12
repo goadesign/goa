@@ -8,7 +8,7 @@ option go_package = "/service_client_streaming_rpcpb";
 // Service is the ServiceClientStreamingRPC service interface.
 service ServiceClientStreamingRPC {
 	// MethodClientStreamingRPC implements MethodClientStreamingRPC.
-	rpc MethodClientStreamingRPC (stream MethodClientStreamingRPCStreamingRequest) returns (MethodClientStreamingRPCResponse);
+	rpc MethodClientStreamingRPC (stream .service_client_streaming_rpc.MethodClientStreamingRPCStreamingRequest) returns (.service_client_streaming_rpc.MethodClientStreamingRPCResponse);
 }
 
 message MethodClientStreamingRPCStreamingRequest {
