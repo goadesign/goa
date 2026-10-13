@@ -25,6 +25,7 @@ func TestTransformPlanHelperLayoutsReturnRegistryNodes(t *testing.T) {
 	for index, helper := range helpers {
 		selectedSource, selectedTarget, err := plan.HelperLayouts(helper.ID, sourceLayout, targetLayout)
 		require.NoError(t, err)
+		require.Equal(t, registry.candidates[index].helper.location, helper.Location())
 		require.Same(t, registry.candidates[index].sourceLayout, selectedSource)
 		require.Same(t, registry.candidates[index].targetLayout, selectedTarget)
 		require.True(t, selectedSource.MatchesOccurrence(plan.sourceCopier.Original(plan.helpers[index].Source)))

@@ -28,7 +28,6 @@ type (
 		unions               []*wireUnionRecord
 		validationRoots      []wireValidationRoot
 		transformHelpers     []*wireTransformHelperRecord
-		transformBindings    map[codegen.TransformHelperID]*wireTransformHelperRecord
 		transformDefinitions map[*codegen.NameDeclaration]*codegen.TransformFunctionData
 		releasedSuffixes     map[*expr.AttributeExpr]string
 		declared             bool
@@ -96,7 +95,6 @@ type (
 		attribute      *expr.AttributeExpr
 		layout         codegen.GoLayoutPolicy
 		servicePackage codegen.ImportSpec
-		serviceType    *codegen.TypeDeclaration
 	}
 
 	// wireUnionRecord stores one generated union and the Go names used for its
@@ -233,6 +231,8 @@ type (
 		pointer             bool
 		arrayElementPointer bool
 		defaults            bool
+		conversion          string
+		location            codegen.TransformHelperDefinitionLocation
 	}
 
 	// wireAttributeScope chooses the Go type name for each copied HTTP field.
@@ -271,10 +271,9 @@ const (
 // may omit the package when they only compare copied attributes.
 func newWireTypeCatalog(pkg ...*codegen.GeneratedPackage) *wireTypeCatalog {
 	catalog := &wireTypeCatalog{
-		bindings:          make(map[*expr.AttributeExpr]*wireTypeRecord),
-		unionBindings:     make(map[*expr.Union]*wireUnionRecord),
-		transformBindings: make(map[codegen.TransformHelperID]*wireTransformHelperRecord),
-		releasedSuffixes:  make(map[*expr.AttributeExpr]string),
+		bindings:         make(map[*expr.AttributeExpr]*wireTypeRecord),
+		unionBindings:    make(map[*expr.Union]*wireUnionRecord),
+		releasedSuffixes: make(map[*expr.AttributeExpr]string),
 	}
 	if len(pkg) > 0 {
 		catalog.pkg = pkg[0]
@@ -435,6 +434,10 @@ func (c *wireTypeCatalog) Declare() error {
 			union.storageNames[index] = storageNames.Unique(codegen.Goify(branch.Name, false))
 		}
 	}
+	// Collect each helper with its actual Go types before sharing declarations.
+	// The complete name order selects the same occurrence after grouping.
+	registry := codegen.NewTransformHelperRegistry()
+	records := make(map[wireNameOrder]*wireTransformHelperRecord)
 	for _, transform := range c.transforms {
 		helpers := transform.plan.Helpers()
 		if len(helpers) == 0 {
@@ -443,6 +446,7 @@ func (c *wireTypeCatalog) Declare() error {
 		if err := c.planTransformLayouts(transform); err != nil {
 			return err
 		}
+		orders := make(map[codegen.TransformHelperDefinitionLocation]wireNameOrder, len(helpers))
 		for _, helper := range helpers {
 			identity, err := c.transformHelperIdentity(transform, helper)
 			if err != nil {
@@ -453,44 +457,47 @@ func (c *wireTypeCatalog) Declare() error {
 				return err
 			}
 			order := wireNameOrder{
-				kind:      wireNameTransformHelper,
-				source:    identity.source.orderKey(),
-				target:    identity.target.orderKey(),
+				kind:       wireNameTransformHelper,
+				source:     identity.source.orderKey(),
+				target:     identity.target.orderKey(),
+				preferred:  preferred,
+				conversion: transform.owner,
+				location:   helper.Location(),
+			}
+			orders[helper.Location()] = order
+			if _, exists := records[order]; exists {
+				continue
+			}
+			records[order] = &wireTransformHelperRecord{
+				identity:  identity,
+				prefix:    transform.prefix,
 				preferred: preferred,
+				order:     order,
 			}
-			record := c.findTransformHelper(identity)
-			if record == nil {
-				record = &wireTransformHelperRecord{
-					identity:  identity,
-					prefix:    transform.prefix,
-					preferred: preferred,
-					order:     order,
-				}
-				c.transformHelpers = append(c.transformHelpers, record)
-			} else if order.ComparePackageName(record.order) < 0 {
-				record.prefix = transform.prefix
-				record.preferred = preferred
-				record.order = order
-			}
-			c.transformBindings[helper.ID] = record
+		}
+		if err := registry.Collect(transform.plan, transform.sourceLayout, transform.targetLayout,
+			func(location codegen.TransformHelperDefinitionLocation) codegen.PackageNameOrder {
+				return orders[location]
+			}); err != nil {
+			return err
 		}
 	}
-	for _, helper := range c.transformHelpers {
+	groups, err := registry.Finalize()
+	if err != nil {
+		return err
+	}
+	// Declare one function per equivalent group and bind every original call
+	// to it before rendering any request or response conversion.
+	for _, group := range groups {
+		helper := records[group.Order().(wireNameOrder)]
 		declaration, err := c.declareTransformHelper(helper)
 		if err != nil {
 			return err
 		}
 		helper.declaration = declaration
-	}
-	for _, transform := range c.transforms {
-		for _, planned := range transform.plan.Helpers() {
-			helper := c.transformBindings[planned.ID]
-			if helper == nil {
-				return fmt.Errorf("HTTP conversion function declaration was not recorded")
-			}
-			if err := transform.plan.BindHelperDeclaration(planned.ID, helper.declaration); err != nil {
-				return err
-			}
+		c.transformHelpers = append(c.transformHelpers, helper)
+		if err := group.Bind(declaration); err != nil {
+			return err
 		}
 	}
 	c.declared = true
@@ -593,7 +600,6 @@ func (c *wireTypeCatalog) transformTypeIdentity(attribute *expr.AttributeExpr, w
 			origin:         userType.Origin(),
 			attribute:      attribute,
 			servicePackage: servicePackage,
-			serviceType:    planned.TypeDeclaration(),
 			layout: codegen.GoLayoutPolicy{
 				Pointer:    servicePointer,
 				UseDefault: true,
@@ -680,37 +686,6 @@ func (c *wireTypeCatalog) declareTransformHelper(helper *wireTransformHelperReco
 		"",
 		helper.order,
 	)
-}
-
-// findTransformHelper returns the declaration for an equivalent conversion.
-func (c *wireTypeCatalog) findTransformHelper(identity wireTransformHelperIdentity) *wireTransformHelperRecord {
-	for _, record := range c.transformHelpers {
-		if wireTransformHelperIdentitiesEqual(record.identity, identity) {
-			return record
-		}
-	}
-	return nil
-}
-
-// wireTransformHelperIdentitiesEqual reports whether two functions have the
-// same generated parameter, result, and field layout.
-func wireTransformHelperIdentitiesEqual(left, right wireTransformHelperIdentity) bool {
-	return wireTransformTypeIdentitiesEqual(left.source, right.source) &&
-		wireTransformTypeIdentitiesEqual(left.target, right.target)
-}
-
-// wireTransformTypeIdentitiesEqual compares exact generated declarations and
-// the concrete fields written inside service types.
-func wireTransformTypeIdentitiesEqual(left, right wireTransformTypeIdentity) bool {
-	if left.wire != right.wire || left.origin != right.origin || left.layout != right.layout || left.servicePackage != right.servicePackage || left.serviceType != right.serviceType {
-		return false
-	}
-	if left.wire != nil {
-		return true
-	}
-	leftType := left.attribute.Type.(expr.UserType)
-	rightType := right.attribute.Type.(expr.UserType)
-	return wireAttributesEqual(leftType.Attribute(), rightType.Attribute(), make(map[wireAttributePair]struct{}))
 }
 
 // orderKey describes every generated fact that changes a conversion
@@ -2133,6 +2108,8 @@ func (o wireNameOrder) ComparePackageName(other codegen.PackageNameOrder) int {
 		cmp.Compare(boolOrder(o.pointer), boolOrder(right.pointer)),
 		cmp.Compare(boolOrder(o.arrayElementPointer), boolOrder(right.arrayElementPointer)),
 		cmp.Compare(boolOrder(o.defaults), boolOrder(right.defaults)),
+		cmp.Compare(o.conversion, right.conversion),
+		o.location.Compare(right.location),
 	} {
 		if compared != 0 {
 			return compared
