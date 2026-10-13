@@ -77,10 +77,11 @@ type (
 		name      string
 	}
 
-	// protobufMessageSource points to either an authored declaration or an
-	// endpoint message created by the generator.
+	// protobufMessageSource records the authored named type, authored inline
+	// object, or endpoint value that owns a protobuf message.
 	protobufMessageSource struct {
 		origin    expr.UserType
+		inline    *expr.AttributeExpr
 		synthetic protobufSyntheticMessage
 	}
 
@@ -452,6 +453,9 @@ func (c *protobufPackageCatalog) collectMessageRecursive(attribute *expr.Attribu
 	case expr.UserType:
 		origin := actual.Origin()
 		identitySource := protobufMessageSource{origin: origin}
+		if inline := protobufInlineObject(actual); inline != nil {
+			identitySource = protobufMessageSource{inline: inline}
+		}
 		if rootSource, ok := c.rootSources[origin]; ok {
 			identitySource = rootSource
 		}
@@ -835,7 +839,7 @@ func (s protobufValidationSource) unionBranch(name string) protobufValidationSou
 // protobuf fields that decide whether two uses share one message.
 func protobufMessageIdentityFor(attribute *expr.AttributeExpr, source protobufMessageSource) (protobufMessageIdentity, error) {
 	userType := attribute.Type.(expr.UserType)
-	if source.origin == nil && source.synthetic.role == 0 {
+	if source.origin == nil && source.inline == nil && source.synthetic.role == 0 {
 		source.origin = userType.Origin()
 	}
 	preferred := codegen.ProtobufName(userType.Name())
@@ -902,6 +906,9 @@ func sameProtobufWireType(left, right expr.DataType, seen map[protobufAttributeP
 	case expr.UserType:
 		right := right.(expr.UserType)
 		sameSource := left.Origin() == right.Origin()
+		if inline := protobufInlineObject(left); inline != nil {
+			sameSource = inline == protobufInlineObject(right)
+		}
 		bothSyntheticWrappers := len(left.Attribute().Meta[wrappedAttrMeta]) > 0 &&
 			len(right.Attribute().Meta[wrappedAttrMeta]) > 0
 		return (sameSource || bothSyntheticWrappers) && sameProtobufWireAttribute(left.Attribute(), right.Attribute(), seen)
@@ -1015,4 +1022,18 @@ func sameProtobufMeta(left, right expr.MetaExpr) bool {
 		}
 	}
 	return true
+}
+
+// protobufInlineObject returns the authored object occurrence represented by a
+// generated message. Named authored types and collection wrappers keep their
+// existing declaration identities and return nil.
+func protobufInlineObject(typ expr.UserType) *expr.AttributeExpr {
+	if _, generated := expr.GeneratedUserTypeExampleIdentity(typ); !generated || len(typ.Attribute().Meta[wrappedAttrMeta]) > 0 {
+		return nil
+	}
+	authored := typ.Attribute().AuthoredAttribute()
+	if _, object := authored.Type.(*expr.Object); object {
+		return authored
+	}
+	return nil
 }

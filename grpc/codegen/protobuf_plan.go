@@ -269,6 +269,17 @@ func (p *protobufServicePlan) nameGroups() ([]*protobufNameGroup, error) {
 	})
 	messages := make([]*protobufNameGroup, 0, len(p.catalog.messages))
 	for _, message := range p.catalog.messages {
+		// An inherited inline field may be reached through several named types.
+		// Choose the lowest source identity from all copies before sorting so
+		// changing method order cannot change the field's protobuf message name.
+		if message.identity.source.inline != nil {
+			for _, use := range message.uses {
+				candidate := use.Type.(expr.UserType)
+				if candidate.ID() < message.identity.userType.ID() {
+					message.identity.userType = candidate
+				}
+			}
+		}
 		messages = append(messages, &protobufNameGroup{
 			preferred: message.identity.preferredName,
 			message:   message,
@@ -562,6 +573,11 @@ func compareProtobufMessageIdentity(left, right protobufMessageIdentity) int {
 	if order := compareProtobufMessageSource(left.source, right.source); order != 0 {
 		return order
 	}
+	if left.source.inline != nil && right.source.inline != nil && left.source.inline != right.source.inline {
+		if order := cmp.Compare(left.userType.ID(), right.userType.ID()); order != 0 {
+			return order
+		}
+	}
 	if order := cmp.Compare(left.preferredName, right.preferredName); order != 0 {
 		return order
 	}
@@ -574,6 +590,9 @@ func compareProtobufMessageIdentity(left, right protobufMessageIdentity) int {
 // compareProtobufMessageSource compares the design declaration or method value
 // that produced a protobuf message.
 func compareProtobufMessageSource(left, right protobufMessageSource) int {
+	if order := compareBool(left.inline != nil, right.inline != nil); order != 0 {
+		return order
+	}
 	leftAuthored := left.origin != nil
 	rightAuthored := right.origin != nil
 	if order := compareBool(leftAuthored, rightAuthored); order != 0 {

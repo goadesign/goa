@@ -8,6 +8,11 @@
 {{- $arr := printf "arr%s" .LoopVar -}}
 {{ $arr }} := make([]{{ .ElemTypeRef }}, len({{ if .SourcePtr }}*{{ end }}{{ .SourceVar }}))
 for {{ .LoopVar }}{{ if .ValVar }}, {{ .ValVar }}{{ end }} := range {{ if .SourcePtr }}*{{ end }}{{ .SourceVar }} {
+{{ if .GuardNil -}}
+  if val == nil {
+    continue
+  }
+{{ end -}}
 {{ if .UseHelper -}}
   {{ $arr }}[{{ .LoopVar }}] = {{ transformHelperName .SourceElem .TargetElem .TransformAttrs }}(val)
 {{ else -}}
@@ -18,6 +23,11 @@ for {{ .LoopVar }}{{ if .ValVar }}, {{ .ValVar }}{{ end }} := range {{ if .Sourc
 {{- else -}}
 {{ .TargetVar }} {{ if .NewVar }}:={{ else }}={{ end }} make([]{{ .ElemTypeRef }}, len({{ if .SourcePtr }}*{{ end }}{{ .SourceVar }}))
 for {{ .LoopVar }}{{ if .ValVar }}, {{ .ValVar }}{{ end }} := range {{ if .SourcePtr }}*{{ end }}{{ .SourceVar }} {
+{{ if .GuardNil -}}
+  if val == nil {
+    continue
+  }
+{{ end -}}
 {{ if .UseHelper -}}
   {{ .TargetVar }}[{{ .LoopVar }}] = {{ transformHelperName .SourceElem .TargetElem .TransformAttrs }}(val)
 {{ else -}}

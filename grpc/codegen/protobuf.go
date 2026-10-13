@@ -137,16 +137,23 @@ func makeProtoBufMessage(att *expr.AttributeExpr, tname string, owner expr.Examp
 	case expr.IsObject(att.Type) || expr.IsUnion(att.Type):
 		att.Type = expr.NewGeneratedUserType(tname, expr.DupAtt(att), owner)
 	}
-	n := ""
-	makeProtoBufMessageR(att, &n, owner, make(map[expr.UserType]struct{}))
+	makeProtoBufMessageR(att, tname, owner, false, make(map[expr.UserType]struct{}))
 	return att
 }
 
-// makeProtoBufMessageR is the recursive implementation of makeProtoBufMessage.
-func makeProtoBufMessageR(att *expr.AttributeExpr, tname *string, owner expr.ExampleIdentity, seen map[expr.UserType]struct{}) {
+// makeProtoBufMessageR gives each inline object a message declaration before
+// collecting protobuf names. A named type already owns its object body, so
+// namedBody prevents creating a second declaration for that same body.
+func makeProtoBufMessageR(att *expr.AttributeExpr, tname string, owner expr.ExampleIdentity, namedBody bool, seen map[expr.UserType]struct{}) {
+	if !namedBody {
+		if _, inline := att.Type.(*expr.Object); inline {
+			body := *att
+			att.Type = expr.NewGeneratedUserType(codegen.ProtobufName(tname), &body, owner)
+		}
+	}
 	ut, isut := att.Type.(expr.UserType)
 
-	// handle infinite recursions
+	// Stop when a named type refers to an already visited declaration.
 	if isut {
 		origin := ut.Origin()
 		if _, ok := seen[origin]; ok {
@@ -155,14 +162,14 @@ func makeProtoBufMessageR(att *expr.AttributeExpr, tname *string, owner expr.Exa
 		seen[origin] = struct{}{}
 	}
 
-	wrap := func(att *expr.AttributeExpr, tname string) {
+	wrap := func(att *expr.AttributeExpr) {
 		switch {
 		case expr.IsArray(att.Type):
-			wrapAttr(att, "ArrayOf"+tname+
+			wrapAttr(att, "ArrayOf"+
 				codegen.ProtobufName(protoBufShapeTypeName(expr.AsArray(att.Type).ElemType)), true, owner)
 		case expr.IsMap(att.Type):
 			m := expr.AsMap(att.Type)
-			wrapAttr(att, tname+"MapOf"+
+			wrapAttr(att, "MapOf"+
 				codegen.ProtobufName(protoBufShapeTypeName(m.KeyType))+
 				codegen.ProtobufName(protoBufShapeTypeName(m.ElemType)), true, owner)
 		}
@@ -184,24 +191,24 @@ func makeProtoBufMessageR(att *expr.AttributeExpr, tname *string, owner expr.Exa
 			}
 			ut.SetAttribute(wrapper)
 		}
-		makeProtoBufMessageR(ut.Attribute(), tname, owner, seen)
+		makeProtoBufMessageR(ut.Attribute(), ut.Name(), expr.UserTypeExampleIdentity(ut), true, seen)
 	case expr.IsArray(att.Type):
 		ar := expr.AsArray(att.Type)
 		elementOwner := owner.ArrayElement(0)
-		makeProtoBufMessageR(ar.ElemType, tname, elementOwner, seen)
-		wrap(ar.ElemType, *tname)
+		makeProtoBufMessageR(ar.ElemType, tname+"Elem", elementOwner, false, seen)
+		wrap(ar.ElemType)
 	case expr.IsMap(att.Type):
 		m := expr.AsMap(att.Type)
 		valueOwner := owner.MapValue(0)
-		makeProtoBufMessageR(m.ElemType, tname, valueOwner, seen)
-		wrap(m.ElemType, *tname)
+		makeProtoBufMessageR(m.ElemType, tname+"Value", valueOwner, false, seen)
+		wrap(m.ElemType)
 	case expr.IsUnion(att.Type):
 		for _, nat := range expr.AsUnion(att.Type).Values {
-			makeProtoBufMessageR(nat.Attribute, tname, owner.UnionMember(nat.Name), seen)
+			makeProtoBufMessageR(nat.Attribute, nat.Name, owner.UnionMember(nat.Name), false, seen)
 		}
 	case expr.IsObject(att.Type):
 		for _, nat := range *(expr.AsObject(att.Type)) {
-			makeProtoBufMessageR(nat.Attribute, tname, owner.Member(nat.Name), seen)
+			makeProtoBufMessageR(nat.Attribute, nat.Name, owner.Member(nat.Name), false, seen)
 		}
 	}
 }
