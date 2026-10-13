@@ -163,13 +163,6 @@ func protoHooks(proto bool) *codegen.TransformHooks {
 			}
 			return "", false
 		},
-		ObjectDeref: func(tgt *expr.AttributeExpr) (string, bool) {
-			// An unnamed struct value does not need a pointer.
-			if _, ok := tgt.Type.(*expr.Object); ok {
-				return "", true
-			}
-			return "&", true
-		},
 	}
 }
 
@@ -299,12 +292,18 @@ func renderArrayTransform(source, target *expr.Array, sourceVar, targetVar strin
 		elem = unAlias(elem)
 	}
 	targetRef := ta.TargetCtx.Scope.Ref(elem, ta.TargetCtx.Pkg(elem))
+	if !proto {
+		var err error
+		targetRef, err = serviceCollectionTypeRef(elem, ta.TargetCtx)
+		if err != nil {
+			return "", err
+		}
+	}
 
 	useHelper := protoCollectionUsesHelper(source.ElemType, target.ElemType)
-	valVar := "val"
-	if obj := expr.AsObject(source.ElemType.Type); !useHelper && obj != nil && len(*obj) == 0 {
-		valVar = ""
-	}
+	// Inline object conversions do not call the named helper that preserves
+	// nil, so the collection loop keeps an absent element before reading fields.
+	guardNil := !useHelper && expr.IsObject(source.ElemType.Type) && expr.IsObject(target.ElemType.Type)
 
 	loopVar, childAttrs := ta.EnterCollection()
 	childAttrs, err := childAttrs.EnterLocalBlock(sourceVar, targetVar, loopVar, "val")
@@ -320,7 +319,8 @@ func renderArrayTransform(source, target *expr.Array, sourceVar, targetVar strin
 		"NewVar":         newVar,
 		"TransformAttrs": childAttrs,
 		"LoopVar":        loopVar,
-		"ValVar":         valVar,
+		"ValVar":         "val",
+		"GuardNil":       guardNil,
 		"UseHelper":      useHelper,
 	}
 	var buf bytes.Buffer
@@ -343,6 +343,19 @@ func renderMapTransform(source, target *expr.Map, sourceVar, targetVar string, n
 		kt = unAlias(kt)
 		et = unAlias(et)
 	}
+	keyRef := ta.TargetCtx.Scope.Ref(kt, ta.TargetCtx.Pkg(kt))
+	elemRef := ta.TargetCtx.Scope.Ref(et, ta.TargetCtx.Pkg(et))
+	if !proto {
+		var err error
+		keyRef, err = serviceCollectionTypeRef(kt, ta.TargetCtx)
+		if err != nil {
+			return "", err
+		}
+		elemRef, err = serviceCollectionTypeRef(et, ta.TargetCtx)
+		if err != nil {
+			return "", err
+		}
+	}
 	loopVar := ""
 	if depth := codegen.MapDepth(target); depth > 0 {
 		loopVar = string(rune(97 + depth))
@@ -352,25 +365,26 @@ func renderMapTransform(source, target *expr.Map, sourceVar, targetVar string, n
 	if err != nil {
 		return "", err
 	}
-	elemNewVar := true
-	if !proto && isWrappedAttr(source.ElemType) {
-		elemNewVar = false
-	}
+	useHelper := protoCollectionUsesHelper(source.ElemType, target.ElemType)
+	// An absent inline object remains nil, just as it does through a named
+	// conversion helper. Wrapper collections retain their existing empty value.
+	guardNil := !proto && isWrappedAttr(source.ElemType) ||
+		!useHelper && expr.IsObject(source.ElemType.Type) && expr.IsObject(target.ElemType.Type)
 	var elemTransform string
-	if protoCollectionUsesHelper(source.ElemType, target.ElemType) {
+	if useHelper {
 		elemTransform = fmt.Sprintf("%s := %s(val)\n", elemTarget, codegen.TransformHelperName(source.ElemType, target.ElemType, blockAttrs))
 	} else {
-		elemTransform, err = codegen.TransformAttribute(source.ElemType, target.ElemType, "val", elemTarget, elemNewVar, blockAttrs)
+		elemTransform, err = codegen.TransformAttribute(source.ElemType, target.ElemType, "val", elemTarget, !guardNil, blockAttrs)
 		if err != nil {
 			return "", err
 		}
 	}
-	if !elemNewVar {
-		elemTransform = fmt.Sprintf("var %s %s\nif val != nil {\n%s}\n", elemTarget, ta.TargetCtx.Scope.Ref(et, ta.TargetCtx.Pkg(et)), elemTransform)
+	if guardNil {
+		elemTransform = fmt.Sprintf("var %s %s\nif val != nil {\n%s}\n", elemTarget, elemRef, elemTransform)
 	}
 	data := map[string]any{
-		"KeyTypeRef":     ta.TargetCtx.Scope.Ref(kt, ta.TargetCtx.Pkg(kt)),
-		"ElemTypeRef":    ta.TargetCtx.Scope.Ref(et, ta.TargetCtx.Pkg(et)),
+		"KeyTypeRef":     keyRef,
+		"ElemTypeRef":    elemRef,
 		"SourceKey":      source.KeyType,
 		"TargetKey":      target.KeyType,
 		"SourceVar":      sourceVar,
@@ -469,4 +483,22 @@ func ensureTrailingNewline(code string) string {
 		code += "\n"
 	}
 	return code
+}
+
+// serviceCollectionTypeRef reads the retained Go layout for a decoded collection
+// value. Object elements keep their pointers and nested collections keep the
+// pointer and import choices already used by the service declaration.
+func serviceCollectionTypeRef(attribute *expr.AttributeExpr, context *codegen.AttributeContext) (string, error) {
+	resolver, ok := context.Scope.(codegen.GoTypeLayoutResolver)
+	if !ok {
+		return "", fmt.Errorf("service collection has no linked Go type resolver")
+	}
+	layout, err := resolver.GoTypeLayout(attribute, context.LayoutPolicy())
+	if err != nil {
+		return "", err
+	}
+	if expr.IsObject(attribute.Type) {
+		return layout.RefWithPointer(true), nil
+	}
+	return layout.Def(), nil
 }
