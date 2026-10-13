@@ -83,7 +83,6 @@ func TestTransformHelpersIgnoreGenerationMetadataAfterReference(t *testing.T) {
 			} else {
 				baseline = names
 			}
-
 		})
 	}
 }
