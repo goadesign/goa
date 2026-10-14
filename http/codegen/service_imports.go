@@ -100,6 +100,14 @@ func httpFixedFileImports(service *expr.HTTPServiceExpr, client bool, kind httpF
 		} else if httpServiceHasRequestBody(service) {
 			paths = append(paths, "io")
 		}
+		if !client {
+			for _, endpoint := range service.HTTPEndpoints {
+				if mappedAttributeHasArray(endpoint.PathParams()) {
+					paths = append(paths, "net/url")
+					break
+				}
+			}
+		}
 		if httpServiceUsesJSONRPC(service) {
 			paths = append(paths, codegen.GoaImport("jsonrpc").Path)
 			if !client {
@@ -810,6 +818,9 @@ func attributeHasNonRequiredValidation(attribute *expr.AttributeExpr, seen map[e
 // whose HTTP text form is not a direct primitive conversion.
 func httpCodecUsesFmt(service *expr.HTTPServiceExpr, client bool) bool {
 	for _, endpoint := range service.HTTPEndpoints {
+		if client && len(expr.ExtractHTTPWildcards(endpoint.Routes[0].FullPaths()[0])) > 0 {
+			return true
+		}
 		if endpoint.MapQueryParams != nil {
 			return true
 		}

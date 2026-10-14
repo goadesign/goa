@@ -13,7 +13,9 @@ func (c *Client) BuildMethodPathPrimitiveStringFormatIPValidateRequest(ctx conte
 		}
 		ip = p
 	}
-	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: MethodPathPrimitiveStringFormatIPValidateServicePathPrimitiveStringFormatIPValidatePath(ip)}
+
+	rawPath := fmt.Sprintf("/forecast/%v", url.PathEscape(fmt.Sprint(ip)))
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: MethodPathPrimitiveStringFormatIPValidateServicePathPrimitiveStringFormatIPValidatePath(ip), RawPath: rawPath}
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
 		return nil, goahttp.ErrInvalidURL("ServicePathPrimitiveStringFormatIPValidate", "MethodPathPrimitiveStringFormatIPValidate", u.String(), err)

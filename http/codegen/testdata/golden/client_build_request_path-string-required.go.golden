@@ -12,7 +12,9 @@ func (c *Client) BuildMethodPathStringValidateRequest(ctx context.Context, v any
 		}
 		p = p.P
 	}
-	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: MethodPathStringValidateServicePathStringValidatePath(p)}
+
+	rawPath := fmt.Sprintf("/%v", url.PathEscape(fmt.Sprint(p)))
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: MethodPathStringValidateServicePathStringValidatePath(p), RawPath: rawPath}
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
 		return nil, goahttp.ErrInvalidURL("ServicePathStringValidate", "MethodPathStringValidate", u.String(), err)

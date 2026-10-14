@@ -9,10 +9,13 @@
 	}
 		{{- end }}
 	{{- end }}
-	return fmt.Sprintf("{{ .PathFormat }}", {{ range $i, $arg := .Args }}
+	{{ if .Target }}{{ .Target }} := {{ else }}return {{ end }}fmt.Sprintf({{ printf "%q" .PathFormat }}, {{ range $i, $arg := .Args }}
+	{{- $wholePath := or (eq (index $.PathParams $i).Attribute.Type.Name "array") (and $.Escape (index $.CatchAll $i)) }}
+	{{- if $.Escape }}{{ if $wholePath }}(&url.URL{Path: {{ else }}url.PathEscape({{ end }}{{ end }}
 	{{- if eq (index $.PathParams $i).Attribute.Type.Name "array" }}strings.Join({{ .VarName }}Slice, ",")
+	{{- else if $.Escape }}fmt.Sprint({{ .VarName }})
 	{{- else }}{{ .VarName }}
-	{{- end }}, {{ end }})
+	{{- end }}{{ if $.Escape }}{{ if $wholePath }}}).EscapedPath(){{ else }}){{ end }}{{ end }}, {{ end }})
 {{- else }}
 	return "{{ .PathFormat }}"
 {{- end -}}

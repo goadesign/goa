@@ -1,11 +1,14 @@
 package http
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
+	chi "github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -370,4 +373,62 @@ func TestResolvePattern(t *testing.T) {
 			assert.True(t, called)
 		})
 	}
+}
+
+// TestPathVariableIdentity checks that encoded values reach handlers unchanged
+// and middleware observes the same route that eventually handles the request.
+func TestPathVariableIdentity(t *testing.T) {
+	for _, pattern := range []string{"/items/{name}", "/items/{name:[^/]+}", "/items/{*name}"} {
+		for _, name := range []string{"ordinary", "équipe", "operations/shift", "literal%2Fpercent", "literal%percent", "what?now", "fragment#name", ".", ".."} {
+			t.Run(pattern+"/"+name, func(t *testing.T) {
+				m := NewMuxer()
+				m.Use(func(next http.Handler) http.Handler {
+					return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+						assert.Equal(t, "GET "+pattern, req.Pattern)
+						assert.Equal(t, pattern, m.ResolvePattern(req))
+						next.ServeHTTP(w, req)
+					})
+				})
+				called := false
+				m.Handle("GET", pattern, func(w http.ResponseWriter, req *http.Request) {
+					called = true
+					assert.Equal(t, name, m.Vars(req)["name"])
+				})
+				request := httptest.NewRequest("GET", "/items/"+url.PathEscape(name), nil)
+				m.ServeHTTP(httptest.NewRecorder(), request)
+				assert.True(t, called)
+			})
+		}
+	}
+}
+
+// TestCustomRoutePath keeps a parent router's explicit path authoritative even
+// when the original request URL names a different resource.
+func TestCustomRoutePath(t *testing.T) {
+	m := NewMuxer()
+	called := false
+	m.Handle("GET", "/items/{name}", func(w http.ResponseWriter, req *http.Request) {
+		called = true
+		assert.Equal(t, "GET /items/{name}", req.Pattern)
+		assert.Equal(t, "operations/shift", m.Vars(req)["name"])
+	})
+	request := httptest.NewRequest("GET", "/unmatched", nil)
+	ctx := chi.NewRouteContext()
+	ctx.RoutePath = "/items/operations%2Fshift"
+	request = request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, ctx))
+	m.ServeHTTP(httptest.NewRecorder(), request)
+	assert.True(t, called)
+}
+
+// TestLiteralUnicodeRoute preserves routes whose fixed text is Unicode.
+func TestLiteralUnicodeRoute(t *testing.T) {
+	m := NewMuxer()
+	called := false
+	m.Handle("GET", "/équipe/{name}", func(w http.ResponseWriter, req *http.Request) {
+		called = true
+		assert.Equal(t, "literal%2Fpercent", m.Vars(req)["name"])
+	})
+	request := httptest.NewRequest("GET", "/%C3%A9quipe/literal%252Fpercent", nil)
+	m.ServeHTTP(httptest.NewRecorder(), request)
+	assert.True(t, called)
 }

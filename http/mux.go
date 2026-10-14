@@ -1,3 +1,6 @@
+// This file matches HTTP requests to registered routes and exposes captured
+// path values to generated servers. It preserves the router's path representation
+// so escaped values are decoded once before reaching service payloads.
 package http
 
 import (
@@ -143,7 +146,7 @@ func (m *mux) Handle(method, pattern string, handler http.HandlerFunc) {
 // read r.Pattern to tag spans and metrics with the http.route attribute.
 func (m *mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	rctx := chi.NewRouteContext()
-	if m.Match(rctx, r.Method, r.URL.Path) {
+	if m.Match(rctx, r.Method, routingPath(r)) {
 		r.Pattern = r.Method + " " + m.resolveWildcard(r.Method, rctx.RoutePattern())
 	}
 	m.Router.ServeHTTP(w, r)
@@ -163,10 +166,17 @@ func (m *mux) Vars(r *http.Request) map[string]string {
 	for i, k := range params.Keys {
 		if k == "*" {
 			wildcard := m.wildcards[r.Method+"::"+ctx.RoutePattern()]
-			vars[wildcard] = unescape(params.Values[i])
+			vars[wildcard] = params.Values[i]
 			continue
 		}
-		vars[k] = unescape(params.Values[i])
+		vars[k] = params.Values[i]
+	}
+	// Chi captures decoded URL.Path values when RawPath is absent. Only
+	// captures from RawPath or an explicit router path still need decoding.
+	if r.URL.RawPath != "" || ctx.RoutePath != "" {
+		for key, value := range vars {
+			vars[key] = unescape(value)
+		}
 	}
 	return vars
 }
@@ -220,8 +230,24 @@ func (m *mux) ensureContext(r *http.Request) *chi.Context {
 	if ctx.RoutePattern() != "" {
 		return ctx // already initialized
 	}
-	if !m.Match(ctx, r.Method, r.URL.Path) {
+	// Pattern lookup before dispatch must not append matches to the live
+	// router context, because Chi will populate that context when it dispatches.
+	matched := chi.NewRouteContext()
+	matched.RoutePath = ctx.RoutePath
+	if !m.Match(matched, r.Method, routingPath(r)) {
 		return nil // route not handled by chi
 	}
-	return ctx
+	return matched
+}
+
+// routingPath selects the same request text as Chi so pattern discovery and
+// handler dispatch agree, including requests routed by a parent router.
+func routingPath(r *http.Request) string {
+	if ctx := chi.RouteContext(r.Context()); ctx != nil && ctx.RoutePath != "" {
+		return ctx.RoutePath
+	}
+	if r.URL.RawPath != "" {
+		return r.URL.RawPath
+	}
+	return r.URL.Path
 }
