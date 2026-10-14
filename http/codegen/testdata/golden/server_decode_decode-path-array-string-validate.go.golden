@@ -12,6 +12,12 @@ func DecodeMethodPathArrayStringValidateRequest(mux goahttp.Muxer, decoder func(
 		)
 		{
 			pRaw := params["p"]
+			// Array paths contain an additional escaped value before the comma
+			// separator. Decode that layer before splitting, preserving literal
+			// text when an external caller sends an invalid escape.
+			if decoded, decodeErr := url.PathUnescape(pRaw); decodeErr == nil {
+				pRaw = decoded
+			}
 			pRawSlice := strings.Split(pRaw, ",")
 			p = make([]string, len(pRawSlice))
 			for i, rv := range pRawSlice {

@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"fmt"
 	"net/http"
+	"net/url"
 	"path"
 	"slices"
 	"sort"
@@ -1220,6 +1221,7 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 		{
 			svcctx := sds.serviceTypeContext(sd, "client").Enter(httpEndpoint.MethodExpr.Payload)
 			s := codegen.NewNameScope()
+			s.Unique("rawPath")
 			s.Unique("c") // 'c' is reserved as the client's receiver name.
 			for _, ca := range routes[0].PathInit.ClientArgs {
 				if ca.FieldName != "" {
@@ -1252,6 +1254,37 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 			"PathInit":     routes[0].PathInit,
 			"Verb":         routes[0].Verb,
 			"IsWebSocket":  httpEndpoint.UsesWebSocket(),
+		}
+		if len(args) > 0 {
+			// Path parameters are escaped before joining the route so a slash in
+			// one value stays inside its segment. Public path helpers keep their
+			// decoded output for callers that assign it to url.URL.Path.
+			route := routes[0].Path
+			matches := expr.HTTPWildcardRegex.FindAllStringIndex(route, -1)
+			var format strings.Builder
+			catchAll := make([]bool, len(matches))
+			start := 0
+			for i, match := range matches {
+				literal := (&url.URL{Path: route[start:match[0]]}).EscapedPath()
+				format.WriteString(strings.ReplaceAll(literal, "%", "%%"))
+				format.WriteString("%v")
+				catchAll[i] = strings.HasPrefix(route[match[0]:match[1]], "{*")
+				start = match[1]
+			}
+			literal := (&url.URL{Path: route[start:]}).EscapedPath()
+			format.WriteString(strings.ReplaceAll(literal, "%", "%%"))
+			var escaped bytes.Buffer
+			if err := pathInitTmpl.Execute(&escaped, map[string]any{
+				"Args":       args,
+				"PathParams": expr.AsObject(httpEndpoint.PathParams().Type),
+				"PathFormat": format.String(),
+				"Escape":     true,
+				"CatchAll":   catchAll,
+				"Target":     "rawPath",
+			}); err != nil {
+				panic(err)
+			}
+			data["RawPathCode"] = escaped.String()
 		}
 		if httpEndpoint.SkipRequestBodyEncodeDecode {
 			data["RequestStruct"] = pkg + "." + method.RequestStruct

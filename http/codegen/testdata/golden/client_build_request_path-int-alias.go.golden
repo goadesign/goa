@@ -21,7 +21,9 @@ func (c *Client) BuildMethodARequest(ctx context.Context, v any) (*http.Request,
 			int64_ = int64(*p.Int64)
 		}
 	}
-	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: MethodAServicePathIntAliasPath(int_, int32_, int64_)}
+
+	rawPath := fmt.Sprintf("/%v/%v/%v", url.PathEscape(fmt.Sprint(int_)), url.PathEscape(fmt.Sprint(int32_)), url.PathEscape(fmt.Sprint(int64_)))
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: MethodAServicePathIntAliasPath(int_, int32_, int64_), RawPath: rawPath}
 	req, err := http.NewRequest("POST", u.String(), nil)
 	if err != nil {
 		return nil, goahttp.ErrInvalidURL("ServicePathIntAlias", "MethodA", u.String(), err)

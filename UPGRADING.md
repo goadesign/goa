@@ -1,3 +1,32 @@
+# Unreleased: HTTP path parameter identity
+
+Generated HTTP clients now keep a slash inside a single path parameter instead
+of treating it as another route segment. The HTTP router also preserves literal
+percent sequences: a string value such as `literal%2Fpercent` reaches the service
+unchanged instead of becoming `literal/percent`. The request builder change also
+applies to WebSocket connections.
+
+**Regenerate HTTP server code when upgrading the Goa runtime, and deploy the
+regenerated code with that runtime.** Existing generated array path decoders
+relied on an additional decode performed by the old router. That decode now
+belongs to the generated array decoder, where the parameter type is known.
+Updating only the runtime while retaining old generated servers can deliver
+percent-encoded array values to the service; for example, `équipe` becomes
+`%C3%A9quipe`. Regeneration is required even when no design files changed.
+
+Regenerate HTTP clients to obtain single-segment escaping. Upgrade servers
+before enabling clients that depend on corrected path identities. Existing
+array clients remain compatible with regenerated servers: array request URLs
+and the public path helpers retain their existing behavior. Public path helpers
+still return the path representation intended for `url.URL.Path`; they do not
+become escaped URI constructors. Query parameters and request bodies are
+unchanged. No stored-data migration is required.
+
+Roll back the runtime and its generated server code together. Do not retain
+regenerated array decoders with the old runtime, which can decode array values
+twice. A rollback also restores the old scalar path behavior, so stop depending
+on corrected slash and literal-percent handling before rolling back.
+
 # Unreleased: reading union values in Go templates
 
 Generated unions now provide `Value() (any, error)`. It returns the selected

@@ -14,7 +14,9 @@ func (c *Client) BuildMethodPathObjectRequest(ctx context.Context, v any) (*http
 			id = *p.ID
 		}
 	}
-	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: MethodPathObjectServicePathObjectPath(id)}
+
+	rawPath := fmt.Sprintf("/%v", url.PathEscape(fmt.Sprint(id)))
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: MethodPathObjectServicePathObjectPath(id), RawPath: rawPath}
 	req, err := http.NewRequest("PUT", u.String(), nil)
 	if err != nil {
 		return nil, goahttp.ErrInvalidURL("ServicePathObject", "MethodPathObject", u.String(), err)

@@ -53,7 +53,10 @@
 			scheme = "wss"
 		}
 	{{- end }}
-	u := &url.URL{Scheme: {{ if .IsWebSocket }}scheme{{ else }}c.scheme{{ end }}, Host: c.host, Path: {{ .PathInit.ClientDeclaration.Name }}({{ range .Args }}{{ .Ref }}, {{ end }})}
+{{- if .RawPathCode }}
+	{{ .RawPathCode }}
+{{- end }}
+	u := &url.URL{Scheme: {{ if .IsWebSocket }}scheme{{ else }}c.scheme{{ end }}, Host: c.host, Path: {{ .PathInit.ClientDeclaration.Name }}({{ range .Args }}{{ .Ref }}, {{ end }}),{{ if .RawPathCode }} RawPath: rawPath,{{ end }}}
 	req, err := http.NewRequest("{{ .Verb }}", u.String(), {{ if .RequestStruct }}body{{ else }}nil{{ end }})
 	if err != nil {
 		return nil, goahttp.ErrInvalidURL("{{ .ServiceName }}", "{{ .EndpointName }}", u.String(), err)
