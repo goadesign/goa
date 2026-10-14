@@ -311,9 +311,9 @@ func paramsFromExpr(endpoint *expr.HTTPEndpointExpr, params *expr.MappedAttribut
 		res       []*Parameter
 		wildcards = expr.ExtractHTTPWildcards(path)
 	)
-	codegen.WalkMappedAttr(params, func(n, pn string, required bool, at *expr.AttributeExpr) error { // nolint: errcheck
+	codegen.WalkMappedAttr(params, func(_, pn string, required bool, at *expr.AttributeExpr) error { // nolint: errcheck
 		in := "query"
-		if slices.Contains(wildcards, n) {
+		if slices.Contains(wildcards, pn) {
 			in = "path"
 			required = true
 		}

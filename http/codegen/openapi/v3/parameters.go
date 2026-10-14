@@ -23,7 +23,7 @@ func paramsFromPath(endpoint *expr.HTTPEndpointExpr, path string, rand *expr.Exa
 	)
 	codegen.WalkMappedAttr(params, func(n, pn string, required bool, at *expr.AttributeExpr) error { // nolint: errcheck
 		in := "query"
-		if slices.Contains(wildcards, n) {
+		if slices.Contains(wildcards, pn) {
 			in = "path"
 			required = true
 		}
