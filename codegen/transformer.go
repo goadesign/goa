@@ -314,6 +314,13 @@ func NewAttributeScope(scope *NameScope) *AttributeScope {
 	return newAttributeScope(scope, "")
 }
 
+// Location returns the field, collection, or union position where the plan
+// found this helper call. Generators use it to keep the call's Go types and
+// name ordering together when several calls share one function.
+func (h TransformHelper) Location() TransformHelperDefinitionLocation {
+	return h.location
+}
+
 // Compare returns -1, 0, or 1 when this authored location sorts before, at,
 // or after other.
 func (l TransformHelperDefinitionLocation) Compare(other TransformHelperDefinitionLocation) int {
