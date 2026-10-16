@@ -1,3 +1,5 @@
+// This file combines schema fields for generator callers. Minimum and maximum
+// counts keep the same widening rule as the existing string and array bounds.
 package openapi
 
 import "reflect"
@@ -63,5 +65,7 @@ func (s *Schema) createMergeItems(other *Schema) mergeItems {
 		{&s.MaxLength, other.MaxLength, maxInt(s.MaxLength, other.MaxLength)},
 		{&s.MinItems, other.MinItems, minInt(s.MinItems, other.MinItems)},
 		{&s.MaxItems, other.MaxItems, maxInt(s.MaxItems, other.MaxItems)},
+		{&s.MinProperties, other.MinProperties, minInt(s.MinProperties, other.MinProperties)},
+		{&s.MaxProperties, other.MaxProperties, maxInt(s.MaxProperties, other.MaxProperties)},
 	}
 }

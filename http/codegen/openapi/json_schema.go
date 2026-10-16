@@ -49,6 +49,14 @@ type (
 		Required             []string `json:"required,omitempty" yaml:"required,omitempty"`
 		AdditionalProperties any      `json:"additionalProperties,omitempty" yaml:"additionalProperties,omitempty"`
 
+		// MinProperties sets the inclusive minimum number of key/value pairs
+		// in an object. Nil leaves the count unrestricted; zero is explicit.
+		MinProperties *int `json:"minProperties,omitempty" yaml:"minProperties,omitempty"`
+
+		// MaxProperties sets the inclusive maximum number of key/value pairs
+		// in an object. Nil leaves the count unrestricted; zero allows none.
+		MaxProperties *int `json:"maxProperties,omitempty" yaml:"maxProperties,omitempty"`
+
 		// Content (JSON Schema 2020-12), used by OpenAPI 3.2 documents to
 		// describe string-encoded data such as JSON-encoded SSE event fields.
 		ContentMediaType string  `json:"contentMediaType,omitempty" yaml:"contentMediaType,omitempty"`
@@ -212,6 +220,8 @@ func (s *Schema) Dup() *Schema {
 		MaxLength:        duplicatePointer(s.MaxLength),
 		MinItems:         duplicatePointer(s.MinItems),
 		MaxItems:         duplicatePointer(s.MaxItems),
+		MinProperties:    duplicatePointer(s.MinProperties),
+		MaxProperties:    duplicatePointer(s.MaxProperties),
 		Required:         append([]string(nil), s.Required...),
 		ContentMediaType: s.ContentMediaType,
 	}
