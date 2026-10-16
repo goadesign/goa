@@ -282,16 +282,22 @@ func initSchemaValidation(schema *openapi.Schema, at *expr.AttributeExpr) {
 		schema.Maximum = validation.Maximum
 	}
 	if validation.MinLength != nil {
-		if _, ok := at.Type.(*expr.Array); ok {
+		switch {
+		case expr.IsArray(at.Type):
 			schema.MinItems = validation.MinLength
-		} else {
+		case expr.IsMap(at.Type):
+			schema.MinProperties = validation.MinLength
+		default:
 			schema.MinLength = validation.MinLength
 		}
 	}
 	if validation.MaxLength != nil {
-		if _, ok := at.Type.(*expr.Array); ok {
+		switch {
+		case expr.IsArray(at.Type):
 			schema.MaxItems = validation.MaxLength
-		} else {
+		case expr.IsMap(at.Type):
+			schema.MaxProperties = validation.MaxLength
+		default:
 			schema.MaxLength = validation.MaxLength
 		}
 	}

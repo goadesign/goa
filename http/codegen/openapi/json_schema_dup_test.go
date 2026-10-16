@@ -17,6 +17,8 @@ func TestSchemaDupCopiesEveryMutableField(t *testing.T) {
 	maxLength := 8
 	minItems := 2
 	maxItems := 4
+	minProperties := 1
+	maxProperties := 2
 	original := &Schema{
 		Schema:               "schema",
 		ID:                   "id",
@@ -44,6 +46,8 @@ func TestSchemaDupCopiesEveryMutableField(t *testing.T) {
 		MaxLength:            &maxLength,
 		MinItems:             &minItems,
 		MaxItems:             &maxItems,
+		MinProperties:        &minProperties,
+		MaxProperties:        &maxProperties,
 		Required:             []string{"required"},
 		AdditionalProperties: &Schema{Title: "additional properties"},
 		ContentMediaType:     "application/json",
@@ -73,6 +77,8 @@ func TestSchemaDupCopiesEveryMutableField(t *testing.T) {
 	*duplicate.MaxLength = 7
 	*duplicate.MinItems = 1
 	*duplicate.MaxItems = 3
+	*duplicate.MinProperties = 0
+	*duplicate.MaxProperties = 3
 	duplicate.Required[0] = "changed"
 	duplicate.AdditionalProperties.(*Schema).Title = "changed"
 	duplicate.ContentSchema.Title = "changed"
@@ -97,6 +103,8 @@ func TestSchemaDupCopiesEveryMutableField(t *testing.T) {
 	require.Equal(t, 8, *original.MaxLength)
 	require.Equal(t, 2, *original.MinItems)
 	require.Equal(t, 4, *original.MaxItems)
+	require.Equal(t, 1, *original.MinProperties)
+	require.Equal(t, 2, *original.MaxProperties)
 	require.Equal(t, "required", original.Required[0])
 	require.Equal(t, "additional properties", original.AdditionalProperties.(*Schema).Title)
 	require.Equal(t, "content schema", original.ContentSchema.Title)

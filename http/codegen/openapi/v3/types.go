@@ -512,16 +512,22 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 		s.Maximum = val.Maximum
 	}
 	if val.MinLength != nil {
-		if _, ok := attr.Type.(*expr.Array); ok {
+		switch {
+		case expr.IsArray(attr.Type):
 			s.MinItems = val.MinLength
-		} else {
+		case expr.IsMap(attr.Type):
+			s.MinProperties = val.MinLength
+		default:
 			s.MinLength = val.MinLength
 		}
 	}
 	if val.MaxLength != nil {
-		if _, ok := attr.Type.(*expr.Array); ok {
+		switch {
+		case expr.IsArray(attr.Type):
 			s.MaxItems = val.MaxLength
-		} else {
+		case expr.IsMap(attr.Type):
+			s.MaxProperties = val.MaxLength
+		default:
 			s.MaxLength = val.MaxLength
 		}
 	}
