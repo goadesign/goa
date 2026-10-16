@@ -19,8 +19,10 @@ func NewMethodUnaryRPCWithErrorsResult(message *service_unary_rpc_with_errorspb.
 // *service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsInternalError.
 func NewMethodUnaryRPCWithErrorsInternalError(message *service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsInternalError) *serviceunaryrpcwitherrors.AnotherError {
 	er := &serviceunaryrpcwitherrors.AnotherError{
-		Name:        *message.Name,
-		Description: message.Description,
+		Name: *message.Name,
+	}
+	if message.Description != nil {
+		er.Description = message.Description
 	}
 	return er
 }
@@ -30,8 +32,10 @@ func NewMethodUnaryRPCWithErrorsInternalError(message *service_unary_rpc_with_er
 // *service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsBadRequestError.
 func NewMethodUnaryRPCWithErrorsBadRequestError(message *service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsBadRequestError) *serviceunaryrpcwitherrors.AnotherError {
 	er := &serviceunaryrpcwitherrors.AnotherError{
-		Name:        *message.Name,
-		Description: message.Description,
+		Name: *message.Name,
+	}
+	if message.Description != nil {
+		er.Description = message.Description
 	}
 	return er
 }
@@ -40,8 +44,9 @@ func NewMethodUnaryRPCWithErrorsBadRequestError(message *service_unary_rpc_with_
 // *serviceunaryrpcwitherrors.ErrorType from
 // *service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsCustomErrorError.
 func NewMethodUnaryRPCWithErrorsCustomErrorError(message *service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsCustomErrorError) *serviceunaryrpcwitherrors.ErrorType {
-	er := &serviceunaryrpcwitherrors.ErrorType{
-		A: message.A,
+	er := &serviceunaryrpcwitherrors.ErrorType{}
+	if message.A != nil {
+		er.A = message.A
 	}
 	return er
 }

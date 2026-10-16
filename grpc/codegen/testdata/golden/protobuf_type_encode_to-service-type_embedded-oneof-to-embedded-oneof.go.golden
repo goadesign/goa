@@ -1,6 +1,7 @@
 func transform() {
-	target := &proto.EmbeddedOneOf{
-		String: source.String_,
+	target := &proto.EmbeddedOneOf{}
+	if source.String_ != nil {
+		target.String = source.String_
 	}
 	if source.EmbeddedOneOf != nil {
 		switch val := source.EmbeddedOneOf.(type) {

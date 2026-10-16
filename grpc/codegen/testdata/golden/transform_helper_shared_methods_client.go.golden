@@ -239,8 +239,9 @@ func transformProtoSharedMethodChildToSharedMethodChild(v *shared_method_helpers
 // *shared_method_helperspb.NearMethodChild from a value of type
 // *sharedmethodhelpers.NearMethodChild.
 func transformNearMethodChildToProtoNearMethodChild(v *sharedmethodhelpers.NearMethodChild) *shared_method_helperspb.NearMethodChild {
-	res := &shared_method_helperspb.NearMethodChild{
-		Value: v.Value,
+	res := &shared_method_helperspb.NearMethodChild{}
+	if v.Value != nil {
+		res.Value = v.Value
 	}
 	if v.Next != nil {
 		res.Next = transformNearMethodChildToProtoNearMethodChild(v.Next)
@@ -253,8 +254,9 @@ func transformNearMethodChildToProtoNearMethodChild(v *sharedmethodhelpers.NearM
 // *sharedmethodhelpers.NearMethodChild from a value of type
 // *shared_method_helperspb.NearMethodChild.
 func transformProtoNearMethodChildToNearMethodChild(v *shared_method_helperspb.NearMethodChild) *sharedmethodhelpers.NearMethodChild {
-	res := &sharedmethodhelpers.NearMethodChild{
-		Value: v.Value,
+	res := &sharedmethodhelpers.NearMethodChild{}
+	if v.Value != nil {
+		res.Value = v.Value
 	}
 	if v.Next != nil {
 		res.Next = transformProtoNearMethodChildToNearMethodChild(v.Next)

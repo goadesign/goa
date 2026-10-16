@@ -145,8 +145,10 @@ func protoHooks(proto bool) *codegen.TransformHooks {
 			if !proto && required && (expr.IsArray(src.Type) || expr.IsMap(src.Type)) {
 				return "", true
 			}
-			// Protobuf message fields can be nil, so check them before use.
-			if expr.IsPrimitive(src.Type) && !srcPtr {
+			// Required primitive fields have already passed validation. Copy
+			// them directly so a missing pointer still exposes an invalid input.
+			// Primitive values without pointers also need no presence check.
+			if expr.IsPrimitive(src.Type) && (required || !srcPtr) {
 				return "", true
 			}
 			if proto && expr.IsUnion(src.Type) {

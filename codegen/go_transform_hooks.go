@@ -74,13 +74,15 @@ type (
 		SameHelperDefinition func(firstSource, firstTarget, nextSource, nextTarget *expr.AttributeExpr) bool
 
 		// GuardCondition returns the condition that guards the
-		// transformation code of an object field, e.g.
+		// value assignment of a primitive or composite object field, e.g.
 		// "if p.Name != nil {\n". src is the (possibly normalized)
 		// field attribute, srcVar the source field variable, required
 		// reports whether the field is required and srcPtr whether the
 		// source field uses a pointer. An empty condition
 		// with ok true means the field transformation must not be
-		// guarded. ok must be false to use Goa's normal check
+		// guarded. Target defaults are applied separately when the source
+		// value is absent; the condition does not suppress them.
+		// ok must be false to use Goa's normal check
 		// (the gRPC generator always guards non-primitives because
 		// proto3 message fields are always nilable).
 		GuardCondition func(src *expr.AttributeExpr, srcVar string, required, srcPtr bool) (string, bool)

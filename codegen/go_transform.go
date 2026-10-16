@@ -949,7 +949,10 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 				return
 			}
 			var (
-				exp string
+				exp        string
+				assignment string
+				condition  string
+				hasGuard   bool
 
 				srcPtr     = ta.SourceCtx.IsPrimitivePointer(n, srcMatt.AttributeExpr)
 				tgtPtr     = ta.TargetCtx.IsPrimitivePointer(n, tgtMatt.AttributeExpr)
@@ -958,6 +961,12 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 				_, isSrcUT = srcc.Type.(expr.UserType)
 				_, isTgtUT = tgtc.Type.(expr.UserType)
 			)
+			if h := ta.Hooks; h != nil && h.GuardCondition != nil {
+				condition, hasGuard = h.GuardCondition(srcc, srcField, srcMatt.IsRequired(n), srcPtr)
+				if !hasGuard {
+					condition = ""
+				}
+			}
 			{
 				var (
 					convExp string
@@ -977,26 +986,21 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 						}
 						exp = fmt.Sprintf("%s(%s%s)", ta.TargetCtx.Scope.Ref(tgtc, ta.TargetCtx.Pkg(tgtc)), deref, srcField)
 					}
-					if srcPtr && !srcMatt.IsRequired(n) {
-						postInitCode += fmt.Sprintf("if %s != nil {\n", srcField)
-						if tgtPtr {
-							tmp := ta.enterLocalBlock().uniqueLocal(Goify(tgtMatt.ElemName(n), false))
-							postInitCode += fmt.Sprintf("%s := %s\n%s.%s = &%s\n", tmp, exp, targetVar, tgtField, tmp)
-						} else {
-							postInitCode += fmt.Sprintf("%s.%s = %s\n", targetVar, tgtField, exp)
+					if !hasGuard && srcPtr && !srcMatt.IsRequired(n) {
+						condition = fmt.Sprintf("if %s != nil {\n", srcField)
+					}
+					if tgtPtr {
+						locals := ta
+						if condition != "" {
+							locals = ta.enterLocalBlock()
 						}
-						postInitCode += "}\n"
-						return
-					} else if tgtPtr {
-						tmp := ta.uniqueLocal(Goify(tgtMatt.ElemName(n), false))
-						postInitCode += fmt.Sprintf("%s := %s\n%s.%s = &%s\n", tmp, exp, targetVar, tgtField, tmp)
-						return
+						tmp := locals.uniqueLocal(Goify(tgtMatt.ElemName(n), false))
+						assignment = fmt.Sprintf("%s := %s\n%s.%s = &%s\n", tmp, exp, targetVar, tgtField, tmp)
 					}
 				case srcPtr && !tgtPtr:
 					exp = "*" + srcField
-					if !srcMatt.IsRequired(n) {
-						postInitCode += fmt.Sprintf("if %s != nil {\n\t%s.%s = %s\n}\n", srcField, targetVar, tgtField, exp)
-						return
+					if !hasGuard && !srcMatt.IsRequired(n) {
+						condition = fmt.Sprintf("if %s != nil {\n", srcField)
 					}
 				case !srcPtr && tgtPtr:
 					exp = "&" + srcField
@@ -1004,7 +1008,18 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 					exp = srcField
 				}
 			}
-			initCode += fmt.Sprintf("\n%s: %s,", tgtField, exp)
+			// A field condition controls copying the source value. Defaults are
+			// applied in the later pass even when this assignment is skipped.
+			if condition != "" {
+				if assignment == "" {
+					assignment = fmt.Sprintf("%s.%s = %s\n", targetVar, tgtField, exp)
+				}
+				postInitCode += condition + Indent(assignment, "\t") + "}\n"
+			} else if assignment != "" {
+				postInitCode += assignment
+			} else {
+				initCode += fmt.Sprintf("\n%s: %s,", tgtField, exp)
+			}
 		})
 		if initCode != "" {
 			initCode += "\n"
@@ -1114,9 +1129,9 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 		// 2) it's an object, map or array to avoid making empty arrays and maps
 		// and to avoid derefencing nil.
 		var guarded bool
-		if h != nil && h.GuardCondition != nil {
+		if code != "" && h != nil && h.GuardCondition != nil {
 			var cond string
-			if cond, guarded = h.GuardCondition(srcc, srcVar, srcMatt.IsRequired(n), ta.SourceCtx.IsFieldPointer(n, srcMatt.AttributeExpr)); guarded && cond != "" && code != "" {
+			if cond, guarded = h.GuardCondition(srcc, srcVar, srcMatt.IsRequired(n), ta.SourceCtx.IsFieldPointer(n, srcMatt.AttributeExpr)); guarded && cond != "" {
 				code = fmt.Sprintf("%s\t%s}\n", cond, code)
 			}
 		}
