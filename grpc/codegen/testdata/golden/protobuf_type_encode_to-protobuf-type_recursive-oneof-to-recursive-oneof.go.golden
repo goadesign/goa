@@ -1,6 +1,7 @@
 func transform() {
-	target := &proto.RecursiveOneOf{
-		String_: source.String,
+	target := &proto.RecursiveOneOf{}
+	if source.String != nil {
+		target.String_ = source.String
 	}
 	if source.RecursiveOneOf.Kind() != "" {
 		switch string(source.RecursiveOneOf.Kind()) {

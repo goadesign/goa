@@ -3,11 +3,11 @@
 func NewMethodPayload(message *default_fieldspb.MethodRequest) *defaultfields.MethodPayload {
 	v := &defaultfields.MethodPayload{
 		Req:  *message.Req,
-		Opt:  message.Opt,
 		Reqs: *message.Reqs,
-		Opts: message.Opts,
 		Rat:  *message.Rat,
-		Flt:  message.Flt,
+	}
+	if message.Opt != nil {
+		v.Opt = message.Opt
 	}
 	if message.Def0 != nil {
 		v.Def0 = *message.Def0
@@ -18,11 +18,17 @@ func NewMethodPayload(message *default_fieldspb.MethodRequest) *defaultfields.Me
 	if message.Def2 != nil {
 		v.Def2 = *message.Def2
 	}
+	if message.Opts != nil {
+		v.Opts = message.Opts
+	}
 	if message.Defs != nil {
 		v.Defs = *message.Defs
 	}
 	if message.Defe != nil {
 		v.Defe = *message.Defe
+	}
+	if message.Flt != nil {
+		v.Flt = message.Flt
 	}
 	if message.Flt0 != nil {
 		v.Flt0 = *message.Flt0

@@ -1,6 +1,7 @@
 func transform() {
-	target := &proto.CompositeWithCustomField{
-		RequiredString: source.RequiredString,
+	target := &proto.CompositeWithCustomField{}
+	if source.RequiredString != nil {
+		target.RequiredString = source.RequiredString
 	}
 	if source.DefaultInt != nil {
 		defaultInt := int32(*source.DefaultInt)

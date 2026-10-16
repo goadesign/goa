@@ -1,8 +1,6 @@
 func transform() {
 	target := &proto.Optional{
-		Float:  source.Float_,
-		String: source.String_,
-		Bytes:  source.Bytes_,
+		Bytes: source.Bytes_,
 		Any: func() any {
 			// Convert protobuf Value to Go any directly
 			if source.Any != nil {
@@ -18,6 +16,12 @@ func transform() {
 	if source.Uint != nil {
 		uint_ := uint(*source.Uint)
 		target.Uint = &uint_
+	}
+	if source.Float_ != nil {
+		target.Float = source.Float_
+	}
+	if source.String_ != nil {
+		target.String = source.String_
 	}
 	if source.Array != nil {
 		target.Array = make([]string, len(source.Array))
