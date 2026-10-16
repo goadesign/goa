@@ -1010,14 +1010,15 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 			}
 			// A field condition controls copying the source value. Defaults are
 			// applied in the later pass even when this assignment is skipped.
-			if condition != "" {
+			switch {
+			case condition != "":
 				if assignment == "" {
 					assignment = fmt.Sprintf("%s.%s = %s\n", targetVar, tgtField, exp)
 				}
 				postInitCode += condition + Indent(assignment, "\t") + "}\n"
-			} else if assignment != "" {
+			case assignment != "":
 				postInitCode += assignment
-			} else {
+			default:
 				initCode += fmt.Sprintf("\n%s: %s,", tgtField, exp)
 			}
 		})
