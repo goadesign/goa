@@ -128,6 +128,13 @@ wire data for existing tagged unions remain unchanged.
 
 # Unreleased: service-specific HTTP body field names
 
+Several methods in one service can now reuse nested types with `BodyFieldName`
+mappings without generation failing to order duplicate preferred type names.
+Generated request and response bodies share the mapped nested declarations,
+while methods that select different body fields retain separate body types.
+Regenerate to obtain the corrected declarations; HTTP property names and
+service values are unchanged.
+
 `BodyFieldName(existingType, "field_name:fieldName")` in a service's `HTTP`
 block selects the JSON property name for that exact named declaration wherever
 it occurs in that service's request, response, or error bodies. Nested objects,
