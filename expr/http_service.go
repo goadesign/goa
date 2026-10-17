@@ -54,6 +54,9 @@ type (
 		// BodyFieldNames maps fields of exact named declarations to wire names
 		// in this service's HTTP bodies. Other transports retain their names.
 		BodyFieldNames map[UserType]map[string]string
+		// mappedBodyOrigins gives copies of one declaration the same HTTP
+		// identity within this service while keeping their attributes separate.
+		mappedBodyOrigins map[UserType]UserType
 	}
 )
 
@@ -295,8 +298,10 @@ func (svc *HTTPServiceExpr) validateTransports(verr *eval.ValidationErrors) {
 	}
 }
 
-// Finalize initializes the path if no path is set in design.
+// Finalize initializes the path and discards temporary mapped identities made
+// during validation so endpoint finalization starts with its own declarations.
 func (svc *HTTPServiceExpr) Finalize() {
+	svc.mappedBodyOrigins = nil
 	if len(svc.Paths) == 0 {
 		svc.Paths = []string{"/"}
 	}

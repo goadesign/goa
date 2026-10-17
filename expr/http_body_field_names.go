@@ -60,6 +60,9 @@ func (svc *HTTPServiceExpr) mapBodyFieldNames(body *AttributeExpr, original User
 		return body
 	}
 	copy := DupAtt(body)
+	if svc.mappedBodyOrigins == nil {
+		svc.mappedBodyOrigins = make(map[UserType]UserType)
+	}
 	seen := make(map[UserType]bool)
 	affected := make(map[UserType]bool)
 	svc.collectMappedBodyTypes(copy.Type, original, affected, seen)
@@ -93,7 +96,8 @@ func (svc *HTTPServiceExpr) mapBodyType(typ DataType, root UserType, affected, s
 			return
 		}
 		seen[actual] = true
-		origin := actual.Origin()
+		declaration := actual.Origin()
+		origin := declaration
 		if root != nil {
 			origin = root
 		}
@@ -117,13 +121,20 @@ func (svc *HTTPServiceExpr) mapBodyType(typ DataType, root UserType, affected, s
 		// another service cannot reuse its changed schema. Unrelated types
 		// retain their existing identities and generated examples.
 		identity := newExampleIdentity(httpMappedBodyTypeExampleKind, []byte(svc.Name()), []byte(actual.ID()))
+		// Equivalent copies in different endpoints retain one mapped origin.
+		// The original generated root, rather than its payload declaration,
+		// remains the key so different header/body selections stay distinct.
+		mappedOrigin := svc.mappedBodyOrigins[declaration]
+		if mappedOrigin == nil {
+			svc.mappedBodyOrigins[declaration] = actual
+		}
 		switch named := actual.(type) {
 		case *UserTypeExpr:
-			named.origin = nil
+			named.origin = mappedOrigin
 			named.UID = "generated:" + identity.Seed()
 			named.exampleIdentity = identity
 		case *ResultTypeExpr:
-			named.origin = nil
+			named.origin = mappedOrigin
 			named.UID = "generated:" + identity.Seed()
 			named.exampleIdentity = identity
 		}

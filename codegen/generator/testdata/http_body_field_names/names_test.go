@@ -57,6 +57,47 @@ func TestMappedBodyRoundTrip(t *testing.T) {
 			require.NoError(t, err)
 			require.NoError(t, response.Body.Close())
 			require.Equal(t, decoded, result)
+
+			// The second method uses the same nested mapped declarations in
+			// both directions and must retain every value from the first method.
+			repeatedRequest := httptest.NewRequest(http.MethodPost, "/mapped/repeat", nil)
+			require.NoError(t, genclient.EncodeRepeatRequest(goahttp.RequestEncoder)(repeatedRequest, decoded))
+			repeated, err := genserver.DecodeRepeatRequest(goahttp.NewMuxer(), goahttp.RequestDecoder)(repeatedRequest)
+			require.NoError(t, err)
+			require.NoError(t, repeatedRequest.Body.Close())
+			require.Equal(t, decoded, repeated)
+			repeatedRecorder := httptest.NewRecorder()
+			require.NoError(t, genserver.EncodeRepeatResponse(goahttp.ResponseEncoder)(context.Background(), repeatedRecorder, repeated))
+			require.JSONEq(t, wire, repeatedRecorder.Body.String())
+			repeatedResponse := repeatedRecorder.Result()
+			repeatedResponse.Request = repeatedRequest
+			repeatedResult, err := genclient.DecodeRepeatResponse(goahttp.ResponseDecoder, false)(repeatedResponse)
+			require.NoError(t, err)
+			require.NoError(t, repeatedResponse.Body.Close())
+			require.Equal(t, decoded, repeatedResult)
+
+			// This method sends the trace through a header. Its body must stay
+			// distinct from the complete document used by the other methods.
+			trace := "request-trace"
+			selected := *decoded
+			selected.TraceID = &trace
+			selectedRequest := httptest.NewRequest(http.MethodPost, "/mapped/selected", nil)
+			require.NoError(t, genclient.EncodeSelectedRequest(goahttp.RequestEncoder)(selectedRequest, &selected))
+			require.Equal(t, trace, selectedRequest.Header.Get("X-Trace"))
+			selectedValue, err := genserver.DecodeSelectedRequest(goahttp.NewMuxer(), goahttp.RequestDecoder)(selectedRequest)
+			require.NoError(t, err)
+			require.NoError(t, selectedRequest.Body.Close())
+			require.Equal(t, &selected, selectedValue)
+			selectedRecorder := httptest.NewRecorder()
+			require.NoError(t, genserver.EncodeSelectedResponse(goahttp.ResponseEncoder)(context.Background(), selectedRecorder, selectedValue))
+			require.Equal(t, trace, selectedRecorder.Header().Get("X-Trace"))
+			require.JSONEq(t, wire, selectedRecorder.Body.String())
+			selectedResponse := selectedRecorder.Result()
+			selectedResponse.Request = selectedRequest
+			selectedResult, err := genclient.DecodeSelectedResponse(goahttp.ResponseDecoder, false)(selectedResponse)
+			require.NoError(t, err)
+			require.NoError(t, selectedResponse.Body.Close())
+			require.Equal(t, &selected, selectedResult)
 			serviceJSON, err := json.Marshal(decoded)
 			require.NoError(t, err)
 			require.NotContains(t, string(serviceJSON), `"displayName":`)

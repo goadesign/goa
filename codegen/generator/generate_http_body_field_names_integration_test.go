@@ -55,6 +55,7 @@ func TestGenerateHTTPBodyFieldNames(t *testing.T) {
 				dsl.Field(5, "first", item)
 				dsl.Field(6, "second", derived)
 			})
+			dsl.Field(7, "trace_id", dsl.String)
 			dsl.Required("items", "by_key", "derived", "tree", "selection")
 		})
 		unrelated := dsl.Type("Unrelated", func() {
@@ -96,6 +97,24 @@ func TestGenerateHTTPBodyFieldNames(t *testing.T) {
 						dsl.Response("bad", 400)
 					})
 					dsl.GRPC(func() {})
+				})
+				dsl.Method("repeat", func() {
+					dsl.Payload(document)
+					dsl.Result(document)
+					dsl.HTTP(func() {
+						dsl.POST("/" + name + "/repeat")
+					})
+				})
+				dsl.Method("selected", func() {
+					dsl.Payload(document)
+					dsl.Result(document)
+					dsl.HTTP(func() {
+						dsl.POST("/" + name + "/selected")
+						dsl.Header("trace_id:X-Trace")
+						dsl.Response(200, func() {
+							dsl.Header("trace_id:X-Trace")
+						})
+					})
 				})
 			})
 		}
