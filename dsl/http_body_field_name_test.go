@@ -86,7 +86,7 @@ func TestBodyFieldName(t *testing.T) {
 		})
 	}
 	t.Run("unrelated method identity", func(t *testing.T) {
-		var identities [][]string
+		identities := make([][]string, 0, 2)
 		for _, enabled := range []bool{false, true} {
 			root, err := runDSL(t, func() {
 				selected := Type("Selected", func() { Attribute("display_name", String) })
@@ -110,7 +110,7 @@ func TestBodyFieldName(t *testing.T) {
 			})
 			require.NoError(t, err)
 			endpoint := root.API.HTTP.Service("example").Endpoint("unrelated")
-			var values []string
+			values := make([]string, 0, 4)
 			for _, body := range []*expr.AttributeExpr{endpoint.Body, endpoint.Responses[0].Body} {
 				typ := body.Type.(expr.UserType)
 				values = append(values, typ.ID(), expr.UserTypeExampleIdentity(typ).Seed())
@@ -189,5 +189,4 @@ func TestBodyFieldName(t *testing.T) {
 			}
 		}
 	})
-
 }

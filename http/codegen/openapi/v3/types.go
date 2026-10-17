@@ -621,43 +621,6 @@ func toRef(n string) string {
 	return fmt.Sprintf("#/components/schemas/%s", n)
 }
 
-// toStringMap converts map[any]any to a map[string]any
-// when possible.
-func toStringMap(val any) any {
-	switch actual := val.(type) {
-	case map[any]any:
-		m := make(map[string]any)
-		for k, v := range actual {
-			m[toString(k)] = toStringMap(v)
-		}
-		return m
-	case []any:
-		mapSlice := make([]any, len(actual))
-		for i, e := range actual {
-			mapSlice[i] = toStringMap(e)
-		}
-		return mapSlice
-	default:
-		return actual
-	}
-}
-
-// toString returns the string representation of the given type.
-func toString(val any) string {
-	switch actual := val.(type) {
-	case string:
-		return actual
-	case int:
-		return strconv.Itoa(actual)
-	case float64:
-		return strconv.FormatFloat(actual, 'f', -1, 64)
-	case bool:
-		return strconv.FormatBool(actual)
-	default:
-		panic("unexpected key type")
-	}
-}
-
 // hashAttribute is helper function that computes a unique hash for the given
 // attribute type. The algorithm returns the same value for two attributes whose
 // types are structurally equivalent unless they are result types with different
