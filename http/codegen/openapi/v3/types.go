@@ -37,13 +37,20 @@ type (
 		SSEItemSchema *openapi.Schema
 	}
 
+	// schemaReference remembers the authored name separately from the unique
+	// component name assigned when another shape already uses that name.
+	schemaReference struct {
+		name string
+		ref  string
+	}
+
 	// schemafier is an internal data structure used to keep the state required to
 	// create JSON schemas for all the request and response body types.
 	schemafier struct {
 		// type schemas indexed by ref
 		schemas map[string]*openapi.Schema
-		// type names indexed by hashes
-		hashes map[uint64][]string
+		// Requested names and assigned references indexed by schema hashes.
+		hashes map[uint64][]schemaReference
 		// released response names indexed by schema hash
 		preferredNames map[uint64][]string
 		rand           *expr.ExampleGenerator
@@ -107,7 +114,7 @@ func (sf *schemafier) field(parent *expr.AttributeExpr, name string, owner expr.
 func newSchemafier(rand *expr.ExampleGenerator, values openapi.Values) *schemafier {
 	return &schemafier{
 		schemas:        make(map[string]*openapi.Schema),
-		hashes:         make(map[uint64][]string),
+		hashes:         make(map[uint64][]schemaReference),
 		preferredNames: make(map[uint64][]string),
 		rand:           rand,
 		values:         values,
@@ -372,11 +379,17 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 	case *expr.Object:
 		s.Type = openapi.Object
 		var itemNotes []string
+		// Read names directly so recursive children keep their original identities.
 		for _, nat := range *t {
 			if !openapi.MustGenerate(nat.Attribute.Meta) {
 				continue
 			}
-			s.Properties[nat.Name] = sf.member(nat.Name).schemafy(nat.Attribute)
+			names := strings.Split(nat.Name, ":")
+			name, wire := names[0], names[0]
+			if len(names) > 1 {
+				wire = names[1]
+			}
+			s.Properties[wire] = sf.member(name).schemafy(nat.Attribute)
 		}
 		if len(itemNotes) > 0 {
 			note = strings.Join(itemNotes, "\n")
@@ -437,16 +450,15 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 		if n, ok := t.Attribute().Meta["openapi:typename"]; ok {
 			metaName = codegen.Goify(n[0], true)
 		}
-		metaRef := toRef(metaName)
 
 		// If it is named, it refers to the same structure and name.
 		// If it is not named, it refers to the same structure.
 		refs, ok := sf.hashes[h]
 		if len(noref) == 0 && ok {
 			for _, ref := range refs {
-				if ref == metaRef || metaName == "" {
-					s.Ref = ref
-					sf.ensureSchemaDescription(ref, t, attr)
+				if ref.name == metaName || ref.ref == toRef(metaName) || metaName == "" {
+					s.Ref = ref.ref
+					sf.ensureSchemaDescription(ref.ref, t, attr)
 					return s
 				}
 			}
@@ -464,7 +476,10 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 
 		typeName := sf.uniquify(codegen.Goify(name, true))
 		s.Ref = toRef(typeName)
-		sf.hashes[h] = append(sf.hashes[h], s.Ref)
+		sf.hashes[h] = append(sf.hashes[h], schemaReference{name: metaName, ref: s.Ref})
+		// Reserve the assigned name before expanding children. Recursive
+		// references reuse it, and other shapes cannot claim the same name.
+		sf.schemas[typeName] = nil
 		schema := sf.at(expr.UserTypeExampleIdentity(t)).schemafy(t.Attribute(), true)
 		if schema.Description == "" {
 			schema.Description = sf.userTypeDescription(t, attr)
@@ -482,7 +497,7 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 	}
 
 	// Default value, example, extensions
-	s.DefaultValue = toStringMap(attr.DefaultValue)
+	s.DefaultValue = openapi.ProjectDefault(attr, attr.DefaultValue)
 	s.Example = openapi.ProjectExample(attr, sf.values.Example(attr, sf.rand))
 	s.Extensions = openapi.ExtensionsFromExpr(attr.Meta)
 
@@ -532,12 +547,26 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 		}
 	}
 	for _, v := range val.Required {
-		if a := attr.Find(v); a != nil {
+		name := v
+		a := attr.Find(v)
+		if object := expr.AsObject(attr.Type); object != nil {
+			for _, field := range *object {
+				names := strings.Split(field.Name, ":")
+				if names[0] == v {
+					a = field.Attribute
+					if len(names) > 1 {
+						name = names[1]
+					}
+					break
+				}
+			}
+		}
+		if a != nil {
 			if !openapi.MustGenerate(a.Meta) {
 				continue
 			}
 		}
-		s.Required = append(s.Required, v)
+		s.Required = append(s.Required, name)
 	}
 
 	return s
@@ -590,43 +619,6 @@ func (sf *schemafier) uniquify(n string) string {
 // to the corresponding definition in the OpenAPI "components" field.
 func toRef(n string) string {
 	return fmt.Sprintf("#/components/schemas/%s", n)
-}
-
-// toStringMap converts map[any]any to a map[string]any
-// when possible.
-func toStringMap(val any) any {
-	switch actual := val.(type) {
-	case map[any]any:
-		m := make(map[string]any)
-		for k, v := range actual {
-			m[toString(k)] = toStringMap(v)
-		}
-		return m
-	case []any:
-		mapSlice := make([]any, len(actual))
-		for i, e := range actual {
-			mapSlice[i] = toStringMap(e)
-		}
-		return mapSlice
-	default:
-		return actual
-	}
-}
-
-// toString returns the string representation of the given type.
-func toString(val any) string {
-	switch actual := val.(type) {
-	case string:
-		return actual
-	case int:
-		return strconv.Itoa(actual)
-	case float64:
-		return strconv.FormatFloat(actual, 'f', -1, 64)
-	case bool:
-		return strconv.FormatBool(actual)
-	default:
-		panic("unexpected key type")
-	}
 }
 
 // hashAttribute is helper function that computes a unique hash for the given

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"reflect"
 	"strconv"
+	"strings"
 
 	"goa.design/goa/v3/expr"
 )
@@ -309,6 +310,13 @@ func AdditionalPropertiesFromExpr(meta expr.MetaExpr) any {
 }
 
 func projectExample(t expr.DataType, val any) any {
+	if hasMappedProperties(t, make(map[expr.UserType]bool)) {
+		value := reflect.ValueOf(val)
+		for value.Kind() == reflect.Pointer || value.Kind() == reflect.Interface {
+			value = value.Elem()
+		}
+		val = value.Interface()
+	}
 	switch actual := t.(type) {
 	case expr.Primitive:
 		if actual.Kind() == expr.BytesKind {
@@ -325,6 +333,11 @@ func projectExample(t expr.DataType, val any) any {
 		return projectArrayExample(actual, val)
 	case *expr.Map:
 		return projectMapExample(actual, val)
+	case *expr.Union:
+		if hasMappedProperties(actual, make(map[expr.UserType]bool)) {
+			return projectUnionExample(actual, val)
+		}
+		return ToStringMap(val)
 	default:
 		return ToStringMap(val)
 	}
@@ -409,13 +422,64 @@ func projectObjectExample(obj *expr.Object, val any) any {
 		if !MustGenerate(nat.Attribute.Meta) {
 			continue
 		}
-		if v, ok := values[nat.Name]; ok {
+		name, wire, mapped := strings.Cut(nat.Name, ":")
+		if !mapped {
+			wire = name
+		}
+		// Authored examples use service names; generated examples use the
+		// complete mapped expression name. Both become the HTTP wire name.
+		v, ok := values[nat.Name]
+		if !ok && mapped {
+			v, ok = values[name]
+		}
+		if ok {
 			if projectedValue := ProjectExample(nat.Attribute, v); projectedValue != nil {
-				projected[nat.Name] = projectedValue
+				projected[wire] = projectedValue
 			}
 		}
 	}
 	return projected
+}
+
+// projectUnionExample retains the selected branch and maps only its typed
+// fields. Discriminator values and untyped content remain unchanged.
+func projectUnionExample(union *expr.Union, value any) any {
+	if union.Untagged {
+		branch := union.UntaggedBranch(value)
+		if branch == nil {
+			panic("validated union example has no matching branch")
+		}
+		if !hasMappedProperties(branch.Attribute.Type, make(map[expr.UserType]bool)) {
+			return ToStringMap(value)
+		}
+		return ProjectExample(branch.Attribute, value)
+	}
+	fields, ok := exampleMap(value)
+	if !ok {
+		panic("validated union example is not an object")
+	}
+	for _, branch := range union.Values {
+		discriminator := reflect.ValueOf(fields[union.GetTypeKey()])
+		for discriminator.Kind() == reflect.Pointer || discriminator.Kind() == reflect.Interface {
+			discriminator = discriminator.Elem()
+		}
+		if branch.Name != discriminator.String() {
+			continue
+		}
+		if !hasMappedProperties(branch.Attribute.Type, make(map[expr.UserType]bool)) {
+			return ToStringMap(value)
+		}
+		if union.Flatten {
+			projected := ProjectExample(branch.Attribute, fields).(map[string]any)
+			projected[union.GetTypeKey()] = branch.Name
+			return projected
+		}
+		return map[string]any{
+			union.GetTypeKey():  branch.Name,
+			union.GetValueKey(): ProjectExample(branch.Attribute, fields[union.GetValueKey()]),
+		}
+	}
+	panic("validated union example has an unknown discriminator")
 }
 
 func projectArrayExample(array *expr.Array, val any) any {

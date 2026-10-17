@@ -126,6 +126,32 @@ Generated HTTP and JSON-RPC clients, servers and command builders compile with
 both union mappings. Regenerate affected transports; service interfaces and
 wire data for existing tagged unions remain unchanged.
 
+# Unreleased: service-specific HTTP body field names
+
+`BodyFieldName(existingType, "field_name:fieldName")` in a service's `HTTP`
+block selects the JSON property name for that exact named declaration wherever
+it occurs in that service's request, response, or error bodies. Nested objects,
+array elements, map values and union branches retain their complete values and
+validation rules. Map keys and strings or bytes containing JSON are not renamed.
+Types created with `Extend` need their own explicit mappings; a base type's
+mapping does not automatically apply to its derived types.
+
+The service type, its direct JSON serialization, protobuf fields and other
+services keep their original names. Explicit mappings take precedence over the
+name in a complete `struct:tag:json` tag only in the HTTP copy; tag options such
+as `omitempty` and `string` remain intact. An identity mapping such as
+`BodyFieldName(record, "label:label")` also replaces a legacy JSON tag name,
+for example `Label,omitempty`, with `label,omitempty` in HTTP bodies. Types
+that contain no mapped declarations retain their schema and example identities.
+Unknown fields, duplicate declarations and collisions with mapped or unmapped
+sibling fields fail design evaluation. Flattened union branches also reject
+names reserved for their discriminator.
+
+This feature is opt-in. Regenerate and deploy clients and servers together when
+adding a mapping to an existing HTTP API, since its JSON property names change.
+Rollback requires restoring the matching generated clients and servers. Existing
+designs without mappings need no changes.
+
 # Upgrading to Goa v3.34.0
 
 Select the exact versions below only after their tags are available. Publication
