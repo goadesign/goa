@@ -1007,24 +1007,31 @@ func (e *HTTPEndpointExpr) Finalize() {
 		}
 	}
 
+	bodySource := bodyFieldNameSource(e.Body, e.MethodExpr.Payload)
 	e.Body = httpRequestBody(e)
 	e.Body.Finalize()
+	e.Body = e.Service.mapBodyFieldNames(e.Body, bodySource)
 
 	e.StreamingBody = httpStreamingBody(e)
 	if e.StreamingBody != nil {
 		e.StreamingBody.Finalize()
+		e.StreamingBody = e.Service.mapBodyFieldNames(e.StreamingBody, bodyFieldNameSource(nil, e.MethodExpr.StreamingPayload))
 	}
 
 	// Initialize responses parent, headers and body
 	for _, r := range e.Responses {
+		bodySource := bodyFieldNameSource(r.Body, e.MethodExpr.Result)
 		r.Finalize(e, e.MethodExpr.Result)
 		r.Body = httpResponseBody(e, r)
 		r.Body.Finalize()
+		r.Body = e.Service.mapBodyFieldNames(r.Body, bodySource)
 	}
 
 	// Make sure all error types are user types and have a body.
 	for _, herr := range e.HTTPErrors {
+		bodySource := bodyFieldNameSource(herr.Response.Body, e.MethodExpr.Error(herr.Name).AttributeExpr)
 		herr.Finalize(e)
+		herr.Response.Body = e.Service.mapBodyFieldNames(herr.Response.Body, bodySource)
 	}
 }
 

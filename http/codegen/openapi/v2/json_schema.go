@@ -4,6 +4,7 @@ package openapiv2
 
 import (
 	"fmt"
+	"strings"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
@@ -13,18 +14,20 @@ import (
 type (
 	// schemaBuilder builds every schema used by one Swagger document.
 	schemaBuilder struct {
-		definitions     map[string]*openapi.Schema
-		definitionNames map[*expr.ResultTypeExpr]string
-		values          openapi.Values
+		definitions      map[string]*openapi.Schema
+		definitionNames  map[*expr.ResultTypeExpr]string
+		definitionShapes map[string]expr.UserType
+		values           openapi.Values
 	}
 )
 
 // newSchemaBuilder starts a schema build with no definitions or assigned names.
 func newSchemaBuilder(values openapi.Values) *schemaBuilder {
 	return &schemaBuilder{
-		definitions:     make(map[string]*openapi.Schema),
-		definitionNames: make(map[*expr.ResultTypeExpr]string),
-		values:          values,
+		definitions:      make(map[string]*openapi.Schema),
+		definitionNames:  make(map[*expr.ResultTypeExpr]string),
+		definitionShapes: make(map[string]expr.UserType),
+		values:           values,
 	}
 }
 
@@ -71,6 +74,7 @@ func (b *schemaBuilder) projectedResultTypeRefWithPrefix(api *expr.APIExpr, sour
 				name = metaName
 			}
 		}
+		name = b.assignDefinitionName(name, projected)
 		if projected == source {
 			// Keep the chosen name here instead of changing the design result.
 			b.definitionNames[projected] = name
@@ -92,6 +96,7 @@ func (b *schemaBuilder) typeRefWithPrefix(api *expr.APIExpr, ut *expr.UserTypeEx
 	if n, ok := ut.Meta["openapi:typename"]; ok {
 		typeName = codegen.Goify(n[0], true)
 	}
+	typeName = b.assignDefinitionName(typeName, ut)
 	if _, ok := b.definitions[typeName]; !ok {
 		b.generateTypeDefinitionWithName(api, ut, typeName, gen)
 	}
@@ -162,13 +167,19 @@ func (b *schemaBuilder) typeSchemaWithPrefix(api *expr.APIExpr, t expr.DataType,
 		b.buildAttributeSchema(api, schema.Items, actual.ElemType, gen.ArrayElement(0))
 	case *expr.Object:
 		schema.Type = openapi.Object
+		// Read names directly so recursive children keep their original identities.
 		for _, nat := range *actual {
 			if !openapi.MustGenerate(nat.Attribute.Meta) {
 				continue
 			}
 			property := openapi.NewSchema()
-			b.buildAttributeSchema(api, property, nat.Attribute, gen.Member(nat.Name))
-			schema.Properties[nat.Name] = property
+			names := strings.Split(nat.Name, ":")
+			name, wire := names[0], names[0]
+			if len(names) > 1 {
+				wire = names[1]
+			}
+			b.buildAttributeSchema(api, property, nat.Attribute, gen.Member(name))
+			schema.Properties[wire] = property
 		}
 	case *expr.Map:
 		schema.Type = openapi.Object
@@ -245,7 +256,7 @@ func (b *schemaBuilder) buildAttributeSchema(api *expr.APIExpr, schema *openapi.
 	if schema.Ref != "" {
 		return schema
 	}
-	schema.DefaultValue = openapi.ToStringMap(at.DefaultValue)
+	schema.DefaultValue = openapi.ProjectDefault(at, at.DefaultValue)
 	if description := b.values.Description(at.AuthoredAttribute(), at.Description); description != "" {
 		schema.Description = description
 	}
@@ -302,10 +313,24 @@ func initSchemaValidation(schema *openapi.Schema, at *expr.AttributeExpr) {
 		}
 	}
 	for _, name := range validation.Required {
-		if attribute := at.Find(name); attribute != nil && !openapi.MustGenerate(attribute.Meta) {
+		wire := name
+		attribute := at.Find(name)
+		if object := expr.AsObject(at.Type); object != nil {
+			for _, field := range *object {
+				names := strings.Split(field.Name, ":")
+				if names[0] == name {
+					attribute = field.Attribute
+					if len(names) > 1 {
+						wire = names[1]
+					}
+					break
+				}
+			}
+		}
+		if attribute != nil && !openapi.MustGenerate(attribute.Meta) {
 			continue
 		}
-		schema.Required = append(schema.Required, name)
+		schema.Required = append(schema.Required, wire)
 	}
 }
 

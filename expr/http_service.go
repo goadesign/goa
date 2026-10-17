@@ -51,6 +51,9 @@ type (
 		// Meta is a set of key/value pairs with semantic that is
 		// specific to each generator.
 		Meta MetaExpr
+		// BodyFieldNames maps fields of exact named declarations to wire names
+		// in this service's HTTP bodies. Other transports retain their names.
+		BodyFieldNames map[UserType]map[string]string
 	}
 )
 
@@ -225,6 +228,7 @@ func (svc *HTTPServiceExpr) Validate() error {
 
 	// Validate transport compatibility
 	svc.validateTransports(verr)
+	svc.validateBodyFieldNames(verr)
 
 	return verr
 }

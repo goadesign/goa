@@ -43,6 +43,7 @@ const (
 	mapKeyExampleKind
 	mapValueExampleKind
 	unionMemberExampleKind
+	httpMappedBodyTypeExampleKind
 )
 
 // UserTypeExampleIdentity returns the example key for typ.

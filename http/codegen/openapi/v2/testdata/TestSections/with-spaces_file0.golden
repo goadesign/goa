@@ -47,6 +47,31 @@
       },
       "title": "Mediatype identifier: application/vnd.goa.foobar; view=default",
       "type": "object"
+    },
+    "GoaFoobar2": {
+      "description": "Test EndpointNot FoundResponseBody result type (default view)",
+      "example": {
+        "bar": [
+          {
+            "string": "item"
+          }
+        ]
+      },
+      "properties": {
+        "bar": {
+          "example": [
+            {
+              "string": "item"
+            }
+          ],
+          "items": {
+            "$ref": "#/definitions/Bar"
+          },
+          "type": "array"
+        }
+      },
+      "title": "Mediatype identifier: application/vnd.goa.foobar; view=default",
+      "type": "object"
     }
   },
   "host": "localhost:80",
@@ -78,7 +103,7 @@
           "404": {
             "description": "Not Found response.",
             "schema": {
-              "$ref": "#/definitions/GoaFoobar"
+              "$ref": "#/definitions/GoaFoobar2"
             }
           }
         },
