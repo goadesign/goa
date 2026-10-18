@@ -19,10 +19,13 @@ func BenchmarkGoTypeLayoutLookups(b *testing.B) {
 			if err != nil {
 				b.Fatal(err)
 			}
-			resolver := &goTypeLayoutAttributor{layout: plan.Link("example.test/service", nil)}
 			b.ReportAllocs()
 			b.ResetTimer()
 			for b.Loop() {
+				resolver := &goTypeLayoutAttributor{
+					walk:   &goTypeLayoutWalk{visited: make(map[*GoTypePlan]struct{})},
+					layout: plan.Link("example.test/service", nil),
+				}
 				for _, field := range object {
 					for range 4 {
 						if len(resolver.findAll(field.Attribute)) != 1 {

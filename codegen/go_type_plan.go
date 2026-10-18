@@ -252,13 +252,7 @@ func (p *GoTypePlan) MatchesOccurrence(attribute *expr.AttributeExpr) bool {
 // attribute may produce several plans with different field names, package
 // paths, or pointer choices.
 func (p *GoTypePlan) PlansForOccurrence(attribute *expr.AttributeExpr) []*GoTypePlan {
-	var matches []*GoTypePlan
-	p.walk(func(candidate *GoTypePlan) {
-		if candidate.occurrence == attribute {
-			matches = append(matches, candidate)
-		}
-	})
-	return matches
+	return p.plansForOccurrence(attribute, make(map[*GoTypePlan]struct{}))
 }
 
 // TypeDeclaration returns the generated declaration for a named user type. It
@@ -841,6 +835,18 @@ func (b GoTypeBinding) declarationCount() int {
 		count++
 	}
 	return count
+}
+
+// plansForOccurrence finds ordered matches using the caller's empty visited map.
+// The caller keeps exclusive access to that map until the traversal returns.
+func (p *GoTypePlan) plansForOccurrence(attribute *expr.AttributeExpr, seen map[*GoTypePlan]struct{}) []*GoTypePlan {
+	var matches []*GoTypePlan
+	p.walkOnce(func(candidate *GoTypePlan) {
+		if candidate.occurrence == attribute {
+			matches = append(matches, candidate)
+		}
+	}, seen)
+	return matches
 }
 
 // walk visits this plan and then its children in their stored order.

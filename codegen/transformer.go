@@ -82,9 +82,15 @@ type (
 	// wrapped resolver supplies operations that the type plan does not record.
 	goTypeLayoutAttributor struct {
 		Attributor
-		layout   LinkedGoType
-		lookupMu sync.Mutex
-		lookups  map[*expr.AttributeExpr][]LinkedGoType
+		layout LinkedGoType
+		walk   *goTypeLayoutWalk
+	}
+
+	// goTypeLayoutWalk owns temporary cycle checks shared by one root resolver
+	// and its children. Each lookup clears its pointer keys before unlocking.
+	goTypeLayoutWalk struct {
+		mu      sync.Mutex
+		visited map[*GoTypePlan]struct{}
 	}
 
 	// TransformAttrs are the attributes that help in the transformation.
@@ -592,6 +598,7 @@ func (a *AttributeContext) WithGoTypeLayout(layout LinkedGoType) (*AttributeCont
 	linked.Scope = &goTypeLayoutAttributor{
 		Attributor: a.Scope,
 		layout:     layout,
+		walk:       &goTypeLayoutWalk{visited: make(map[*GoTypePlan]struct{})},
 	}
 	return linked, nil
 }
@@ -725,6 +732,7 @@ func (a *goTypeLayoutAttributor) Enter(attribute *expr.AttributeExpr) Attributor
 	return &goTypeLayoutAttributor{
 		Attributor: a.Attributor.Enter(attribute),
 		layout:     a.mustFind(attribute),
+		walk:       a.walk,
 	}
 }
 
@@ -788,23 +796,19 @@ func (a *goTypeLayoutAttributor) mustFind(attribute *expr.AttributeExpr) LinkedG
 }
 
 // findAll returns every retained occurrence of attribute below the current type.
-// The completed type graph cannot change, so repeated questions reuse their
-// ordered plans. Child resolvers keep separate results for their own subtrees.
+// Parent and child resolvers reuse one visited map while keeping separate results.
+// The lock covers only this walk, which calls no external code.
 func (a *goTypeLayoutAttributor) findAll(attribute *expr.AttributeExpr) []LinkedGoType {
-	a.lookupMu.Lock()
-	defer a.lookupMu.Unlock()
-	if layouts, found := a.lookups[attribute]; found {
-		return layouts
-	}
-	plans := a.layout.plan.PlansForOccurrence(attribute)
+	a.walk.mu.Lock()
+	defer func() {
+		clear(a.walk.visited)
+		a.walk.mu.Unlock()
+	}()
+	plans := a.layout.plan.plansForOccurrence(attribute, a.walk.visited)
 	layouts := make([]LinkedGoType, len(plans))
 	for index, plan := range plans {
 		layouts[index] = a.layout.Enter(plan)
 	}
-	if a.lookups == nil {
-		a.lookups = make(map[*expr.AttributeExpr][]LinkedGoType)
-	}
-	a.lookups[attribute] = layouts
 	return layouts
 }
 

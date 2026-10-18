@@ -21,6 +21,7 @@ func TestTypeLayoutLookupPreservesOccurrencesAndSubtrees(t *testing.T) {
 	require.NoError(t, err)
 	resolver := &goTypeLayoutAttributor{
 		Attributor: NewAttributeScope(NewNameScope()),
+		walk:       &goTypeLayoutWalk{visited: make(map[*GoTypePlan]struct{})},
 		layout:     plan.Link("example.test/service", nil),
 	}
 	for range 2 {
@@ -44,7 +45,10 @@ func TestTypeLayoutLookupPreservesRecursiveOrder(t *testing.T) {
 	second := &GoTypePlan{occurrence: attribute, kind: GoPrimitive, primitive: "string"}
 	root := &GoTypePlan{fields: []*GoTypePlan{first, second}}
 	first.value = root
-	resolver := &goTypeLayoutAttributor{layout: root.Link("example.test/service", nil)}
+	resolver := &goTypeLayoutAttributor{
+		walk:   &goTypeLayoutWalk{visited: make(map[*GoTypePlan]struct{})},
+		layout: root.Link("example.test/service", nil),
+	}
 	for range 2 {
 		matches := resolver.findAll(attribute)
 		require.Len(t, matches, 2)
@@ -59,7 +63,10 @@ func TestTypeLayoutLookupStillRejectsAmbiguousReferences(t *testing.T) {
 		{occurrence: attribute, kind: GoPrimitive, primitive: "string"},
 		{occurrence: attribute, kind: GoPrimitive, primitive: "int"},
 	}}
-	resolver := &goTypeLayoutAttributor{layout: root.Link("example.test/service", nil)}
+	resolver := &goTypeLayoutAttributor{
+		walk:   &goTypeLayoutWalk{visited: make(map[*GoTypePlan]struct{})},
+		layout: root.Link("example.test/service", nil),
+	}
 	for range 2 {
 		require.PanicsWithValue(t, `Go type layout has different references for "string"`, func() {
 			resolver.find(attribute)
@@ -71,7 +78,10 @@ func TestTypeLayoutLookupConcurrentReads(t *testing.T) {
 	attribute := &expr.AttributeExpr{Type: expr.String}
 	plan, err := PlanGoType(attribute, GoTypePlanOptions{Owner: "example.test/service"})
 	require.NoError(t, err)
-	resolver := &goTypeLayoutAttributor{layout: plan.Link("example.test/service", nil)}
+	resolver := &goTypeLayoutAttributor{
+		walk:   &goTypeLayoutWalk{visited: make(map[*GoTypePlan]struct{})},
+		layout: plan.Link("example.test/service", nil),
+	}
 	var workers sync.WaitGroup
 	for range 16 {
 		workers.Go(func() {
@@ -90,9 +100,12 @@ func TestTypeLayoutLookupReadsCurrentQualifier(t *testing.T) {
 	attribute := &expr.AttributeExpr{Type: expr.String}
 	plan := &GoTypePlan{occurrence: attribute, kind: GoNamed, owner: "example.test/types"}
 	qualifier := "first"
-	resolver := &goTypeLayoutAttributor{layout: plan.Link("example.test/service", func(string) string {
-		return qualifier
-	})}
+	resolver := &goTypeLayoutAttributor{
+		walk: &goTypeLayoutWalk{visited: make(map[*GoTypePlan]struct{})},
+		layout: plan.Link("example.test/service", func(string) string {
+			return qualifier
+		}),
+	}
 	require.Equal(t, "first", resolver.findAll(attribute)[0].Package())
 	qualifier = "final"
 	require.Equal(t, "final", resolver.findAll(attribute)[0].Package())
