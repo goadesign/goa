@@ -17,6 +17,13 @@ import (
 )
 
 type (
+	// transformObjectMatches keeps one object's copied field rules and original
+	// children together so both rendering passes read the same mapping.
+	transformObjectMatches struct {
+		source, target             *expr.MappedAttributeExpr
+		sourceFields, targetFields map[string]*expr.AttributeExpr
+	}
+
 	// transformCopyAttributor passes the original expression to name
 	// lookups that recorded expressions before the transform copied them.
 	transformCopyAttributor struct {
@@ -929,6 +936,7 @@ func wrappedPrimitivePointer(wrapper *expr.AttributeExpr, context *AttributeCont
 // transformObject generates Go code to transform source object to target
 // object.
 func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar string, newVar bool, ta *TransformAttrs) (string, error) {
+	matches := newTransformObjectMatches(source, target)
 	var (
 		initCode     string
 		postInitCode string
@@ -936,7 +944,7 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 	)
 	{
 		// walk through primitives first to initialize the struct
-		walkMatches(source, target, func(srcMatt, tgtMatt *expr.MappedAttributeExpr, srcc, tgtc *expr.AttributeExpr, n string) {
+		matches.walk(func(srcMatt, tgtMatt *expr.MappedAttributeExpr, srcc, tgtc *expr.AttributeExpr, n string) {
 			if err != nil {
 				return
 			}
@@ -1047,7 +1055,7 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 
 	// iterate through attributes to initialize rest of the struct fields and
 	// handle default values
-	walkMatches(source, target, func(srcMatt, tgtMatt *expr.MappedAttributeExpr, srcc, tgtc *expr.AttributeExpr, n string) {
+	matches.walk(func(srcMatt, tgtMatt *expr.MappedAttributeExpr, srcc, tgtc *expr.AttributeExpr, n string) {
 		if err != nil {
 			return
 		}
@@ -1636,7 +1644,8 @@ func planTransformChildren(source, target *expr.AttributeExpr, required bool, lo
 			return nil
 		}
 		var walkErr error
-		walkMatches(source, target, func(sourceMapped, _ *expr.MappedAttributeExpr, sourceChild, targetChild *expr.AttributeExpr, name string) {
+		matches := newTransformObjectMatches(source, target)
+		matches.walk(func(sourceMapped, _ *expr.MappedAttributeExpr, sourceChild, targetChild *expr.AttributeExpr, name string) {
 			if walkErr == nil {
 				if plan.hooks != nil && plan.hooks.FieldPairAttrs != nil {
 					sourceChild, targetChild = plan.hooks.FieldPairAttrs(sourceChild, targetChild)
@@ -1694,21 +1703,14 @@ func generateTransformHelper(helper TransformHelper, ta *TransformAttrs) (*Trans
 	return tfd, nil
 }
 
-// walkMatches iterates through the attributes of source and looks for
-// attributes with identical names in target. walkMatches calls the walker
-// function for each pair of matched attributes. Both source and target must be
-// objects or else walkMatches panics.
-func walkMatches(source, target *expr.AttributeExpr, walker func(src, tgt *expr.MappedAttributeExpr, srcc, tgtc *expr.AttributeExpr, n string)) {
-	srcMatt := mappedObjectDefinition(source)
-	tgtMatt := mappedObjectDefinition(target)
-	srcFields := originalMappedFields(source)
-	tgtFields := originalMappedFields(target)
-	srcObj := expr.AsObject(srcMatt.Type)
-	tgtObj := expr.AsObject(tgtMatt.Type)
-	for _, nat := range *srcObj {
-		if att := tgtObj.Attribute(nat.Name); att != nil {
-			walker(srcMatt, tgtMatt, srcFields[nat.Name], tgtFields[nat.Name], nat.Name)
-		}
+// newTransformObjectMatches copies the field rules of two objects while
+// retaining their original children for hooks and nested transformations.
+func newTransformObjectMatches(source, target *expr.AttributeExpr) transformObjectMatches {
+	return transformObjectMatches{
+		source:       mappedObjectDefinition(source),
+		target:       mappedObjectDefinition(target),
+		sourceFields: originalMappedFields(source),
+		targetFields: originalMappedFields(target),
 	}
 }
 
@@ -1734,4 +1736,16 @@ func originalMappedFields(attribute *expr.AttributeExpr) map[string]*expr.Attrib
 		fields[name] = named.Attribute
 	}
 	return fields
+}
+
+// walk visits matching fields in source order. Each callback receives the
+// copied parent rules and original children used by this transformation.
+func (m transformObjectMatches) walk(walker func(src, tgt *expr.MappedAttributeExpr, srcc, tgtc *expr.AttributeExpr, n string)) {
+	source := expr.AsObject(m.source.Type)
+	target := expr.AsObject(m.target.Type)
+	for _, field := range *source {
+		if target.Attribute(field.Name) != nil {
+			walker(m.source, m.target, m.sourceFields[field.Name], m.targetFields[field.Name], field.Name)
+		}
+	}
 }
