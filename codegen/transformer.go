@@ -5,6 +5,7 @@ package codegen
 import (
 	"fmt"
 	"strings"
+	"sync"
 
 	"goa.design/goa/v3/expr"
 )
@@ -81,7 +82,9 @@ type (
 	// wrapped resolver supplies operations that the type plan does not record.
 	goTypeLayoutAttributor struct {
 		Attributor
-		layout LinkedGoType
+		layout   LinkedGoType
+		lookupMu sync.Mutex
+		lookups  map[*expr.AttributeExpr][]LinkedGoType
 	}
 
 	// TransformAttrs are the attributes that help in the transformation.
@@ -785,12 +788,23 @@ func (a *goTypeLayoutAttributor) mustFind(attribute *expr.AttributeExpr) LinkedG
 }
 
 // findAll returns every retained occurrence of attribute below the current type.
+// The completed type graph cannot change, so repeated questions reuse their
+// ordered plans. Child resolvers keep separate results for their own subtrees.
 func (a *goTypeLayoutAttributor) findAll(attribute *expr.AttributeExpr) []LinkedGoType {
+	a.lookupMu.Lock()
+	defer a.lookupMu.Unlock()
+	if layouts, found := a.lookups[attribute]; found {
+		return layouts
+	}
 	plans := a.layout.plan.PlansForOccurrence(attribute)
 	layouts := make([]LinkedGoType, len(plans))
 	for index, plan := range plans {
 		layouts[index] = a.layout.Enter(plan)
 	}
+	if a.lookups == nil {
+		a.lookups = make(map[*expr.AttributeExpr][]LinkedGoType)
+	}
+	a.lookups[attribute] = layouts
 	return layouts
 }
 

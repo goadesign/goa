@@ -30,10 +30,10 @@ type (
 		value string
 	}
 
-	// designSnapshotter records each design value once, even when pointers form
-	// a cycle or several fields point to the same value.
+	// designSnapshotter visits each design value once and passes its state to
+	// record, even when pointers form a cycle or several fields share a value.
 	designSnapshotter struct {
-		states     []designState
+		record     func(designState)
 		references []reflect.Value
 		visited    map[designVisit]struct{}
 	}
@@ -77,16 +77,20 @@ var typeMapType = reflect.TypeFor[expr.TypeMap]()
 // snapshotPreparedDesign records every value reachable from roots after the
 // designs have been prepared.
 func snapshotPreparedDesign(roots []eval.Root) (*designSnapshot, error) {
-	snapshotter := &designSnapshotter{visited: make(map[designVisit]struct{})}
+	snapshot := &designSnapshot{}
+	snapshotter := &designSnapshotter{
+		visited: make(map[designVisit]struct{}),
+		record: func(state designState) {
+			snapshot.states = append(snapshot.states, state)
+		},
+	}
 	for i, root := range roots {
 		if err := snapshotter.appendValue(fmt.Sprintf("roots[%d]", i), reflect.ValueOf(root)); err != nil {
 			return nil, err
 		}
 	}
-	return &designSnapshot{
-		states:     snapshotter.states,
-		references: snapshotter.references,
-	}, nil
+	snapshot.references = snapshotter.references
+	return snapshot, nil
 }
 
 // orderedMapEntries returns map entries in an order that does not depend on
@@ -331,23 +335,28 @@ func formatPointer(pointer uintptr) string {
 func (s *designSnapshot) changedPath(roots []eval.Root) (string, error) {
 	defer runtime.KeepAlive(s.references)
 
-	current, err := snapshotPreparedDesign(roots)
-	if err != nil {
-		return "", err
+	var changed string
+	index := 0
+	current := &designSnapshotter{
+		visited: make(map[designVisit]struct{}),
+		record: func(state designState) {
+			if changed == "" && (index >= len(s.states) || s.states[index] != state) {
+				changed = state.path
+			}
+			index++
+		},
 	}
-	common := min(len(s.states), len(current.states))
-	for i := range common {
-		if s.states[i] != current.states[i] {
-			return current.states[i].path, nil
+	// Keep walking after a difference: an unsupported value must still return
+	// its error, even when an earlier value already changed.
+	for i, root := range roots {
+		if err := current.appendValue(fmt.Sprintf("roots[%d]", i), reflect.ValueOf(root)); err != nil {
+			return "", err
 		}
 	}
-	if len(s.states) > common {
-		return s.states[common].path, nil
+	if changed == "" && index < len(s.states) {
+		changed = s.states[index].path
 	}
-	if len(current.states) > common {
-		return current.states[common].path, nil
-	}
-	return "", nil
+	return changed, nil
 }
 
 // appendValue records value and recursively records all state it can reach.
@@ -493,9 +502,9 @@ func (s *designSnapshotter) appendExternalType(path string, value reflect.Value)
 	s.append(path, value.Elem().Type(), "external exemplar type")
 }
 
-// append adds one comparable state entry to the traversal.
+// append sends one visited value to the snapshot recorder or comparison.
 func (s *designSnapshotter) append(path string, typ reflect.Type, value string) {
-	s.states = append(s.states, designState{path: path, typ: typ, value: value})
+	s.record(designState{path: path, typ: typ, value: value})
 }
 
 // seen records a reference and reports whether this exact node was already traversed.
