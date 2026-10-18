@@ -1,11 +1,13 @@
+// This file renders section templates into files. Go source is checked and
+// formatted before writing; file callbacks receive the completed file on disk.
 package codegen
 
 import (
 	"bytes"
 	"fmt"
 	"go/ast"
-	"go/format"
 	"go/parser"
+	"go/printer"
 	"go/scanner"
 	"go/token"
 	"io"
@@ -142,9 +144,11 @@ func finalizeGoSource(path string, content []byte) ([]byte, error) {
 	removeUnusedImports(fset, file, impMap)
 	ast.SortImports(fset, file)
 
-	// Format the AST back to bytes
+	// Print the cleaned, sorted file without format.Node's defensive copy of
+	// grouped imports. imports.Process below still applies final Go formatting.
 	var formatted bytes.Buffer
-	if err := format.Node(&formatted, fset, file); err != nil {
+	config := printer.Config{Mode: printer.UseSpaces | printer.TabIndent, Tabwidth: 8}
+	if err := config.Fprint(&formatted, fset, file); err != nil {
 		return nil, err
 	}
 
