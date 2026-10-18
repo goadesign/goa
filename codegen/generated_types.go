@@ -16,13 +16,16 @@ type (
 	// GeneratedPackage stores declarations, final names, and the output location
 	// for one generated Go package.
 	GeneratedPackage struct {
-		generation   *generationOwner
-		genpkg       string
-		claim        string
-		path         string
-		outputDir    string
-		scope        *NameScope
-		names        []*NameDeclaration
+		generation *generationOwner
+		genpkg     string
+		claim      string
+		path       string
+		outputDir  string
+		scope      *NameScope
+		names      []*NameDeclaration
+		// nameOrders keeps preferred declarations sorted within each concrete order
+		// type so collection rejects equal ordering facts without scanning names.
+		nameOrders   map[reflect.Type][]*NameDeclaration
 		exactNames   map[string]*NameDeclaration
 		nameBindings map[string]*NameDeclaration
 		importPlan   *importAliasPlan
@@ -273,19 +276,20 @@ func (p *GeneratedPackage) DeclareName(declaration *NameDeclaration, keys ...Has
 				err,
 			)
 		}
-		for _, existing := range p.names {
-			if existing.exact || reflect.TypeOf(existing.order) != reflect.TypeOf(declaration.order) {
-				continue
-			}
-			if existing.order.ComparePackageName(declaration.order) == 0 {
-				return fmt.Errorf(
-					"generated package %q cannot deterministically order preferred %s %q",
-					p.path,
-					declaration.kind,
-					declaration.preferredName(),
-				)
-			}
+		orderType := reflect.TypeOf(declaration.order)
+		orders := p.nameOrders[orderType]
+		index, found := slices.BinarySearchFunc(orders, declaration.order, func(existing *NameDeclaration, order PackageNameOrder) int {
+			return existing.order.ComparePackageName(order)
+		})
+		if found {
+			return fmt.Errorf(
+				"generated package %q cannot deterministically order preferred %s %q",
+				p.path,
+				declaration.kind,
+				declaration.preferredName(),
+			)
 		}
+		p.nameOrders[orderType] = slices.Insert(orders, index, declaration)
 	}
 	declaration.owner = p
 	p.names = append(p.names, declaration)
@@ -654,6 +658,7 @@ func newGeneratedPackage(claim, path, outputDir string) *GeneratedPackage {
 		path:         path,
 		outputDir:    outputDir,
 		scope:        NewNameScope(),
+		nameOrders:   make(map[reflect.Type][]*NameDeclaration),
 		exactNames:   make(map[string]*NameDeclaration),
 		nameBindings: make(map[string]*NameDeclaration),
 		importPlan: &importAliasPlan{
@@ -730,6 +735,7 @@ func (p *GeneratedPackage) finishFreeze() {
 	}
 	p.scope.Freeze()
 	p.frozen = true
+	p.nameOrders = nil
 }
 
 // freezeGeneratedPackages chooses independent names in every package before it
