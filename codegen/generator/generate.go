@@ -134,7 +134,9 @@ func generate(dir, cmd string, debug bool, registry *registry) (outputs []string
 	written := make(map[string]struct{})
 	{
 		start := time.Now()
-		numWorkers := runtime.NumCPU()
+		// Match Go's CPU budget so parsing files does not retain more syntax
+		// trees at once than the process can work on.
+		numWorkers := min(runtime.GOMAXPROCS(0), len(genfiles))
 		if debug {
 			fmt.Fprintf(os.Stderr, "[TIMING]     [generate] Stage 10: Starting parallel file writing with %d workers\n", numWorkers)
 		}

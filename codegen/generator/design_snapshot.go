@@ -30,10 +30,11 @@ type (
 		value string
 	}
 
-	// designSnapshotter records each design value once, even when pointers form
-	// a cycle or several fields point to the same value.
+	// designSnapshotter visits each design value once and passes its state to
+	// record, even when pointers form a cycle or several fields share a value.
 	designSnapshotter struct {
-		states     []designState
+		record     func([]byte, reflect.Type, string)
+		path       []byte
 		references []reflect.Value
 		visited    map[designVisit]struct{}
 	}
@@ -77,16 +78,20 @@ var typeMapType = reflect.TypeFor[expr.TypeMap]()
 // snapshotPreparedDesign records every value reachable from roots after the
 // designs have been prepared.
 func snapshotPreparedDesign(roots []eval.Root) (*designSnapshot, error) {
-	snapshotter := &designSnapshotter{visited: make(map[designVisit]struct{})}
+	snapshot := &designSnapshot{}
+	snapshotter := &designSnapshotter{
+		visited: make(map[designVisit]struct{}),
+		record: func(path []byte, typ reflect.Type, value string) {
+			snapshot.states = append(snapshot.states, designState{path: string(path), typ: typ, value: value})
+		},
+	}
 	for i, root := range roots {
-		if err := snapshotter.appendValue(fmt.Sprintf("roots[%d]", i), reflect.ValueOf(root)); err != nil {
+		if err := snapshotter.appendValue(fmt.Appendf(snapshotter.path[:0], "roots[%d]", i), reflect.ValueOf(root)); err != nil {
 			return nil, err
 		}
 	}
-	return &designSnapshot{
-		states:     snapshotter.states,
-		references: snapshotter.references,
-	}, nil
+	snapshot.references = snapshotter.references
+	return snapshot, nil
 }
 
 // orderedMapEntries returns map entries in an order that does not depend on
@@ -331,171 +336,180 @@ func formatPointer(pointer uintptr) string {
 func (s *designSnapshot) changedPath(roots []eval.Root) (string, error) {
 	defer runtime.KeepAlive(s.references)
 
-	current, err := snapshotPreparedDesign(roots)
-	if err != nil {
-		return "", err
+	var changed string
+	index := 0
+	current := &designSnapshotter{
+		visited: make(map[designVisit]struct{}),
+		record: func(path []byte, typ reflect.Type, value string) {
+			if changed == "" {
+				if index >= len(s.states) || s.states[index].path != string(path) ||
+					s.states[index].typ != typ || s.states[index].value != value {
+					changed = string(path)
+				}
+			}
+			index++
+		},
 	}
-	common := min(len(s.states), len(current.states))
-	for i := range common {
-		if s.states[i] != current.states[i] {
-			return current.states[i].path, nil
+	// Keep walking after a difference: an unsupported value must still return
+	// its error, even when an earlier value already changed.
+	for i, root := range roots {
+		if err := current.appendValue(fmt.Appendf(current.path[:0], "roots[%d]", i), reflect.ValueOf(root)); err != nil {
+			return "", err
 		}
 	}
-	if len(s.states) > common {
-		return s.states[common].path, nil
+	if changed == "" && index < len(s.states) {
+		changed = s.states[index].path
 	}
-	if len(current.states) > common {
-		return current.states[common].path, nil
-	}
-	return "", nil
+	return changed, nil
 }
 
-// appendValue records value and recursively records all state it can reach.
-func (s *designSnapshotter) appendValue(path string, value reflect.Value) error {
+// appendValue visits value with the supplied path, then restores the parent's
+// path length. Child visits reuse the buffer; record must copy any path it keeps.
+func (s *designSnapshotter) appendValue(path []byte, value reflect.Value) error {
+	parentLength := len(s.path)
+	s.path = path
+	defer func() {
+		s.path = s.path[:parentLength]
+	}()
 	if !value.IsValid() {
-		s.append(path, nil, "invalid")
+		s.record(s.path, nil, "invalid")
 		return nil
 	}
 	typ := value.Type()
 	switch value.Kind() {
 	case reflect.Bool:
-		s.append(path, typ, strconv.FormatBool(value.Bool()))
+		s.record(s.path, typ, strconv.FormatBool(value.Bool()))
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		s.append(path, typ, strconv.FormatInt(value.Int(), 10))
+		s.record(s.path, typ, strconv.FormatInt(value.Int(), 10))
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		s.append(path, typ, strconv.FormatUint(value.Uint(), 10))
+		s.record(s.path, typ, strconv.FormatUint(value.Uint(), 10))
 	case reflect.Float32:
-		s.append(path, typ, strconv.FormatUint(uint64(math.Float32bits(float32(value.Float()))), 16))
+		s.record(s.path, typ, strconv.FormatUint(uint64(math.Float32bits(float32(value.Float()))), 16))
 	case reflect.Float64:
-		s.append(path, typ, strconv.FormatUint(math.Float64bits(value.Float()), 16))
+		s.record(s.path, typ, strconv.FormatUint(math.Float64bits(value.Float()), 16))
 	case reflect.Complex64:
 		complexValue := complex64(value.Complex())
-		s.append(path, typ, fmt.Sprintf("%x:%x", math.Float32bits(real(complexValue)), math.Float32bits(imag(complexValue))))
+		s.record(s.path, typ, fmt.Sprintf("%x:%x", math.Float32bits(real(complexValue)), math.Float32bits(imag(complexValue))))
 	case reflect.Complex128:
 		complexValue := value.Complex()
-		s.append(path, typ, fmt.Sprintf("%x:%x", math.Float64bits(real(complexValue)), math.Float64bits(imag(complexValue))))
+		s.record(s.path, typ, fmt.Sprintf("%x:%x", math.Float64bits(real(complexValue)), math.Float64bits(imag(complexValue))))
 	case reflect.String:
-		s.append(path, typ, value.String())
+		s.record(s.path, typ, value.String())
 	case reflect.Interface:
 		if value.IsNil() {
-			s.append(path, typ, "nil")
+			s.record(s.path, typ, "nil")
 			return nil
 		}
-		s.append(path, typ, value.Elem().Type().String())
-		return s.appendValue(path, value.Elem())
+		s.record(s.path, typ, value.Elem().Type().String())
+		return s.appendValue(s.path, value.Elem())
 	case reflect.Pointer:
 		if value.IsNil() {
-			s.append(path, typ, "nil")
+			s.record(s.path, typ, "nil")
 			return nil
 		}
 		pointer := value.Pointer()
 		s.references = append(s.references, value)
-		s.append(path, typ, formatPointer(pointer))
+		s.record(s.path, typ, formatPointer(pointer))
 		if s.seen(designVisit{typ: typ, kind: value.Kind(), ptr: pointer}) {
 			return nil
 		}
-		return s.appendValue(path, value.Elem())
+		return s.appendValue(s.path, value.Elem())
 	case reflect.Struct:
-		s.append(path, typ, "struct")
+		s.record(s.path, typ, "struct")
 		if typ == typeMapType {
-			if err := s.appendValue(path+".User", value.FieldByName("User")); err != nil {
+			if err := s.appendValue(append(s.path, ".User"...), value.FieldByName("User")); err != nil {
 				return err
 			}
-			s.appendExternalType(path+".External", value.FieldByName("External"))
+			s.appendExternalType(append(s.path, ".External"...), value.FieldByName("External"))
 			return nil
 		}
 		for i := range value.NumField() {
-			if err := s.appendValue(path+"."+typ.Field(i).Name, value.Field(i)); err != nil {
+			if err := s.appendValue(append(append(s.path, '.'), typ.Field(i).Name...), value.Field(i)); err != nil {
 				return err
 			}
 		}
 	case reflect.Array:
-		s.append(path, typ, strconv.Itoa(value.Len()))
+		s.record(s.path, typ, strconv.Itoa(value.Len()))
 		for i := range value.Len() {
-			if err := s.appendValue(fmt.Sprintf("%s[%d]", path, i), value.Index(i)); err != nil {
+			if err := s.appendValue(fmt.Appendf(s.path, "[%d]", i), value.Index(i)); err != nil {
 				return err
 			}
 		}
 	case reflect.Slice:
 		if value.IsNil() {
-			s.append(path, typ, "nil")
+			s.record(s.path, typ, "nil")
 			return nil
 		}
 		pointer := value.Pointer()
 		s.references = append(s.references, value)
-		s.append(path, typ, fmt.Sprintf("%s:%d:%d", formatPointer(pointer), value.Len(), value.Cap()))
+		s.record(s.path, typ, fmt.Sprintf("%s:%d:%d", formatPointer(pointer), value.Len(), value.Cap()))
 		visit := designVisit{typ: typ, kind: value.Kind(), ptr: pointer, extent: value.Cap()}
 		if s.seen(visit) {
 			return nil
 		}
 		reachable := value.Slice(0, value.Cap())
 		for i := range reachable.Len() {
-			if err := s.appendValue(fmt.Sprintf("%s[%d]", path, i), reachable.Index(i)); err != nil {
+			if err := s.appendValue(fmt.Appendf(s.path, "[%d]", i), reachable.Index(i)); err != nil {
 				return err
 			}
 		}
 	case reflect.Map:
 		if value.IsNil() {
-			s.append(path, typ, "nil")
+			s.record(s.path, typ, "nil")
 			return nil
 		}
 		pointer := value.Pointer()
 		s.references = append(s.references, value)
-		s.append(path, typ, fmt.Sprintf("%s:%d", formatPointer(pointer), value.Len()))
+		s.record(s.path, typ, fmt.Sprintf("%s:%d", formatPointer(pointer), value.Len()))
 		if s.seen(designVisit{typ: typ, kind: value.Kind(), ptr: pointer}) {
 			return nil
 		}
 		entries, err := orderedMapEntries(value)
 		if err != nil {
-			return fmt.Errorf("snapshot prepared design at %s: %w", path, err)
+			return fmt.Errorf("snapshot prepared design at %s: %w", s.path, err)
 		}
 		for i, entry := range entries {
-			entryPath := mapEntryPath(path, i, entry.key)
-			if err := s.appendValue(entryPath+".key", entry.key); err != nil {
+			entryPath := mapEntryPath(string(s.path), i, entry.key)
+			if err := s.appendValue(append(s.path[:0], (entryPath+".key")...), entry.key); err != nil {
 				return err
 			}
-			if err := s.appendValue(entryPath, entry.value); err != nil {
+			if err := s.appendValue(append(s.path[:0], entryPath...), entry.value); err != nil {
 				return err
 			}
 		}
 	case reflect.Func:
 		if value.IsNil() {
-			s.append(path, typ, "nil")
+			s.record(s.path, typ, "nil")
 			return nil
 		}
 		// Design evaluation has finished, so functions stored by Goa or a plugin
 		// will not run here. Record their type and pointer address without invoking
 		// them.
-		s.append(path, typ, formatPointer(value.Pointer()))
+		s.record(s.path, typ, formatPointer(value.Pointer()))
 	case reflect.Chan:
 		if !value.IsNil() {
-			return fmt.Errorf("snapshot prepared design at %s: unsupported non-nil channel %s", path, typ)
+			return fmt.Errorf("snapshot prepared design at %s: unsupported non-nil channel %s", s.path, typ)
 		}
-		s.append(path, typ, "nil")
+		s.record(s.path, typ, "nil")
 	case reflect.UnsafePointer:
 		if value.Pointer() != 0 {
-			return fmt.Errorf("snapshot prepared design at %s: unsupported non-nil unsafe pointer %s", path, typ)
+			return fmt.Errorf("snapshot prepared design at %s: unsupported non-nil unsafe pointer %s", s.path, typ)
 		}
-		s.append(path, typ, "nil")
+		s.record(s.path, typ, "nil")
 	default:
-		return fmt.Errorf("snapshot prepared design at %s: unsupported %s value", path, value.Kind())
+		return fmt.Errorf("snapshot prepared design at %s: unsupported %s value", s.path, value.Kind())
 	}
 	return nil
 }
 
 // appendExternalType records the concrete Go type of a conversion example.
 // Generators do not read fields or other runtime state from that value.
-func (s *designSnapshotter) appendExternalType(path string, value reflect.Value) {
+func (s *designSnapshotter) appendExternalType(path []byte, value reflect.Value) {
 	if value.IsNil() {
-		s.append(path, value.Type(), "nil")
+		s.record(path, value.Type(), "nil")
 		return
 	}
-	s.append(path, value.Elem().Type(), "external exemplar type")
-}
-
-// append adds one comparable state entry to the traversal.
-func (s *designSnapshotter) append(path string, typ reflect.Type, value string) {
-	s.states = append(s.states, designState{path: path, typ: typ, value: value})
+	s.record(path, value.Elem().Type(), "external exemplar type")
 }
 
 // seen records a reference and reports whether this exact node was already traversed.
