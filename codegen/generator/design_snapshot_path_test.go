@@ -72,3 +72,82 @@ func TestPreparedDesignPathBufferPreservesDeepError(t *testing.T) {
 	require.NoError(t, walker.appendValue(append(walker.path, "replacement"...), reflect.ValueOf("other")))
 	require.EqualError(t, err, "snapshot prepared design at root"+strings.Repeat(".Next", 32)+".Value: unsupported non-nil channel chan int")
 }
+
+func TestPreparedDesignMapPathBufferPreservesNestedPaths(t *testing.T) {
+	type key struct {
+		Value string
+	}
+	value := struct {
+		Nested map[string]map[string]string
+		Keys   map[*key]string
+		Last   string
+	}{
+		Nested: map[string]map[string]string{
+			"a": {"line\n\"": "first"},
+			"b": {"next": "second"},
+		},
+		Keys: map[*key]string{&key{Value: "key"}: "value"},
+		Last: "last",
+	}
+	var paths []string
+	walker := &designSnapshotter{
+		visited: make(map[designVisit]struct{}),
+		record: func(path []byte, _ reflect.Type, _ string) {
+			paths = append(paths, string(path))
+		},
+	}
+	require.NoError(t, walker.appendValue([]byte("root"), reflect.ValueOf(value)))
+	require.Equal(t, []string{
+		"root", "root.Nested",
+		`root.Nested["a"].key`, `root.Nested["a"]`,
+		`root.Nested["a"]["line\n\""].key`, `root.Nested["a"]["line\n\""]`,
+		`root.Nested["b"].key`, `root.Nested["b"]`,
+		`root.Nested["b"]["next"].key`, `root.Nested["b"]["next"]`,
+		"root.Keys", "root.Keys{0}.key", "root.Keys{0}.key", "root.Keys{0}.key.Value",
+		"root.Keys{0}", "root.Last",
+	}, paths)
+	require.Empty(t, walker.path)
+}
+
+func TestPreparedDesignMapPathBufferPreservesError(t *testing.T) {
+	walker := &designSnapshotter{
+		visited: make(map[designVisit]struct{}),
+		record: func([]byte, reflect.Type, string) {
+		},
+	}
+	value := map[string]map[string]any{"outer": {"bad": make(chan int)}}
+	err := walker.appendValue([]byte("root"), reflect.ValueOf(value))
+	want := `snapshot prepared design at root["outer"]["bad"]: unsupported non-nil channel chan int`
+	require.EqualError(t, err, want)
+	require.Empty(t, walker.path)
+	require.NoError(t, walker.appendValue(append(walker.path, "replacement"...), reflect.ValueOf("other")))
+	require.EqualError(t, err, want)
+}
+
+func TestPreparedDesignMapPathBufferGrowsWithinKey(t *testing.T) {
+	type node struct {
+		Next  *node
+		Value string
+	}
+	key := &node{}
+	leaf := key
+	for range 64 {
+		leaf.Next = &node{}
+		leaf = leaf.Next
+	}
+	value := struct {
+		Keys map[*node]string
+		Last string
+	}{Keys: map[*node]string{key: "value"}, Last: "last"}
+	var paths []string
+	walker := &designSnapshotter{
+		visited: make(map[designVisit]struct{}),
+		record: func(path []byte, _ reflect.Type, _ string) {
+			paths = append(paths, string(path))
+		},
+	}
+	require.NoError(t, walker.appendValue([]byte("root"), reflect.ValueOf(value)))
+	require.Contains(t, paths, "root.Keys{0}.key"+strings.Repeat(".Next", 64)+".Value")
+	require.Equal(t, []string{"root.Keys{0}", "root.Last"}, paths[len(paths)-2:])
+	require.Empty(t, walker.path)
+}

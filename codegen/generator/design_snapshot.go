@@ -35,7 +35,7 @@ type (
 	designSnapshotter struct {
 		record     func([]byte, reflect.Type, string)
 		path       []byte
-		references []reflect.Value
+		references *[]reflect.Value
 		visited    map[designVisit]struct{}
 	}
 
@@ -80,7 +80,8 @@ var typeMapType = reflect.TypeFor[expr.TypeMap]()
 func snapshotPreparedDesign(roots []eval.Root) (*designSnapshot, error) {
 	snapshot := &designSnapshot{}
 	snapshotter := &designSnapshotter{
-		visited: make(map[designVisit]struct{}),
+		references: &snapshot.references,
+		visited:    make(map[designVisit]struct{}),
 		record: func(path []byte, typ reflect.Type, value string) {
 			snapshot.states = append(snapshot.states, designState{path: string(path), typ: typ, value: value})
 		},
@@ -90,7 +91,6 @@ func snapshotPreparedDesign(roots []eval.Root) (*designSnapshot, error) {
 			return nil, err
 		}
 	}
-	snapshot.references = snapshotter.references
 	return snapshot, nil
 }
 
@@ -319,12 +319,13 @@ func stableTypeName(typ reflect.Type) string {
 	return typ.PkgPath() + ":" + typ.String()
 }
 
-// mapEntryPath returns the field path shown when a map entry changes.
-func mapEntryPath(path string, index int, key reflect.Value) string {
+// appendMapEntryPath adds a map key or entry index to the field path shown when
+// that entry changes. The caller can reuse the supplied path buffer.
+func appendMapEntryPath(path []byte, index int, key reflect.Value) []byte {
 	if key.Kind() == reflect.String {
-		return path + "[" + strconv.Quote(key.String()) + "]"
+		return append(strconv.AppendQuote(append(path, '['), key.String()), ']')
 	}
-	return fmt.Sprintf("%s{%d}", path, index)
+	return append(strconv.AppendInt(append(path, '{'), int64(index), 10), '}')
 }
 
 // formatPointer returns a pointer address as text for a change report.
@@ -335,6 +336,9 @@ func formatPointer(pointer uintptr) string {
 // changedPath returns the first design field that differs from the saved copy.
 func (s *designSnapshot) changedPath(roots []eval.Root) (string, error) {
 	defer runtime.KeepAlive(s.references)
+	// Current roots keep every audited object alive until comparison finishes.
+	// Only the saved snapshot needs a separate list for objects later removed.
+	defer runtime.KeepAlive(roots)
 
 	var changed string
 	index := 0
@@ -408,7 +412,9 @@ func (s *designSnapshotter) appendValue(path []byte, value reflect.Value) error 
 			return nil
 		}
 		pointer := value.Pointer()
-		s.references = append(s.references, value)
+		if s.references != nil {
+			*s.references = append(*s.references, value)
+		}
 		s.record(s.path, typ, formatPointer(pointer))
 		if s.seen(designVisit{typ: typ, kind: value.Kind(), ptr: pointer}) {
 			return nil
@@ -441,7 +447,9 @@ func (s *designSnapshotter) appendValue(path []byte, value reflect.Value) error 
 			return nil
 		}
 		pointer := value.Pointer()
-		s.references = append(s.references, value)
+		if s.references != nil {
+			*s.references = append(*s.references, value)
+		}
 		s.record(s.path, typ, fmt.Sprintf("%s:%d:%d", formatPointer(pointer), value.Len(), value.Cap()))
 		visit := designVisit{typ: typ, kind: value.Kind(), ptr: pointer, extent: value.Cap()}
 		if s.seen(visit) {
@@ -459,7 +467,9 @@ func (s *designSnapshotter) appendValue(path []byte, value reflect.Value) error 
 			return nil
 		}
 		pointer := value.Pointer()
-		s.references = append(s.references, value)
+		if s.references != nil {
+			*s.references = append(*s.references, value)
+		}
 		s.record(s.path, typ, fmt.Sprintf("%s:%d", formatPointer(pointer), value.Len()))
 		if s.seen(designVisit{typ: typ, kind: value.Kind(), ptr: pointer}) {
 			return nil
@@ -469,11 +479,12 @@ func (s *designSnapshotter) appendValue(path []byte, value reflect.Value) error 
 			return fmt.Errorf("snapshot prepared design at %s: %w", s.path, err)
 		}
 		for i, entry := range entries {
-			entryPath := mapEntryPath(string(s.path), i, entry.key)
-			if err := s.appendValue(append(s.path[:0], (entryPath+".key")...), entry.key); err != nil {
+			entryPath := appendMapEntryPath(s.path, i, entry.key)
+			entryLength := len(entryPath)
+			if err := s.appendValue(append(entryPath, ".key"...), entry.key); err != nil {
 				return err
 			}
-			if err := s.appendValue(append(s.path[:0], entryPath...), entry.value); err != nil {
+			if err := s.appendValue(s.path[:entryLength], entry.value); err != nil {
 				return err
 			}
 		}

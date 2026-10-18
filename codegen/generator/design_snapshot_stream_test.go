@@ -2,7 +2,9 @@
 package generator
 
 import (
+	"runtime"
 	"testing"
+	"weak"
 
 	"github.com/stretchr/testify/require"
 
@@ -36,6 +38,11 @@ func TestPreparedDesignDirectComparisonMatchesSnapshots(t *testing.T) {
 			copied := *root.Types[0].(*expr.UserTypeExpr)
 			root.Types[1] = &copied
 		}},
+		{"spare slice capacity", func(root *expr.RootExpr) {
+			root.Types[:cap(root.Types)][2] = &expr.UserTypeExpr{
+				TypeName: "Hidden", AttributeExpr: &expr.AttributeExpr{Type: expr.String},
+			}
+		}},
 		{"unsupported after mutation", func(root *expr.RootExpr) {
 			root.Types[0].(*expr.UserTypeExpr).TypeName = "Changed"
 			root.Types[0].Attribute().DefaultValue = make(chan int)
@@ -48,13 +55,16 @@ func TestPreparedDesignDirectComparisonMatchesSnapshots(t *testing.T) {
 				Type: &expr.Object{{Name: "next", Attribute: &expr.AttributeExpr{Type: node}}},
 				Meta: expr.MetaExpr{"first": {"original"}},
 			}
-			root := &expr.RootExpr{Types: []expr.UserType{node, node}}
+			types := make([]expr.UserType, 2, 3)
+			types[0], types[1] = node, node
+			root := &expr.RootExpr{Types: types}
 			roots := []eval.Root{root}
 			before, err := snapshotPreparedDesign(roots)
 			require.NoError(t, err)
 			test.mutate(root)
-			after, wantErr := snapshotPreparedDesign(roots)
+			runtime.GC()
 			path, gotErr := before.changedPath(roots)
+			after, wantErr := snapshotPreparedDesign(roots)
 			if wantErr != nil {
 				require.EqualError(t, gotErr, wantErr.Error())
 				require.Empty(t, path)
@@ -64,6 +74,29 @@ func TestPreparedDesignDirectComparisonMatchesSnapshots(t *testing.T) {
 			require.Equal(t, firstSnapshotDifference(before, after), path)
 		})
 	}
+}
+
+func TestPreparedDesignSnapshotRetainsRemovedObjects(t *testing.T) {
+	attribute := &expr.AttributeExpr{Type: expr.String, Description: "original"}
+	removed := weak.Make(attribute)
+	root := &expr.RootExpr{Types: []expr.UserType{&expr.UserTypeExpr{
+		TypeName: "Record", AttributeExpr: attribute,
+	}}}
+	roots := []eval.Root{root}
+	snapshot, err := snapshotPreparedDesign(roots)
+	require.NoError(t, err)
+	root.Types = nil
+
+	for range 3 {
+		runtime.GC()
+		// The saved snapshot must retain removed objects so their addresses cannot
+		// be reused by later design values and hide a replacement.
+		require.NotNil(t, removed.Value())
+		changed, err := snapshot.changedPath(roots)
+		require.NoError(t, err)
+		require.Equal(t, "roots[0].Types", changed)
+	}
+	runtime.KeepAlive(snapshot)
 }
 
 func TestPreparedDesignDirectComparisonRootCount(t *testing.T) {
