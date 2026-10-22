@@ -1,4 +1,39 @@
-## Unreleased: forwarding existing gRPC errors
+# Upgrading to Goa v3.35.0
+
+Select the exact versions below only after their tags are available. Publication
+of the Goa tag does not itself publish the plugins or examples tags.
+
+Goa's root and nested JSON-RPC module files require **Go 1.27.3**, without a
+toolchain directive. Because Go modules select the maximum required `go`
+version across the dependency graph, upgrading to Goa v3.35.0 ensures
+downstream services build with Go 1.27.3 or later, incorporating:
+
+- **Go 1.27.3 (`CVE-2026-111943` in `crypto/x509`):** blocks trust in eight
+  distrusted intermediate certificate authority (CA) SubjectPublicKeyInfo
+  (SPKI) hashes during X.509 certificate chain verification across Linux/Unix,
+  macOS, and Windows—critical for static and distroless container images where
+  operating-system or browser revocation lists are not consulted.
+- **Go 1.27.2 (15 standard-library and toolchain security fixes):** addresses
+  HTTP/2 server crashes and HPACK encoder races (`CVE-2026-97032`), HTTP/2
+  memory and CPU exhaustion (`CVE-2026-78659`, `CVE-2026-78660`,
+  `CVE-2026-78667`, `CVE-2026-78669`), double flow-control refunds
+  (`CVE-2026-78663`), HTTP/1 `CONNECT` desynchronization (`CVE-2026-56866`,
+  `CVE-2026-94439`), `net/textproto` and `mime/multipart` header limit bypasses
+  (`CVE-2026-94440`), `crypto/tls` malformed ECH extension handling
+  (`CVE-2026-97031`), `html/template` escaping (`CVE-2026-94448`,
+  `CVE-2026-97030`), `os.Root` junction traversal (`CVE-2026-56857`), and
+  `cmd/go` checksum database checks (`CVE-2026-94444`, `CVE-2026-94447`).
+
+The code changes merged for v3.35.0 passed CI on Go 1.27.3 on Ubuntu and
+Windows; Windows does not run the nested JSON-RPC suite. A declared minimum is
+not a claim that every dependency graph was tested on that version.
+
+The v3.35.0 sections below describe the current upgrade. The v3.34.0 and
+v3.33.0 sections and the earlier v3.31/v3.32 migrations are retained as
+historical guidance; the installation and regeneration sections select the
+current target after publication.
+
+## v3.35.0: forwarding existing gRPC errors
 
 A generated server now forwards an existing gRPC error's code and ordered
 details without appending a generic permanent fault when no Goa service error
@@ -17,7 +52,7 @@ failure should return a Goa service error with its declared traits. There is no
 protobuf or stored-data change. Rolling back the server
 runtime restores the previous appended fault details.
 
-# Unreleased: HTTP path parameter identity
+## v3.35.0: HTTP path parameter identity
 
 Generated HTTP clients now keep a slash inside a single path parameter instead
 of treating it as another route segment. The HTTP router also preserves literal
@@ -46,7 +81,7 @@ regenerated array decoders with the old runtime, which can decode array values
 twice. A rollback also restores the old scalar path behavior, so stop depending
 on corrected slash and literal-percent handling before rolling back.
 
-# Unreleased: reading union values in Go templates
+## v3.35.0: reading union values in Go templates
 
 Generated unions now provide `Value() (any, error)`. It returns the selected
 branch's original typed value, including an empty string, zero, or false. An
@@ -62,7 +97,7 @@ and client/server wire contracts are unchanged. No coordinated deployment or
 data migration is required. Rolling back removes `Value`, so regenerate and
 update templates that use it before rolling back.
 
-# Unreleased: unions with distinct JSON kinds
+## v3.35.0: unions with distinct JSON kinds
 
 Inside a `OneOf` declaration, add `Meta("oneof:json:untagged")` to write the
 selected value directly. An array branch becomes `[{"uri":"file://record"}]`,
@@ -90,7 +125,7 @@ the tagged and untagged wire values differ; roll back both peers together.
 Migrate persisted service JSON before changing its mapping. New APIs can use
 the mapping without a data migration. Goa does not migrate application storage.
 
-# Unreleased: selected result views inside union branches
+## v3.35.0: selected result views inside union branches
 
 A result type used in a `OneOf` branch now respects its declared `View`.
 For example, a receipt branch with `View("public")` sends only the receipt's
@@ -116,7 +151,7 @@ function must accept the planned source Go type and return the planned target Go
 type. The transform plan writes its calls and excludes its body and children that
 have no other caller. Existing `BindHelperDefinition` behavior is unchanged.
 
-# Unreleased: object unions with a flat JSON discriminator
+## v3.35.0: object unions with a flat JSON discriminator
 
 Inside a `OneOf` declaration, add `Meta("oneof:json:flatten")` to encode the
 selected object's fields beside the discriminator. For example, selecting a
@@ -145,7 +180,7 @@ Generated HTTP and JSON-RPC clients, servers and command builders compile with
 both union mappings. Regenerate affected transports; service interfaces and
 wire data for existing tagged unions remain unchanged.
 
-# Unreleased: service-specific HTTP body field names
+## v3.35.0: service-specific HTTP body field names
 
 Several methods in one service can now reuse nested types with `BodyFieldName`
 mappings without generation failing to order duplicate preferred type names.
@@ -178,22 +213,32 @@ adding a mapping to an existing HTTP API, since its JSON property names change.
 Rollback requires restoring the matching generated clients and servers. Existing
 designs without mappings need no changes.
 
-# Upgrading to Goa v3.34.0
+## v3.35.0: upgrade order and rollback
 
-Select the exact versions below only after their tags are available. Publication
-of the Goa tag does not itself publish the plugins or examples tags.
-
-Goa's root and nested JSON-RPC module files require **Go 1.27.3**, without a
-toolchain directive.
-The code changes merged for v3.34.0 each passed CI on Go 1.26.8 and 1.27.1 on
-Ubuntu and Windows; Windows does not run the nested JSON-RPC suite. Go 1.26.0 itself
-was not tested. A declared minimum is not a claim that every dependency graph
-was tested on that version.
-
-The v3.34.0 sections below describe the current upgrade. The v3.33.0 sections
-and the earlier v3.31/v3.32 migrations are retained as historical guidance;
-the installation and regeneration sections select the current target after
-publication.
+1. Ensure your build environment has **Go 1.27.3 or later** installed. After
+   publication, install the same exact version of the Goa module and command as
+   shown in the installation section below, update official plugins in the same
+   application change when used, and regenerate the complete design.
+2. Regenerate HTTP server code and deploy it together with the upgraded Goa
+   runtime, even when no design files changed, so generated array path decoders
+   own their percent-decoding pass alongside the updated router. Roll back the
+   runtime and generated HTTP server code together.
+3. Regenerate and deploy clients and servers together when:
+   - a `OneOf` branch uses a non-default `View` whose excluded fields an older
+     client validator previously required;
+   - an endpoint opts into `Meta("oneof:json:flatten")`,
+     `Meta("oneof:json:untagged")`, or `BodyFieldName(...)`, because those
+     options change the JSON wire representation.
+   Roll back both peers together for any of these wire changes.
+4. Rebuilding gRPC servers preserves existing upstream gRPC status codes and
+   details when forwarding unhandled errors. Clients generated with v3.34.0 or
+   later already preserve native cancellation and deadline responses; regenerate
+   older gRPC clients before or with the server update.
+5. Union `Value()` template accessors, gRPC collection union branches, raw JSON
+   preservation in named types and tagged unions, protobuf inline object and
+   qualified message fixes, and code generation performance improvements
+   require only regeneration and a normal build; no stored-data migration
+   applies.
 
 ## v3.34.0: generated URL-encoded form requests
 
@@ -756,7 +801,7 @@ preview.
 | Required gRPC scalar fields | Regenerate protobuf code and update direct message literals. Coordinate peers when required zero or empty values matter. |
 | JSON-RPC errors, selected views, or server streams | Update both generated peers and custom clients for the changed envelopes and stream lifecycle. JSON-RPC WebSocket generation has been removed. |
 | Dynamic gRPC views or optional primitive HTTP SSE data | Regenerate and deploy both peers together for the cases listed under coordinated deployment. |
-| Code-generation plugins | Upgrade `goa.design/plugins/v3` to v3.34.0 and migrate custom plugins that declare names or call removed generator APIs. |
+| Code-generation plugins | Upgrade `goa.design/plugins/v3` to v3.35.0 and migrate custom plugins that declare names or call removed generator APIs. |
 
 There is no persisted-data migration. Keep the previous binaries, dependency
 versions, design, and generated tree available for rollback.
@@ -814,15 +859,15 @@ Review the matching migration sections if your project has any of these characte
 Test ordinary HTTP-only services as well. Review the generated diff even when
 none of the specialized migrations below applies.
 
-## Install v3.34.0 after publication
+## Install v3.35.0 after publication
 
 After the exact tags are published and verified, start from a branch with the
 current generated tree committed. Install both the Goa module and the `goa`
 command from the same release version:
 
 ```bash
-go get goa.design/goa/v3@v3.34.0
-go install goa.design/goa/v3/cmd/goa@v3.34.0
+go get goa.design/goa/v3@v3.35.0
+go install goa.design/goa/v3/cmd/goa@v3.35.0
 goa version
 ```
 
@@ -830,7 +875,7 @@ The Go command records the same release version in `go.mod`. The installed
 command reports the same version:
 
 ```text
-Goa version v3.34.0
+Goa version v3.35.0
 ```
 
 Do not use an older `goa` command with the new module. Also install the
@@ -847,11 +892,11 @@ If your design imports the official plugins, update that module in the same
 application change:
 
 ```bash
-go get goa.design/plugins/v3@v3.34.0
+go get goa.design/plugins/v3@v3.35.0
 ```
 
 Wait for the matching plugins/examples tags before selecting them; their
-publication is not implied by the Goa tag. Use v3.34.0 when copying examples
+publication is not implied by the Goa tag. Use v3.35.0 when copying examples
 for this target. Custom plugins must complete
 the generator-library migration below before regenerating an application.
 
