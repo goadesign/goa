@@ -53,36 +53,39 @@ func TestFilesExamplesGenerateOnlyCallableClients(t *testing.T) {
 		},
 	}
 
+	cases := make([]generatedTestDir, 0, len(tests))
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			directory, paths := renderCompleteExample(t, test.design)
-			testutil.CompareOrUpdateGolden(
-				t,
-				strings.Join(paths, "\n"),
-				filepath.Join("testdata", "golden", "files_client", test.name, "paths.golden"),
-			)
+		directory, paths := renderCompleteExample(t, test.design)
+		testutil.CompareOrUpdateGolden(
+			t,
+			strings.Join(paths, "\n"),
+			filepath.Join("testdata", "golden", "files_client", test.name, "paths.golden"),
+		)
 
-			for _, path := range test.present {
-				require.Contains(t, paths, filepath.ToSlash(path))
-				content, err := os.ReadFile(filepath.Join(directory, path))
-				require.NoError(t, err)
-				testutil.AssertGo(
-					t,
-					filepath.Join("testdata", "golden", "files_client", test.name, path+".golden"),
-					string(content),
-				)
+		for _, path := range test.present {
+			require.Contains(t, paths, filepath.ToSlash(path))
+			content, err := os.ReadFile(filepath.Join(directory, path))
+			require.NoError(t, err)
+			testutil.AssertGo(
+				t,
+				filepath.Join("testdata", "golden", "files_client", test.name, path+".golden"),
+				string(content),
+			)
+		}
+		for _, path := range test.absent {
+			require.NotContains(t, paths, path)
+		}
+		for _, path := range paths {
+			for _, fragment := range test.absentFragments {
+				require.NotContains(t, path, fragment)
 			}
-			for _, path := range test.absent {
-				require.NotContains(t, paths, path)
-			}
-			for _, path := range paths {
-				for _, fragment := range test.absentFragments {
-					require.NotContains(t, path, fragment)
-				}
-			}
-			runGeneratedTests(t, directory)
+		}
+		cases = append(cases, generatedTestDir{
+			name: test.name,
+			dir:  directory,
 		})
 	}
+	runGeneratedTestDirs(t, cases)
 }
 
 // renderCompleteExample assembles service, transport, and example files,

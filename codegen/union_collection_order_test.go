@@ -14,9 +14,14 @@ import (
 // Distinct element types detect a consumed-but-swapped helper call even when
 // the render cursor has consumed every planned occurrence.
 func TestUnionCollectionHelperOrder(t *testing.T) {
+	t.Parallel()
+	files := make(map[string]string)
+	caseIndex := 0
 	for _, collection := range []string{"map", "slice"} {
 		for _, nesting := range []string{"flat", "array", "union"} {
 			for _, directFirst := range []bool{false, true} {
+				caseDir := fmt.Sprintf("case%d", caseIndex)
+				caseIndex++
 				t.Run(fmt.Sprintf("%s/%s/direct-first=%t", collection, nesting, directFirst), func(t *testing.T) {
 					shape := func(prefix string) (*expr.AttributeExpr, string) {
 						var declarations strings.Builder
@@ -81,7 +86,7 @@ func (v *%[1]s) SetDirect(value %[3]s) { v.kind = "direct"; v.direct = value }
 					require.Equal(t, helpers, repeatedHelpers)
 
 					var generated strings.Builder
-					generated.WriteString("package fixture\n")
+					generated.WriteString("package " + caseDir + "\n")
 					generated.WriteString(sourceTypes)
 					generated.WriteString(targetTypes)
 					fmt.Fprintf(&generated, "func convert(source *SourceChoice) *TargetChoice {\n%s\nreturn target\n}\n", code)
@@ -124,18 +129,17 @@ func (v *%[1]s) SetDirect(value %[3]s) { v.kind = "direct"; v.direct = value }
 						values = append(values, extra)
 					}
 					var checks strings.Builder
-					checks.WriteString("package fixture\nimport(\"reflect\";\"testing\")\nfunc TestConvert(t *testing.T) {\n")
+					checks.WriteString("package " + caseDir + "\nimport(\"reflect\";\"testing\")\nfunc TestConvert(t *testing.T) {\n")
 					checks.WriteString("tests := []struct { source *SourceChoice; target *TargetChoice }{\n")
 					for _, value := range values {
 						fmt.Fprintf(&checks, "{%s, %s},\n", strings.ReplaceAll(value, "PREFIX", "Source"), strings.ReplaceAll(value, "PREFIX", "Target"))
 					}
 					checks.WriteString("}\nfor i, test := range tests {\nif got := convert(test.source); !reflect.DeepEqual(got, test.target) { t.Errorf(\"case %d: got %#v, want %#v\", i, got, test.target) }\n}\n}\n")
-					runCollectionFixture(t, map[string]string{
-						"convert.go":      generated.String(),
-						"convert_test.go": checks.String(),
-					})
+					files[caseDir+"/convert.go"] = generated.String()
+					files[caseDir+"/convert_test.go"] = checks.String()
 				})
 			}
 		}
 	}
+	runCollectionFixture(t, files)
 }

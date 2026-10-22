@@ -137,24 +137,24 @@ func TestExternalConversionReachabilityCoversEveryServiceValue(t *testing.T) {
 			})
 		},
 	}
+	compiled := make([]compiledServiceCase, 0, len(tests))
 	for name, use := range tests {
-		t.Run(name, func(t *testing.T) {
-			root := codegen.RunDSL(t, func() {
-				mapped := dsl.Type("Mapped", func() {
-					dsl.ConvertTo(nestedalpha.Child{})
-					dsl.Attribute("value", dsl.String)
-					dsl.Required("value")
-				})
-				use(mapped)
+		root := codegen.RunDSL(t, func() {
+			mapped := dsl.Type("Mapped", func() {
+				dsl.ConvertTo(nestedalpha.Child{})
+				dsl.Attribute("value", dsl.String)
+				dsl.Required("value")
 			})
-			plan := retainedServicePlanForPackage(t, root)
-			files, err := Files(plan)
-			require.NoError(t, err)
-			conversionPath := filepath.Join(codegen.Gendir, "reach", "convert.go")
-			require.Len(t, filesAtPath(files, conversionPath), 1)
-			compileGeneratedServiceFiles(t, files)
+			use(mapped)
 		})
+		plan := retainedServicePlanForPackage(t, root)
+		files, err := Files(plan)
+		require.NoError(t, err)
+		conversionPath := filepath.Join(codegen.Gendir, "reach", "convert.go")
+		require.Len(t, filesAtPath(files, conversionPath), 1)
+		compiled = append(compiled, compiledServiceCase{name: name, files: files})
 	}
+	compileGeneratedServiceCases(t, compiled)
 }
 
 // TestExternalConversionsAggregateAcrossRoots catches root-local conversion

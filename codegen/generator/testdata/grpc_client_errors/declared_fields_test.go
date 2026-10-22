@@ -23,12 +23,14 @@ import (
 )
 
 func TestGeneratedDeclaredOwnedGoaFields(t *testing.T) {
+	t.Parallel()
 	for mask := range 8 {
 		for _, empty := range []bool{false, true} {
 			for _, joined := range []bool{false, true} {
 				for _, wrapped := range []bool{false, true} {
 					for _, method := range []string{"ReadErrors", "RetryErrors"} {
 						t.Run(fmt.Sprintf("traits=%d/empty=%t/joined=%t/wrapped=%t/%s", mask, empty, joined, wrapped, method), func(t *testing.T) {
+							t.Parallel()
 							var cause error = errors.New("retained failure")
 							if joined {
 								cause = errors.Join(status.Error(codes.Canceled, "independent stop"), errors.New("cleanup failed"))

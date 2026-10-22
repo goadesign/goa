@@ -60,6 +60,69 @@ func NewMappedAttributeExpr(att *AttributeExpr) *MappedAttributeExpr {
 	return ma
 }
 
+// NewShallowMappedAttributeExpr creates a mapped attribute expression that
+// copies only the top-level object attribute and its immediate field slice
+// without deep-copying nested attributes or metadata. If multiple immediate
+// fields reference distinct copies of the same UserType origin, later fields
+// reuse the first seen UserType so default lookups match DupAtt semantics.
+func NewShallowMappedAttributeExpr(att *AttributeExpr) *MappedAttributeExpr {
+	if att == nil {
+		return NewEmptyMappedAttributeExpr()
+	}
+	srcObj := AsObject(att.Type)
+	if srcObj == nil {
+		panic("cannot create a mapped attribute with a non object attribute") // bug
+	}
+	var (
+		nameMap    = make(map[string]string)
+		reverseMap = make(map[string]string)
+		seenUTs    map[UserType]UserType
+		mappedObj  = make(Object, 0, len(*srcObj))
+	)
+	for _, nat := range *srcObj {
+		elems := strings.Split(nat.Name, ":")
+		fieldName := elems[0]
+		if len(elems) > 1 {
+			nameMap[fieldName] = elems[1]
+			reverseMap[elems[1]] = fieldName
+		}
+		fieldAttr := nat.Attribute
+		if fieldAttr != nil {
+			if ut, ok := fieldAttr.Type.(UserType); ok {
+				if seenUTs == nil {
+					seenUTs = make(map[UserType]UserType, len(*srcObj))
+				}
+				origin := ut.Origin()
+				if first, exists := seenUTs[origin]; exists {
+					if first != ut {
+						copied := *fieldAttr
+						copied.Type = first
+						fieldAttr = &copied
+					}
+				} else {
+					seenUTs[origin] = ut
+				}
+			}
+		}
+		mappedObj.Set(fieldName, fieldAttr)
+	}
+	shallow := *att
+	if att.Validation != nil {
+		shallow.Validation = att.Validation.Dup()
+	} else if ut, ok := att.Type.(UserType); ok {
+		if val := ut.Attribute().Validation; val != nil {
+			shallow.Validation = val.Dup()
+		}
+	}
+	shallow.UserExamples = shallow.ExtractUserExamples()
+	shallow.Type = &mappedObj
+	return &MappedAttributeExpr{
+		AttributeExpr: &shallow,
+		nameMap:       nameMap,
+		reverseMap:    reverseMap,
+	}
+}
+
 // Remap recomputes the name mappings from the inner attribute. Use this if
 // the underlying attribute is modified after the mapped attribute has been
 // initially created.

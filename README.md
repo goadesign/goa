@@ -115,7 +115,7 @@ Here, `genhello` is the generated `gen/hello` package. The generated transports 
 
 ### Try it
 
-Start with **Go 1.26 or later**; Go 1.27.1 is recommended:
+Start with **Go 1.27.3 or later**:
 
 ```bash
 mkdir hello && cd hello

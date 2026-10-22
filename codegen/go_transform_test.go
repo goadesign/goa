@@ -2517,7 +2517,7 @@ func compileTransformSource(t *testing.T, source string) {
 		0o600,
 	))
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "transform.go"), []byte(source), 0o600))
-	command := exec.Command("go", "test", "./...")
+	command := exec.Command("go", "build", "./...")
 	command.Dir = dir
 	output, err := command.CombinedOutput()
 	if err != nil {

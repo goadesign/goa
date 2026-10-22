@@ -36,7 +36,9 @@ type (
 	// already matched during an audit. Child calls restore their parent on return.
 	designSnapshotter struct {
 		record       func([]byte, reflect.Type, string)
+		recordBytes  func([]byte, reflect.Type, []byte)
 		path         []byte
+		scratch      []byte
 		savedPath    *designPath
 		parentPath   *designPath
 		parentLength int
@@ -97,7 +99,7 @@ func snapshotPreparedDesign(roots []eval.Root) (*designSnapshot, error) {
 		snapshot.states = append(snapshot.states, designState{path: saved, typ: typ, value: value})
 	}
 	for i, root := range roots {
-		if err := snapshotter.appendValue(fmt.Appendf(snapshotter.path[:0], "roots[%d]", i), reflect.ValueOf(root)); err != nil {
+		if err := snapshotter.appendValue(appendIndexPath(append(snapshotter.path[:0], "roots"...), i), reflect.ValueOf(root)); err != nil {
 			return nil, err
 		}
 	}
@@ -127,8 +129,10 @@ func orderedMapEntries(value reflect.Value) ([]mapSnapshotEntry, error) {
 			order:    valueOrder,
 		})
 	}
-	if err := validateMapOrderTypes(entries); err != nil {
-		return nil, err
+	if len(entries) > 1 && (typeCanHoldInterface(value.Type().Key()) || typeCanHoldInterface(value.Type().Elem())) {
+		if err := validateMapOrderTypes(entries); err != nil {
+			return nil, err
+		}
 	}
 	slices.SortFunc(entries, func(left, right mapSnapshotEntry) int {
 		if compared := compareMapOrderValue(left.keyOrder, right.keyOrder); compared != 0 {
@@ -137,6 +141,26 @@ func orderedMapEntries(value reflect.Value) ([]mapSnapshotEntry, error) {
 		return compareMapOrderValue(left.order, right.order)
 	})
 	return entries, nil
+}
+
+// typeCanHoldInterface reports whether values of typ can contain an interface
+// whose concrete runtime type might differ across map entries.
+func typeCanHoldInterface(typ reflect.Type) bool {
+	switch typ.Kind() {
+	case reflect.Interface:
+		return true
+	case reflect.Struct:
+		for i := range typ.NumField() {
+			if typeCanHoldInterface(typ.Field(i).Type) {
+				return true
+			}
+		}
+		return false
+	case reflect.Array:
+		return typeCanHoldInterface(typ.Elem())
+	default:
+		return false
+	}
 }
 
 // validateMapOrderTypes rejects two runtime types that print the same name but
@@ -338,9 +362,34 @@ func appendMapEntryPath(path []byte, index int, key reflect.Value) []byte {
 	return append(strconv.AppendInt(append(path, '{'), int64(index), 10), '}')
 }
 
-// formatPointer returns a pointer address as text for a change report.
-func formatPointer(pointer uintptr) string {
-	return "0x" + strconv.FormatUint(uint64(pointer), 16)
+// appendIndexPath appends "[index]" to path without fmt formatting overhead.
+func appendIndexPath(path []byte, index int) []byte {
+	return append(strconv.AppendInt(append(path, '['), int64(index), 10), ']')
+}
+
+// appendPointer appends a pointer address in "0x..." hex form to dst.
+func appendPointer(dst []byte, pointer uintptr) []byte {
+	return strconv.AppendUint(append(dst, '0', 'x'), uint64(pointer), 16)
+}
+
+// emitBytes passes a formatted byte slice to recordBytes when present, or
+// converts it to a string for record.
+func (s *designSnapshotter) emitBytes(path []byte, typ reflect.Type, value []byte) {
+	if s.recordBytes != nil {
+		s.recordBytes(path, typ, value)
+		return
+	}
+	s.record(path, typ, string(value))
+}
+
+// recordString passes a constant or existing string to recordBytes or record.
+func (s *designSnapshotter) recordString(path []byte, typ reflect.Type, value string) {
+	if s.recordBytes != nil {
+		s.scratch = append(s.scratch[:0], value...)
+		s.recordBytes(path, typ, s.scratch)
+		return
+	}
+	s.record(path, typ, value)
 }
 
 // changedPath returns the first design field that differs from the saved copy.
@@ -352,8 +401,10 @@ func (s *designSnapshot) changedPath(roots []eval.Root) (string, error) {
 
 	var changed string
 	index := 0
-	current := &designSnapshotter{visited: make(map[designVisit]struct{})}
-	current.record = func(path []byte, typ reflect.Type, value string) {
+	current := &designSnapshotter{
+		visited: make(map[designVisit]struct{}, len(s.references)),
+	}
+	current.recordBytes = func(path []byte, typ reflect.Type, value []byte) {
 		if changed == "" {
 			parent, prefixLength := current.parentPath, current.parentLength
 			// Conversion exemplar types extend the current struct path directly.
@@ -361,7 +412,7 @@ func (s *designSnapshot) changedPath(roots []eval.Root) (string, error) {
 				parent, prefixLength = current.savedPath, len(current.path)
 			}
 			if index >= len(s.states) || !s.states[index].path.matches(path, parent, prefixLength) ||
-				s.states[index].typ != typ || s.states[index].value != value {
+				s.states[index].typ != typ || s.states[index].value != string(value) {
 				changed = string(path)
 			} else {
 				current.savedPath = s.states[index].path
@@ -372,7 +423,7 @@ func (s *designSnapshot) changedPath(roots []eval.Root) (string, error) {
 	// Keep walking after a difference: an unsupported value must still return
 	// its error, even when an earlier value already changed.
 	for i, root := range roots {
-		if err := current.appendValue(fmt.Appendf(current.path[:0], "roots[%d]", i), reflect.ValueOf(root)); err != nil {
+		if err := current.appendValue(appendIndexPath(append(current.path[:0], "roots"...), i), reflect.ValueOf(root)); err != nil {
 			return "", err
 		}
 	}
@@ -401,52 +452,64 @@ func (s *designSnapshotter) appendValue(path []byte, value reflect.Value) error 
 		s.parentPath, s.parentLength = previousParent, previousLength
 	}()
 	if !value.IsValid() {
-		s.record(s.path, nil, "invalid")
+		s.recordString(s.path, nil, "invalid")
 		return nil
 	}
 	typ := value.Type()
 	switch value.Kind() {
 	case reflect.Bool:
-		s.record(s.path, typ, strconv.FormatBool(value.Bool()))
+		s.scratch = strconv.AppendBool(s.scratch[:0], value.Bool())
+		s.emitBytes(s.path, typ, s.scratch)
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		s.record(s.path, typ, strconv.FormatInt(value.Int(), 10))
+		s.scratch = strconv.AppendInt(s.scratch[:0], value.Int(), 10)
+		s.emitBytes(s.path, typ, s.scratch)
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		s.record(s.path, typ, strconv.FormatUint(value.Uint(), 10))
+		s.scratch = strconv.AppendUint(s.scratch[:0], value.Uint(), 10)
+		s.emitBytes(s.path, typ, s.scratch)
 	case reflect.Float32:
-		s.record(s.path, typ, strconv.FormatUint(uint64(math.Float32bits(float32(value.Float()))), 16))
+		s.scratch = strconv.AppendUint(s.scratch[:0], uint64(math.Float32bits(float32(value.Float()))), 16)
+		s.emitBytes(s.path, typ, s.scratch)
 	case reflect.Float64:
-		s.record(s.path, typ, strconv.FormatUint(math.Float64bits(value.Float()), 16))
+		s.scratch = strconv.AppendUint(s.scratch[:0], math.Float64bits(value.Float()), 16)
+		s.emitBytes(s.path, typ, s.scratch)
 	case reflect.Complex64:
 		complexValue := complex64(value.Complex())
-		s.record(s.path, typ, fmt.Sprintf("%x:%x", math.Float32bits(real(complexValue)), math.Float32bits(imag(complexValue))))
+		s.scratch = strconv.AppendUint(s.scratch[:0], uint64(math.Float32bits(real(complexValue))), 16)
+		s.scratch = append(s.scratch, ':')
+		s.scratch = strconv.AppendUint(s.scratch, uint64(math.Float32bits(imag(complexValue))), 16)
+		s.emitBytes(s.path, typ, s.scratch)
 	case reflect.Complex128:
 		complexValue := value.Complex()
-		s.record(s.path, typ, fmt.Sprintf("%x:%x", math.Float64bits(real(complexValue)), math.Float64bits(imag(complexValue))))
+		s.scratch = strconv.AppendUint(s.scratch[:0], math.Float64bits(real(complexValue)), 16)
+		s.scratch = append(s.scratch, ':')
+		s.scratch = strconv.AppendUint(s.scratch, math.Float64bits(imag(complexValue)), 16)
+		s.emitBytes(s.path, typ, s.scratch)
 	case reflect.String:
-		s.record(s.path, typ, value.String())
+		s.recordString(s.path, typ, value.String())
 	case reflect.Interface:
 		if value.IsNil() {
-			s.record(s.path, typ, "nil")
+			s.recordString(s.path, typ, "nil")
 			return nil
 		}
-		s.record(s.path, typ, value.Elem().Type().String())
+		s.recordString(s.path, typ, value.Elem().Type().String())
 		return s.appendValue(s.path, value.Elem())
 	case reflect.Pointer:
 		if value.IsNil() {
-			s.record(s.path, typ, "nil")
+			s.recordString(s.path, typ, "nil")
 			return nil
 		}
 		pointer := value.Pointer()
 		if s.references != nil {
 			*s.references = append(*s.references, value)
 		}
-		s.record(s.path, typ, formatPointer(pointer))
+		s.scratch = appendPointer(s.scratch[:0], pointer)
+		s.emitBytes(s.path, typ, s.scratch)
 		if s.seen(designVisit{typ: typ, kind: value.Kind(), ptr: pointer}) {
 			return nil
 		}
 		return s.appendValue(s.path, value.Elem())
 	case reflect.Struct:
-		s.record(s.path, typ, "struct")
+		s.recordString(s.path, typ, "struct")
 		if typ == typeMapType {
 			if err := s.appendValue(append(s.path, ".User"...), value.FieldByName("User")); err != nil {
 				return err
@@ -460,42 +523,51 @@ func (s *designSnapshotter) appendValue(path []byte, value reflect.Value) error 
 			}
 		}
 	case reflect.Array:
-		s.record(s.path, typ, strconv.Itoa(value.Len()))
+		s.scratch = strconv.AppendInt(s.scratch[:0], int64(value.Len()), 10)
+		s.emitBytes(s.path, typ, s.scratch)
 		for i := range value.Len() {
-			if err := s.appendValue(fmt.Appendf(s.path, "[%d]", i), value.Index(i)); err != nil {
+			if err := s.appendValue(appendIndexPath(s.path, i), value.Index(i)); err != nil {
 				return err
 			}
 		}
 	case reflect.Slice:
 		if value.IsNil() {
-			s.record(s.path, typ, "nil")
+			s.recordString(s.path, typ, "nil")
 			return nil
 		}
 		pointer := value.Pointer()
 		if s.references != nil {
 			*s.references = append(*s.references, value)
 		}
-		s.record(s.path, typ, fmt.Sprintf("%s:%d:%d", formatPointer(pointer), value.Len(), value.Cap()))
+		s.scratch = appendPointer(s.scratch[:0], pointer)
+		s.scratch = append(s.scratch, ':')
+		s.scratch = strconv.AppendInt(s.scratch, int64(value.Len()), 10)
+		s.scratch = append(s.scratch, ':')
+		s.scratch = strconv.AppendInt(s.scratch, int64(value.Cap()), 10)
+		s.emitBytes(s.path, typ, s.scratch)
 		visit := designVisit{typ: typ, kind: value.Kind(), ptr: pointer, extent: value.Cap()}
 		if s.seen(visit) {
 			return nil
 		}
 		reachable := value.Slice(0, value.Cap())
 		for i := range reachable.Len() {
-			if err := s.appendValue(fmt.Appendf(s.path, "[%d]", i), reachable.Index(i)); err != nil {
+			if err := s.appendValue(appendIndexPath(s.path, i), reachable.Index(i)); err != nil {
 				return err
 			}
 		}
 	case reflect.Map:
 		if value.IsNil() {
-			s.record(s.path, typ, "nil")
+			s.recordString(s.path, typ, "nil")
 			return nil
 		}
 		pointer := value.Pointer()
 		if s.references != nil {
 			*s.references = append(*s.references, value)
 		}
-		s.record(s.path, typ, fmt.Sprintf("%s:%d", formatPointer(pointer), value.Len()))
+		s.scratch = appendPointer(s.scratch[:0], pointer)
+		s.scratch = append(s.scratch, ':')
+		s.scratch = strconv.AppendInt(s.scratch, int64(value.Len()), 10)
+		s.emitBytes(s.path, typ, s.scratch)
 		if s.seen(designVisit{typ: typ, kind: value.Kind(), ptr: pointer}) {
 			return nil
 		}
@@ -515,23 +587,24 @@ func (s *designSnapshotter) appendValue(path []byte, value reflect.Value) error 
 		}
 	case reflect.Func:
 		if value.IsNil() {
-			s.record(s.path, typ, "nil")
+			s.recordString(s.path, typ, "nil")
 			return nil
 		}
 		// Design evaluation has finished, so functions stored by Goa or a plugin
 		// will not run here. Record their type and pointer address without invoking
 		// them.
-		s.record(s.path, typ, formatPointer(value.Pointer()))
+		s.scratch = appendPointer(s.scratch[:0], value.Pointer())
+		s.emitBytes(s.path, typ, s.scratch)
 	case reflect.Chan:
 		if !value.IsNil() {
 			return fmt.Errorf("snapshot prepared design at %s: unsupported non-nil channel %s", s.path, typ)
 		}
-		s.record(s.path, typ, "nil")
+		s.recordString(s.path, typ, "nil")
 	case reflect.UnsafePointer:
 		if value.Pointer() != 0 {
 			return fmt.Errorf("snapshot prepared design at %s: unsupported non-nil unsafe pointer %s", s.path, typ)
 		}
-		s.record(s.path, typ, "nil")
+		s.recordString(s.path, typ, "nil")
 	default:
 		return fmt.Errorf("snapshot prepared design at %s: unsupported %s value", s.path, value.Kind())
 	}
@@ -542,10 +615,10 @@ func (s *designSnapshotter) appendValue(path []byte, value reflect.Value) error 
 // Generators do not read fields or other runtime state from that value.
 func (s *designSnapshotter) appendExternalType(path []byte, value reflect.Value) {
 	if value.IsNil() {
-		s.record(path, value.Type(), "nil")
+		s.recordString(path, value.Type(), "nil")
 		return
 	}
-	s.record(path, value.Elem().Type(), "external exemplar type")
+	s.recordString(path, value.Elem().Type(), "external exemplar type")
 }
 
 // seen records a reference and reports whether this exact node was already traversed.

@@ -97,145 +97,146 @@ func TestRequiredInlineArrayRejectsNil(t *testing.T) {
 `
 
 func TestInlineObjectProtobufGeneration(t *testing.T) {
+	var compiled []protobufCompileCase
 	for _, name := range []string{"inline", "extended", "collections"} {
 		extended := name == "extended"
-		t.Run(name, func(t *testing.T) {
-			var previous []byte
-			var previousMessages []byte
-			for run := 0; run < 2; run++ {
-				root := RunGRPCDSL(t, func() {
-					base := dsl.Type("BaseAaa", func() {
-						dsl.Field(1, "session", func() {
-							dsl.Field(1, "reference", dsl.String)
-						})
+		var previous []byte
+		var previousMessages []byte
+		for run := 0; run < 2; run++ {
+			root := RunGRPCDSL(t, func() {
+				base := dsl.Type("BaseAaa", func() {
+					dsl.Field(1, "session", func() {
+						dsl.Field(1, "reference", dsl.String)
 					})
-					other := dsl.Type("Mmm", func() {
-						dsl.Field(1, "session", func() {
-							dsl.Field(1, "reference", dsl.String)
-						})
+				})
+				other := dsl.Type("Mmm", func() {
+					dsl.Field(1, "session", func() {
+						dsl.Field(1, "reference", dsl.String)
 					})
-					node := dsl.Type("Node", func() {
-						dsl.Field(1, "next", "Node")
-						dsl.Field(2, "value", dsl.String)
-					})
-					messageName := "Envelope"
+				})
+				node := dsl.Type("Node", func() {
+					dsl.Field(1, "next", "Node")
+					dsl.Field(2, "value", dsl.String)
+				})
+				messageName := "Envelope"
+				if extended {
+					messageName = "Zzz"
+				}
+				message := dsl.Type(messageName, func() {
 					if extended {
-						messageName = "Zzz"
+						dsl.Extend(base)
+						dsl.Required("session")
+						dsl.Field(10, "other", other)
 					}
-					message := dsl.Type(messageName, func() {
-						if extended {
-							dsl.Extend(base)
-							dsl.Required("session")
-							dsl.Field(10, "other", other)
-						}
-						dsl.Field(2, "detail", func() {
-							dsl.Meta("struct:name:proto", "Detail")
-							dsl.Field(1, "value", dsl.String)
-							dsl.Required("value")
-						})
-						dsl.Required("detail")
-						if name == "collections" {
-							dsl.Field(3, "rows", dsl.ArrayOf(&expr.Object{}, func() {
-								dsl.Field(1, "value", dsl.String)
-							}))
-							dsl.Field(4, "labels", dsl.MapOf(dsl.String, &expr.Object{}, func() {
-								dsl.Elem(func() {
-									dsl.Field(1, "value", dsl.String)
-								})
-							}))
-							dsl.Field(5, "matrix", dsl.ArrayOf(dsl.ArrayOf(&expr.Object{}, func() {
-								dsl.Field(1, "value", dsl.String)
-							})))
-							dsl.Field(11, "required_rows", dsl.ArrayOfRequired(&expr.Object{}, func() {
-								dsl.Field(1, "value", dsl.String)
-							}))
-							dsl.Field(6, "first", node)
-							dsl.Field(7, "second", node)
-							dsl.OneOf("choice", func() {
-								dsl.Field(8, "text", dsl.String)
-								dsl.Field(9, "object", func() {
-									dsl.Field(1, "value", dsl.String)
-								})
-							})
-						}
+					dsl.Field(2, "detail", func() {
+						dsl.Meta("struct:name:proto", "Detail")
+						dsl.Field(1, "value", dsl.String)
+						dsl.Required("value")
 					})
-					dsl.Service("records", func() {
-						read := func() {
-							dsl.Method("read", func() {
-								dsl.Payload(message)
-								dsl.Result(message)
+					dsl.Required("detail")
+					if name == "collections" {
+						dsl.Field(3, "rows", dsl.ArrayOf(&expr.Object{}, func() {
+							dsl.Field(1, "value", dsl.String)
+						}))
+						dsl.Field(4, "labels", dsl.MapOf(dsl.String, &expr.Object{}, func() {
+							dsl.Elem(func() {
+								dsl.Field(1, "value", dsl.String)
+							})
+						}))
+						dsl.Field(5, "matrix", dsl.ArrayOf(dsl.ArrayOf(&expr.Object{}, func() {
+							dsl.Field(1, "value", dsl.String)
+						})))
+						dsl.Field(11, "required_rows", dsl.ArrayOfRequired(&expr.Object{}, func() {
+							dsl.Field(1, "value", dsl.String)
+						}))
+						dsl.Field(6, "first", node)
+						dsl.Field(7, "second", node)
+						dsl.OneOf("choice", func() {
+							dsl.Field(8, "text", dsl.String)
+							dsl.Field(9, "object", func() {
+								dsl.Field(1, "value", dsl.String)
+							})
+						})
+					}
+				})
+				dsl.Service("records", func() {
+					read := func() {
+						dsl.Method("read", func() {
+							dsl.Payload(message)
+							dsl.Result(message)
+							dsl.GRPC(func() {})
+						})
+					}
+					baseMethod := func() {
+						if extended {
+							dsl.Method("base", func() {
+								dsl.Payload(base)
+								dsl.Result(base)
 								dsl.GRPC(func() {})
 							})
 						}
-						baseMethod := func() {
-							if extended {
-								dsl.Method("base", func() {
-									dsl.Payload(base)
-									dsl.Result(base)
-									dsl.GRPC(func() {})
-								})
-							}
-						}
-						if run == 0 {
-							read()
-							baseMethod()
-						} else {
-							baseMethod()
-							read()
-						}
-					})
-				})
-				generation, servicePlans := grpcServicePlans(t, []*expr.RootExpr{root})
-				plans, err := NewPlans(generation, PlanInput{Root: root, Service: servicePlans[0]})
-				require.NoError(t, err)
-				require.NoError(t, generation.Freeze())
-				require.NoError(t, servicePlans[0].Link())
-				require.NoError(t, plans[0].Link())
-				files, err := service.Files(servicePlans...)
-				require.NoError(t, err)
-				files = append(files, plans[0].ServerFiles()...)
-				files = append(files, plans[0].ClientFiles()...)
-				files = append(files, plans[0].ServerTypeFiles()...)
-				files = append(files, plans[0].ClientTypeFiles()...)
-				files = append(files, plans[0].ProtoFiles()...)
-				directory := t.TempDir()
-				writeProtobufDescriptorModule(t, directory)
-				var source []byte
-				var sessionMessage string
-				for _, file := range files {
-					path, err := file.Render(directory)
-					require.NoError(t, err)
-					if filepath.Ext(path) == ".proto" {
-						source, err = os.ReadFile(path)
-						require.NoError(t, err)
-						descriptor := describeGeneratedProto(t, path)
-						for _, message := range descriptor.GetMessageType() {
-							if message.GetName() == "ReadRequest" && extended {
-								qualified := fieldNamed(t, message, "session").GetTypeName()
-								sessionMessage = qualified[strings.LastIndex(qualified, ".")+1:]
-							}
-						}
-						descriptor.Service = nil
-						slices.SortFunc(descriptor.MessageType, func(left, right *descriptorpb.DescriptorProto) int {
-							return cmp.Compare(left.GetName(), right.GetName())
-						})
-						encoded, err := proto.MarshalOptions{Deterministic: true}.Marshal(descriptor)
-						require.NoError(t, err)
-						if run > 0 {
-							require.Equal(t, previousMessages, encoded)
-						}
-						previousMessages = encoded
 					}
+					if run == 0 {
+						read()
+						baseMethod()
+					} else {
+						baseMethod()
+						read()
+					}
+				})
+			})
+			generation, servicePlans := grpcServicePlans(t, []*expr.RootExpr{root})
+			plans, err := NewPlans(generation, PlanInput{Root: root, Service: servicePlans[0]})
+			require.NoError(t, err)
+			require.NoError(t, generation.Freeze())
+			require.NoError(t, servicePlans[0].Link())
+			require.NoError(t, plans[0].Link())
+			files, err := service.Files(servicePlans...)
+			require.NoError(t, err)
+			files = append(files, plans[0].ServerFiles()...)
+			files = append(files, plans[0].ClientFiles()...)
+			files = append(files, plans[0].ServerTypeFiles()...)
+			files = append(files, plans[0].ClientTypeFiles()...)
+			files = append(files, plans[0].ProtoFiles()...)
+			directory := t.TempDir()
+			writeProtobufDescriptorModule(t, directory)
+			var source []byte
+			var sessionMessage string
+			for _, file := range files {
+				path, err := file.Render(directory)
+				require.NoError(t, err)
+				if filepath.Ext(path) == ".proto" {
+					source, err = os.ReadFile(path)
+					require.NoError(t, err)
+					descriptor := describeGeneratedProto(t, path)
+					for _, message := range descriptor.GetMessageType() {
+						if message.GetName() == "ReadRequest" && extended {
+							qualified := fieldNamed(t, message, "session").GetTypeName()
+							sessionMessage = qualified[strings.LastIndex(qualified, ".")+1:]
+						}
+					}
+					descriptor.Service = nil
+					slices.SortFunc(descriptor.MessageType, func(left, right *descriptorpb.DescriptorProto) int {
+						return cmp.Compare(left.GetName(), right.GetName())
+					})
+					encoded, err := proto.MarshalOptions{Deterministic: true}.Marshal(descriptor)
+					require.NoError(t, err)
+					if run > 0 {
+						require.Equal(t, previousMessages, encoded)
+					}
+					previousMessages = encoded
 				}
-				require.NotEmpty(t, source)
-				require.Equal(t, 1, strings.Count(string(source), "message Detail {"))
-				if extended {
-					require.Equal(t, 1, strings.Count(string(source), "message Session {"))
-				}
-				if run > 0 && !extended {
-					require.Equal(t, previous, source)
-				}
-				previous = source
+			}
+			require.NotEmpty(t, source)
+			require.Equal(t, 1, strings.Count(string(source), "message Detail {"))
+			if extended {
+				require.Equal(t, 1, strings.Count(string(source), "message Session {"))
+			}
+			if run > 0 && !extended {
+				require.Equal(t, previous, source)
+			}
+			previous = source
+			if run == 1 {
 				if extended {
 					runtimeTest := filepath.Join(directory, "gen", "grpc", "records", "server", "inline_object_test.go")
 					require.NoError(t, os.WriteFile(runtimeTest, []byte(strings.ReplaceAll(inlineObjectRuntimeTest, "genpb.Session", "genpb."+sessionMessage)), 0o600))
@@ -244,10 +245,11 @@ func TestInlineObjectProtobufGeneration(t *testing.T) {
 					runtimeTest := filepath.Join(directory, "gen", "grpc", "records", "server", "inline_collection_test.go")
 					require.NoError(t, os.WriteFile(runtimeTest, []byte(inlineCollectionRuntimeTest), 0o600))
 				}
-				compileProtobufDescriptorModule(t, directory)
+				compiled = append(compiled, protobufCompileCase{name: name, dir: directory})
 			}
-		})
+		}
 	}
+	compileProtobufDescriptorCases(t, compiled)
 }
 
 // TestInlineObjectMessagePreparation checks copied graph identity and authored

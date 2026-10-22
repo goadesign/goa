@@ -13,6 +13,9 @@ import (
 )
 
 func TestGenerateUnionBranchViews(t *testing.T) {
+	source, err := os.ReadFile(filepath.Join("testdata", "union_branch_views", "views_test.go"))
+	require.NoError(t, err)
+	cases := make([]generatedTestDir, 0, 2)
 	for _, test := range []struct {
 		name    string
 		flatten bool
@@ -20,12 +23,17 @@ func TestGenerateUnionBranchViews(t *testing.T) {
 		{"tagged", false},
 		{"flat", true},
 	} {
-		t.Run(test.name, func(t *testing.T) {
-			dir := generateViewedTransportModule(t, func() { unionBranchViewsDSL(test.flatten) })
-			source, err := os.ReadFile(filepath.Join("testdata", "union_branch_views", "views_test.go"))
-			require.NoError(t, err)
-			writeGeneratedContractTest(t, dir, "checks", string(source))
-			runGeneratedPackageTests(t, dir, "./checks")
+		dir := generateViewedTransportModule(t, func() { unionBranchViewsDSL(test.flatten) })
+		writeGeneratedContractTest(t, dir, "checks", string(source))
+		cases = append(cases, generatedTestDir{
+			name: test.name,
+			dir:  dir,
+		})
+	}
+	parallelGeneratedTest(t)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			runGeneratedPackageTests(t, tc.dir, "./checks")
 		})
 	}
 }

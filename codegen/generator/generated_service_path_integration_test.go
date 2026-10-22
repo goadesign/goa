@@ -24,55 +24,52 @@ func TestGeneratedTransportsUsePlannedServicePaths(t *testing.T) {
 		{name: "forward"},
 		{name: "reverse", reverse: true},
 	}
+	rootDir := t.TempDir()
+	writeGeneratedModule(t, rootDir, "generated.local")
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			root := servicePathRoot(t, test.reverse)
-			plan := mustTestPlan(t, "generated.local/gen", []eval.Root{root}, planExampleData)
-			expected := map[string]string{
-				"read-value":  "read_value",
-				"read_value":  "read_value3",
-				"read_value2": "read_value2",
-			}
-			for _, service := range root.Services {
-				require.Equal(t, expected[service.Name], plan.Service(root).Services().Get(service.Name).PathName)
-			}
+		modulePrefix := "generated.local/" + test.name
+		root := servicePathRoot(t, test.reverse)
+		plan := mustTestPlan(t, modulePrefix+"/gen", []eval.Root{root}, planExampleData)
+		expected := map[string]string{
+			"read-value":  "read_value",
+			"read_value":  "read_value3",
+			"read_value2": "read_value2",
+		}
+		for _, service := range root.Services {
+			require.Equal(t, expected[service.Name], plan.Service(root).Services().Get(service.Name).PathName)
+		}
 
-			files, err := testServiceFiles(plan)
-			require.NoError(t, err)
-			transportFiles, err := testTransportFiles(plan)
-			require.NoError(t, err)
-			files = append(files, transportFiles...)
-			exampleFiles, err := assembleExampleFilesForTest(plan)
-			require.NoError(t, err)
-			files = append(files, exampleFiles...)
-			files, err = mergeFilesByPath(files)
-			require.NoError(t, err)
+		files, err := testServiceFiles(plan)
+		require.NoError(t, err)
+		transportFiles, err := testTransportFiles(plan)
+		require.NoError(t, err)
+		files = append(files, transportFiles...)
+		exampleFiles, err := assembleExampleFilesForTest(plan)
+		require.NoError(t, err)
+		files = append(files, exampleFiles...)
+		files, err = mergeFilesByPath(files)
+		require.NoError(t, err)
 
-			generatedPaths := make(map[string]struct{}, len(files))
-			for _, file := range files {
-				generatedPaths[filepath.ToSlash(file.Path)] = struct{}{}
+		generatedPaths := make(map[string]struct{}, len(files))
+		for _, file := range files {
+			generatedPaths[filepath.ToSlash(file.Path)] = struct{}{}
+		}
+		for _, servicePath := range expected {
+			for _, filePath := range []string{
+				"gen/" + servicePath + "/service.go",
+				"gen/http/" + servicePath + "/server/server.go",
+				"gen/jsonrpc/" + servicePath + "/server/server.go",
+				"gen/grpc/" + servicePath + "/server/server.go",
+			} {
+				_, ok := generatedPaths[filePath]
+				require.True(t, ok, "missing generated file %s", filePath)
 			}
-			for _, servicePath := range expected {
-				for _, filePath := range []string{
-					"gen/" + servicePath + "/service.go",
-					"gen/http/" + servicePath + "/server/server.go",
-					"gen/jsonrpc/" + servicePath + "/server/server.go",
-					"gen/grpc/" + servicePath + "/server/server.go",
-				} {
-					_, ok := generatedPaths[filePath]
-					require.True(t, ok, "missing generated file %s", filePath)
-				}
-			}
+		}
 
-			dir := t.TempDir()
-			writeGeneratedModule(t, dir, "generated.local")
-			for _, file := range files {
-				_, err := file.Render(dir)
-				require.NoError(t, err)
-			}
-			runGeneratedTests(t, dir)
-		})
+		dir := filepath.Join(rootDir, test.name)
+		renderGeneratedFiles(t, dir, files)
 	}
+	runGeneratedTests(t, rootDir)
 }
 
 // servicePathRoot returns one API whose services exercise every generated

@@ -21,11 +21,13 @@ import (
 )
 
 func TestGeneratedDeclaredGenericDetailOwnership(t *testing.T) {
+	t.Parallel()
 	for _, method := range []string{"ReadErrors", "RetryErrors"} {
 		for _, joined := range []bool{false, true} {
 			for _, reverse := range []bool{false, true} {
 				for _, wrapped := range []bool{false, true} {
 					t.Run(fmt.Sprintf("%s/joined=%t/reverse=%t/wrapped=%t", method, joined, reverse, wrapped), func(t *testing.T) {
+						t.Parallel()
 						busy := goa.TemporaryError("busy", "catalog unavailable")
 						busy.ID = "catalog-busy-id"
 						var input error = busy

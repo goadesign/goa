@@ -130,12 +130,7 @@ func mixedSSEMappedFieldDSL() {
 func runGeneratedMixedSSEClientTest(t *testing.T, files []*codegen.File) {
 	t.Helper()
 	directory := t.TempDir()
-	repository, err := filepath.Abs(filepath.Join("..", ".."))
-	require.NoError(t, err)
-	module := "module generated.local\n\ngo 1.25\n\n" +
-		"require goa.design/goa/v3 v3.0.0\n\n" +
-		"replace goa.design/goa/v3 => " + filepath.ToSlash(repository) + "\n"
-	require.NoError(t, os.WriteFile(filepath.Join(directory, "go.mod"), []byte(module), 0o600))
+	writeHTTPGeneratedModule(t, directory)
 	for _, file := range files {
 		_, err := file.Render(directory)
 		require.NoError(t, err)
@@ -144,9 +139,11 @@ func runGeneratedMixedSSEClientTest(t *testing.T, files []*codegen.File) {
 	testPath := filepath.Join(directory, "gen", "http", "mixed_sse_wire", "client", "mixed_sse_test.go")
 	require.NoError(t, os.WriteFile(testPath, []byte(generatedMixedSSEClientTest), 0o600))
 
+	parallelHTTPTest(t)
+
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
-	command := exec.CommandContext(ctx, "go", "test", "-mod=mod", "./gen/http/mixed_sse_wire/client")
+	command := exec.CommandContext(ctx, "go", "test", "-mod=readonly", "./gen/http/mixed_sse_wire/client")
 	command.Dir = directory
 	command.Env = append(os.Environ(), "GOWORK=off")
 	output, err := command.CombinedOutput()
@@ -160,20 +157,17 @@ func runGeneratedMixedSSEClientTest(t *testing.T, files []*codegen.File) {
 func runGeneratedMixedSSECompile(t *testing.T, files []*codegen.File, packagePath string) {
 	t.Helper()
 	directory := t.TempDir()
-	repository, err := filepath.Abs(filepath.Join("..", ".."))
-	require.NoError(t, err)
-	module := "module generated.local\n\ngo 1.25\n\n" +
-		"require goa.design/goa/v3 v3.0.0\n\n" +
-		"replace goa.design/goa/v3 => " + filepath.ToSlash(repository) + "\n"
-	require.NoError(t, os.WriteFile(filepath.Join(directory, "go.mod"), []byte(module), 0o600))
+	writeHTTPGeneratedModule(t, directory)
 	for _, file := range files {
 		_, err := file.Render(directory)
 		require.NoError(t, err)
 	}
 
+	parallelHTTPTest(t)
+
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
-	command := exec.CommandContext(ctx, "go", "test", "-mod=mod", packagePath)
+	command := exec.CommandContext(ctx, "go", "build", "-mod=readonly", packagePath)
 	command.Dir = directory
 	command.Env = append(os.Environ(), "GOWORK=off")
 	output, err := command.CombinedOutput()

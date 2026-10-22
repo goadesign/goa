@@ -93,6 +93,7 @@ func TestExternalConversionChecksSignatureNames(t *testing.T) {
 }
 
 func TestExternalConversionReadsPrivateValues(t *testing.T) {
+	compiled := make([]compiledServiceCase, 0, 10)
 	for _, field := range []string{"scalar", "words", "keys", "values", "choice"} {
 		for _, source := range []struct {
 			name     string
@@ -101,33 +102,36 @@ func TestExternalConversionReadsPrivateValues(t *testing.T) {
 			{"Envelope", external.Envelope{}},
 			{"PublicEnvelope", external.PublicEnvelope{}},
 		} {
-			t.Run(field+"/"+source.name, func(t *testing.T) {
-				root := externalAccessibilityRoot(t, field, external.PublicEnvelope{}, source.external)
-				generation := mustTestGeneration(t, "generated.local/gen", []eval.Root{root})
-				plan, err := NewPlan(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
-				require.NoError(t, err)
-				require.NoError(t, generation.Freeze())
-				require.NoError(t, plan.Link())
-				files, err := Files(plan)
-				require.NoError(t, err)
-				comparison := fmt.Sprintf(
-					"if !reflect.DeepEqual(want.Nested.%s, got.Nested.%s) { t.Fatalf(\"changed value or presence: %%#v\", got.Nested) }",
-					codegen.Goify(field, true), codegen.Goify(field, true),
-				)
-				if field == "choice" {
-					comparison = `wantWords, wantSelected := want.Choice.AsWords()
+			root := externalAccessibilityRoot(t, field, external.PublicEnvelope{}, source.external)
+			generation := mustTestGeneration(t, "generated.local/gen", []eval.Root{root})
+			plan, err := NewPlan(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
+			require.NoError(t, err)
+			require.NoError(t, generation.Freeze())
+			require.NoError(t, plan.Link())
+			files, err := Files(plan)
+			require.NoError(t, err)
+			comparison := fmt.Sprintf(
+				"if !reflect.DeepEqual(want.Nested.%s, got.Nested.%s) { t.Fatalf(\"changed value or presence: %%#v\", got.Nested) }",
+				codegen.Goify(field, true), codegen.Goify(field, true),
+			)
+			if field == "choice" {
+				comparison = `wantWords, wantSelected := want.Choice.AsWords()
 	gotWords, gotSelected := got.Choice.AsWords()
 	if wantSelected != gotSelected || !reflect.DeepEqual(wantWords, gotWords) {
 		t.Fatalf("changed union value or presence: %#v, selected=%v", gotWords, gotSelected)
 	}`
-				}
-				proof := fmt.Sprintf(externalAccessibilityRuntimeTest, source.name, source.name, comparison)
-				compileGeneratedServiceFilesWith(t, files, map[string]string{
+			}
+			proof := fmt.Sprintf(externalAccessibilityRuntimeTest, source.name, source.name, comparison)
+			compiled = append(compiled, compiledServiceCase{
+				name:  field + "/" + source.name,
+				files: files,
+				additional: map[string]string{
 					filepath.Join(codegen.Gendir, "values", "accessibility_test.go"): proof,
-				})
+				},
 			})
 		}
 	}
+	compileGeneratedServiceCases(t, compiled)
 }
 
 // externalAccessibilityRoot selects one nested field or union branch. Other

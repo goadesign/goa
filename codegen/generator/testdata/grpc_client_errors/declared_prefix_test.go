@@ -34,10 +34,12 @@ type (
 )
 
 func TestGeneratedDeclaredExplicitTemporaryPrefix(t *testing.T) {
+	t.Parallel()
 	for _, reverse := range []bool{false, true} {
 		for _, wrapped := range []bool{false, true} {
 			for _, method := range []string{"ReadErrors", "RetryErrors"} {
 				t.Run(fmt.Sprintf("reverse=%t/wrapped=%t/%s", reverse, wrapped, method), func(t *testing.T) {
+					t.Parallel()
 					busy := goa.TemporaryError("busy", "child Busy")
 					canceled := status.Error(codes.Canceled, "independent stop")
 					input := errors.Join(busy, canceled)

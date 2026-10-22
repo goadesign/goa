@@ -3,6 +3,8 @@
 package generator
 
 import (
+	"fmt"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -191,32 +193,29 @@ func TestGeneratedJSONRPCPackagesCompileAcrossSharedPackageRoots(t *testing.T) {
 		{name: "ordinary", mode: jsonRPCUnary},
 		{name: "server sent events", mode: jsonRPCSSE},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			first := jsonRPCSharedPackageRoot(t, "Shared", "First", test.mode)
-			second := jsonRPCSharedPackageRoot(t, "Shared", "Second", test.mode)
-			plan := mustTestPlan(t, "generated.local/gen", []eval.Root{first, second}, planTransportData)
-			files, err := testServiceFiles(plan)
-			require.NoError(t, err)
-			for _, root := range []*expr.RootExpr{first, second} {
-				jsonPlan := plan.jsonrpc[root]
-				files = append(files, jsonPlan.ServerFiles()...)
-				files = append(files, jsonPlan.ClientFiles()...)
-				files = append(files, jsonPlan.ServerTypeFiles()...)
-				files = append(files, jsonPlan.ClientTypeFiles()...)
-				files = append(files, jsonPlan.PathFiles()...)
-			}
-			files, err = mergeFilesByPath(files)
-			require.NoError(t, err)
-			dir := t.TempDir()
-			writeGeneratedModule(t, dir, "generated.local")
-			for _, file := range files {
-				_, err := file.Render(dir)
-				require.NoError(t, err)
-			}
-			runGeneratedTests(t, dir)
-		})
+	rootDir := t.TempDir()
+	writeGeneratedModule(t, rootDir, "generated.local")
+	for caseIndex, test := range tests {
+		slug := fmt.Sprintf("case%d", caseIndex)
+		first := jsonRPCSharedPackageRoot(t, "Shared", "First", test.mode)
+		second := jsonRPCSharedPackageRoot(t, "Shared", "Second", test.mode)
+		plan := mustTestPlan(t, "generated.local/"+slug+"/gen", []eval.Root{first, second}, planTransportData)
+		files, err := testServiceFiles(plan)
+		require.NoError(t, err)
+		for _, root := range []*expr.RootExpr{first, second} {
+			jsonPlan := plan.jsonrpc[root]
+			files = append(files, jsonPlan.ServerFiles()...)
+			files = append(files, jsonPlan.ClientFiles()...)
+			files = append(files, jsonPlan.ServerTypeFiles()...)
+			files = append(files, jsonPlan.ClientTypeFiles()...)
+			files = append(files, jsonPlan.PathFiles()...)
+		}
+		files, err = mergeFilesByPath(files)
+		require.NoError(t, err)
+		dir := filepath.Join(rootDir, slug)
+		renderGeneratedFiles(t, dir, files)
 	}
+	runGeneratedTests(t, rootDir)
 }
 
 // jsonRPCSharedPackageRoot returns one design whose service name controls the

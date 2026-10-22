@@ -1720,7 +1720,7 @@ func mappedObjectDefinition(attribute *expr.AttributeExpr) *expr.MappedAttribute
 	for {
 		named, ok := attribute.Type.(expr.UserType)
 		if !ok {
-			return expr.NewMappedAttributeExpr(attribute)
+			return expr.NewShallowMappedAttributeExpr(attribute)
 		}
 		attribute = named.Attribute()
 	}

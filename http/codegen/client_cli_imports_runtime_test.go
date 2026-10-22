@@ -92,10 +92,24 @@ func TestGeneratedCLIExplicitObjectBodies(t *testing.T) {
 		{"optional", testdata.PayloadBodyInlineObjectDSL, "*payload.A"},
 		{"defaulted", testdata.PayloadBodyInlineObjectDefaultDSL, "payload.A"},
 	}
+	dirs := make([]struct {
+		name string
+		dir  string
+	}, 0, len(cases))
 	for _, test := range cases {
-		t.Run(test.name, func(t *testing.T) {
-			root := expr.RunDSL(t, test.design)
-			runGeneratedCLIImportTest(t, root, fmt.Sprintf(generatedExplicitObjectCLITest, test.value))
+		root := expr.RunDSL(t, test.design)
+		dirs = append(dirs, struct {
+			name string
+			dir  string
+		}{
+			name: test.name,
+			dir:  prepareGeneratedCLIImportTestDir(t, root, fmt.Sprintf(generatedExplicitObjectCLITest, test.value)),
+		})
+	}
+	parallelHTTPTest(t)
+	for _, tc := range dirs {
+		t.Run(tc.name, func(t *testing.T) {
+			executeGeneratedCLIImportTestDir(t, tc.dir)
 		})
 	}
 }
@@ -104,6 +118,12 @@ func TestGeneratedCLIExplicitObjectBodies(t *testing.T) {
 // packages together. The separate module compiles the generated imports and
 // runs the supplied tests against this checkout's runtime.
 func runGeneratedCLIImportTest(t *testing.T, root *expr.RootExpr, testSource string) {
+	t.Helper()
+	directory := prepareGeneratedCLIImportTestDir(t, root, testSource)
+	executeGeneratedCLIImportTestDir(t, directory)
+}
+
+func prepareGeneratedCLIImportTestDir(t *testing.T, root *expr.RootExpr, testSource string) string {
 	t.Helper()
 	plan, generation, servicePlan := plannedHTTPPlan(t, root, false)
 	require.NoError(t, generation.Freeze())
@@ -118,21 +138,21 @@ func runGeneratedCLIImportTest(t *testing.T, root *expr.RootExpr, testSource str
 	files = append(files, plan.ClientCLIFiles()...)
 
 	directory := t.TempDir()
-	repository, err := filepath.Abs(filepath.Join("..", ".."))
-	require.NoError(t, err)
-	module := "module generated.local\n\ngo 1.26\n\n" +
-		"require goa.design/goa/v3 v3.0.0\n\n" +
-		"replace goa.design/goa/v3 => " + filepath.ToSlash(repository) + "\n"
-	require.NoError(t, os.WriteFile(filepath.Join(directory, "go.mod"), []byte(module), 0o600))
+	writeHTTPGeneratedModule(t, directory)
 	for _, file := range files {
 		_, err := file.Render(directory)
 		require.NoError(t, err)
 	}
 	require.NoError(t, os.WriteFile(filepath.Join(directory, "cli_test.go"), []byte(testSource), 0o600))
+	return directory
+}
 
+func executeGeneratedCLIImportTestDir(t *testing.T, directory string) {
+	t.Helper()
+	parallelHTTPTest(t)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
-	command := exec.CommandContext(ctx, "go", "test", "-mod=mod", "./...")
+	command := exec.CommandContext(ctx, "go", "test", "-mod=readonly", "./...")
 	command.Dir = directory
 	command.Env = append(os.Environ(), "GOWORK=off")
 	output, err := command.CombinedOutput()

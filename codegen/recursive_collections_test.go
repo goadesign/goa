@@ -83,7 +83,10 @@ target := convert(source)
 if target.Next["leaf"].Next != nil { t.Fatal("changed optional nil map") }`,
 		},
 	}
-	for _, test := range tests {
+	t.Parallel()
+	files := make(map[string]string)
+	for index, test := range tests {
+		caseDir := fmt.Sprintf("case%d", index)
 		t.Run(test.name, func(t *testing.T) {
 			source, sourceTypes := recursiveCollectionGraph("Source", test.shapes)
 			target, targetTypes := recursiveCollectionGraph("Target", test.shapes)
@@ -103,7 +106,7 @@ if target.Next["leaf"].Next != nil { t.Fatal("changed optional nil map") }`,
 
 			scope := NewNameScope()
 			var generated strings.Builder
-			generated.WriteString("package fixture\n\ntype (\n")
+			generated.WriteString("package " + caseDir + "\n\ntype (\n")
 			for _, named := range append(sourceTypes, targetTypes...) {
 				fmt.Fprintf(&generated, "%s %s\n", named.Name(), scope.GoTypeDef(named.Attribute(), false, true))
 			}
@@ -114,13 +117,12 @@ if target.Next["leaf"].Next != nil { t.Fatal("changed optional nil map") }`,
 				fmt.Fprintf(&generated, "func %s(v %s) %s {\n%s\nreturn res\n}\n",
 					helper.Name, helper.ParamTypeRef, helper.ResultTypeRef, helper.Code)
 			}
-			runCollectionFixture(t, map[string]string{
-				"convert.go": generated.String(),
-				"convert_test.go": "package fixture\nimport \"testing\"\nfunc TestConvert(t *testing.T) {\n" +
-					test.check + "\n}\n",
-			})
+			files[caseDir+"/convert.go"] = generated.String()
+			files[caseDir+"/convert_test.go"] = "package " + caseDir + "\nimport \"testing\"\nfunc TestConvert(t *testing.T) {\n" +
+				test.check + "\n}\n"
 		})
 	}
+	runCollectionFixture(t, files)
 }
 
 func TestCollectionHelpersPreserveOccurrences(t *testing.T) {

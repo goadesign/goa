@@ -5,7 +5,10 @@ package generator
 
 import (
 	"cmp"
+	"fmt"
+	"os"
 	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -24,7 +27,9 @@ func (o constructorDependencyOrder) ComparePackageName(other codegen.PackageName
 }
 
 func TestServerConstructorDependenciesCompileWithExamples(t *testing.T) {
-	for _, test := range []struct {
+	rootDir := t.TempDir()
+	writeGeneratedModule(t, rootDir, "generated.local")
+	for caseIndex, test := range []struct {
 		mode           string
 		beforeExamples bool
 		clientName     string
@@ -41,135 +46,133 @@ func TestServerConstructorDependenciesCompileWithExamples(t *testing.T) {
 		{mode: "mixed", beforeExamples: true},
 		{mode: "http", clientName: "http"},
 	} {
+		slug := fmt.Sprintf("case%d", caseIndex)
+		modulePrefix := "generated.local/" + slug
 		mode := test.mode
 		clientName := test.clientName
 		if clientName == "" {
 			clientName = "client"
 		}
-		t.Run(mode, func(t *testing.T) {
-			root := codegen.RunDSL(t, func() {
-				dsl.API("records", func() {})
-				dsl.Service("records", func() {
-					if mode == "files" {
-						dsl.Files("/assets/{*path}", "assets")
-						return
-					}
-					if mode == "multipart" {
-						dsl.Method("upload", func() {
-							dsl.Payload(dsl.String)
-							dsl.HTTP(func() {
-								dsl.POST("/upload")
-								dsl.MultipartRequest()
-							})
+		root := codegen.RunDSL(t, func() {
+			dsl.API("records", func() {})
+			dsl.Service("records", func() {
+				if mode == "files" {
+					dsl.Files("/assets/{*path}", "assets")
+					return
+				}
+				if mode == "multipart" {
+					dsl.Method("upload", func() {
+						dsl.Payload(dsl.String)
+						dsl.HTTP(func() {
+							dsl.POST("/upload")
+							dsl.MultipartRequest()
 						})
-						return
-					}
-					if mode == "websocket" || mode == "sse" {
-						dsl.Method("watch", func() {
-							dsl.StreamingResult(dsl.String)
-							dsl.HTTP(func() {
-								dsl.GET("/watch")
-								if mode == "sse" {
-									dsl.ServerSentEvents()
-								}
-							})
-						})
-						return
-					}
-					dsl.Method("read", func() {
-						dsl.Result(dsl.String)
-						if mode != "http" {
-							dsl.JSONRPC(func() {})
-						} else {
-							dsl.HTTP(func() { dsl.GET("/records") })
-						}
 					})
-					if mode == "mixed" {
-						dsl.Method("native", func() {
-							dsl.Result(dsl.String)
-							dsl.HTTP(func() { dsl.GET("/native") })
+					return
+				}
+				if mode == "websocket" || mode == "sse" {
+					dsl.Method("watch", func() {
+						dsl.StreamingResult(dsl.String)
+						dsl.HTTP(func() {
+							dsl.GET("/watch")
+							if mode == "sse" {
+								dsl.ServerSentEvents()
+							}
 						})
+					})
+					return
+				}
+				dsl.Method("read", func() {
+					dsl.Result(dsl.String)
+					if mode != "http" {
+						dsl.JSONRPC(func() {})
+					} else {
+						dsl.HTTP(func() { dsl.GET("/records") })
 					}
 				})
+				if mode == "mixed" {
+					dsl.Method("native", func() {
+						dsl.Result(dsl.String)
+						dsl.HTTP(func() { dsl.GET("/native") })
+					})
+				}
 			})
-			var checks []*codegen.File
-			declare := func(plan *Plan) error {
-				dependencyType, err := codegen.PlanGoType(&expr.AttributeExpr{
-					Type: expr.String,
-					Meta: expr.MetaExpr{"struct:field:type": {"*http.Client", "net/http", "http"}},
-				}, codegen.GoTypePlanOptions{Owner: "generated.local"})
-				if err != nil {
-					return err
-				}
-				locationType, err := codegen.PlanGoType(&expr.AttributeExpr{
-					Type: expr.String,
-					Meta: expr.MetaExpr{"struct:field:type": {"*url.URL", "net/url", "url"}},
-				}, codegen.GoTypePlanOptions{Owner: "generated.local"})
-				if err != nil {
-					return err
-				}
-				if transport, exists := plan.HTTP(root); exists {
-					service := root.API.HTTP.Services[0]
-					if _, err := transport.DeclareServerConstructorDependency(service, "location", locationType, "NewRecords", constructorDependencyOrder("http location")); err != nil {
-						return err
-					}
-					if _, err := transport.DeclareServerConstructorDependency(service, clientName, dependencyType, "NewRecords", constructorDependencyOrder("http")); err != nil {
-						return err
-					}
-				}
-				if transport, exists := plan.JSONRPC(root); exists {
-					service := root.API.JSONRPC.Services[0]
-					if _, err := transport.DeclareServerConstructorDependency(service, "location", locationType, "NewRecords", constructorDependencyOrder("jsonrpc location")); err != nil {
-						return err
-					}
-					if _, err := transport.DeclareServerConstructorDependency(service, clientName, dependencyType, "NewRecords", constructorDependencyOrder("jsonrpc")); err != nil {
-						return err
-					}
-				}
-				return nil
-			}
-			planners := []func(*Plan) error{planExampleData, declare}
-			if test.beforeExamples {
-				planners = []func(*Plan) error{planTransportData, declare, planExampleData}
-			}
-			plan := mustTestPlan(t, "generated.local/gen", []eval.Root{root}, planners...)
-			files, err := testServiceFiles(plan)
-			require.NoError(t, err)
-			transports, err := testTransportFiles(plan)
-			require.NoError(t, err)
-			files = append(files, transports...)
-			examples, err := assembleExampleFilesForTest(plan)
-			require.NoError(t, err)
-			files = append(files, examples...)
-			for _, dialect := range []string{"http", "jsonrpc"} {
-				if mode != "mixed" && dialect != mode {
-					continue
-				}
-				check := &codegen.File{
-					Path: path.Join("gen", dialect, "records", "server", "dependency_test.go"),
-					SectionTemplates: []*codegen.SectionTemplate{{
-						Name:   "dependency-value-test",
-						Source: constructorDependencyCheck,
-						Data: struct {
-							HTTP, Mixed bool
-							ClientName  string
-						}{HTTP: dialect == "http", Mixed: mode == "mixed", ClientName: clientName},
-					}},
-				}
-				checks = append(checks, check)
-			}
-			files = append(files, checks...)
-			files, err = mergeFilesByPath(files)
-			require.NoError(t, err)
-			directory := t.TempDir()
-			writeGeneratedModule(t, directory, "generated.local")
-			for _, file := range files {
-				_, err := file.Render(directory)
-				require.NoError(t, err)
-			}
-			runGeneratedTests(t, directory)
 		})
+		var checks []*codegen.File
+		declare := func(plan *Plan) error {
+			dependencyType, err := codegen.PlanGoType(&expr.AttributeExpr{
+				Type: expr.String,
+				Meta: expr.MetaExpr{"struct:field:type": {"*http.Client", "net/http", "http"}},
+			}, codegen.GoTypePlanOptions{Owner: modulePrefix})
+			if err != nil {
+				return err
+			}
+			locationType, err := codegen.PlanGoType(&expr.AttributeExpr{
+				Type: expr.String,
+				Meta: expr.MetaExpr{"struct:field:type": {"*url.URL", "net/url", "url"}},
+			}, codegen.GoTypePlanOptions{Owner: modulePrefix})
+			if err != nil {
+				return err
+			}
+			if transport, exists := plan.HTTP(root); exists {
+				service := root.API.HTTP.Services[0]
+				if _, err := transport.DeclareServerConstructorDependency(service, "location", locationType, "NewRecords", constructorDependencyOrder("http location")); err != nil {
+					return err
+				}
+				if _, err := transport.DeclareServerConstructorDependency(service, clientName, dependencyType, "NewRecords", constructorDependencyOrder("http")); err != nil {
+					return err
+				}
+			}
+			if transport, exists := plan.JSONRPC(root); exists {
+				service := root.API.JSONRPC.Services[0]
+				if _, err := transport.DeclareServerConstructorDependency(service, "location", locationType, "NewRecords", constructorDependencyOrder("jsonrpc location")); err != nil {
+					return err
+				}
+				if _, err := transport.DeclareServerConstructorDependency(service, clientName, dependencyType, "NewRecords", constructorDependencyOrder("jsonrpc")); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+		planners := []func(*Plan) error{planExampleData, declare}
+		if test.beforeExamples {
+			planners = []func(*Plan) error{planTransportData, declare, planExampleData}
+		}
+		plan := mustTestPlan(t, modulePrefix+"/gen", []eval.Root{root}, planners...)
+		files, err := testServiceFiles(plan)
+		require.NoError(t, err)
+		transports, err := testTransportFiles(plan)
+		require.NoError(t, err)
+		files = append(files, transports...)
+		examples, err := assembleExampleFilesForTest(plan)
+		require.NoError(t, err)
+		files = append(files, examples...)
+		for _, dialect := range []string{"http", "jsonrpc"} {
+			if mode != "mixed" && dialect != mode {
+				continue
+			}
+			check := &codegen.File{
+				Path: path.Join("gen", dialect, "records", "server", "dependency_test.go"),
+				SectionTemplates: []*codegen.SectionTemplate{{
+					Name:   "dependency-value-test",
+					Source: constructorDependencyCheck,
+					Data: struct {
+						HTTP, Mixed  bool
+						ClientName   string
+						ModulePrefix string
+					}{HTTP: dialect == "http", Mixed: mode == "mixed", ClientName: clientName, ModulePrefix: modulePrefix},
+				}},
+			}
+			checks = append(checks, check)
+		}
+		files = append(files, checks...)
+		files, err = mergeFilesByPath(files)
+		require.NoError(t, err)
+		directory := filepath.Join(rootDir, slug)
+		require.NoError(t, os.MkdirAll(directory, 0o750))
+		renderGeneratedFiles(t, directory, files)
 	}
+	runGeneratedTests(t, rootDir)
 }
 
 const constructorDependencyCheck = `package server
@@ -181,7 +184,7 @@ import (
     "testing"
 
     goahttp "goa.design/goa/v3/http"
-    genrecords "generated.local/gen/records"
+    genrecords "{{ .ModulePrefix }}/gen/records"
 )
 type fixtureService struct{}
 func (s *fixtureService) Read(context.Context) (string, error) { return "accepted", nil }

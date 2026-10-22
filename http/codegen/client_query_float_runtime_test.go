@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"slices"
-	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -20,6 +20,77 @@ import (
 	"goa.design/goa/v3/eval"
 	"goa.design/goa/v3/expr"
 )
+
+type httpModuleTemplate struct {
+	goMod []byte
+	goSum []byte
+}
+
+const httpModuleSeed = `package seed
+
+import (
+	_ "github.com/gorilla/websocket"
+	_ "github.com/stretchr/testify/assert"
+	_ "github.com/stretchr/testify/require"
+	_ "goa.design/goa/v3/http"
+	_ "goa.design/goa/v3/pkg"
+)
+`
+
+var (
+	parallelHTTPTests sync.Map
+	cachedHTTPModule  = sync.OnceValues(func() (httpModuleTemplate, error) {
+		goaRoot, err := filepath.Abs(filepath.Join("..", ".."))
+		if err != nil {
+			return httpModuleTemplate{}, err
+		}
+		tmpDir, err := os.MkdirTemp("", "goa-http-mod-template-*")
+		if err != nil {
+			return httpModuleTemplate{}, err
+		}
+		defer func() { _ = os.RemoveAll(tmpDir) }()
+
+		module := "module generated.local\n\ngo 1.25.0\n\n" +
+			"require goa.design/goa/v3 v3.0.0\n\n" +
+			"replace goa.design/goa/v3 => " + filepath.ToSlash(goaRoot) + "\n"
+		if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(module), 0o600); err != nil {
+			return httpModuleTemplate{}, err
+		}
+		if err := os.WriteFile(filepath.Join(tmpDir, "seed.go"), []byte(httpModuleSeed), 0o600); err != nil {
+			return httpModuleTemplate{}, err
+		}
+		cmd := exec.Command("go", "mod", "tidy")
+		cmd.Dir = tmpDir
+		cmd.Env = append(os.Environ(), "GOWORK=off")
+		if out, err := cmd.CombinedOutput(); err != nil {
+			return httpModuleTemplate{}, &os.PathError{Op: "go mod tidy", Path: string(out), Err: err}
+		}
+		goMod, err := os.ReadFile(filepath.Join(tmpDir, "go.mod"))
+		if err != nil {
+			return httpModuleTemplate{}, err
+		}
+		goSum, err := os.ReadFile(filepath.Join(tmpDir, "go.sum"))
+		if err != nil {
+			return httpModuleTemplate{}, err
+		}
+		return httpModuleTemplate{goMod: goMod, goSum: goSum}, nil
+	})
+)
+
+func parallelHTTPTest(t *testing.T) {
+	t.Helper()
+	if _, loaded := parallelHTTPTests.LoadOrStore(t, struct{}{}); !loaded {
+		t.Parallel()
+	}
+}
+
+func writeHTTPGeneratedModule(t *testing.T, directory string) {
+	t.Helper()
+	tmpl, err := cachedHTTPModule()
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(directory, "go.mod"), tmpl.goMod, 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(directory, "go.sum"), tmpl.goSum, 0o600))
+}
 
 // TestGeneratedClientFormatsFloatQueriesCompactly catches fixed-point query
 // formatting that expands values which have a shorter exponent form.
@@ -69,11 +140,7 @@ func TestGeneratedClientFormatsFloatQueriesCompactly(t *testing.T) {
 func runGeneratedFloatQueryTest(t *testing.T, files []*codegen.File) {
 	t.Helper()
 	directory := t.TempDir()
-	goaRoot := floatQueryModuleDirectory(t)
-	module := "module generated.local\n\ngo 1.24\n\n" +
-		"require goa.design/goa/v3 v3.0.0\n\n" +
-		"replace goa.design/goa/v3 => " + filepath.ToSlash(goaRoot) + "\n"
-	require.NoError(t, os.WriteFile(filepath.Join(directory, "go.mod"), []byte(module), 0o600))
+	writeHTTPGeneratedModule(t, directory)
 	for _, file := range files {
 		_, err := file.Render(directory)
 		require.NoError(t, err)
@@ -82,25 +149,15 @@ func runGeneratedFloatQueryTest(t *testing.T, files []*codegen.File) {
 	testPath := filepath.Join(directory, "gen", "http", "float_query", "client", "float_query_test.go")
 	require.NoError(t, os.WriteFile(testPath, []byte(generatedFloatQueryTest), 0o600))
 
+	parallelHTTPTest(t)
+
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
-	command := exec.CommandContext(ctx, "go", "test", "-mod=mod", "./gen/http/float_query/client")
+	command := exec.CommandContext(ctx, "go", "test", "-mod=readonly", "./gen/http/float_query/client")
 	command.Dir = directory
 	command.Env = append(os.Environ(), "GOWORK=off")
 	output, err := command.CombinedOutput()
 	require.NoError(t, err, "run generated float query test:\n%s", output)
-}
-
-// floatQueryModuleDirectory returns this Goa checkout so the temporary module
-// tests the generated code against the same runtime as the generator.
-func floatQueryModuleDirectory(t *testing.T) string {
-	t.Helper()
-	command := exec.Command("go", "list", "-m", "-f", "{{.Dir}}", "goa.design/goa/v3")
-	output, err := command.CombinedOutput()
-	require.NoError(t, err, "resolve Goa module:\n%s", output)
-	directory := strings.TrimSpace(string(output))
-	require.NotEmpty(t, directory)
-	return directory
 }
 
 const generatedFloatQueryTest = `package client

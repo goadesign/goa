@@ -16,34 +16,37 @@ import (
 // TestServerUsesProtobufMethodNames checks both source orders. Each generated
 // server method must match the protobuf method for the same endpoint.
 func TestServerUsesProtobufMethodNames(t *testing.T) {
+	compiled := make([]protobufCompileCase, 0, 2)
 	for _, reverse := range []bool{false, true} {
 		name := "underscored first"
 		if reverse {
 			name = "camel case first"
 		}
-		t.Run(name, func(t *testing.T) {
-			root := RunGRPCDSL(t, collidingProtobufMethodDSL(reverse))
-			generation, servicePlans := grpcServicePlans(t, []*expr.RootExpr{root})
-			plans, err := NewPlans(generation, PlanInput{Root: root, Service: servicePlans[0]})
-			require.NoError(t, err)
-			require.NoError(t, generation.Freeze())
-			require.NoError(t, servicePlans[0].Link())
-			require.NoError(t, plans[0].Link())
-			services := plans[0].services
-			service := services.Get("Values")
-			sections := serverFiles(services)[0].Section("server-grpc-interface")
-			require.Len(t, sections, len(service.Endpoints))
+		root := RunGRPCDSL(t, collidingProtobufMethodDSL(reverse))
+		generation, servicePlans := grpcServicePlans(t, []*expr.RootExpr{root})
+		plans, err := NewPlans(generation, PlanInput{Root: root, Service: servicePlans[0]})
+		require.NoError(t, err)
+		require.NoError(t, generation.Freeze())
+		require.NoError(t, servicePlans[0].Link())
+		require.NoError(t, plans[0].Link())
+		services := plans[0].services
+		serviceData := services.Get("Values")
+		sections := serverFiles(services)[0].Section("server-grpc-interface")
+		require.Len(t, sections, len(serviceData.Endpoints))
 
-			foundDifferentName := false
-			for index, endpoint := range service.Endpoints {
-				foundDifferentName = foundDifferentName || endpoint.GRPCMethodName != endpoint.Method.VarName
-				code := codegen.SectionCode(t, sections[index])
-				require.Contains(t, code, "func (s *"+endpoint.ServerStruct+") "+endpoint.GRPCMethodName+"(")
-			}
-			require.True(t, foundDifferentName, "test methods did not exercise different service and protobuf names")
-			compileProtobufMethodServer(t, plans[0], servicePlans)
+		foundDifferentName := false
+		for index, endpoint := range serviceData.Endpoints {
+			foundDifferentName = foundDifferentName || endpoint.GRPCMethodName != endpoint.Method.VarName
+			code := codegen.SectionCode(t, sections[index])
+			require.Contains(t, code, "func (s *"+endpoint.ServerStruct+") "+endpoint.GRPCMethodName+"(")
+		}
+		require.True(t, foundDifferentName, "test methods did not exercise different service and protobuf names")
+		compiled = append(compiled, protobufCompileCase{
+			name: name,
+			dir:  renderProtobufMethodServer(t, plans[0], servicePlans),
 		})
 	}
+	compileProtobufDescriptorCases(t, compiled)
 }
 
 // collidingProtobufMethodDSL defines two methods that produce the same initial
@@ -80,6 +83,13 @@ func collidingProtobufMethodDSL(reverse bool) func() {
 // Go to check that the server implements the generated protobuf interface.
 func compileProtobufMethodServer(t *testing.T, plan *Plan, servicePlans []*service.Plan) {
 	t.Helper()
+	compileProtobufDescriptorModule(t, renderProtobufMethodServer(t, plan, servicePlans))
+}
+
+// renderProtobufMethodServer writes the service and transport files into a
+// temporary module directory for compilation.
+func renderProtobufMethodServer(t *testing.T, plan *Plan, servicePlans []*service.Plan) string {
+	t.Helper()
 	files, err := service.Files(servicePlans...)
 	require.NoError(t, err)
 	files = append(files, plan.ServerFiles()...)
@@ -93,5 +103,5 @@ func compileProtobufMethodServer(t *testing.T, plan *Plan, servicePlans []*servi
 		_, err := file.Render(moduleDir)
 		require.NoError(t, err)
 	}
-	compileProtobufDescriptorModule(t, moduleDir)
+	return moduleDir
 }

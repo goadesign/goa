@@ -4,6 +4,7 @@
 package generator
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -24,58 +25,55 @@ func TestGeneratedGRPCPackagesCompileAcrossSharedPackageRoots(t *testing.T) {
 		{name: "forward"},
 		{name: "reverse", reverse: true},
 	}
+	rootDir := t.TempDir()
+	writeGeneratedModule(t, rootDir, "generated.local")
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			first := grpcSharedPackageRoot(t, "Shared", "First")
-			second := grpcSharedPackageRoot(t, "Shared", "Second")
-			roots := []eval.Root{first, second}
-			if test.reverse {
-				roots[0], roots[1] = roots[1], roots[0]
-			}
+		modulePrefix := "generated.local/" + test.name
+		first := grpcSharedPackageRoot(t, "Shared", "First")
+		second := grpcSharedPackageRoot(t, "Shared", "Second")
+		roots := []eval.Root{first, second}
+		if test.reverse {
+			roots[0], roots[1] = roots[1], roots[0]
+		}
 
-			reserveValidator := func(plan *Plan) error {
-				pkg, err := plan.Generation().ClaimPackage("generated.local/gen/grpc/shared/server")
-				if err != nil {
+		reserveValidator := func(plan *Plan) error {
+			pkg, err := plan.Generation().ClaimPackage(modulePrefix + "/gen/grpc/shared/server")
+			if err != nil {
+				return err
+			}
+			for _, name := range []string{"ValidateSyncRequest", "ValidateExchangeRequest", "ValidateExchangeStreamingRequest"} {
+				if err := pkg.DeclareName(codegen.NewExactName(codegen.NameFunction, name)); err != nil {
 					return err
 				}
-				for _, name := range []string{"ValidateSyncRequest", "ValidateExchangeRequest", "ValidateExchangeStreamingRequest"} {
-					if err := pkg.DeclareName(codegen.NewExactName(codegen.NameFunction, name)); err != nil {
-						return err
-					}
-				}
-				return nil
 			}
-			plan := mustTestPlan(t, "generated.local/gen", roots, planTransportData, reserveValidator)
-			files, err := testServiceFiles(plan)
-			require.NoError(t, err)
-			transportFiles, err := testTransportFiles(plan)
-			require.NoError(t, err)
-			files = append(files, transportFiles...)
-			files = append(files, &codegen.File{
-				Path: "gen/grpc/shared/server/validator_owner.go",
-				SectionTemplates: []*codegen.SectionTemplate{
-					{
-						Name: "validator-owner",
-						Source: `package server
+			return nil
+		}
+		plan := mustTestPlan(t, modulePrefix+"/gen", roots, planTransportData, reserveValidator)
+		files, err := testServiceFiles(plan)
+		require.NoError(t, err)
+		transportFiles, err := testTransportFiles(plan)
+		require.NoError(t, err)
+		files = append(files, transportFiles...)
+		files = append(files, &codegen.File{
+			Path: "gen/grpc/shared/server/validator_owner.go",
+			SectionTemplates: []*codegen.SectionTemplate{
+				{
+					Name: "validator-owner",
+					Source: `package server
 
 func ValidateSyncRequest() {}
 func ValidateExchangeRequest() {}
 func ValidateExchangeStreamingRequest() {}`,
-					},
 				},
-			})
-			files, err = mergeFilesByPath(files)
-			require.NoError(t, err)
-
-			dir := t.TempDir()
-			writeGeneratedModule(t, dir, "generated.local")
-			for _, file := range files {
-				_, err := file.Render(dir)
-				require.NoError(t, err)
-			}
-			runGeneratedTests(t, dir)
+			},
 		})
+		files, err = mergeFilesByPath(files)
+		require.NoError(t, err)
+
+		dir := filepath.Join(rootDir, test.name)
+		renderGeneratedFiles(t, dir, files)
 	}
+	runGeneratedTests(t, rootDir)
 }
 
 // grpcSharedPackageRoot returns one design whose service name chooses the

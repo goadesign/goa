@@ -2,6 +2,8 @@
 package generator
 
 import (
+	"runtime"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -47,4 +49,44 @@ func testOpenAPIFiles(plan *Plan) ([]*codegen.File, error) {
 // assembleExampleFilesForTest returns example files from the plan under test.
 func assembleExampleFilesForTest(plan *Plan) ([]*codegen.File, error) {
 	return exampleFiles(plan)
+}
+
+// renderGeneratedFiles renders files into dir concurrently across GOMAXPROCS workers.
+func renderGeneratedFiles(t *testing.T, dir string, files []*codegen.File) {
+	t.Helper()
+	if len(files) == 0 {
+		return
+	}
+	workers := min(runtime.GOMAXPROCS(0), len(files))
+	if workers <= 1 {
+		for _, file := range files {
+			_, err := file.Render(dir)
+			require.NoError(t, err)
+		}
+		return
+	}
+	work := make(chan *codegen.File, len(files))
+	for _, file := range files {
+		work <- file
+	}
+	close(work)
+	errs := make(chan error, len(files))
+	var wg sync.WaitGroup
+	for range workers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for file := range work {
+				if _, err := file.Render(dir); err != nil {
+					errs <- err
+					return
+				}
+			}
+		}()
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		require.NoError(t, err)
+	}
 }

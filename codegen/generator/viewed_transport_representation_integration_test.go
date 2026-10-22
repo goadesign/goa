@@ -106,9 +106,10 @@ func writeGeneratedContractTest(t *testing.T, moduleDir, packageDir, source stri
 // the command to that package makes a failure point to the code under test.
 func runGeneratedPackageTests(t *testing.T, dir, packagePattern string) {
 	t.Helper()
+	parallelGeneratedTest(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, "go", "test", "-mod=mod", packagePattern)
+	cmd := exec.CommandContext(ctx, "go", "test", "-mod=readonly", packagePattern)
 	cmd.Dir = dir
 	cmd.Env = append(os.Environ(), "GOWORK=off")
 	output, err := cmd.CombinedOutput()

@@ -29,6 +29,7 @@ import (
 
 // TestGeneratedRemoteErrors preserves remote error names, traits, and retry counts.
 func TestGeneratedRemoteErrors(t *testing.T) {
+	t.Parallel()
 	unknown := status.FromProto(&statuspb.Status{
 		Code: int32(codes.Internal), Message: "unknown detail",
 		Details: []*anypb.Any{{TypeUrl: "type.example/Unknown", Value: []byte{}}},
@@ -50,6 +51,7 @@ func TestGeneratedRemoteErrors(t *testing.T) {
 			}), "rejected", false, false},
 		} {
 			t.Run(method.name+"/"+test.name, func(t *testing.T) {
+				t.Parallel()
 				var calls atomic.Int32
 				client := newCatalogClient(t, func(_ any, stream grpc.ServerStream) error {
 					calls.Add(1)
@@ -77,6 +79,7 @@ func TestGeneratedRemoteErrors(t *testing.T) {
 
 // TestGeneratedTransientThenSuccess retries temporary failures only for idempotent methods.
 func TestGeneratedTransientThenSuccess(t *testing.T) {
+	t.Parallel()
 	for _, method := range catalogMethods {
 		for _, failure := range []struct {
 			name string
@@ -88,6 +91,7 @@ func TestGeneratedTransientThenSuccess(t *testing.T) {
 			})},
 		} {
 			t.Run(method.name+"/"+failure.name, func(t *testing.T) {
+				t.Parallel()
 				var calls atomic.Int32
 				client := newCatalogClient(t, func(_ any, stream grpc.ServerStream) error {
 					if calls.Add(1) == 1 {

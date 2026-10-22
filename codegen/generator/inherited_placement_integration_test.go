@@ -3,7 +3,9 @@
 package generator
 
 import (
+	"fmt"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -15,7 +17,11 @@ import (
 )
 
 func TestGenerateInheritedPlacementAcrossTransports(t *testing.T) {
-	for _, reverse := range []bool{false, true} {
+	rootDir := t.TempDir()
+	writeGeneratedModule(t, rootDir, "generated.local")
+	for caseIndex, reverse := range []bool{false, true} {
+		slug := fmt.Sprintf("case%d", caseIndex)
+		modulePrefix := "generated.local/" + slug
 		var values schema.Types
 		var packet expr.UserType
 		first := codegen.RunDSL(t, func() {
@@ -40,26 +46,24 @@ func TestGenerateInheritedPlacementAcrossTransports(t *testing.T) {
 		if reverse {
 			roots[0], roots[1] = roots[1], roots[0]
 		}
-		plan := mustTestPlan(t, "generated.local/gen", roots, planTransportData)
+		plan := mustTestPlan(t, modulePrefix+"/gen", roots, planTransportData)
 		files, err := testServiceFiles(plan)
 		require.NoError(t, err)
 		transports, err := testTransportFiles(plan)
 		require.NoError(t, err)
 		files, err = mergeFilesByPath(append(files, transports...))
 		require.NoError(t, err)
-		directory := t.TempDir()
-		writeGeneratedModule(t, directory, "generated.local")
-		for _, file := range files {
-			_, err := file.Render(directory)
-			require.NoError(t, err)
-		}
-		writeGeneratedContractTest(t, directory, filepath.Join("gen", "http", "alpha", "server"), inheritedHTTPExchange)
-		writeGeneratedContractTest(t, directory, filepath.Join("gen", "grpc", "alpha", "server"), inheritedGRPCExchange)
-		runGeneratedTests(t, directory)
+		directory := filepath.Join(rootDir, slug)
+		renderGeneratedFiles(t, directory, files)
+		httpTest := strings.ReplaceAll(inheritedHTTPExchange, `"generated.local/gen/`, `"`+modulePrefix+`/gen/`)
+		grpcTest := strings.ReplaceAll(inheritedGRPCExchange, `"generated.local/gen/`, `"`+modulePrefix+`/gen/`)
+		writeGeneratedContractTest(t, directory, filepath.Join("gen", "http", "alpha", "server"), httpTest)
+		writeGeneratedContractTest(t, directory, filepath.Join("gen", "grpc", "alpha", "server"), grpcTest)
 		for _, value := range []expr.UserType{values.Text, values.Child, values.Nested, values.Entry} {
 			require.NotContains(t, value.Attribute().Meta, "struct:pkg:path")
 		}
 	}
+	runGeneratedTests(t, rootDir)
 }
 
 func TestGenerateExplicitPlacementAcrossTransports(t *testing.T) {

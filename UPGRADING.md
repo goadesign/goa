@@ -183,8 +183,8 @@ designs without mappings need no changes.
 Select the exact versions below only after their tags are available. Publication
 of the Goa tag does not itself publish the plugins or examples tags.
 
-Goa's root and nested JSON-RPC module files retain **Go 1.26.0** as their
-declared minimum, without a toolchain directive. Go 1.27.1 is recommended.
+Goa's root and nested JSON-RPC module files require **Go 1.27.3**, without a
+toolchain directive.
 The code changes merged for v3.34.0 each passed CI on Go 1.26.8 and 1.27.1 on
 Ubuntu and Windows; Windows does not run the nested JSON-RPC suite. Go 1.26.0 itself
 was not tested. A declared minimum is not a claim that every dependency graph
