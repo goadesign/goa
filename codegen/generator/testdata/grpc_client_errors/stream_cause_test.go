@@ -1,3 +1,5 @@
+// These tests receive explicit service failures and native transport failures
+// through generated streaming clients, preserving each result's declared meaning.
 package clienterrors_test
 
 import (
@@ -53,7 +55,7 @@ func TestGeneratedGenericStreamErrors(t *testing.T) {
 				var calls atomic.Int32
 				client := newEncodingCatalogClient(t, func(context.Context, any) (any, error) {
 					calls.Add(1)
-					return nil, status.Error(code, "server operation ended")
+					return nil, goa.NewServiceError(status.Error(code, "server operation ended"), "fault", false, false, true)
 				})
 				ctx := catalogContext(t)
 				err := method.call(t, ctx, client)

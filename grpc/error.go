@@ -171,16 +171,25 @@ func NewStatusError(code codes.Code, err error, details ...protoiface.MessageV1)
 	return st.Err()
 }
 
-// EncodeError returns a gRPC status error from the given error with the error
-// response encoded in the status details. An explicit status on the outer
-// chain of wrappers keeps its code and ordered details. Otherwise a Goa
-// ServiceError's name and traits determine the code. Status discovery stops
-// at an independent join: unowned branches must agree on the code, or the caller receives Unknown.
-// Joined branches do not supply details for the whole result. A single raw
-// context cancellation or deadline without a Goa error or explicit status
-// returns its native code and full error text, without service-error details.
+// EncodeError returns a gRPC status for the complete error. An explicit status
+// on the outer chain of wrappers keeps its code and ordered details. A Goa
+// ServiceError supplies appended service fields; without one, the existing
+// status is forwarded unchanged. Without an explicit status, a ServiceError's
+// name and traits select the code. At an independent join, unowned branches
+// must agree on the code or the caller receives Unknown, and no branch supplies
+// details for the whole result. A single raw context cancellation or deadline
+// without a Goa error or explicit status returns its native code and full error
+// text, without service-error details.
 func EncodeError(err error) error {
 	scope := scopeError(err)
+	if scope.service == nil && scope.explicit {
+		// An existing gRPC result already supplies its code and details. Return
+		// those fields unchanged so another service does not invent a permanent
+		// fault for a deadline or replace the peer's declared error details.
+		if st, ok := status.FromError(err); ok {
+			return st.Err()
+		}
+	}
 	if scope.service == nil && !scope.explicit && len(scope.causes) == 0 {
 		// A single context stop has a standard transport code. Return that code
 		// without labeling the stopped operation as a service fault.

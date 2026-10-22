@@ -63,7 +63,7 @@ func TestGeneratedDeclaredExplicitTemporaryPrefix(t *testing.T) {
 					err = callDeclaredFailure(t, catalogContext(t), client, method)
 					require.Equal(t, codes.Aborted, status.Code(original))
 					raw := status.Convert(original)
-					require.Len(t, raw.Proto().Details, 3)
+					require.Len(t, raw.Proto().Details, 2)
 					require.Equal(t, whole.Proto().Details, raw.Proto().Details[:2])
 					decoded := requireGenericCause(t, err, codes.Aborted)
 					require.Equal(t, response.Name, decoded.Name)
@@ -71,7 +71,6 @@ func TestGeneratedDeclaredExplicitTemporaryPrefix(t *testing.T) {
 					require.Equal(t, response.Msg, decoded.Message)
 					require.True(t, decoded.Temporary)
 					require.Same(t, original, errors.Unwrap(err))
-					requireDeclaredResponse(t, raw.Details()[2].(*goapb.ErrorResponse), returned, nil)
 					count := int32(1)
 					if method == "RetryErrors" {
 						count = 2
@@ -107,7 +106,7 @@ func TestGeneratedDeclaredCustomFirstPrefix(t *testing.T) {
 			require.NoError(t, ctx.Err())
 			require.Equal(t, codes.Canceled, status.Code(original))
 			require.Equal(t, whole.Message(), status.Convert(original).Message())
-			require.Len(t, status.Convert(original).Proto().Details, 3)
+			require.Len(t, status.Convert(original).Proto().Details, 2)
 			require.Equal(t, whole.Proto().Details, status.Convert(original).Proto().Details[:2])
 			require.True(t, proto.Equal(detail, goagrpc.DecodeError(original)))
 			if invalid {

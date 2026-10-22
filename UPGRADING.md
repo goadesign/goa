@@ -1,3 +1,22 @@
+## Unreleased: forwarding existing gRPC errors
+
+A generated server now forwards an existing gRPC error's code and ordered
+details without appending a generic permanent fault when no Goa service error
+owns the result. For example, forwarding a wrapped `DeadlineExceeded` response
+keeps it a native deadline. Previously the appended fault detail made a
+generated client treat that response as a permanent service failure. Existing
+service errors still supply their declared fields, and independent joined
+failures keep their complete-error handling.
+
+Rebuild servers with the updated runtime. Clients generated with the native
+cancellation and deadline handling in v3.34.0 already preserve these responses;
+older clients need regeneration before or with the server update. Native
+`Unavailable` responses may now retry on idempotent methods under the generated
+client's existing transport policy. A service requiring an explicit permanent
+failure should return a Goa service error with its declared traits. There is no
+protobuf or stored-data change. Rolling back the server
+runtime restores the previous appended fault details.
+
 # Unreleased: HTTP path parameter identity
 
 Generated HTTP clients now keep a slash inside a single path parameter instead
