@@ -20,6 +20,7 @@ BUILD=0
 PREVIEW_NUMBER?=
 
 PREVIEW_TAG=v$(MAJOR).$(MINOR).$(BUILD)-preview.$(PREVIEW_NUMBER)
+RELEASE_TAG?=v$(MAJOR).$(MINOR).$(BUILD)
 
 GOOS=$(shell go env GOOS)
 GOARCH=$(shell go env GOARCH)
@@ -33,9 +34,9 @@ PROTOC_DEST=$(GOBIN_DIR)/$(PROTOC_BIN)
 PROTOC_INCLUDE_DEST=$(GOPATH)/include
 
 .PHONY: all all-tests ci depend lint test test-release integration-test build-goa
-.PHONY: release stable-release-check release-preflight release-goa release-examples release-plugins
+.PHONY: release stable-release-check release-preflight warm-proxy release-goa release-examples release-plugins
 .PHONY: preview-version preview-check preview-preflight prepare-preview release-preview
-.NOTPARALLEL: release release-goa release-examples release-plugins prepare-preview release-preview
+.NOTPARALLEL: release warm-proxy release-goa release-examples release-plugins prepare-preview release-preview
 
 # Only list test and build dependencies
 # Standard dependencies are installed via go get
@@ -215,7 +216,37 @@ release-preview: preview-preflight
 	fi
 	git tag $(PREVIEW_TAG)
 	git push origin $(PREVIEW_TAG)
+	@$(MAKE) warm-proxy RELEASE_TAG=$(PREVIEW_TAG)
 	@echo "Preview $(PREVIEW_TAG) published; examples and plugins were not changed"
+
+warm-proxy:
+	@tag="$(RELEASE_TAG)"; \
+	commit="$$(git rev-parse "refs/tags/$$tag^{commit}")"; \
+	echo "Waiting for gopkg.in to expose $$tag ($$commit)..."; \
+	for i in $$(seq 1 30); do \
+		if git ls-remote --exit-code --tags "https://gopkg.in/goadesign/goa.v$(MAJOR)" "refs/tags/$$tag" >/dev/null 2>&1; then \
+			break; \
+		fi; \
+		if [ "$$i" -eq 30 ]; then \
+			echo "error: gopkg.in did not expose $$tag in time"; \
+			exit 1; \
+		fi; \
+		sleep 2; \
+	done; \
+	echo "Warming proxy.golang.org and sum.golang.org for goa.design/goa/v$(MAJOR)@$$tag..."; \
+	for i in $$(seq 1 30); do \
+		if curl -fsSL "https://proxy.golang.org/goa.design/goa/v$(MAJOR)/@v/$$commit.info" >/dev/null 2>&1 && \
+		   curl -fsSL "https://sum.golang.org/lookup/goa.design/goa/v$(MAJOR)@$$tag" >/dev/null 2>&1; then \
+			break; \
+		fi; \
+		if [ "$$i" -eq 30 ]; then \
+			echo "error: proxy.golang.org or sum.golang.org did not index $$tag in time"; \
+			exit 1; \
+		fi; \
+		sleep 2; \
+	done; \
+	curl -fsSL "https://proxy.golang.org/goa.design/goa/v$(MAJOR)/@v/$$tag.info" >/dev/null 2>&1 || true; \
+	GOPROXY=https://proxy.golang.org,direct GOSUMDB=sum.golang.org go mod download "goa.design/goa/v$(MAJOR)@$$tag"
 
 release-goa:
 	# First make sure all is clean
@@ -258,8 +289,7 @@ release-goa:
 	cd cmd/goa && go install .
 	git push origin v$(MAJOR)
 	git push origin v$(MAJOR).$(MINOR).$(BUILD)
-	# Wait for Go proxy to update
-	sleep 10
+	@$(MAKE) warm-proxy RELEASE_TAG=v$(MAJOR).$(MINOR).$(BUILD)
 
 release-examples:
 	cd $(GOPATH)/src/goa.design/examples && \

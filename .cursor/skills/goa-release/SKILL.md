@@ -190,8 +190,10 @@ command that can create commits, tags, and pushes. Before running it:
 ## Run And Babysit Release
 
 1. From the Goa repository, run `make release`.
-2. Watch the command until it exits. Track which phase is running: `release-goa`,
-   `release-examples`, or `release-plugins`.
+2. Watch the command until it exits. Track which phase is running: `release-goa` (including
+   `warm-proxy`, which waits for `gopkg.in` to expose the new tag and warms `proxy.golang.org` and
+   `sum.golang.org` by commit hash before querying the tag), `release-examples`, or
+   `release-plugins`.
 3. If it fails, stop and inspect the failing repository before rerunning anything. Do not blindly
    rerun the whole release after a tag or push may have succeeded.
 4. Before any rerun, inventory local and remote branches and tags for `v3.x.y` in all three
