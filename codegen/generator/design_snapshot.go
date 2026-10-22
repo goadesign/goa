@@ -25,18 +25,23 @@ type (
 
 	// designState records one scalar, container, or reference reached at path.
 	designState struct {
-		path  string
+		path  *designPath
 		typ   reflect.Type
 		value string
 	}
 
 	// designSnapshotter visits each design value once and passes its state to
 	// record, even when pointers form a cycle or several fields share a value.
+	// savedPath is the retained path during capture or the exact saved path
+	// already matched during an audit. Child calls restore their parent on return.
 	designSnapshotter struct {
-		record     func([]byte, reflect.Type, string)
-		path       []byte
-		references *[]reflect.Value
-		visited    map[designVisit]struct{}
+		record       func([]byte, reflect.Type, string)
+		path         []byte
+		savedPath    *designPath
+		parentPath   *designPath
+		parentLength int
+		references   *[]reflect.Value
+		visited      map[designVisit]struct{}
 	}
 
 	// designVisit identifies one pointer, map, or slice. Slice capacity separates
@@ -82,9 +87,14 @@ func snapshotPreparedDesign(roots []eval.Root) (*designSnapshot, error) {
 	snapshotter := &designSnapshotter{
 		references: &snapshot.references,
 		visited:    make(map[designVisit]struct{}),
-		record: func(path []byte, typ reflect.Type, value string) {
-			snapshot.states = append(snapshot.states, designState{path: string(path), typ: typ, value: value})
-		},
+	}
+	snapshotter.record = func(path []byte, typ reflect.Type, value string) {
+		saved := snapshotter.savedPath
+		// Conversion exemplars record their type directly, without a child visit.
+		if len(path) > len(snapshotter.path) {
+			saved = &designPath{parent: saved, suffix: string(path[len(snapshotter.path):]), length: len(path)}
+		}
+		snapshot.states = append(snapshot.states, designState{path: saved, typ: typ, value: value})
 	}
 	for i, root := range roots {
 		if err := snapshotter.appendValue(fmt.Appendf(snapshotter.path[:0], "roots[%d]", i), reflect.ValueOf(root)); err != nil {
@@ -342,17 +352,22 @@ func (s *designSnapshot) changedPath(roots []eval.Root) (string, error) {
 
 	var changed string
 	index := 0
-	current := &designSnapshotter{
-		visited: make(map[designVisit]struct{}),
-		record: func(path []byte, typ reflect.Type, value string) {
-			if changed == "" {
-				if index >= len(s.states) || s.states[index].path != string(path) ||
-					s.states[index].typ != typ || s.states[index].value != value {
-					changed = string(path)
-				}
+	current := &designSnapshotter{visited: make(map[designVisit]struct{})}
+	current.record = func(path []byte, typ reflect.Type, value string) {
+		if changed == "" {
+			parent, prefixLength := current.parentPath, current.parentLength
+			// Conversion exemplar types extend the current struct path directly.
+			if len(path) > len(current.path) {
+				parent, prefixLength = current.savedPath, len(current.path)
 			}
-			index++
-		},
+			if index >= len(s.states) || !s.states[index].path.matches(path, parent, prefixLength) ||
+				s.states[index].typ != typ || s.states[index].value != value {
+				changed = string(path)
+			} else {
+				current.savedPath = s.states[index].path
+			}
+		}
+		index++
 	}
 	// Keep walking after a difference: an unsupported value must still return
 	// its error, even when an earlier value already changed.
@@ -362,18 +377,28 @@ func (s *designSnapshot) changedPath(roots []eval.Root) (string, error) {
 		}
 	}
 	if changed == "" && index < len(s.states) {
-		changed = s.states[index].path
+		changed = s.states[index].path.string()
 	}
 	return changed, nil
 }
 
 // appendValue visits value with the supplied path, then restores the parent's
-// path length. Child visits reuse the buffer; record must copy any path it keeps.
+// path and its saved parent. Capture retains only each new suffix; audits
+// reuse the saved parent after record verifies it. Child visits reuse the byte
+// buffer, so record must copy any complete diagnostic path it keeps.
 func (s *designSnapshotter) appendValue(path []byte, value reflect.Value) error {
 	parentLength := len(s.path)
+	parentPath := s.savedPath
+	previousParent, previousLength := s.parentPath, s.parentLength
+	s.parentPath, s.parentLength = parentPath, parentLength
+	if s.references != nil && len(path) > parentLength {
+		s.savedPath = &designPath{parent: parentPath, suffix: string(path[parentLength:]), length: len(path)}
+	}
 	s.path = path
 	defer func() {
 		s.path = s.path[:parentLength]
+		s.savedPath = parentPath
+		s.parentPath, s.parentLength = previousParent, previousLength
 	}()
 	if !value.IsValid() {
 		s.record(s.path, nil, "invalid")

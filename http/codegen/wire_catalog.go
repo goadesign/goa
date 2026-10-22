@@ -299,7 +299,8 @@ func (c *wireTypeCatalog) collectWithReleasedNames(attribute *expr.AttributeExpr
 		root = api[0]
 	}
 	use := wireUnionUse{role: role, view: policy.view}
-	return c.collectRecursive(attribute, role, policy, use, preferred, suffix, root, true, releasedNames, make(map[expr.UserType]struct{}))
+	record, _ := c.collectRecursive(attribute, role, policy, use, preferred, suffix, root, true, releasedNames, make(map[expr.UserType]struct{}), make(map[expr.UserType]struct{}))
+	return record
 }
 
 // collectChildren records named types inside attribute without recording its
@@ -317,10 +318,10 @@ func (c *wireTypeCatalog) collectChildrenWithReleasedNames(attribute *expr.Attri
 		root = api[0]
 	}
 	if userType, ok := attribute.Type.(expr.UserType); ok {
-		c.collectRecursive(userType.Attribute(), wireAttribute, policy, use, "", suffix, root, false, releasedNames, make(map[expr.UserType]struct{}))
+		c.collectRecursive(userType.Attribute(), wireAttribute, policy, use, "", suffix, root, false, releasedNames, make(map[expr.UserType]struct{}), make(map[expr.UserType]struct{}))
 		return
 	}
-	c.collectRecursive(attribute, wireAttribute, policy, use, "", suffix, root, false, releasedNames, make(map[expr.UserType]struct{}))
+	c.collectRecursive(attribute, wireAttribute, policy, use, "", suffix, root, false, releasedNames, make(map[expr.UserType]struct{}), make(map[expr.UserType]struct{}))
 }
 
 // Declare requests every type and function name this HTTP package can write.
@@ -1296,9 +1297,15 @@ func (r *wireTypeRecord) errorDescription() string {
 // collectRecursive records named types and stops when a type refers back to one
 // it is already reading. Released names are kept separately from current type
 // identity so several old declarations can share one current declaration.
-func (c *wireTypeCatalog) collectRecursive(attribute *expr.AttributeExpr, role wireTypeRole, policy wireTypePolicy, use wireUnionUse, preferred, releasedSuffix, api string, root bool, releasedNames map[expr.UserType]string, seen map[expr.UserType]struct{}) *wireTypeRecord {
+// Each occurrence still records its name and validation requirements. After an
+// exact copied definition's children have been collected, later references in
+// this walk reuse that work. Separate copies with the same origin are visited
+// independently because they may contain different fields or authored unions.
+// The boolean result is false when an active ancestor stopped any descendants;
+// that definition must be visited again if it occurs outside that ancestor.
+func (c *wireTypeCatalog) collectRecursive(attribute *expr.AttributeExpr, role wireTypeRole, policy wireTypePolicy, use wireUnionUse, preferred, releasedSuffix, api string, root bool, releasedNames map[expr.UserType]string, seen, completed map[expr.UserType]struct{}) (*wireTypeRecord, bool) {
 	if attribute.Type == expr.Empty {
-		return nil
+		return nil, true
 	}
 	var record *wireTypeRecord
 	if userType, ok := attribute.Type.(expr.UserType); ok {
@@ -1315,14 +1322,20 @@ func (c *wireTypeCatalog) collectRecursive(attribute *expr.AttributeExpr, role w
 		record.addReleasedName(released)
 		origin := userType.Origin()
 		if _, ok := seen[origin]; ok {
-			return record
+			return record, false
+		}
+		if _, ok := completed[userType]; ok {
+			return record, true
 		}
 		seen[origin] = struct{}{}
 		nestedPolicy := policy
 		nestedPolicy.view = ""
-		c.collectRecursive(userType.Attribute(), wireAttribute, nestedPolicy, use, "", releasedSuffix, api, false, releasedNames, seen)
+		_, visitedAll := c.collectRecursive(userType.Attribute(), wireAttribute, nestedPolicy, use, "", releasedSuffix, api, false, releasedNames, seen, completed)
 		delete(seen, origin)
-		return record
+		if visitedAll {
+			completed[userType] = struct{}{}
+		}
+		return record, visitedAll
 	}
 	if preferred != "" {
 		identity := newWireTypeIdentity(attribute, role, policy, preferred)
@@ -1330,22 +1343,27 @@ func (c *wireTypeCatalog) collectRecursive(attribute *expr.AttributeExpr, role w
 		record = c.findOrAppend(identity)
 		record.addReleasedName(preferred)
 	}
+	visitedAll := true
 	switch actual := attribute.Type.(type) {
 	case *expr.Object:
 		nestedPolicy := policy
 		nestedPolicy.view = ""
 		for _, named := range sortedWireAttributes(*actual) {
-			c.collectRecursive(named.Attribute, wireAttribute, nestedPolicy, use, "", releasedSuffix, api, false, releasedNames, seen)
+			_, visited := c.collectRecursive(named.Attribute, wireAttribute, nestedPolicy, use, "", releasedSuffix, api, false, releasedNames, seen, completed)
+			visitedAll = visitedAll && visited
 		}
 	case *expr.Array:
 		nestedPolicy := policy
 		nestedPolicy.view = ""
-		c.collectRecursive(actual.ElemType, wireAttribute, nestedPolicy, use, "", releasedSuffix, api, false, releasedNames, seen)
+		_, visited := c.collectRecursive(actual.ElemType, wireAttribute, nestedPolicy, use, "", releasedSuffix, api, false, releasedNames, seen, completed)
+		visitedAll = visitedAll && visited
 	case *expr.Map:
 		nestedPolicy := policy
 		nestedPolicy.view = ""
-		c.collectRecursive(actual.KeyType, wireAttribute, nestedPolicy, use, "", releasedSuffix, api, false, releasedNames, seen)
-		c.collectRecursive(actual.ElemType, wireAttribute, nestedPolicy, use, "", releasedSuffix, api, false, releasedNames, seen)
+		_, visited := c.collectRecursive(actual.KeyType, wireAttribute, nestedPolicy, use, "", releasedSuffix, api, false, releasedNames, seen, completed)
+		visitedAll = visitedAll && visited
+		_, visited = c.collectRecursive(actual.ElemType, wireAttribute, nestedPolicy, use, "", releasedSuffix, api, false, releasedNames, seen, completed)
+		visitedAll = visitedAll && visited
 	case *expr.Union:
 		nestedPolicy := policy
 		nestedPolicy.view = ""
@@ -1357,10 +1375,11 @@ func (c *wireTypeCatalog) collectRecursive(attribute *expr.AttributeExpr, role w
 			policy:    policy,
 		})
 		for _, named := range actual.Values {
-			c.collectRecursive(named.Attribute, wireAttribute, nestedPolicy, use, "", releasedSuffix, api, false, releasedNames, seen)
+			_, visited := c.collectRecursive(named.Attribute, wireAttribute, nestedPolicy, use, "", releasedSuffix, api, false, releasedNames, seen, completed)
+			visitedAll = visitedAll && visited
 		}
 	}
-	return record
+	return record, visitedAll
 }
 
 // addReleasedName records one spelling used before HTTP types were retained.

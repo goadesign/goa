@@ -125,15 +125,16 @@ func TestPreparedDesignDirectComparisonRootCount(t *testing.T) {
 func firstSnapshotDifference(before, after *designSnapshot) string {
 	common := min(len(before.states), len(after.states))
 	for index := range common {
-		if before.states[index] != after.states[index] {
-			return after.states[index].path
+		left, right := before.states[index], after.states[index]
+		if left.path.string() != right.path.string() || left.typ != right.typ || left.value != right.value {
+			return after.states[index].path.string()
 		}
 	}
 	if len(before.states) > common {
-		return before.states[common].path
+		return before.states[common].path.string()
 	}
 	if len(after.states) > common {
-		return after.states[common].path
+		return after.states[common].path.string()
 	}
 	return ""
 }
