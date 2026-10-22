@@ -124,7 +124,7 @@ go get goa.design/goa/v3@latest
 mkdir design
 ```
 
-Save the design above as `design/design.go`. For all three transports, install the [Protocol Buffer compiler](https://protobuf.dev/installation/) and the [Go protobuf generators](UPGRADING.md#install-v3340-after-publication). For an HTTP-only first run, omit both `JSONRPC` blocks and the `GRPC` block.
+Save the design above as `design/design.go`. For all three transports, install the [Protocol Buffer compiler](https://protobuf.dev/installation/) and the [Go protobuf generators](UPGRADING.md#install-v3350-after-publication). For an HTTP-only first run, omit both `JSONRPC` blocks and the `GRPC` block.
 
 Generate the code and starter application:
 
@@ -191,11 +191,11 @@ You implement the planner and application behavior; Goa-AI generates contracts, 
 
 **[Explore Goa-AI →](https://github.com/goadesign/goa-ai)** · [Quickstart](https://goa.design/docs/2-goa-ai/quickstart/) · [A service and an agent sharing one design](https://goa.design/docs/ai-development/#one-design-two-entry-points)
 
-## Upgrading to v3.32.0
+## Upgrading to v3.35.0
 
-v3.34.0 adds generated clients and servers for URL-encoded form requests, lets transport plugins reuse Goa's URL parameter validation and declare server dependencies, reports gRPC cancellation with native status codes, and fixes generation for viewed collection bodies, mapped URL parameters, explicit object bodies, and JSON-RPC bindings. Goa requires Go 1.26 or later.
+v3.35.0 adds flat and untagged JSON union encodings, service-specific HTTP body field name mappings, `OneOf` template value accessors, and collection branches in gRPC unions; preserves HTTP path parameter identity, selected result views in union branches, and forwarded gRPC status codes; and speeds up `goa gen` up to 6.5x on large multi-service designs. Goa now requires **Go 1.27.3 or later**, incorporating the emergency `crypto/x509` intermediate CA distrust fix (`CVE-2026-111943`) and the 15 standard-library and toolchain security fixes from Go 1.27.2.
 
-Projects upgrading from v3.30.x must also account for the intentional source and transport changes introduced in v3.31. Read the **[upgrade guide](UPGRADING.md)** before regenerating; it keeps the current v3.34.0 changes separate from those earlier migrations. The [release notes](https://github.com/goadesign/goa/releases/tag/v3.34.0) explain the benefits and fixes.
+Projects upgrading from v3.30.x must also account for the intentional source and transport changes introduced in v3.31. Read the **[upgrade guide](UPGRADING.md)** before regenerating; it keeps the current v3.35.0 changes separate from those earlier migrations. The [release notes](https://github.com/goadesign/goa/releases/tag/v3.35.0) explain the benefits and fixes.
 
 ## Keep exploring
 
