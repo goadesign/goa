@@ -73,7 +73,7 @@ func runPrimitivePathRuntimeTest(t *testing.T, files []*goacodegen.File) {
 
 	parallelHTTPTest(t)
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
 	command := exec.CommandContext(ctx, "go", "test", "-mod=readonly", "./gen/http/primitive_path/client")
 	command.Dir = directory

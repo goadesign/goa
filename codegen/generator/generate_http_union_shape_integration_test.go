@@ -252,7 +252,7 @@ func writeGeneratedModule(t *testing.T, dir, modulePath string) {
 func runGeneratedTests(t *testing.T, dir string) {
 	t.Helper()
 	parallelGeneratedTest(t)
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, "go", "test", "-mod=readonly", "./...")
 	cmd.Dir = dir

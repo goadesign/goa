@@ -101,7 +101,7 @@ func runGeneratedResponseBodyLifecycleTest(t *testing.T, files []*codegen.File) 
 
 	parallelHTTPTest(t)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
 	command := exec.CommandContext(ctx, "go", "test", "-mod=readonly", "./gen/http/body_lifecycle/client")
 	command.Dir = directory

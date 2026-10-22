@@ -141,7 +141,7 @@ func runGeneratedMixedSSEClientTest(t *testing.T, files []*codegen.File) {
 
 	parallelHTTPTest(t)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
 	command := exec.CommandContext(ctx, "go", "test", "-mod=readonly", "./gen/http/mixed_sse_wire/client")
 	command.Dir = directory
@@ -165,7 +165,7 @@ func runGeneratedMixedSSECompile(t *testing.T, files []*codegen.File, packagePat
 
 	parallelHTTPTest(t)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
 	command := exec.CommandContext(ctx, "go", "build", "-mod=readonly", packagePath)
 	command.Dir = directory

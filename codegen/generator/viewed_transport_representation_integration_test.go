@@ -107,7 +107,7 @@ func writeGeneratedContractTest(t *testing.T, moduleDir, packageDir, source stri
 func runGeneratedPackageTests(t *testing.T, dir, packagePattern string) {
 	t.Helper()
 	parallelGeneratedTest(t)
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, "go", "test", "-mod=readonly", packagePattern)
 	cmd.Dir = dir

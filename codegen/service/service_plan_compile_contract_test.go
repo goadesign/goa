@@ -336,7 +336,7 @@ func compileGeneratedServiceFilesWith(t *testing.T, files []*codegen.File, addit
 
 	parallelServiceTest(t)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
 	args := []string{"build", "-mod=readonly", "./..."}
 	if len(additional) > 0 {

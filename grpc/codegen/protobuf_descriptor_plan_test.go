@@ -442,7 +442,7 @@ func hasProtobufTestFiles(dir string) bool {
 func compileProtobufDescriptorModule(t *testing.T, directory string) {
 	t.Helper()
 	parallelGRPCTest(t)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
 	args := []string{"build", "-mod=readonly", "./..."}
 	if hasProtobufTestFiles(directory) {

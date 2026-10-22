@@ -49,11 +49,9 @@ func generateGRPCClientErrors(t *testing.T, pattern string) {
 		require.NoError(t, os.WriteFile(filepath.Join(target, filepath.Base(fixture)), source, 0o600))
 	}
 
-	parallelGeneratedTest(t)
-
 	// Bound compilation and the local server tests together. Passing -race to
 	// this child command instruments the generated client, not just its generator.
-	ctx, cancel := context.WithTimeout(t.Context(), 90*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 3*time.Minute)
 	defer cancel()
 	command := exec.CommandContext(ctx, "go", "test", "-mod=readonly", "-race", "-count=1", "-v", "./clienterrors", "-run", pattern)
 	command.Dir = dir

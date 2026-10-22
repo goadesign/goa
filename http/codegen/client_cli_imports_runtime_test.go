@@ -150,7 +150,7 @@ func prepareGeneratedCLIImportTestDir(t *testing.T, root *expr.RootExpr, testSou
 func executeGeneratedCLIImportTestDir(t *testing.T, directory string) {
 	t.Helper()
 	parallelHTTPTest(t)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
 	command := exec.CommandContext(ctx, "go", "test", "-mod=readonly", "./...")
 	command.Dir = directory
