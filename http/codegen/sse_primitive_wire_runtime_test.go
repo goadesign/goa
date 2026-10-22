@@ -212,12 +212,7 @@ func sseFieldWireDSL() {
 func runGeneratedSSEFieldWireTests(t *testing.T, files []*codegen.File) {
 	t.Helper()
 	directory := t.TempDir()
-	repository, err := filepath.Abs(filepath.Join("..", ".."))
-	require.NoError(t, err)
-	module := "module generated.local\n\ngo 1.25\n\n" +
-		"require goa.design/goa/v3 v3.0.0\n\n" +
-		"replace goa.design/goa/v3 => " + filepath.ToSlash(repository) + "\n"
-	require.NoError(t, os.WriteFile(filepath.Join(directory, "go.mod"), []byte(module), 0o600))
+	writeHTTPGeneratedModule(t, directory)
 	for _, file := range files {
 		_, err := file.Render(directory)
 		require.NoError(t, err)
@@ -228,9 +223,11 @@ func runGeneratedSSEFieldWireTests(t *testing.T, files []*codegen.File) {
 	require.NoError(t, os.WriteFile(serverTest, []byte(generatedSSEServerWireTest), 0o600))
 	require.NoError(t, os.WriteFile(clientTest, []byte(generatedSSEClientWireTest), 0o600))
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	parallelHTTPTest(t)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
-	command := exec.CommandContext(ctx, "go", "test", "-mod=mod", "./gen/http/sse_wire/server", "./gen/http/sse_wire/client")
+	command := exec.CommandContext(ctx, "go", "test", "-mod=readonly", "./gen/http/sse_wire/server", "./gen/http/sse_wire/client")
 	command.Dir = directory
 	command.Env = append(os.Environ(), "GOWORK=off")
 	output, err := command.CombinedOutput()

@@ -633,92 +633,91 @@ func TestNamedUnionBranchImportsReferenceOnly(t *testing.T) {
 func TestNormalizedMethodTypesUseServicePackageNames(t *testing.T) {
 	registry := testRegistryFromGenfuncs([]testGenfunc{{Plan: planServiceData, Generate: testServiceFiles}})
 
-	t.Run("relocated name does not collide", func(t *testing.T) {
-		codegen.RunDSL(t, func() {
-			dsl.API("relocated wrapper names", func() {})
-			relocated := dsl.Type("UsePayload", func() {
-				dsl.Meta("struct:pkg:path", "types")
-				dsl.Field(1, "value", dsl.String)
+	codegen.RunDSL(t, func() {
+		dsl.API("relocated wrapper names", func() {})
+		relocated := dsl.Type("UsePayload", func() {
+			dsl.Meta("struct:pkg:path", "types")
+			dsl.Field(1, "value", dsl.String)
+		})
+		dsl.Service("Values", func() {
+			dsl.Method("Other", func() {
+				dsl.Payload(func() {
+					dsl.Field(1, "nested", relocated)
+				})
+				dsl.HTTP(func() {
+					dsl.POST("/other")
+					dsl.Response(204)
+				})
+				dsl.GRPC(func() {})
 			})
-			dsl.Service("Values", func() {
-				dsl.Method("Other", func() {
-					dsl.Payload(func() {
-						dsl.Field(1, "nested", relocated)
-					})
-					dsl.HTTP(func() {
-						dsl.POST("/other")
-						dsl.Response(204)
-					})
-					dsl.GRPC(func() {})
+			dsl.Method("Use", func() {
+				dsl.Payload(func() {
+					dsl.Field(1, "value", dsl.String)
 				})
-				dsl.Method("Use", func() {
-					dsl.Payload(func() {
-						dsl.Field(1, "value", dsl.String)
-					})
-					dsl.HTTP(func() {
-						dsl.POST("/use")
-						dsl.Response(204)
-					})
-					dsl.GRPC(func() {})
+				dsl.HTTP(func() {
+					dsl.POST("/use")
+					dsl.Response(204)
 				})
+				dsl.GRPC(func() {})
 			})
 		})
-
-		dir := t.TempDir()
-		genDir := filepath.Join(dir, codegen.Gendir)
-		writeGeneratedModule(t, genDir, "generated.local/gen")
-		_, err := generate(dir, "gen", false, registry)
-		require.NoError(t, err)
-		content, err := os.ReadFile(filepath.Join(genDir, "values", "service.go"))
-		require.NoError(t, err)
-		require.Contains(t, string(content), "type UsePayload struct")
-		require.NotContains(t, string(content), "type UsePayload2 struct")
-		runGeneratedTests(t, genDir)
 	})
 
-	t.Run("local name collides", func(t *testing.T) {
-		registry := testRegistryFromGenfuncs([]testGenfunc{
-			{Plan: planServiceData, Generate: testServiceFiles},
-			{Plan: planTransportData, Generate: testTransportFiles},
-		})
-		codegen.RunDSL(t, func() {
-			dsl.API("local wrapper names", func() {})
-			local := dsl.Type("UsePayload", func() {
-				dsl.Field(1, "existing", dsl.String)
-			})
-			dsl.Service("Values", func() {
-				dsl.Method("Existing", func() {
-					dsl.Payload(local)
-					dsl.HTTP(func() {
-						dsl.POST("/existing")
-						dsl.Response(204)
-					})
-					dsl.GRPC(func() {})
-				})
-				dsl.Method("Use", func() {
-					dsl.Payload(func() {
-						dsl.Field(1, "value", dsl.String)
-					})
-					dsl.HTTP(func() {
-						dsl.POST("/use")
-						dsl.Response(204)
-					})
-					dsl.GRPC(func() {})
-				})
-			})
-		})
+	firstDir := t.TempDir()
+	firstGenDir := filepath.Join(firstDir, codegen.Gendir)
+	writeGeneratedModule(t, firstGenDir, "generated.local/gen")
+	_, err := generate(firstDir, "gen", false, registry)
+	require.NoError(t, err)
+	content, err := os.ReadFile(filepath.Join(firstGenDir, "values", "service.go"))
+	require.NoError(t, err)
+	require.Contains(t, string(content), "type UsePayload struct")
+	require.NotContains(t, string(content), "type UsePayload2 struct")
 
-		dir := t.TempDir()
-		genDir := filepath.Join(dir, codegen.Gendir)
-		writeGeneratedModule(t, genDir, "generated.local/gen")
-		_, err := generate(dir, "gen", false, registry)
-		require.NoError(t, err)
-		content, err := os.ReadFile(filepath.Join(genDir, "values", "service.go"))
-		require.NoError(t, err)
-		code := string(content)
-		require.Contains(t, code, "type UsePayload struct")
-		require.Contains(t, code, "type UsePayload2 struct")
-		runGeneratedTests(t, genDir)
+	localRegistry := testRegistryFromGenfuncs([]testGenfunc{
+		{Plan: planServiceData, Generate: testServiceFiles},
+		{Plan: planTransportData, Generate: testTransportFiles},
+	})
+	codegen.RunDSL(t, func() {
+		dsl.API("local wrapper names", func() {})
+		local := dsl.Type("UsePayload", func() {
+			dsl.Field(1, "existing", dsl.String)
+		})
+		dsl.Service("Values", func() {
+			dsl.Method("Existing", func() {
+				dsl.Payload(local)
+				dsl.HTTP(func() {
+					dsl.POST("/existing")
+					dsl.Response(204)
+				})
+				dsl.GRPC(func() {})
+			})
+			dsl.Method("Use", func() {
+				dsl.Payload(func() {
+					dsl.Field(1, "value", dsl.String)
+				})
+				dsl.HTTP(func() {
+					dsl.POST("/use")
+					dsl.Response(204)
+				})
+				dsl.GRPC(func() {})
+			})
+		})
+	})
+
+	secondDir := t.TempDir()
+	secondGenDir := filepath.Join(secondDir, codegen.Gendir)
+	writeGeneratedModule(t, secondGenDir, "generated.local/gen")
+	_, err = generate(secondDir, "gen", false, localRegistry)
+	require.NoError(t, err)
+	content, err = os.ReadFile(filepath.Join(secondGenDir, "values", "service.go"))
+	require.NoError(t, err)
+	code := string(content)
+	require.Contains(t, code, "type UsePayload struct")
+	require.Contains(t, code, "type UsePayload2 struct")
+
+	runGeneratedTestDirs(t, []generatedTestDir{
+		{name: "relocated name does not collide", dir: firstGenDir},
+		{name: "local name collides", dir: secondGenDir},
 	})
 }
 

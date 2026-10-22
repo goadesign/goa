@@ -19,6 +19,7 @@ import (
 // TestGeneratedJSONRPCPathInputs generates and runs real clients and servers
 // so URL decoding, validation and endpoint delivery are checked together.
 func TestGeneratedJSONRPCPathInputs(t *testing.T) {
+	t.Parallel()
 	for _, mapped := range []bool{false, true} {
 		name := "same names"
 		design := pathInputsDesign
@@ -30,6 +31,7 @@ func TestGeneratedJSONRPCPathInputs(t *testing.T) {
 			design = strings.ReplaceAll(design, "HTTP(func() { GET(", "HTTP(func() { Param(\"organization_id:organization\"); GET(")
 		}
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			runGeneratedPathInputs(t, design)
 		})
 	}

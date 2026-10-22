@@ -18,6 +18,7 @@ import (
 
 func TestExternalUnionConversions(t *testing.T) {
 	var baseline string
+	var compileFiles []*codegen.File
 	for _, test := range []struct {
 		name    string
 		reverse bool
@@ -27,64 +28,63 @@ func TestExternalUnionConversions(t *testing.T) {
 		{name: "reverse roots", reverse: true},
 		{name: "retained plan", mutate: true},
 	} {
-		t.Run(test.name, func(t *testing.T) {
-			roots := externalUnionRoots(t)
-			if test.reverse {
-				slices.Reverse(roots)
-			}
-			evaluated := make([]eval.Root, len(roots))
-			inputs := make([]PlanInput, len(roots))
-			for i, root := range roots {
-				evaluated[i] = root
-				inputs[i] = PlanInput{Root: root, Examples: expr.NewExampleGenerator(root.API.RandomizerFactory)}
-			}
-			generation := mustTestGeneration(t, "generated.local/gen", evaluated)
-			plans, err := NewPlans(generation, inputs...)
-			require.NoError(t, err)
-			if test.mutate {
-				packet := roots[0].Conversions[0].User
-				entry := expr.AsArray(packet.Attribute().Find("entries").Type).ElemType.Type
-				choice := expr.AsUnion(expr.AsObject(entry).Attribute("choice").Type)
-				choice.Values[0].Name = "changed"
-				choice.Values[0].Attribute.Type = expr.Int
-				for _, root := range roots {
-					for _, mapping := range append(root.Conversions, root.Creations...) {
-						mapping.User = nil
-						mapping.External = struct{}{}
-					}
-					root.Conversions = nil
-					root.Creations = nil
+		roots := externalUnionRoots(t)
+		if test.reverse {
+			slices.Reverse(roots)
+		}
+		evaluated := make([]eval.Root, len(roots))
+		inputs := make([]PlanInput, len(roots))
+		for i, root := range roots {
+			evaluated[i] = root
+			inputs[i] = PlanInput{Root: root, Examples: expr.NewExampleGenerator(root.API.RandomizerFactory)}
+		}
+		generation := mustTestGeneration(t, "generated.local/gen", evaluated)
+		plans, err := NewPlans(generation, inputs...)
+		require.NoError(t, err)
+		if test.mutate {
+			packet := roots[0].Conversions[0].User
+			entry := expr.AsArray(packet.Attribute().Find("entries").Type).ElemType.Type
+			choice := expr.AsUnion(expr.AsObject(entry).Attribute("choice").Type)
+			choice.Values[0].Name = "changed"
+			choice.Values[0].Attribute.Type = expr.Int
+			for _, root := range roots {
+				for _, mapping := range append(root.Conversions, root.Creations...) {
+					mapping.User = nil
+					mapping.External = struct{}{}
 				}
+				root.Conversions = nil
+				root.Creations = nil
 			}
-			require.NoError(t, generation.Freeze())
-			for _, plan := range plans {
-				require.NoError(t, plan.Link())
-			}
-			files, err := Files(plans...)
-			require.NoError(t, err)
-			path := filepath.Join(codegen.Gendir, "shared", "types", "convert.go")
-			require.Len(t, filesAtPath(files, path), 1)
-			source := renderSingleFileAtPath(t, files, path)
-			require.Contains(t, source, "Text_Value")
-			require.Contains(t, source, "Text_List")
-			require.Contains(t, source, "Text_Table")
-			require.Contains(t, source, "Byte_Data")
-			require.NotContains(t, source, ".TextValue")
-			require.NotContains(t, source, "ChoiceBranchText")
-			require.Contains(t, source, "codegen/service/testdata/external-union")
-			require.Contains(t, source, "codegen/service/testdata/nested-alpha")
-			require.Contains(t, source, "ConvertToEnvelope")
-			require.Contains(t, source, "CreateFromEnvelope")
-			if baseline == "" {
-				baseline = source
-			} else {
-				require.Equal(t, baseline, source)
-			}
-			compileGeneratedServiceFilesWith(t, files, map[string]string{
-				filepath.Join(codegen.Gendir, "shared", "types", "conversion_test.go"): externalUnionRoundTripTest,
-			})
-		})
+		}
+		require.NoError(t, generation.Freeze())
+		for _, plan := range plans {
+			require.NoError(t, plan.Link())
+		}
+		files, err := Files(plans...)
+		require.NoError(t, err)
+		path := filepath.Join(codegen.Gendir, "shared", "types", "convert.go")
+		require.Len(t, filesAtPath(files, path), 1)
+		source := renderSingleFileAtPath(t, files, path)
+		require.Contains(t, source, "Text_Value")
+		require.Contains(t, source, "Text_List")
+		require.Contains(t, source, "Text_Table")
+		require.Contains(t, source, "Byte_Data")
+		require.NotContains(t, source, ".TextValue")
+		require.NotContains(t, source, "ChoiceBranchText")
+		require.Contains(t, source, "codegen/service/testdata/external-union")
+		require.Contains(t, source, "codegen/service/testdata/nested-alpha")
+		require.Contains(t, source, "ConvertToEnvelope")
+		require.Contains(t, source, "CreateFromEnvelope")
+		if baseline == "" {
+			baseline = source
+			compileFiles = files
+		} else {
+			require.Equal(t, baseline, source)
+		}
 	}
+	compileGeneratedServiceFilesWith(t, compileFiles, map[string]string{
+		filepath.Join(codegen.Gendir, "shared", "types", "conversion_test.go"): externalUnionRoundTripTest,
+	})
 }
 
 func TestExternalUnionPlanningRejectsIncompatibleMethods(t *testing.T) {

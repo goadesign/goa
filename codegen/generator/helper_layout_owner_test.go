@@ -5,6 +5,7 @@ package generator
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -138,131 +139,127 @@ func TestTransformHelperConstructorsPreserveEnclosingOwners(t *testing.T) {
 }
 
 func TestHTTPSharedBranchOwnersCompileAndRoundTrip(t *testing.T) {
+	rootDir := t.TempDir()
+	writeGeneratedModule(t, rootDir, "generated.local")
 	for _, order := range []string{"forward", "reverse"} {
-		t.Run(order, func(t *testing.T) {
-			fixture := sharedHelperOwnerRoots(t)
-			if order == "reverse" {
-				fixture.roots[0], fixture.roots[1] = fixture.roots[1], fixture.roots[0]
-			}
-			plan := mustTestPlan(t, "generated.local/gen", fixture.roots, planServiceData, planTransportData)
-			files, err := testServiceFiles(plan)
-			require.NoError(t, err)
-			transports, err := testTransportFiles(plan)
-			require.NoError(t, err)
-			files, err = mergeFilesByPath(append(files, transports...))
-			require.NoError(t, err)
-			directory := t.TempDir()
-			writeGeneratedModule(t, directory, "generated.local")
-			for _, file := range files {
-				_, err := file.Render(directory)
-				require.NoError(t, err)
-			}
+		modulePrefix := "generated.local/" + order
+		fixture := sharedHelperOwnerRoots(t)
+		if order == "reverse" {
+			fixture.roots[0], fixture.roots[1] = fixture.roots[1], fixture.roots[0]
+		}
+		plan := mustTestPlan(t, modulePrefix+"/gen", fixture.roots, planServiceData, planTransportData)
+		files, err := testServiceFiles(plan)
+		require.NoError(t, err)
+		transports, err := testTransportFiles(plan)
+		require.NoError(t, err)
+		files, err = mergeFilesByPath(append(files, transports...))
+		require.NoError(t, err)
+		directory := filepath.Join(rootDir, order)
+		renderGeneratedFiles(t, directory, files)
 
-			// Request and response helpers must name and allocate the declaration
-			// selected beneath each parent, even when the branch origin is shared.
-			for _, side := range []string{"server", "client"} {
-				source := generatedTreeSource(t, filepath.Join(directory, "gen", "http", "right", side))
-				for index, owner := range []string{"lefttypes", "righttypes"} {
-					pkg := plan.Generation().Package("generated.local/gen/" + owner)
-					record, err := pkg.UnionBranchType(fixture.choices[index], "record")
-					require.NoError(t, err)
-					require.Contains(t, source, "*"+owner+"."+record.Name())
-					require.Contains(t, source, "&"+owner+"."+record.Name()+"{")
-				}
+		// Request and response helpers must name and allocate the declaration
+		// selected beneath each parent, even when the branch origin is shared.
+		for _, side := range []string{"server", "client"} {
+			source := generatedTreeSource(t, filepath.Join(directory, "gen", "http", "right", side))
+			for index, owner := range []string{"lefttypes", "righttypes"} {
+				pkg := plan.Generation().Package(modulePrefix + "/gen/" + owner)
+				record, err := pkg.UnionBranchType(fixture.choices[index], "record")
+				require.NoError(t, err)
+				require.Contains(t, source, "*"+owner+"."+record.Name())
+				require.Contains(t, source, "&"+owner+"."+record.Name()+"{")
 			}
-			writeGeneratedContractTest(t, directory, filepath.Join("gen", "http", "right", "server"), sharedHelperOwnerRoundTrip)
-			runGeneratedTests(t, directory)
-		})
+		}
+		testSrc := strings.ReplaceAll(sharedHelperOwnerRoundTrip, `"generated.local/gen/`, `"`+modulePrefix+`/gen/`)
+		writeGeneratedContractTest(t, directory, filepath.Join("gen", "http", "right", "server"), testSrc)
 	}
+	runGeneratedTests(t, rootDir)
 }
 
 // These controls distinguish generated branch ownership from authored child
 // placement and from ordinary copies of a parent that already has one owner.
 func TestHTTPUnionOwnerControlsCompile(t *testing.T) {
-	for _, scenario := range []string{"service local", "equal names", "explicit child", "shared parent copy"} {
-		t.Run(scenario, func(t *testing.T) {
-			transport := func(name string, input expr.UserType) {
-				dsl.Service(name, func() {
-					dsl.Method("Exchange", func() {
-						dsl.Payload(input)
-						dsl.Result(input)
-						dsl.HTTP(func() { dsl.POST("/" + name) })
-					})
+	rootDir := t.TempDir()
+	writeGeneratedModule(t, rootDir, "generated.local")
+	for caseIndex, scenario := range []string{"service local", "equal names", "explicit child", "shared parent copy"} {
+		slug := fmt.Sprintf("case%d", caseIndex)
+		modulePrefix := "generated.local/" + slug
+		transport := func(name string, input expr.UserType) {
+			dsl.Service(name, func() {
+				dsl.Method("Exchange", func() {
+					dsl.Payload(input)
+					dsl.Result(input)
+					dsl.HTTP(func() { dsl.POST("/" + name) })
+				})
+			})
+		}
+		first := codegen.RunDSL(t, func() {
+			dsl.API("first", func() {})
+			var child expr.UserType
+			if scenario == "explicit child" {
+				child = dsl.Type("LocatedRecord", func() {
+					dsl.Meta("struct:pkg:path", "children")
+					dsl.Attribute("text", dsl.String)
+					dsl.Required("text")
 				})
 			}
-			first := codegen.RunDSL(t, func() {
-				dsl.API("first", func() {})
-				var child expr.UserType
-				if scenario == "explicit child" {
-					child = dsl.Type("LocatedRecord", func() {
-						dsl.Meta("struct:pkg:path", "children")
-						dsl.Attribute("text", dsl.String)
-						dsl.Required("text")
-					})
+			input := dsl.Type("FirstInput", func() {
+				if scenario != "service local" {
+					dsl.Meta("struct:pkg:path", "firsttypes")
 				}
-				input := dsl.Type("FirstInput", func() {
-					if scenario != "service local" {
-						dsl.Meta("struct:pkg:path", "firsttypes")
+				dsl.OneOf("choice", func() {
+					dsl.TypeName("OwnerChoice")
+					if child != nil {
+						dsl.Attribute("record", child)
+					} else {
+						dsl.Attribute("record", func() {
+							dsl.Attribute("text", dsl.String)
+							dsl.Required("text")
+						})
 					}
-					dsl.OneOf("choice", func() {
-						dsl.TypeName("OwnerChoice")
-						if child != nil {
-							dsl.Attribute("record", child)
-						} else {
+				})
+				dsl.Required("choice")
+			})
+			transport("first", input)
+		})
+		input := first.UserType("FirstInput")
+		choice := expr.AsObject(input).Attribute("choice")
+		second := codegen.RunDSL(t, func() {
+			dsl.API("second", func() {})
+			var selected expr.UserType
+			if scenario == "shared parent copy" {
+				selected = expr.DupAtt(&expr.AttributeExpr{Type: input}).Type.(expr.UserType)
+			} else {
+				selected = dsl.Type("SecondInput", func() {
+					if scenario != "service local" {
+						dsl.Meta("struct:pkg:path", "secondtypes")
+					}
+					if scenario == "equal names" {
+						dsl.OneOf("choice", func() {
+							dsl.TypeName("OwnerChoice")
 							dsl.Attribute("record", func() {
-								dsl.Attribute("text", dsl.String)
+								dsl.Attribute("text", dsl.Int)
 								dsl.Required("text")
 							})
-						}
-					})
+						})
+					} else {
+						dsl.Attribute("choice", choice.Type)
+					}
 					dsl.Required("choice")
 				})
-				transport("first", input)
-			})
-			input := first.UserType("FirstInput")
-			choice := expr.AsObject(input).Attribute("choice")
-			second := codegen.RunDSL(t, func() {
-				dsl.API("second", func() {})
-				var selected expr.UserType
-				if scenario == "shared parent copy" {
-					selected = expr.DupAtt(&expr.AttributeExpr{Type: input}).Type.(expr.UserType)
-				} else {
-					selected = dsl.Type("SecondInput", func() {
-						if scenario != "service local" {
-							dsl.Meta("struct:pkg:path", "secondtypes")
-						}
-						if scenario == "equal names" {
-							dsl.OneOf("choice", func() {
-								dsl.TypeName("OwnerChoice")
-								dsl.Attribute("record", func() {
-									dsl.Attribute("text", dsl.Int)
-									dsl.Required("text")
-								})
-							})
-						} else {
-							dsl.Attribute("choice", choice.Type)
-						}
-						dsl.Required("choice")
-					})
-				}
-				transport("second", selected)
-			})
-			plan := mustTestPlan(t, "generated.local/gen", []eval.Root{first, second}, planServiceData, planTransportData)
-			files, err := testServiceFiles(plan)
-			require.NoError(t, err)
-			transports, err := testTransportFiles(plan)
-			require.NoError(t, err)
-			files, err = mergeFilesByPath(append(files, transports...))
-			require.NoError(t, err)
-			directory := t.TempDir()
-			writeGeneratedModule(t, directory, "generated.local")
-			for _, file := range files {
-				_, err := file.Render(directory)
-				require.NoError(t, err)
 			}
-			runGeneratedTests(t, directory)
+			transport("second", selected)
 		})
+		plan := mustTestPlan(t, modulePrefix+"/gen", []eval.Root{first, second}, planServiceData, planTransportData)
+		files, err := testServiceFiles(plan)
+		require.NoError(t, err)
+		transports, err := testTransportFiles(plan)
+		require.NoError(t, err)
+		files, err = mergeFilesByPath(append(files, transports...))
+		require.NoError(t, err)
+		directory := filepath.Join(rootDir, slug)
+		renderGeneratedFiles(t, directory, files)
 	}
+	runGeneratedTests(t, rootDir)
 }
 
 type helperOwnerRoots struct {

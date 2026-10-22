@@ -36,11 +36,13 @@ type (
 )
 
 func TestGeneratedDeclaredErrorOwnership(t *testing.T) {
+	t.Parallel()
 	for _, reverse := range []bool{false, true} {
 		for _, test := range declaredOwnershipCases(t, reverse) {
 			for _, wrapped := range []bool{false, true} {
 				for _, method := range []string{"ReadErrors", "RetryErrors", "Watch", "Upload", "Exchange", "Collect"} {
 					t.Run(fmt.Sprintf("%s/reverse=%t/wrapped=%t/%s", test.name, reverse, wrapped, method), func(t *testing.T) {
+						t.Parallel()
 						input := test.err
 						if wrapped {
 							input = fmt.Errorf("catalog call: %w", input)

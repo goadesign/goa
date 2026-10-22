@@ -49,10 +49,12 @@ type (
 )
 
 func TestGeneratedWholeOperationEncoding(t *testing.T) {
+	t.Parallel()
 	for _, test := range rpcEncodingCases(t) {
 		for _, wrap := range []bool{false, true} {
 			for _, method := range []string{"Read", "Count", "Watch", "Retry"} {
 				t.Run(fmt.Sprintf("%s/wrapped=%t/%s", test.name, wrap, method), func(t *testing.T) {
+					t.Parallel()
 					input := test.err
 					if wrap {
 						input = fmt.Errorf("catalog operation: %w", input)

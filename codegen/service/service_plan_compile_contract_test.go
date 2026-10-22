@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -20,6 +21,93 @@ import (
 	"goa.design/goa/v3/eval"
 	"goa.design/goa/v3/expr"
 )
+
+type (
+	serviceModuleTemplate struct {
+		goMod []byte
+		goSum []byte
+	}
+
+	compiledServiceCase struct {
+		name       string
+		files      []*codegen.File
+		additional map[string]string
+	}
+)
+
+const serviceModuleSeed = `package seed
+
+import (
+	_ "goa.design/clue/debug"
+	_ "goa.design/clue/health"
+	_ "goa.design/clue/interceptors"
+	_ "goa.design/clue/log"
+	_ "goa.design/goa/v3/codegen/service/testdata/external"
+	_ "goa.design/goa/v3/codegen/service/testdata/external-accessibility"
+	_ "goa.design/goa/v3/codegen/service/testdata/external-union"
+	_ "goa.design/goa/v3/codegen/service/testdata/nested-alpha"
+	_ "goa.design/goa/v3/codegen/service/testdata/nested-beta"
+	_ "goa.design/goa/v3/codegen/service/testdata/nested-outer"
+	_ "goa.design/goa/v3/pkg"
+)
+`
+
+var (
+	parallelServiceTests sync.Map
+	cachedServiceModule  = sync.OnceValues(func() (serviceModuleTemplate, error) {
+		goaRoot, err := filepath.Abs(filepath.Join("..", ".."))
+		if err != nil {
+			return serviceModuleTemplate{}, err
+		}
+		tmpDir, err := os.MkdirTemp("", "goa-service-mod-template-*")
+		if err != nil {
+			return serviceModuleTemplate{}, err
+		}
+		defer func() { _ = os.RemoveAll(tmpDir) }()
+
+		module := "module generated.local\n\ngo 1.25.0\n\n" +
+			"require (\n\tgoa.design/goa/v3 v3.0.0\n\tgoa.design/clue v1.2.6\n)\n\n" +
+			"replace goa.design/goa/v3 => " + filepath.ToSlash(goaRoot) + "\n"
+		if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(module), 0o600); err != nil {
+			return serviceModuleTemplate{}, err
+		}
+		if err := os.WriteFile(filepath.Join(tmpDir, "seed.go"), []byte(serviceModuleSeed), 0o600); err != nil {
+			return serviceModuleTemplate{}, err
+		}
+		cmd := exec.Command("go", "mod", "tidy")
+		cmd.Dir = tmpDir
+		cmd.Env = append(os.Environ(), "GOWORK=off")
+		if out, err := cmd.CombinedOutput(); err != nil {
+			return serviceModuleTemplate{}, &os.PathError{Op: "go mod tidy", Path: string(out), Err: err}
+		}
+		goMod, err := os.ReadFile(filepath.Join(tmpDir, "go.mod"))
+		if err != nil {
+			return serviceModuleTemplate{}, err
+		}
+		goSum, err := os.ReadFile(filepath.Join(tmpDir, "go.sum"))
+		if err != nil {
+			return serviceModuleTemplate{}, err
+		}
+		return serviceModuleTemplate{goMod: goMod, goSum: goSum}, nil
+	})
+)
+
+func parallelServiceTest(t *testing.T) {
+	t.Helper()
+	if _, loaded := parallelServiceTests.LoadOrStore(t, struct{}{}); !loaded {
+		t.Parallel()
+	}
+}
+
+func compileGeneratedServiceCases(t *testing.T, cases []compiledServiceCase) {
+	t.Helper()
+	parallelServiceTest(t)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			compileGeneratedServiceFilesWith(t, tc.files, tc.additional)
+		})
+	}
+}
 
 // TestServicePackageNameUsesClaimedImportPath verifies service package names
 // remain lowercase after the final generated import path is claimed.
@@ -62,11 +150,10 @@ func TestRepeatedInlineMethodErrorsCompile(t *testing.T) {
 	plan := retainedServicePlanForPackage(t, root)
 	files, err := Files(plan)
 	require.NoError(t, err)
-	compileGeneratedServiceFiles(t, files)
-
 	rendered := renderedServiceFiles(t, files)
 	serviceSource := string(rendered[filepath.Join(codegen.Gendir, "secured", "service.go")])
 	require.Equal(t, 1, strings.Count(serviceSource, "type InvalidScopes string"))
+	compileGeneratedServiceFiles(t, files)
 }
 
 // TestExtendedLocatedUnionBranchAliasesCompile verifies that Goa writes each
@@ -110,8 +197,6 @@ func TestExtendedLocatedUnionBranchAliasesCompile(t *testing.T) {
 	plan := retainedServicePlanForPackage(t, root)
 	files, err := Files(plan)
 	require.NoError(t, err)
-	compileGeneratedServiceFiles(t, files)
-
 	rendered := renderedServiceFiles(t, files)
 	for _, name := range []string{"owner_session_id.go", "owner_task_id.go", "unions.go"} {
 		path := filepath.Join(codegen.Gendir, "types", name)
@@ -123,6 +208,7 @@ func TestExtendedLocatedUnionBranchAliasesCompile(t *testing.T) {
 			string(source),
 		)
 	}
+	compileGeneratedServiceFiles(t, files)
 }
 
 // TestNestedViewValidatorCollisionCompiles catches a parent validator that
@@ -198,16 +284,16 @@ func TestMixedResultStarterCompiles(t *testing.T) {
 		{"result and stream", testdata.MixedResultsEndpointDSL},
 		{"result view and stream", testdata.MixedResultsWithViewsEndpointDSL},
 	}
+	compiled := make([]compiledServiceCase, 0, len(cases))
 	for _, c := range cases {
-		t.Run(c.Name, func(t *testing.T) {
-			root := codegen.RunDSL(t, c.DSL)
-			plan := retainedServicePlanForPackage(t, root)
-			files, err := Files(plan)
-			require.NoError(t, err)
-			files = append(files, ExampleServiceFiles(plan)...)
-			compileGeneratedServiceFiles(t, files)
-		})
+		root := codegen.RunDSL(t, c.DSL)
+		plan := retainedServicePlanForPackage(t, root)
+		files, err := Files(plan)
+		require.NoError(t, err)
+		files = append(files, ExampleServiceFiles(plan)...)
+		compiled = append(compiled, compiledServiceCase{name: c.Name, files: files})
 	}
+	compileGeneratedServiceCases(t, compiled)
 }
 
 // retainedServicePlanForPackage builds and links service generation data using
@@ -234,13 +320,10 @@ func compileGeneratedServiceFiles(t *testing.T, files []*codegen.File) {
 func compileGeneratedServiceFilesWith(t *testing.T, files []*codegen.File, additional map[string]string) {
 	t.Helper()
 	directory := t.TempDir()
-	goaRoot := serviceModuleDirectory(t, "goa.design/goa/v3")
-	// Relocated types may import Clue. Pin its Go 1.25-compatible release so
-	// these fixtures continue testing Goa's minimum supported toolchain.
-	module := "module generated.local\n\ngo 1.25.0\n\n" +
-		"require (\n\tgoa.design/goa/v3 v3.0.0\n\tgoa.design/clue v1.2.6\n)\n\n" +
-		"replace goa.design/goa/v3 => " + filepath.ToSlash(goaRoot) + "\n"
-	require.NoError(t, os.WriteFile(filepath.Join(directory, "go.mod"), []byte(module), 0o600))
+	tmpl, err := cachedServiceModule()
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(directory, "go.mod"), tmpl.goMod, 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(directory, "go.sum"), tmpl.goSum, 0o600))
 	for _, file := range files {
 		_, err := file.Render(directory)
 		require.NoError(t, err)
@@ -251,23 +334,17 @@ func compileGeneratedServiceFilesWith(t *testing.T, files []*codegen.File, addit
 		require.NoError(t, os.WriteFile(fullPath, []byte(source), 0o600))
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	parallelServiceTest(t)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
-	command := exec.CommandContext(ctx, "go", "test", "-mod=mod", "./...")
+	args := []string{"build", "-mod=readonly", "./..."}
+	if len(additional) > 0 {
+		args = []string{"test", "-mod=readonly", "./..."}
+	}
+	command := exec.CommandContext(ctx, "go", args...)
 	command.Dir = directory
 	command.Env = append(os.Environ(), "GOWORK=off")
 	output, err := command.CombinedOutput()
 	require.NoError(t, err, "compile generated packages:\n%s", output)
-}
-
-// serviceModuleDirectory resolves the local checkout for a module used by a
-// temporary generated module.
-func serviceModuleDirectory(t *testing.T, module string) string {
-	t.Helper()
-	command := exec.Command("go", "list", "-m", "-f", "{{.Dir}}", module)
-	output, err := command.CombinedOutput()
-	require.NoError(t, err, "resolve module %s:\n%s", module, output)
-	directory := strings.TrimSpace(string(output))
-	require.NotEmpty(t, directory)
-	return directory
 }

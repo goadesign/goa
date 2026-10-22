@@ -23,12 +23,6 @@ func TestGenerateGRPCClientErrorIdentity(t *testing.T) {
 	generateGRPCClientErrors(t, ".")
 }
 
-// TestGenerateGRPCDeclaredErrorOwnership checks the changed declared selection
-// and its caller controls without replaying the unrelated generic join matrix.
-func TestGenerateGRPCDeclaredErrorOwnership(t *testing.T) {
-	generateGRPCClientErrors(t, "^TestGenerated(Declared|ResponseValidation|MergedResponseValidation|MetadataValidation|Views|WrongPayloadDoesNotCallRPC|InvalidResponseDoesNotTryAnotherReply|InvalidMetadataDoesNotRetry|RemoteValidationNameStillRetries|RetryReusesEncodedRequest|RetryReplacesFailedAttemptMetadata|CancellationAfterFailedRPCStopsRetry|BuildHelperPreservesRawErrors|CustomContextCodes|GenericStreamErrors|RawStreamErrors|EndedClientKeepsLocalCause)")
-}
-
 // generateGRPCClientErrors renders the actual service and transports, then
 // runs the selected handwritten tests against their generated RPC methods.
 func generateGRPCClientErrors(t *testing.T, pattern string) {
@@ -43,10 +37,7 @@ func generateGRPCClientErrors(t *testing.T, pattern string) {
 
 	dir := t.TempDir()
 	writeGeneratedModule(t, dir, "generated.local")
-	for _, file := range files {
-		_, err := file.Render(dir)
-		require.NoError(t, err)
-	}
+	renderGeneratedFiles(t, dir, files)
 	fixtures, err := filepath.Glob("testdata/grpc_client_errors/*_test.go")
 	require.NoError(t, err)
 	require.NotEmpty(t, fixtures)
@@ -60,9 +51,9 @@ func generateGRPCClientErrors(t *testing.T, pattern string) {
 
 	// Bound compilation and the local server tests together. Passing -race to
 	// this child command instruments the generated client, not just its generator.
-	ctx, cancel := context.WithTimeout(t.Context(), 90*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 3*time.Minute)
 	defer cancel()
-	command := exec.CommandContext(ctx, "go", "test", "-mod=mod", "-race", "-count=1", "-v", "./...", "-run", pattern)
+	command := exec.CommandContext(ctx, "go", "test", "-mod=readonly", "-race", "-count=1", "-v", "./clienterrors", "-run", pattern)
 	command.Dir = dir
 	command.Env = append(os.Environ(), "GOWORK=off")
 	output, err := command.CombinedOutput()

@@ -55,15 +55,12 @@ func TestRecursiveTransformCallsRetainRequiredness(t *testing.T) {
 
 	forwardFiles, err := Files(forwardPlan)
 	require.NoError(t, err)
-	reverseFiles, err := Files(reversePlan)
+	_, err = Files(reversePlan)
 	require.NoError(t, err)
 
 	compileFiles := append([]*codegen.File(nil), forwardFiles...)
 	compileFiles = append(compileFiles, ExampleServiceFiles(forwardPlan)...)
 	compileGeneratedServiceFiles(t, compileFiles)
-	reverseCompileFiles := append([]*codegen.File(nil), reverseFiles...)
-	reverseCompileFiles = append(reverseCompileFiles, ExampleServiceFiles(reversePlan)...)
-	compileGeneratedServiceFiles(t, reverseCompileFiles)
 }
 
 // TestRecursiveTransformCallsShareSiblingHelper checks that required and

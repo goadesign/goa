@@ -13,6 +13,7 @@ import (
 )
 
 func TestExternalConversionPackageDeclarations(t *testing.T) {
+	compiled := make([]compiledServiceCase, 0, 5)
 	for _, tc := range []struct {
 		name      string
 		service   string
@@ -24,28 +25,27 @@ func TestExternalConversionPackageDeclarations(t *testing.T) {
 		{"explicit package", "catalog", "shared/demo_models"},
 		{"explicit acronym package", "catalog", "shared/HTTPModels"},
 	} {
-		t.Run(tc.name, func(t *testing.T) {
-			root := codegen.RunDSL(t, func() {
-				model := dsl.Type("Model", func() {
-					if tc.placement != "" {
-						dsl.Meta("struct:pkg:path", tc.placement)
-					}
-					dsl.Attribute("foo", dsl.String)
-					dsl.Required("foo")
-					dsl.ConvertTo(external.ConvertModel{})
-					dsl.CreateFrom(external.ConvertModel{})
-				})
-				dsl.Service(tc.service, func() {
-					dsl.Method("exchange", func() {
-						dsl.Payload(model)
-						dsl.Result(model)
-					})
+		root := codegen.RunDSL(t, func() {
+			model := dsl.Type("Model", func() {
+				if tc.placement != "" {
+					dsl.Meta("struct:pkg:path", tc.placement)
+				}
+				dsl.Attribute("foo", dsl.String)
+				dsl.Required("foo")
+				dsl.ConvertTo(external.ConvertModel{})
+				dsl.CreateFrom(external.ConvertModel{})
+			})
+			dsl.Service(tc.service, func() {
+				dsl.Method("exchange", func() {
+					dsl.Payload(model)
+					dsl.Result(model)
 				})
 			})
-			plan := retainedServicePlanForPackage(t, root)
-			files, err := Files(plan)
-			require.NoError(t, err)
-			compileGeneratedServiceFiles(t, files)
 		})
+		plan := retainedServicePlanForPackage(t, root)
+		files, err := Files(plan)
+		require.NoError(t, err)
+		compiled = append(compiled, compiledServiceCase{name: tc.name, files: files})
 	}
+	compileGeneratedServiceCases(t, compiled)
 }

@@ -20,6 +20,7 @@ import (
 
 func TestInheritedPlacementAcrossRoots(t *testing.T) {
 	var baseline map[string][]byte
+	var compileFiles []*codegen.File
 	for _, reverseRoots := range []bool{false, true} {
 		for _, reverseServices := range []bool{false, true} {
 			roots, values := inheritedPlacementRoots(t, reverseServices)
@@ -65,19 +66,20 @@ func TestInheritedPlacementAcrossRoots(t *testing.T) {
 			require.Len(t, filesAtPath(files, filepath.Join(codegen.Gendir, "shared", "types", "child.go")), 1)
 			require.Len(t, filesAtPath(files, filepath.Join(codegen.Gendir, "shared", "types", "convert.go")), 1)
 			rendered := renderedServiceFiles(t, files)
-			if baseline == nil {
-				baseline = rendered
-			} else {
-				require.Equal(t, baseline, rendered)
-			}
-			compileGeneratedServiceFilesWith(t, files, map[string]string{
-				filepath.Join(codegen.Gendir, "shared", "types", "placement_test.go"): inheritedPlacementRoundTrip,
-			})
 			for _, value := range []expr.UserType{values.Child, values.Entry, values.Nested, values.Text} {
 				require.NotContains(t, value.Attribute().Meta, "struct:pkg:path")
 			}
+			if baseline == nil {
+				baseline = rendered
+				compileFiles = files
+			} else {
+				require.Equal(t, baseline, rendered)
+			}
 		}
 	}
+	compileGeneratedServiceFilesWith(t, compileFiles, map[string]string{
+		filepath.Join(codegen.Gendir, "shared", "types", "placement_test.go"): inheritedPlacementRoundTrip,
+	})
 }
 
 func TestInheritedPlacementConflicts(t *testing.T) {

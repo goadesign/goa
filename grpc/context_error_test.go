@@ -20,7 +20,7 @@ type (
 	// typedTransportError lets callers inspect a transport-specific error type
 	// even after Goa correlates the RPC failure with the caller context.
 	typedTransportError struct {
-		error
+		err error
 	}
 
 	// joinedTransportError exposes a status with a caller-defined cause list so
@@ -52,7 +52,7 @@ func TestContextErrorSingleCause(t *testing.T) {
 			)
 			require.NoError(t, err)
 			original := transportStatus.Err()
-			typed := &typedTransportError{error: original}
+			typed := &typedTransportError{err: original}
 
 			for _, wrapped := range []struct {
 				name      string
@@ -116,7 +116,7 @@ func TestContextErrorDeclinesJoinedCauses(t *testing.T) {
 		{name: "joined", err: joined},
 		{name: "wrapped join", err: fmt.Errorf("request failed: %w", joined)},
 		{name: "multiple wrapped joins", err: fmt.Errorf("client: %w", fmt.Errorf("request: %w", joined))},
-		{name: "typed wrapped join", err: &typedTransportError{error: joined}},
+		{name: "typed wrapped join", err: &typedTransportError{err: joined}},
 		{name: "multiple formatting causes", err: fmt.Errorf("request: %w; cleanup: %w", transportErr, cleanup)},
 		{name: "branching beneath single join", err: errors.Join(fmt.Errorf("request: %w", joined))},
 		{name: "empty cause list", err: &joinedTransportError{error: transportErr}},
@@ -164,8 +164,12 @@ func onlyContextCauses(err, ctxErr error) bool {
 	}
 }
 
+func (e *typedTransportError) Error() string {
+	return e.err.Error()
+}
+
 func (e *typedTransportError) Unwrap() error {
-	return e.error
+	return e.err
 }
 
 func (e *joinedTransportError) Unwrap() []error {

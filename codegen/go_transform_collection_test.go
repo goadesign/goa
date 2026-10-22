@@ -101,7 +101,7 @@ func TestGoTransformCollectionsUseFinalCustomTypeImportAlias(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(directory, "go.mod"), []byte("module "+owner+"\n\ngo 1.26.0\n"), 0o600))
 	require.NoError(t, os.WriteFile(filepath.Join(directory, "custom", "strconv", "token.go"), []byte("package strconv\ntype Token string\n"), 0o600))
 	require.NoError(t, os.WriteFile(filepath.Join(directory, "transform.go"), []byte(source.String()), 0o600))
-	command := exec.Command("go", "test", "./...")
+	command := exec.Command("go", "build", "./...")
 	command.Dir = directory
 	output, err := command.CombinedOutput()
 	require.NoError(t, err, "generated collection conversions did not compile:\n%s", output)

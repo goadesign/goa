@@ -62,8 +62,10 @@ func TestPublicPluginRegistrationUsesDefaultGenerationRun(t *testing.T) {
 		return
 	}
 
+	parallelGeneratedTest(t)
 	for _, mode := range []string{"run", "duplicate", "repeat", "http-extension", "legacy-http-endpoint"} {
 		t.Run(mode, func(t *testing.T) {
+			t.Parallel()
 			command := exec.Command(os.Args[0], "-test.run=^TestPublicPluginRegistrationUsesDefaultGenerationRun$")
 			command.Env = append(os.Environ(), publicPluginChildMode+"="+mode)
 			output, err := command.CombinedOutput()

@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -20,92 +21,177 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
+type (
+	protobufModuleTemplate struct {
+		goMod []byte
+		goSum []byte
+	}
+
+	protobufCompileCase struct {
+		name string
+		dir  string
+	}
+)
+
+const protobufModuleSeed = `package seed
+
+import (
+	_ "github.com/stretchr/testify/require"
+	_ "goa.design/goa/v3/grpc"
+	_ "goa.design/goa/v3/grpc/pb"
+	_ "goa.design/goa/v3/http"
+	_ "goa.design/goa/v3/pkg"
+	_ "google.golang.org/grpc"
+	_ "google.golang.org/grpc/codes"
+	_ "google.golang.org/grpc/status"
+	_ "google.golang.org/protobuf/proto"
+	_ "google.golang.org/protobuf/reflect/protoreflect"
+	_ "google.golang.org/protobuf/runtime/protoimpl"
+)
+`
+
+var (
+	parallelGRPCTests      sync.Map
+	cachedProtobufModFiles = sync.OnceValues(func() (protobufModuleTemplate, error) {
+		goaRoot, err := filepath.Abs(filepath.Join("..", ".."))
+		if err != nil {
+			return protobufModuleTemplate{}, err
+		}
+		tmpDir, err := os.MkdirTemp("", "goa-grpc-mod-template-*")
+		if err != nil {
+			return protobufModuleTemplate{}, err
+		}
+		defer func() { _ = os.RemoveAll(tmpDir) }()
+
+		module := "module generated.local\n\ngo 1.25\n\nrequire goa.design/goa/v3 v3.0.0\n\n" +
+			"replace goa.design/goa/v3 => " + filepath.ToSlash(goaRoot) + "\n"
+		if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(module), 0o600); err != nil {
+			return protobufModuleTemplate{}, err
+		}
+		if err := os.WriteFile(filepath.Join(tmpDir, "seed.go"), []byte(protobufModuleSeed), 0o600); err != nil {
+			return protobufModuleTemplate{}, err
+		}
+		cmd := exec.Command("go", "mod", "tidy")
+		cmd.Dir = tmpDir
+		cmd.Env = append(os.Environ(), "GOWORK=off")
+		if out, err := cmd.CombinedOutput(); err != nil {
+			return protobufModuleTemplate{}, &os.PathError{Op: "go mod tidy", Path: string(out), Err: err}
+		}
+		goMod, err := os.ReadFile(filepath.Join(tmpDir, "go.mod"))
+		if err != nil {
+			return protobufModuleTemplate{}, err
+		}
+		goSum, err := os.ReadFile(filepath.Join(tmpDir, "go.sum"))
+		if err != nil {
+			return protobufModuleTemplate{}, err
+		}
+		return protobufModuleTemplate{goMod: goMod, goSum: goSum}, nil
+	})
+)
+
+func parallelGRPCTest(t *testing.T) {
+	t.Helper()
+	if _, loaded := parallelGRPCTests.LoadOrStore(t, struct{}{}); !loaded {
+		t.Parallel()
+	}
+}
+
+func compileProtobufDescriptorCases(t *testing.T, cases []protobufCompileCase) {
+	t.Helper()
+	parallelGRPCTest(t)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			compileProtobufDescriptorModule(t, tc.dir)
+		})
+	}
+}
+
 // TestPlanUsesNamesFromSupportedProtobufTools checks both method orders because
 // changing source order must not change the Go declarations chosen for a file.
 func TestPlanUsesNamesFromSupportedProtobufTools(t *testing.T) {
+	compiled := make([]protobufCompileCase, 0, 2)
 	for _, reverse := range []bool{false, true} {
 		name := "unary-first"
 		if reverse {
 			name = "stream-first"
 		}
-		t.Run(name, func(t *testing.T) {
-			moduleDir, protoPath, generatedGo := renderProtobufDescriptorPlan(t, reverse)
-			descriptor := describeGeneratedProto(t, protoPath)
-			rules, err := newProtocNameRules(protocNameVersionGo1_36GRPC1_6)
-			require.NoError(t, err)
-			names, err := rules.file(descriptor)
-			require.NoError(t, err)
+		moduleDir, protoPath, generatedGo := renderProtobufDescriptorPlan(t, reverse)
+		descriptor := describeGeneratedProto(t, protoPath)
+		rules, err := newProtocNameRules(protocNameVersionGo1_36GRPC1_6)
+		require.NoError(t, err)
+		names, err := rules.file(descriptor)
+		require.NoError(t, err)
 
-			serviceDescriptor := descriptor.GetService()[0]
-			messageDescriptor := messageWithOneof(t, descriptor, "result2_kind")
-			oneofDescriptor := messageDescriptor.GetOneofDecl()[0]
-			resetDescriptor := fieldNamed(t, messageDescriptor, "reset")
-			apiURLDescriptor := fieldNamed(t, messageDescriptor, "api_url")
-			dns2Descriptor := fieldNamed(t, messageDescriptor, "dns2_server")
-			stringDescriptor := fieldNamed(t, messageDescriptor, "string_")
-			oneofStringDescriptor := fieldNamed(t, messageDescriptor, "string_2")
-			require.NotEqual(t, stringDescriptor.GetName(), oneofStringDescriptor.GetName())
-			require.NotNil(t, oneofStringDescriptor.OneofIndex)
-			packageName := descriptor.GetPackage()
-			serviceName := packageName + "." + serviceDescriptor.GetName()
-			messageName := packageName + "." + messageDescriptor.GetName()
-			outerStringName, ok := names.lookup(messageName+"."+stringDescriptor.GetName(), protocFieldName)
-			require.True(t, ok)
-			require.Equal(t, "String_", outerStringName)
-			oneofStringName, ok := names.lookup(messageName+"."+oneofStringDescriptor.GetName(), protocFieldName)
-			require.True(t, ok)
-			require.Equal(t, "String_2", oneofStringName)
-			oneofStringWrapper, ok := names.lookup(messageName+"."+oneofStringDescriptor.GetName(), protocOneofWrapperName)
-			require.True(t, ok)
-			require.Equal(t, messageDescriptor.GetName()+"_String_2", oneofStringWrapper)
-			methodNames := make(map[string]string, len(serviceDescriptor.GetMethod()))
-			for _, method := range serviceDescriptor.GetMethod() {
-				methodNames[method.GetName()] = serviceName + "." + method.GetName()
-			}
+		serviceDescriptor := descriptor.GetService()[0]
+		messageDescriptor := messageWithOneof(t, descriptor, "result2_kind")
+		oneofDescriptor := messageDescriptor.GetOneofDecl()[0]
+		resetDescriptor := fieldNamed(t, messageDescriptor, "reset")
+		apiURLDescriptor := fieldNamed(t, messageDescriptor, "api_url")
+		dns2Descriptor := fieldNamed(t, messageDescriptor, "dns2_server")
+		stringDescriptor := fieldNamed(t, messageDescriptor, "string_")
+		oneofStringDescriptor := fieldNamed(t, messageDescriptor, "string_2")
+		require.NotEqual(t, stringDescriptor.GetName(), oneofStringDescriptor.GetName())
+		require.NotNil(t, oneofStringDescriptor.OneofIndex)
+		packageName := descriptor.GetPackage()
+		serviceName := packageName + "." + serviceDescriptor.GetName()
+		messageName := packageName + "." + messageDescriptor.GetName()
+		outerStringName, ok := names.lookup(messageName+"."+stringDescriptor.GetName(), protocFieldName)
+		require.True(t, ok)
+		require.Equal(t, "String_", outerStringName)
+		oneofStringName, ok := names.lookup(messageName+"."+oneofStringDescriptor.GetName(), protocFieldName)
+		require.True(t, ok)
+		require.Equal(t, "String_2", oneofStringName)
+		oneofStringWrapper, ok := names.lookup(messageName+"."+oneofStringDescriptor.GetName(), protocOneofWrapperName)
+		require.True(t, ok)
+		require.Equal(t, messageDescriptor.GetName()+"_String_2", oneofStringWrapper)
+		methodNames := make(map[string]string, len(serviceDescriptor.GetMethod()))
+		for _, method := range serviceDescriptor.GetMethod() {
+			methodNames[method.GetName()] = serviceName + "." + method.GetName()
+		}
 
-			checks := []struct {
-				descriptor string
-				role       protocNameRole
-			}{
-				{messageName, protocMessageName},
-				{messageName + "." + apiURLDescriptor.GetName(), protocFieldName},
-				{messageName + "." + dns2Descriptor.GetName(), protocFieldName},
-				{messageName + "." + stringDescriptor.GetName(), protocFieldName},
-				{messageName + "." + oneofStringDescriptor.GetName(), protocFieldName},
-				{messageName + "." + oneofStringDescriptor.GetName(), protocOneofWrapperName},
-				{messageName + "." + oneofDescriptor.GetName(), protocOneofFieldName},
-				{messageName + "." + resetDescriptor.GetName(), protocOneofWrapperName},
-				{serviceName, protocServiceClientName},
-				{serviceName, protocServiceServerName},
-				{methodNames["GetUrl2"], protocMethodName},
-				{methodNames["SyncX509"], protocMethodName},
-				{methodNames["SyncX509"], protocMethodClientStreamName},
-				{methodNames["SyncX509"], protocMethodServerStreamName},
-			}
-			declarations := declaredGoNames(t,
-				strings.TrimSuffix(protoPath, ".proto")+".pb.go",
-				strings.TrimSuffix(protoPath, ".proto")+"_grpc.pb.go",
-			)
-			for _, check := range checks {
-				name, ok := names.lookup(check.descriptor, check.role)
-				require.True(t, ok, "%s was not recorded for %s", check.role, check.descriptor)
-				require.Contains(t, declarations, name, "the protobuf tools did not declare %s", name)
-				require.True(t, strings.Contains(generatedGo, name), "Goa did not use %s", name)
-			}
+		checks := []struct {
+			descriptor string
+			role       protocNameRole
+		}{
+			{messageName, protocMessageName},
+			{messageName + "." + apiURLDescriptor.GetName(), protocFieldName},
+			{messageName + "." + dns2Descriptor.GetName(), protocFieldName},
+			{messageName + "." + stringDescriptor.GetName(), protocFieldName},
+			{messageName + "." + oneofStringDescriptor.GetName(), protocFieldName},
+			{messageName + "." + oneofStringDescriptor.GetName(), protocOneofWrapperName},
+			{messageName + "." + oneofDescriptor.GetName(), protocOneofFieldName},
+			{messageName + "." + resetDescriptor.GetName(), protocOneofWrapperName},
+			{serviceName, protocServiceClientName},
+			{serviceName, protocServiceServerName},
+			{methodNames["GetUrl2"], protocMethodName},
+			{methodNames["SyncX509"], protocMethodName},
+			{methodNames["SyncX509"], protocMethodClientStreamName},
+			{methodNames["SyncX509"], protocMethodServerStreamName},
+		}
+		declarations := declaredGoNames(t,
+			strings.TrimSuffix(protoPath, ".proto")+".pb.go",
+			strings.TrimSuffix(protoPath, ".proto")+"_grpc.pb.go",
+		)
+		for _, check := range checks {
+			declaredName, ok := names.lookup(check.descriptor, check.role)
+			require.True(t, ok, "%s was not recorded for %s", check.role, check.descriptor)
+			require.Contains(t, declarations, declaredName, "the protobuf tools did not declare %s", declaredName)
+			require.True(t, strings.Contains(generatedGo, declaredName), "Goa did not use %s", declaredName)
+		}
 
-			protoSource, err := os.ReadFile(protoPath)
-			require.NoError(t, err)
-			require.Contains(t, string(protoSource), "message lower_snake_message {")
-			require.Contains(t, string(protoSource), "lower_snake_message lower = 2;")
-			require.Contains(t, string(protoSource), "message "+messageDescriptor.GetName()+" {")
-			require.Contains(t, string(protoSource), "oneof result2_kind {")
-			require.Contains(t, string(protoSource), "service "+serviceDescriptor.GetName()+" {")
-			require.Contains(t, string(protoSource), "rpc GetUrl2 (")
-			require.Contains(t, string(protoSource), "rpc CafRead (")
-			require.Contains(t, string(protoSource), "rpc SyncX509 (stream ")
-			compileProtobufDescriptorModule(t, moduleDir)
-		})
+		protoSource, err := os.ReadFile(protoPath)
+		require.NoError(t, err)
+		require.Contains(t, string(protoSource), "message lower_snake_message {")
+		require.Contains(t, string(protoSource), "lower_snake_message lower = 2;")
+		require.Contains(t, string(protoSource), "message "+messageDescriptor.GetName()+" {")
+		require.Contains(t, string(protoSource), "oneof result2_kind {")
+		require.Contains(t, string(protoSource), "service "+serviceDescriptor.GetName()+" {")
+		require.Contains(t, string(protoSource), "rpc GetUrl2 (")
+		require.Contains(t, string(protoSource), "rpc CafRead (")
+		require.Contains(t, string(protoSource), "rpc SyncX509 (stream ")
+		compiled = append(compiled, protobufCompileCase{name: name, dir: moduleDir})
 	}
+	compileProtobufDescriptorCases(t, compiled)
 }
 
 // TestPlanWritesLegalFieldAndOneofNames checks names that would make protoc
@@ -328,22 +414,41 @@ func fieldNamed(t *testing.T, message *descriptorpb.DescriptorProto, name string
 // writeProtobufDescriptorModule writes a module that imports this Goa checkout.
 func writeProtobufDescriptorModule(t *testing.T, directory string) {
 	t.Helper()
-	command := exec.Command("go", "list", "-m", "-f", "{{.Dir}}", "goa.design/goa/v3")
-	output, err := command.CombinedOutput()
-	require.NoError(t, err, string(output))
-	goaDirectory := strings.TrimSpace(string(output))
-	require.NotEmpty(t, goaDirectory)
-	module := "module generated.local\n\ngo 1.25\n\nrequire goa.design/goa/v3 v3.0.0\n\n" +
-		"replace goa.design/goa/v3 => " + filepath.ToSlash(goaDirectory) + "\n"
-	require.NoError(t, os.WriteFile(filepath.Join(directory, "go.mod"), []byte(module), 0o600))
+	tmpl, err := cachedProtobufModFiles()
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(directory, "go.mod"), tmpl.goMod, 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(directory, "go.sum"), tmpl.goSum, 0o600))
+}
+
+func hasProtobufTestFiles(dir string) bool {
+	found := false
+	_ = filepath.WalkDir(dir, func(path string, entry os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.IsDir() {
+			return nil
+		}
+		if strings.HasSuffix(entry.Name(), "_test.go") {
+			found = true
+			return filepath.SkipAll
+		}
+		return nil
+	})
+	return found
 }
 
 // compileProtobufDescriptorModule compiles every package written by the plan.
 func compileProtobufDescriptorModule(t *testing.T, directory string) {
 	t.Helper()
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	parallelGRPCTest(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
-	command := exec.CommandContext(ctx, "go", "test", "-mod=mod", "./...")
+	args := []string{"build", "-mod=readonly", "./..."}
+	if hasProtobufTestFiles(directory) {
+		args = []string{"test", "-mod=readonly", "./..."}
+	}
+	command := exec.CommandContext(ctx, "go", args...)
 	command.Dir = directory
 	command.Env = append(os.Environ(), "GOWORK=off")
 	output, err := command.CombinedOutput()

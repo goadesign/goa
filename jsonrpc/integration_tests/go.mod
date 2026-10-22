@@ -1,6 +1,6 @@
 module goa.design/goa/v3/jsonrpc/integration_tests
 
-go 1.26.0
+go 1.27.3
 
 require (
 	github.com/stretchr/testify v1.12.1

@@ -5,7 +5,6 @@ package codegen
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -64,13 +63,7 @@ func primitivePathDSL() {
 func runPrimitivePathRuntimeTest(t *testing.T, files []*goacodegen.File) {
 	t.Helper()
 	directory := t.TempDir()
-	repository, err := filepath.Abs(filepath.Join("..", ".."))
-	require.NoError(t, err)
-	module := fmt.Sprintf(
-		"module generated.local\n\ngo 1.24\n\nrequire goa.design/goa/v3 v3.0.0\n\nreplace goa.design/goa/v3 => %s\n",
-		filepath.ToSlash(repository),
-	)
-	require.NoError(t, os.WriteFile(filepath.Join(directory, "go.mod"), []byte(module), 0o600))
+	writeHTTPGeneratedModule(t, directory)
 	for _, file := range files {
 		_, err := file.Render(directory)
 		require.NoError(t, err)
@@ -78,9 +71,11 @@ func runPrimitivePathRuntimeTest(t *testing.T, files []*goacodegen.File) {
 	testPath := filepath.Join(directory, "gen", "http", "primitive_path", "client", "primitive_path_test.go")
 	require.NoError(t, os.WriteFile(testPath, []byte(generatedPrimitivePathTest), 0o600))
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	parallelHTTPTest(t)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
-	command := exec.CommandContext(ctx, "go", "test", "-mod=mod", "./gen/http/primitive_path/client")
+	command := exec.CommandContext(ctx, "go", "test", "-mod=readonly", "./gen/http/primitive_path/client")
 	command.Dir = directory
 	command.Env = append(os.Environ(), "GOWORK=off")
 	output, err := command.CombinedOutput()

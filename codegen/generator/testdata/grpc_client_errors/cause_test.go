@@ -81,10 +81,12 @@ func TestGeneratedServerContextStatus(t *testing.T) {
 // TestGeneratedGenericFields keeps all six received fields, including empty
 // strings. The transport code must not replace the received boolean traits.
 func TestGeneratedGenericFields(t *testing.T) {
+	t.Parallel()
 	for _, method := range catalogMethods {
 		for traits := 0; traits < 8; traits++ {
 			for _, empty := range []bool{false, true} {
 				t.Run(fmt.Sprintf("%s/traits=%d/empty=%t", method.name, traits, empty), func(t *testing.T) {
+					t.Parallel()
 					original := goa.NewServiceError(status.Error(codes.FailedPrecondition, "transport message"),
 						"rejected", traits&1 != 0, traits&2 != 0, traits&4 != 0)
 					original.ID, original.Message = "server-error-id", "service message"
@@ -270,9 +272,11 @@ func TestGeneratedCustomContextCodes(t *testing.T) {
 // TestGeneratedGenericInterceptorRetry retains a local interceptor's retry
 // trait even when the received generic error has Temporary set to false.
 func TestGeneratedGenericInterceptorRetry(t *testing.T) {
+	t.Parallel()
 	for _, method := range catalogMethods {
 		for _, wrap := range []bool{false, true} {
 			t.Run(fmt.Sprintf("%s/retryable=%t", method.name, wrap), func(t *testing.T) {
+				t.Parallel()
 				var calls atomic.Int32
 				var original error
 				client := newEncodingCatalogClient(t, func(context.Context, any) (any, error) {

@@ -18,6 +18,7 @@ import (
 // TestGeneratedJSONRPCServerMiddleware verifies direct and mounted HTTP calls
 // through the middleware installed after route registration.
 func TestGeneratedJSONRPCServerMiddleware(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	workingDir, err := os.Getwd()
 	require.NoError(t, err)

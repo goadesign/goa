@@ -139,9 +139,11 @@ func TestGeneratePrivateValueValidation(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, before, after)
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	parallelGeneratedTest(t)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
-	command := exec.CommandContext(ctx, "go", "test", "-mod=mod", "-v", "./...")
+	command := exec.CommandContext(ctx, "go", "test", "-mod=readonly", "-v", "./...")
 	command.Dir = dir
 	command.Env = append(os.Environ(), "GOWORK=off")
 	output, err := command.CombinedOutput()

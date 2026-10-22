@@ -3,6 +3,7 @@
 package service
 
 import (
+	"fmt"
 	"slices"
 	"testing"
 
@@ -13,6 +14,7 @@ import (
 )
 
 func TestExplicitPlacementOwnsDescendants(t *testing.T) {
+	var compiled []compiledServiceCase
 	for _, forced := range []bool{false, true} {
 		for _, ambiguous := range []bool{false, true} {
 			for _, reverse := range []bool{false, true} {
@@ -87,12 +89,16 @@ func TestExplicitPlacementOwnsDescendants(t *testing.T) {
 				}
 				files, err := Files(plans...)
 				require.NoError(t, err)
-				compileGeneratedServiceFilesWith(t, files, nil)
 				require.NotContains(t, leaf.Attribute().Meta, "struct:pkg:path")
 				require.Equal(t, []string{"right/types"}, inner.Attribute().Meta["struct:pkg:path"])
+				compiled = append(compiled, compiledServiceCase{
+					name:  fmt.Sprintf("forced=%t/reverse=%t", forced, reverse),
+					files: files,
+				})
 			}
 		}
 	}
+	compileGeneratedServiceCases(t, compiled)
 }
 
 func TestExplicitPlacementConflictingOriginCopies(t *testing.T) {
