@@ -65,11 +65,10 @@ func TestGeneratedServerContextStatus(t *testing.T) {
 					result, err := method.endpoint(client)(ctx, &gencatalog.Selection{Key: "book"})
 					require.Nil(t, result)
 					require.NoError(t, ctx.Err())
-					decoded := requireGenericCause(t, err, code)
-					require.Equal(t, "fault", decoded.Name)
-					require.False(t, decoded.Timeout)
-					require.False(t, decoded.Temporary)
-					require.True(t, decoded.Fault)
+					require.Equal(t, code, status.Code(err))
+					require.Empty(t, status.Convert(err).Details())
+					var decoded *goa.ServiceError
+					require.False(t, errors.As(err, &decoded))
 					require.NotErrorIs(t, err, context.Canceled)
 					require.NotErrorIs(t, err, context.DeadlineExceeded)
 					require.EqualValues(t, 1, calls.Load())
@@ -134,7 +133,7 @@ func TestGeneratedGenericOrderedDetails(t *testing.T) {
 			decoded := requireGenericCause(t, err, codes.Canceled)
 			require.Equal(t, "remote-id", decoded.ID)
 			received := status.Convert(errors.Unwrap(err)).Proto()
-			require.Len(t, received.Details, 5, "the generated server appends its generic fault detail")
+			require.Len(t, received.Details, 4, "the generated server preserves the existing details")
 			for i, detail := range status.Convert(transport).Proto().Details {
 				require.True(t, proto.Equal(detail, received.Details[i]))
 			}
@@ -174,7 +173,7 @@ func TestGeneratedGenericFirstDetail(t *testing.T) {
 				require.NoError(t, ctx.Err())
 				require.NotErrorIs(t, err, context.Canceled)
 				received := status.Convert(err).Proto().Details
-				require.Len(t, received, 3, "the server still appends its generic detail to an explicit status")
+				require.Len(t, received, 2, "the server preserves the existing details")
 				for i, detail := range status.Convert(original).Proto().Details {
 					require.True(t, proto.Equal(detail, received[i]))
 				}
@@ -194,7 +193,7 @@ func TestGeneratedGenericLocalCauses(t *testing.T) {
 				cleanup := errors.New("local cleanup failed")
 				var original error
 				client := newEncodingCatalogClient(t, func(context.Context, any) (any, error) {
-					return nil, status.Error(codes.Canceled, "server operation ended")
+					return nil, goa.NewServiceError(status.Error(codes.Canceled, "server operation ended"), "fault", false, false, true)
 				}, grpc.WithUnaryInterceptor(func(ctx context.Context, method string, request, reply any, conn *grpc.ClientConn, invoke grpc.UnaryInvoker, opts ...grpc.CallOption) error {
 					original = invoke(ctx, method, request, reply, conn, opts...)
 					switch kind {
@@ -278,7 +277,7 @@ func TestGeneratedGenericInterceptorRetry(t *testing.T) {
 				var original error
 				client := newEncodingCatalogClient(t, func(context.Context, any) (any, error) {
 					calls.Add(1)
-					return nil, status.Error(codes.Unavailable, "server unavailable")
+					return nil, goa.NewServiceError(status.Error(codes.Unavailable, "server unavailable"), "fault", false, false, true)
 				}, grpc.WithUnaryInterceptor(func(ctx context.Context, method string, request, reply any, conn *grpc.ClientConn, invoke grpc.UnaryInvoker, opts ...grpc.CallOption) error {
 					original = invoke(ctx, method, request, reply, conn, opts...)
 					if original != nil && wrap {

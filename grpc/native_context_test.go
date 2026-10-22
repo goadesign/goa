@@ -104,8 +104,7 @@ func TestEncodeErrorNativeContextPreservesStatusFacade(t *testing.T) {
 			encoded := status.Convert(EncodeError(input))
 			require.Equal(t, test.code, encoded.Code())
 			if test.st != nil {
-				require.Len(t, encoded.Proto().Details, 2)
-				require.Equal(t, declared.Proto().Details[0], encoded.Proto().Details[0])
+				require.Equal(t, declared.Proto().Details, encoded.Proto().Details)
 			} else {
 				require.Len(t, encoded.Proto().Details, 1)
 			}

@@ -63,13 +63,17 @@ func TestEncodeErrorOwnership(t *testing.T) {
 				}
 				require.Equal(t, expectedMessage, encoded.Message())
 				details := encoded.Proto().Details
-				require.Len(t, details, len(test.prefix)+1)
-				if len(test.prefix) > 0 {
-					require.Equal(t, test.prefix, details[:len(test.prefix)])
+				if test.prefix != nil && test.owner == nil {
+					require.Equal(t, test.prefix, details)
+				} else {
+					require.Len(t, details, len(test.prefix)+1)
+					if len(test.prefix) > 0 {
+						require.Equal(t, test.prefix, details[:len(test.prefix)])
+					}
+					response, ok := encoded.Details()[len(test.prefix)].(*goapb.ErrorResponse)
+					require.True(t, ok)
+					requireEncodingResponse(t, response, input, test.owner)
 				}
-				response, ok := encoded.Details()[len(test.prefix)].(*goapb.ErrorResponse)
-				require.True(t, ok)
-				requireEncodingResponse(t, response, input, test.owner)
 				requireEncodingResponse(t, NewErrorResponse(input), input, test.owner)
 			})
 		}

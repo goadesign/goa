@@ -116,17 +116,16 @@ func TestGeneratedWholeOperationEncoding(t *testing.T) {
 						require.Equal(t, test.st.Proto().Details, raw.Proto().Details[:prefix])
 					}
 					require.Equal(t, rawMessage, raw.Message())
-					require.Len(t, raw.Details(), prefix+1)
+					if test.st != nil && test.owner == nil {
+						require.Equal(t, test.st.Proto().Details, raw.Proto().Details)
+					} else {
+						require.Len(t, raw.Details(), prefix+1)
+					}
 					if prefix > 0 {
-						// The original first detail still controls decoding.
-						// Appending a generic detail does not replace it.
+						// The original first detail still controls decoding when
+						// the server forwards the existing complete status.
 						first := goagrpc.DecodeError(original)
 						require.True(t, proto.Equal(goagrpc.DecodeError(test.st.Err()), first))
-						appendedMessage := input.Error()
-						if test.owner != nil {
-							appendedMessage = test.owner.Message
-						}
-						require.Equal(t, appendedMessage, raw.Details()[prefix].(*goapb.ErrorResponse).Msg)
 						if response, ok := first.(*goapb.ErrorResponse); ok {
 							decoded := requireGenericCause(t, err, test.code)
 							require.True(t, proto.Equal(response, goagrpc.NewErrorResponse(decoded)))

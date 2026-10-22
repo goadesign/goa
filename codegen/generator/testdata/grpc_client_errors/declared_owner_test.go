@@ -84,8 +84,12 @@ func TestGeneratedDeclaredErrorOwnership(t *testing.T) {
 						if test.prefix != nil {
 							prefix := test.prefix.Proto().Details
 							prefixCount = len(prefix)
-							require.Len(t, details, prefixCount+1)
-							require.Equal(t, prefix, details[:prefixCount])
+							if test.owner == nil {
+								require.Equal(t, prefix, details)
+							} else {
+								require.Len(t, details, prefixCount+1)
+								require.Equal(t, prefix, details[:prefixCount])
+							}
 						} else {
 							require.Len(t, details, 1)
 						}
@@ -97,9 +101,11 @@ func TestGeneratedDeclaredErrorOwnership(t *testing.T) {
 							require.Equal(t, "", decoded.Error())
 							require.Nil(t, errors.Unwrap(err))
 						} else {
-							response, ok := raw.Details()[prefixCount].(*goapb.ErrorResponse)
-							require.True(t, ok)
-							requireDeclaredResponse(t, response, input, test.owner)
+							if test.prefix == nil || test.owner != nil {
+								response, ok := raw.Details()[prefixCount].(*goapb.ErrorResponse)
+								require.True(t, ok)
+								requireDeclaredResponse(t, response, input, test.owner)
+							}
 							first := goagrpc.DecodeError(original)
 							if response, ok := first.(*goapb.ErrorResponse); ok {
 								decoded := requireGenericCause(t, err, test.code)
