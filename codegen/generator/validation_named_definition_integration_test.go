@@ -92,6 +92,9 @@ func TestGenerateNamedDefinitionValidation(t *testing.T) {
 		"Choice":    root.UserType("Base").Attribute(),
 		"Selection": expr.AsObject(root.UserType("Holder").Attribute().Type).Attribute("Selection"),
 	} {
+		union, err := left.Union(attribute)
+		require.NoError(t, err)
+		data[key+"Union"] = fixture.pkg.ImportName(left.ImportPath()) + "." + union.Name()
 		for _, branchName := range []string{"text", "number"} {
 			branch, err := left.UnionBranch(attribute, branchName)
 			require.NoError(t, err)
@@ -405,6 +408,9 @@ func TestDirectUnionValueAndOptionalPointer(t *testing.T) {
 	}
 	if err := ValidateOptional(&Optional{}); err != nil {
 		t.Errorf("absent optional union: %v", err)
+	}
+	if err := ValidateOptional(&Optional{Selection: new({{.SelectionUnion}})}); err == nil {
+		t.Error("present optional union accepted a missing branch")
 	}
 	for _, invalid := range []bool{false, true} {
 		value := {{.Selectiontext}}("valid")

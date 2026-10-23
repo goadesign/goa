@@ -122,25 +122,6 @@ type (
 		value *validationPlanNode
 	}
 
-	// validationUnionPlan stores generated sum-type branch operations.
-	validationUnionPlan struct {
-		cases    []validationUnionCasePlan
-		receiver *GoTypePlan
-	}
-
-	// validationUnionCasePlan stores one sum-type accessor and branch program.
-	validationUnionCasePlan struct {
-		typeTag   string
-		fieldName string
-		node      *validationPlanNode
-	}
-
-	// validatorCallPlan stores one exact nested validator declaration.
-	validatorCallPlan struct {
-		declaration *NameDeclaration
-		address     bool
-	}
-
 	// validationPlanner performs all expression reads while validation checks and
 	// function calls are copied into a plan.
 	validationPlanner struct {
@@ -240,6 +221,9 @@ func (p *ValidationPlan) ImportPreferences() []GoTypeImport {
 	// its branches need validation. Include those receivers at every depth.
 	var addMethodOwners func(*validationPlanNode)
 	addMethodOwners = func(node *validationPlanNode) {
+		if node.call != nil {
+			addReceiver(node.call.optionalUnion)
+		}
 		for _, required := range node.rules.required {
 			addReceiver(required.receiver)
 		}
@@ -365,13 +349,26 @@ func (p *validationPlanner) plan(attribute *expr.AttributeExpr, layout *GoTypePl
 			return nil, fmt.Errorf("plan validation for %s: validator declaration must be a function, got %s", path, declaration.Kind())
 		}
 		p.declarations = append(p.declarations, declaration)
+		// Optional union fields stored by value use an empty kind for absence.
+		// Keep the union method owner so absent fields skip their nested validator.
+		var optionalUnion *GoTypePlan
+		if expr.IsUnion(attribute.Type) && !required && !valuePointer {
+			optionalUnion = layout
+			for optionalUnion.kind == GoNamed && optionalUnion.value != nil {
+				optionalUnion = optionalUnion.value
+			}
+			if optionalUnion.kind != GoUnion {
+				return nil, fmt.Errorf("plan validation for %s: optional named union layout does not retain its union definition", path)
+			}
+		}
 		return &validationPlanNode{
 			occurrence: attribute,
 			layout:     layout,
 			guard:      valuePointer || !layout.ReferenceIsPointer() && layout.ReferenceCanBeNil(),
 			call: &validatorCallPlan{
-				declaration: declaration,
-				address:     layout.ReferenceIsPointer() && !valuePointer,
+				declaration:   declaration,
+				address:       layout.ReferenceIsPointer() && !valuePointer,
+				optionalUnion: optionalUnion,
 			},
 		}, nil
 	}
@@ -457,43 +454,10 @@ func (p *validationPlanner) plan(attribute *expr.AttributeExpr, layout *GoTypePl
 			node.mapValue = &validationMapPlan{key: key, value: value}
 		}
 	case expr.IsUnion(attribute.Type):
-		union := expr.AsUnion(attribute.Type)
-		branches := structure.Branches()
-		if len(branches) != len(union.Values) {
-			return nil, fmt.Errorf("plan validation for %s: union layout has %d branches, expected %d", path, len(branches), len(union.Values))
-		}
-		var cases []validationUnionCasePlan
-		for index, branch := range union.Values {
-			branchPolicy := policy
-			branchPolicy.Pointer = branchPolicy.Pointer && expr.IsObject(branch.Attribute.Type)
-			child, err := p.plan(
-				branch.Attribute,
-				branches[index].withPolicy(branchPolicy),
-				true,
-				expr.IsAlias(branch.Attribute.Type),
-				true,
-				branches[index].ReferenceIsPointer(),
-				fmt.Sprintf("union branch %q", branch.Name),
-			)
-			if err != nil {
-				return nil, err
-			}
-			if child.empty() {
-				continue
-			}
-			cases = append(cases, validationUnionCasePlan{
-				typeTag:   branch.Name,
-				fieldName: Goify(branch.Name, true),
-				node:      child,
-			})
-		}
-		if len(cases) > 0 {
-			node.union = &validationUnionPlan{cases: cases}
-			if structure != layout {
-				// Defined types do not inherit the underlying union's methods.
-				// Retain that declaration for the receiver conversion.
-				node.union.receiver = structure
-			}
+		var err error
+		node.union, err = p.planUnion(attribute, layout, structure, required, valuePointer, path)
+		if err != nil {
+			return nil, err
 		}
 	}
 	// Required-field rules index the structural fields checked above. Keep
@@ -674,6 +638,9 @@ func attributeNeedsValidation(attribute *expr.AttributeExpr, policy GoLayoutPoli
 		return attributeNeedsValidation(mapping.KeyType, keyPolicy, seen) ||
 			attributeNeedsValidation(mapping.ElemType, valuePolicy, seen)
 	case expr.IsUnion(attribute.Type):
+		if policy.SumType {
+			return true
+		}
 		for _, branch := range expr.AsUnion(attribute.Type).Values {
 			branchPolicy := policy
 			branchPolicy.Pointer = policy.Pointer && expr.IsObject(branch.Attribute.Type)
@@ -760,6 +727,10 @@ func (p LinkedValidationPlan) renderNode(node *validationPlanNode, target, conte
 		}); err != nil {
 			panic(err)
 		}
+		if node.call.optionalUnion != nil {
+			receiver := p.layout.Enter(node.call.optionalUnion).Name()
+			return fmt.Sprintf("if (%s)(%s).Kind() != \"\" {\n\t%s\n}", receiver, target, buffer.String())
+		}
 		if node.guard {
 			return fmt.Sprintf("if %s != nil {\n\t%s\n}", target, buffer.String())
 		}
@@ -827,7 +798,7 @@ func (p LinkedValidationPlan) renderNode(node *validationPlanNode, target, conte
 			unionTarget = fmt.Sprintf("(%s)(%s)", receiver, target)
 		}
 		var buffer bytes.Buffer
-		if err := unionSumValT.Execute(&buffer, map[string]any{"target": unionTarget, "cases": cases}); err != nil {
+		if err := unionSumValT.Execute(&buffer, map[string]any{"target": unionTarget, "cases": cases, "optional": node.union.optional, "goa": p.goaPackage()}); err != nil {
 			panic(err)
 		}
 		sections = append(sections, buffer.String())

@@ -139,13 +139,15 @@ func ValidationCodeWithPathParameter(att *expr.AttributeExpr, put expr.UserType,
 }
 
 func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *AttributeContext, req, alias, view bool, target string, context validationPath, seen map[expr.UserType]*bytes.Buffer) *bytes.Buffer {
-	return renderValidationCode(att, put, attCtx, req, alias, view, target, context, seen, true)
+	// Goa uses pointer references for root unions. Nested fields pass their
+	// stored pointer shape instead of deriving it from primitive-field rules.
+	return renderValidationCode(att, put, attCtx, req, alias, view, target, context, seen, expr.IsUnion(att.Type), true)
 }
 
 // renderValidationCode writes one validation tree. localGuards reports whether
 // local rule templates must check a pointer before reading it. Nested fields
 // disable those checks when validateAttribute wraps the whole field once.
-func renderValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *AttributeContext, req, alias, view bool, target string, context validationPath, seen map[expr.UserType]*bytes.Buffer, localGuards bool) *bytes.Buffer {
+func renderValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *AttributeContext, req, alias, view bool, target string, context validationPath, seen map[expr.UserType]*bytes.Buffer, unionPointer, localGuards bool) *bytes.Buffer {
 	if seen == nil {
 		seen = make(map[expr.UserType]*bytes.Buffer)
 	}
@@ -273,16 +275,15 @@ func renderValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *At
 					"validation": val,
 				})
 			}
-			if len(cases) > 0 {
-				newline()
-				data := map[string]any{
-					"target": target,
-					"cases":  cases,
-					"goa":    "goa",
-				}
-				if err := unionSumValT.Execute(buf, data); err != nil {
-					panic(err) // bug
-				}
+			newline()
+			data := map[string]any{
+				"target":   unionMethodReceiver(att, attCtx, target, unionPointer),
+				"cases":    cases,
+				"optional": !req && !unionPointer,
+				"goa":      "goa",
+			}
+			if err := unionSumValT.Execute(buf, data); err != nil {
+				panic(err) // bug
 			}
 			break
 		}
@@ -360,7 +361,7 @@ func validateAttribute(ctx *AttributeContext, att *expr.AttributeExpr, put expr.
 		if expr.IsUnion(att.Type) && ctx.Scope.IsSumType() {
 			guard = unionPointer
 		}
-		code := renderValidationCode(att, put, ctx, req, false, view, target, context, seen, !guard).String()
+		code := renderValidationCode(att, put, ctx, req, false, view, target, context, seen, unionPointer, !guard).String()
 		if code == "" {
 			return ""
 		}
@@ -382,7 +383,7 @@ func validateAttribute(ctx *AttributeContext, att *expr.AttributeExpr, put expr.
 		// the original attribute with alias=true ensures validations operate
 		// on the correct value type without dropping field defaults.
 		guard := validationAttributeNeedsNilGuard(att, ctx, req)
-		code := renderValidationCode(att, put, ctx, req, true, view, target, context, seen, !guard).String()
+		code := renderValidationCode(att, put, ctx, req, true, view, target, context, seen, unionPointer, !guard).String()
 		if code == "" {
 			return ""
 		}
@@ -406,6 +407,10 @@ func validateAttribute(ctx *AttributeContext, att *expr.AttributeExpr, put expr.
 		panic(err) // bug
 	}
 	if unionValue {
+		if !req {
+			receiver := unionMethodReceiver(att, ctx, target, false)
+			return fmt.Sprintf("if %s.Kind() != \"\" {\n\t%s\n}", receiver, buf.String())
+		}
 		return buf.String()
 	}
 	if resolver, ok := ctx.Scope.(nilUserTypeValidationAttributor); ok && resolver.ValidationAcceptsNil(att) {

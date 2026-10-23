@@ -20,6 +20,16 @@ func DecodeOptionalUnionRequest(mux goahttp.Muxer, decoder func(*http.Request) g
 				return payload, goa.DecodePayloadError(err.Error())
 			}
 		}
+		if body != nil {
+
+			if err2 := body.Validate(); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+
+			if err != nil {
+				return payload, err
+			}
+		}
 		payload = NewOptionalUnionPayload(body)
 
 		return payload, nil
