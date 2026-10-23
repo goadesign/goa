@@ -11,6 +11,9 @@ func NewProtoListRequest() *wrapped_collectionpb.ListRequest {
 func NewListResult(message *wrapped_collectionpb.WrappedCollectionItemCollection) wrappedcollectionviews.WrappedCollectionItemCollectionView {
 	result := make([]*wrappedcollectionviews.WrappedCollectionItemView, len(message.Field))
 	for i, val := range message.Field {
+		if val == nil {
+			continue
+		}
 		result[i] = transformProtoWrappedCollectionItemToWrappedCollectionItemView(val)
 	}
 	return result

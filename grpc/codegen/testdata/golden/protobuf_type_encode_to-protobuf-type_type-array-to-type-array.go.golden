@@ -3,6 +3,9 @@ func transform() {
 	if source.TypeArray != nil {
 		target.TypeArray = make([]*proto.SimpleArray, len(source.TypeArray))
 		for i, val := range source.TypeArray {
+			if val == nil {
+				continue
+			}
 			target.TypeArray[i] = svcProtoSimpleArrayToProtoSimpleArray(val)
 		}
 	}

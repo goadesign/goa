@@ -5,6 +5,9 @@ func NewProtoWrappedCollectionItemCollection(result wrappedcollectionviews.Wrapp
 	message := &wrapped_collectionpb.WrappedCollectionItemCollection{}
 	message.Field = make([]*wrapped_collectionpb.WrappedCollectionItem, len(result))
 	for i, val := range result {
+		if val == nil {
+			continue
+		}
 		message.Field[i] = transformWrappedCollectionItemViewToProtoWrappedCollectionItem(val)
 	}
 	return message

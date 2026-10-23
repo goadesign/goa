@@ -303,9 +303,10 @@ func renderArrayTransform(source, target *expr.Array, sourceVar, targetVar strin
 	}
 
 	useHelper := protoCollectionUsesHelper(source.ElemType, target.ElemType)
-	// Inline object conversions do not call the named helper that preserves
-	// nil, so the collection loop keeps an absent element before reading fields.
-	guardNil := !useHelper && expr.IsObject(source.ElemType.Type) && expr.IsObject(target.ElemType.Type)
+	// Nullable named objects and inline objects keep nil entries at their
+	// original positions before conversion code reads any object fields.
+	guardNil := (!useHelper || !source.NonNullableElems) &&
+		expr.IsObject(source.ElemType.Type) && expr.IsObject(target.ElemType.Type)
 
 	loopVar, childAttrs := ta.EnterCollection()
 	childAttrs, err := childAttrs.EnterLocalBlock(sourceVar, targetVar, loopVar, "val")
@@ -368,13 +369,13 @@ func renderMapTransform(source, target *expr.Map, sourceVar, targetVar string, n
 		return "", err
 	}
 	useHelper := protoCollectionUsesHelper(source.ElemType, target.ElemType)
-	// An absent inline object remains nil, just as it does through a named
-	// conversion helper. Wrapper collections retain their existing empty value.
+	// A nil object value keeps its map key without calling a strict object
+	// helper. Wrapper collections retain their existing empty value.
 	guardNil := !proto && isWrappedAttr(source.ElemType) ||
-		!useHelper && expr.IsObject(source.ElemType.Type) && expr.IsObject(target.ElemType.Type)
+		expr.IsObject(source.ElemType.Type) && expr.IsObject(target.ElemType.Type)
 	var elemTransform string
 	if useHelper {
-		elemTransform = fmt.Sprintf("%s := %s(val)\n", elemTarget, codegen.TransformHelperName(source.ElemType, target.ElemType, blockAttrs))
+		elemTransform = fmt.Sprintf("%s = %s(val)\n", elemTarget, codegen.TransformHelperName(source.ElemType, target.ElemType, blockAttrs))
 	} else {
 		elemTransform, err = codegen.TransformAttribute(source.ElemType, target.ElemType, "val", elemTarget, !guardNil, blockAttrs)
 		if err != nil {
