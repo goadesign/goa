@@ -4,6 +4,9 @@ func transform() {
 		target.Collection = &proto.ResultTypeCollection2{}
 		target.Collection.Field = make([]*proto.ResultType, len(source.Collection))
 		for i, val := range source.Collection {
+			if val == nil {
+				continue
+			}
 			target.Collection.Field[i] = svcProtoResultTypeToProtoResultType(val)
 		}
 	}

@@ -25,6 +25,9 @@ func transformProtoResultTToResultT(v *service_result_with_collectionpb.ResultT)
 	if v.CollectionField != nil {
 		res.CollectionField = make([]*serviceresultwithcollection.RT, len(v.CollectionField.Field))
 		for i, val := range v.CollectionField.Field {
+			if val == nil {
+				continue
+			}
 			res.CollectionField[i] = transformProtoRTToRT(val)
 		}
 	}
