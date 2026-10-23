@@ -309,12 +309,17 @@ func ValidateEditResponseBody(body *EditResponseBody) (err error) {
 		err = goa.MergeErrors(err, goa.MissingFieldError("relationship", "body"))
 	}
 	if body.Relationship != nil {
-		switch string(body.Relationship.Kind()) {
-		case "editable":
-			actual, _ := body.Relationship.AsEditable()
-			if actual != nil {
-				if err2 := validateEditableResponseBody(actual, "body.relationship.value"); err2 != nil {
-					err = goa.MergeErrors(err, err2)
+
+		if err2 := body.Relationship.Validate(); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		} else {
+			switch string(body.Relationship.Kind()) {
+			case "editable":
+				actual, _ := body.Relationship.AsEditable()
+				if actual != nil {
+					if err2 := validateEditableResponseBody(actual, "body.relationship.value"); err2 != nil {
+						err = goa.MergeErrors(err, err2)
+					}
 				}
 			}
 		}
@@ -330,12 +335,17 @@ func validateEditResponseBody(body *EditResponseBody, path string) (err error) {
 		err = goa.MergeErrors(err, goa.MissingFieldError("relationship", path))
 	}
 	if body.Relationship != nil {
-		switch string(body.Relationship.Kind()) {
-		case "editable":
-			actual, _ := body.Relationship.AsEditable()
-			if actual != nil {
-				if err2 := validateEditableResponseBody(actual, path+".relationship.value"); err2 != nil {
-					err = goa.MergeErrors(err, err2)
+
+		if err2 := body.Relationship.Validate(); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		} else {
+			switch string(body.Relationship.Kind()) {
+			case "editable":
+				actual, _ := body.Relationship.AsEditable()
+				if actual != nil {
+					if err2 := validateEditableResponseBody(actual, path+".relationship.value"); err2 != nil {
+						err = goa.MergeErrors(err, err2)
+					}
 				}
 			}
 		}

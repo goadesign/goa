@@ -17,6 +17,15 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
+type (
+	// namedUnionValidationAttributor keeps the fixture's private validator owner
+	// while the service resolver supplies the generated union method names.
+	namedUnionValidationAttributor struct {
+		codegen.Attributor
+		validator *codegen.NameDeclaration
+	}
+)
+
 func TestGenerateNamedUnionConversions(t *testing.T) {
 	root := codegen.RunDSL(t, namedUnionConversionDSL)
 	base := &expr.AttributeExpr{Type: root.UserType("Base")}
@@ -48,7 +57,9 @@ func TestGenerateNamedUnionConversions(t *testing.T) {
 	var imports *codegen.GeneratedImportPlan
 	var validation *codegen.ValidationPlan
 	var holderValidation, presenceValidation, pointerValidation *codegen.ValidationPlan
-	var presenceLayout, pointerLayout *codegen.GoTypePlan
+	var presenceLayout, pointerLayout, plainLayout *codegen.GoTypePlan
+	var plainValidation *codegen.ValidationPlan
+	var plainValidator *codegen.NameDeclaration
 	functions := make([]map[string]string, 0, len(operations))
 	var optionalDefinition string
 	registry := newDefaultRegistry()
@@ -133,21 +144,41 @@ func TestGenerateNamedUnionConversions(t *testing.T) {
 					Owner: "generated.local/gen/values/types", Bind: bind, RetainNamedValue: true,
 					Policy: codegen.GoLayoutPolicy{UseDefault: true, SumType: true},
 				}
+				plain := &expr.AttributeExpr{Type: root.UserType("PlainDerived")}
+				plainValidator = codegen.NewExactName(codegen.NameFunction, "ValidatePlainDerived")
+				if err := pkg.DeclareName(plainValidator); err != nil {
+					return err
+				}
+				plainLayout, err = codegen.PlanGoType(plain, options)
+				if err != nil {
+					return err
+				}
+				plainValidation, err = codegen.NewValidationPlan(plain, plainLayout, codegen.ValidationPlanOptions{Required: true})
+				if err != nil {
+					return err
+				}
+				presenceOptions := codegen.ValidationPlanOptions{Required: true, Bind: func(request codegen.ValidatorBindingRequest) (*codegen.NameDeclaration, error) {
+					if request.Attribute.Type != plain.Type {
+						return nil, fmt.Errorf("unexpected presence validator for %s", request.Attribute.Type.Name())
+					}
+					return plainValidator, nil
+				}}
 				presenceLayout, err = codegen.PlanGoType(presence, options)
 				if err != nil {
 					return err
 				}
-				presenceValidation, err = codegen.NewValidationPlan(presence, presenceLayout, codegen.ValidationPlanOptions{Required: true})
+				presenceValidation, err = codegen.NewValidationPlan(presence, presenceLayout, presenceOptions)
 				if err != nil {
 					return err
 				}
-				require.Empty(t, presenceValidation.ValidatorDeclarations())
+				require.Equal(t, []*codegen.NameDeclaration{plainValidator}, presenceValidation.ValidatorDeclarations())
 				wantPresenceImports := []codegen.GoTypeImport{
 					{Name: "goa", Path: codegen.GoaImport("").Path},
 					{Path: "generated.local/gen/left/types"},
+					{Name: "checks", Path: pkg.ImportPath()},
 				}
 				require.Equal(t, wantPresenceImports, presenceValidation.ImportPreferences(),
-					"the required check alone needs the union method owner's import")
+					"union checks retain the method owner and nested validator imports")
 				presenceDefinition := presence.Type.(expr.UserType).Attribute()
 				for _, collection := range []expr.DataType{
 					&expr.Array{ElemType: presenceDefinition},
@@ -158,7 +189,7 @@ func TestGenerateNamedUnionConversions(t *testing.T) {
 					if err != nil {
 						return err
 					}
-					validation, err := codegen.NewValidationPlan(attribute, layout, codegen.ValidationPlanOptions{Required: true})
+					validation, err := codegen.NewValidationPlan(attribute, layout, presenceOptions)
 					if err != nil {
 						return err
 					}
@@ -170,7 +201,7 @@ func TestGenerateNamedUnionConversions(t *testing.T) {
 				if err != nil {
 					return err
 				}
-				_, err = codegen.NewValidationPlan(presenceDefinition, incomplete, codegen.ValidationPlanOptions{Required: true})
+				_, err = codegen.NewValidationPlan(presenceDefinition, incomplete, presenceOptions)
 				require.ErrorContains(t, err, `required field "choice": named union layout does not retain its union definition`)
 				options.RetainNamedValue = true
 				options.Policy.Pointer, options.Policy.UnionPointer = true, true
@@ -178,13 +209,13 @@ func TestGenerateNamedUnionConversions(t *testing.T) {
 				if err != nil {
 					return err
 				}
-				pointerValidation, err = codegen.NewValidationPlan(presenceDefinition, pointerLayout, codegen.ValidationPlanOptions{Required: true})
+				pointerValidation, err = codegen.NewValidationPlan(presenceDefinition, pointerLayout, presenceOptions)
 				if err != nil {
 					return err
 				}
-				require.Equal(t, wantPresenceImports[:1], pointerValidation.ImportPreferences(),
-					"a nil presence check does not call union methods")
-				for _, validation := range []*codegen.ValidationPlan{validation, holderValidation, presenceValidation, pointerValidation} {
+				require.Equal(t, []codegen.GoTypeImport{wantPresenceImports[0], wantPresenceImports[2]}, pointerValidation.ImportPreferences(),
+					"pointer fields call the nested validator without checking the union method owner directly")
+				for _, validation := range []*codegen.ValidationPlan{validation, holderValidation, presenceValidation, pointerValidation, plainValidation} {
 					for _, spec := range validation.ImportPreferences() {
 						if spec.Path == codegen.GoaImport("").Path {
 							err = imports.Require(codegen.NewImport(spec.Name, spec.Path))
@@ -274,6 +305,7 @@ func TestGenerateNamedUnionConversions(t *testing.T) {
 					plan   *codegen.ValidationPlan
 					layout *codegen.GoTypePlan
 				}{
+					{"ValidatePlainDerived", plainValidation, plainLayout},
 					{"ValidateHolder", holderValidation, operations[5].sourceType},
 					{"ValidatePresence", presenceValidation, presenceLayout},
 					{"ValidatePresencePointer", pointerValidation, pointerLayout},
@@ -297,7 +329,7 @@ func TestGenerateNamedUnionConversions(t *testing.T) {
 					})
 				}
 				legacy := codegen.NewAttributeContext(false, false, true, "", codegen.NewNameScope())
-				legacy.Scope = plan.Service(root).Services().ServiceAttributor("catalog", pkg.ImportPath()).Enter(presence)
+				legacy.Scope = &namedUnionValidationAttributor{Attributor: plan.Service(root).Services().ServiceAttributor("catalog", pkg.ImportPath()).Enter(presence), validator: plainValidator}
 				validators = append(validators, map[string]string{
 					"Name":      "ValidatePresenceLegacy",
 					"Parameter": presenceLayout.Link(pkg.ImportPath(), pkg.ImportName).Ref(),
@@ -404,6 +436,11 @@ func {{.Name}}(input {{.Parameter}}) {{.Result}} {
 	require.Equal(t, beforePresence, retainedPresence.Render("value", "body"))
 	require.Equal(t, beforeImports, retainedPresence.Imports())
 	runGeneratedTests(t, directory)
+}
+
+// ValidatorCall sends the fixture's named field to its retained private validator.
+func (a *namedUnionValidationAttributor) ValidatorCall(_ *expr.AttributeExpr, _, target, _ string) string {
+	return fmt.Sprintf("%s(%s)", a.validator.Name(), target)
 }
 
 func namedUnionConversionDSL() {
@@ -517,10 +554,10 @@ func TestRequiredNamedUnionPresence(t *testing.T) {
 	}
 	if err := ValidatePresencePointer(&PresencePointer{}); err == nil { t.Fatal("accepted nil required pointer") }
 	selected := {{.PlainDerived}}({{.plainText}}(""))
-	for _, pointer := range []*{{.PlainDerived}}{&selected, new({{.PlainDerived}})} {
+	for index, pointer := range []*{{.PlainDerived}}{&selected, new({{.PlainDerived}})} {
 		before := *pointer
-		if err := ValidatePresencePointer(&PresencePointer{Choice: pointer}); err != nil {
-			t.Fatalf("pointer presence check rejected a nonnil field: %v", err)
+		if err := ValidatePresencePointer(&PresencePointer{Choice: pointer}); (err != nil) != (index == 1) {
+			t.Fatalf("pointer union invalid = %t, want %t: %v", err != nil, index == 1, err)
 		}
 		if !reflect.DeepEqual(*pointer, before) { t.Fatal("pointer presence validation changed its caller") }
 	}
