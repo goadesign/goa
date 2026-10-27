@@ -456,12 +456,15 @@ func (c *protobufPackageCatalog) collectMessageRecursive(attribute *expr.Attribu
 		if inline := protobufInlineObject(actual); inline != nil {
 			identitySource = protobufMessageSource{inline: inline}
 		}
-		if rootSource, ok := c.rootSources[origin]; ok {
+		rootSource, isRootMessage := c.rootSources[origin]
+		if isRootMessage {
 			identitySource = rootSource
 		}
 		// Named collections keep their authored declaration identity after their
-		// body becomes a wrapper. Other generated wrappers own new declarations.
-		if !root && len(actual.Attribute().Meta[wrappedAttrMeta]) > 0 && !expr.IsArray(origin) && !expr.IsMap(origin) {
+		// body becomes a wrapper. A root message reached again through a stream
+		// envelope keeps its root identity. Other generated wrappers own new
+		// declarations.
+		if !root && !isRootMessage && len(actual.Attribute().Meta[wrappedAttrMeta]) > 0 && !expr.IsArray(origin) && !expr.IsMap(origin) {
 			identitySource = protobufMessageSource{synthetic: protobufSyntheticMessage{
 				role: protobufWrapperMessage,
 			}}
