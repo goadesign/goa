@@ -453,22 +453,21 @@ func (c *protobufPackageCatalog) collectMessageRecursive(attribute *expr.Attribu
 	case expr.UserType:
 		origin := actual.Origin()
 		identitySource := protobufMessageSource{origin: origin}
-		if inline := protobufInlineObject(actual); inline != nil {
-			identitySource = protobufMessageSource{inline: inline}
-		}
-		if rootSource, ok := c.rootSources[origin]; ok {
-			identitySource = rootSource
-		}
-		// Named collections keep their authored declaration identity after their
-		// body becomes a wrapper. Other generated wrappers own new declarations.
-		if !root && len(actual.Attribute().Meta[wrappedAttrMeta]) > 0 && !expr.IsArray(origin) && !expr.IsMap(origin) {
-			identitySource = protobufMessageSource{synthetic: protobufSyntheticMessage{
-				role: protobufWrapperMessage,
-			}}
-		}
 		if root && (source.origin != nil || source.synthetic.role != 0) {
 			identitySource = source
 			c.rootSources[origin] = source
+		} else if rootSource, ok := c.rootSources[origin]; ok {
+			identitySource = rootSource
+		} else if inline := protobufInlineObject(actual); inline != nil {
+			identitySource = protobufMessageSource{inline: inline}
+		} else if !root && len(actual.Attribute().Meta[wrappedAttrMeta]) > 0 && !expr.IsArray(origin) && !expr.IsMap(origin) {
+			// Named collections keep their authored declaration identity after their
+			// body becomes a wrapper. A root message reached again through a stream
+			// envelope keeps its root identity. Other generated wrappers own new
+			// declarations.
+			identitySource = protobufMessageSource{synthetic: protobufSyntheticMessage{
+				role: protobufWrapperMessage,
+			}}
 		}
 		identity, err := protobufMessageIdentityFor(attribute, identitySource)
 		if err != nil {
