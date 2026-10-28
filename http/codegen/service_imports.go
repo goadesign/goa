@@ -420,10 +420,14 @@ func httpBasicAuthFlags(endpoint *expr.HTTPEndpointExpr) []httpCLIFlag {
 // encoder receives a request context.
 func httpServerCodecUsesContext(service *expr.HTTPServiceExpr) bool {
 	for _, endpoint := range service.HTTPEndpoints {
-		if endpoint.IsJSONRPC() || endpoint.UsesWebSocket() {
+		if endpoint.IsJSONRPC() {
 			continue
 		}
-		if endpoint.Redirect == nil || len(endpoint.HTTPErrors) > 0 {
+		// Error encoders are rendered for WebSocket endpoints too.
+		if len(endpoint.HTTPErrors) > 0 {
+			return true
+		}
+		if endpoint.Redirect == nil && !endpoint.UsesWebSocket() {
 			return true
 		}
 	}
