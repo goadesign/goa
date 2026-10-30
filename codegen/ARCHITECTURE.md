@@ -125,6 +125,33 @@ while runs execute, and tests install isolated registries. The released
 it before starting concurrent runs; each run reads its function list once and
 turns that list into fresh internal generators.
 
+## Source inspection without installed build programs
+
+`generator.Sources(genpkg, roots)` returns the `gen` command's relative file
+names and formatted source bytes. The caller supplies already evaluated roots
+and the generated import path, so this operation does not discover a package
+through the Go command, write output files, inspect `SkipExist`, or run file
+finalizers. Command-added `gen/goa.json` version metadata is omitted; the caller
+already selects the generator module. Core and plugin source files are retained
+unchanged. It uses the same plugin ordering, retained plans, name freeze,
+same-path merging, and prepared-root audit as disk generation. For example, a
+gRPC design can return its exact `.proto` definition with no protobuf programs
+installed. It does not return protoc-generated `.pb.go` files.
+
+`codegen.File.Source` owns the template execution and formatting shared with
+`File.Render`. Source inspection completes the mutation audit after templates
+execute. Registered plugins and template functions retain their own behavior;
+callers handling untrusted code must still restrict filesystem, process, and
+network access.
+
+The gRPC source operation selects `grpc/codegen.NewSourcePlans`. It copies and
+validates authored compiler commands and include paths without inspecting
+installed programs. Every returned protobuf file still has a real finalizer:
+an explicit `File.Render` resolves and checks the programs before compiling.
+The ordinary `NewPlans` constructor and `generator.Generate` keep their existing
+eager program/version checks and captured absolute paths. Both constructors
+use one wire planner; neither changes the supported protobuf naming rules.
+
 ## The retained core plan
 
 `generator.Plan` is the typed value shared by core generators and plugins. Its

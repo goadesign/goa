@@ -74,11 +74,11 @@ func collectGRPCServicePlans(plan *Plan) ([]*grpcServicePlan, error) {
 		}
 
 		plannedProtobuf := plan.protobuf[source]
-		plannedTools := plan.tools[source]
+		plannedFinalizer := plan.finalizers[source]
 		plannedSymbols := plan.symbols[source]
 		service.protoImports, service.protoGoImports = collectGRPCProtobufImports(plannedProtobuf)
 		plan.protobuf[service.expression] = plannedProtobuf
-		plan.tools[service.expression] = plannedTools
+		plan.finalizers[service.expression] = plannedFinalizer
 		plan.symbols[service.expression] = plannedSymbols
 		for endpointIndex, endpoint := range service.endpoints {
 			sourceEndpoint := source.GRPCEndpoints[endpointIndex]
