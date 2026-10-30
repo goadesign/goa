@@ -95,36 +95,27 @@ func (f *File) Render(dir string) (string, error) {
 		return "", err
 	}
 
-	// Render all sections to a buffer instead of directly to file
-	var buf bytes.Buffer
-	for _, s := range f.SectionTemplates {
-		if err := s.Write(&buf); err != nil {
-			return "", err
-		}
+	content, err := f.source(path)
+	if err != nil {
+		return "", err
 	}
-
-	// For Go files, process everything in memory
-	content := buf.Bytes()
-	if filepath.Ext(path) == ".go" {
-		content, err = finalizeGoSource(path, content)
-		if err != nil {
-			return "", err
-		}
-	}
-
-	// Write the final content exactly once
 	if err := os.WriteFile(path, content, 0644); err != nil {
 		return "", err
 	}
-
-	// Run finalizer if any
 	if f.FinalizeFunc != nil {
 		if err := f.FinalizeFunc(path); err != nil {
 			return "", err
 		}
 	}
-
 	return path, nil
+}
+
+// Source executes the section templates and formats Go source, returning fresh
+// bytes without reading or writing files or invoking FinalizeFunc. SkipExist
+// affects only Render; Source always produces the declared file's content.
+// Template functions retain their own behavior and may return an error.
+func (f *File) Source() ([]byte, error) {
+	return f.source(f.Path)
 }
 
 // Write writes the section to the given writer.
@@ -215,4 +206,20 @@ func finalizeGoSource(path string, content []byte) ([]byte, error) {
 	}
 
 	return imports.Process(path, formatted.Bytes(), &opt)
+}
+
+// source shares template execution and Go formatting with disk rendering while
+// retaining the caller's filename in syntax errors.
+func (f *File) source(path string) ([]byte, error) {
+	var buf bytes.Buffer
+	for _, s := range f.SectionTemplates {
+		if err := s.Write(&buf); err != nil {
+			return nil, err
+		}
+	}
+	content := buf.Bytes()
+	if filepath.Ext(path) == ".go" {
+		return finalizeGoSource(path, content)
+	}
+	return content, nil
 }

@@ -53,11 +53,8 @@ func planProtobufTools(inputs []PlanInput, resolver protobufToolResolver) (map[*
 	for _, input := range inputs {
 		for _, service := range input.Root.API.GRPC.Services {
 			command := protobufCompilerCommand(input.Root, service)
-			if len(command) == 0 {
-				return nil, fmt.Errorf(`Meta("protoc:cmd"): must be given arguments`)
-			}
-			if plugin := replacedGoPlugin(command[1:]); plugin != "" {
-				return nil, fmt.Errorf(`Meta("protoc:cmd") cannot replace required plugin %q`, plugin)
+			if err := validateProtobufCommand(command); err != nil {
+				return nil, err
 			}
 			compiler := compilers[command[0]]
 			if compiler == "" {

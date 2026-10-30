@@ -8,6 +8,7 @@ import (
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/eval"
+	grpccodegen "goa.design/goa/v3/grpc/codegen"
 )
 
 type (
@@ -95,7 +96,7 @@ func generatorFactoryFor(generate Genfunc) generatorFactory {
 // plan. It does not run registered plugins because callers invoked the core
 // generator directly.
 func runStandaloneGenerator(genpkg string, roots []eval.Root, factory generatorFactory) ([]*codegen.File, error) {
-	run := generationRun{cores: []coreGenerator{factory()}}
+	run := generationRun{cores: []coreGenerator{factory()}, grpcPlans: grpccodegen.NewPlans}
 	result, err := run.execute(genpkg, roots)
 	if err != nil {
 		return nil, err
