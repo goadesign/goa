@@ -101,13 +101,9 @@ func (a *AttributeExpr) resolveInheritance(resolving map[*AttributeExpr]struct{}
 	}
 	if IsObject(a.Type) {
 		for _, ref := range a.References {
-			ru, ok := ref.(UserType)
-			if !ok || ru.Attribute() == nil {
-				continue
+			if ru, ok := ref.(UserType); ok {
+				a.Inherit(ru.Attribute())
 			}
-			ru.Attribute().resolveInheritance(resolving)
-			a.resolveInheritedFields(ru.Attribute(), resolving, make(map[*AttributeExpr]struct{}))
-			a.Inherit(ru.Attribute())
 		}
 		for _, base := range a.Bases {
 			ru, ok := base.(UserType)
@@ -123,39 +119,6 @@ func (a *AttributeExpr) resolveInheritance(resolving map[*AttributeExpr]struct{}
 		a.Bases = nil
 	}
 	a.inheritanceResolved = true
-}
-
-// resolveInheritedFields resolves inheritance on matching child object fields
-// of parent before a.Inherit(parent) recursively inherits child field
-// properties. Only fields declared on a are inspected, avoiding traversal of
-// unrelated value fields on parent, and target child attributes defer their own
-// Extend merges until after outer Reference inheritance completes.
-func (a *AttributeExpr) resolveInheritedFields(
-	parent *AttributeExpr,
-	resolving map[*AttributeExpr]struct{},
-	seen map[*AttributeExpr]struct{},
-) {
-	if !a.shouldInherit(parent) {
-		return
-	}
-	for _, nat := range *AsObject(a.Type) {
-		if nat == nil || nat.Attribute == nil {
-			continue
-		}
-		patt := AsObject(parent.Type).Attribute(nat.Name)
-		if patt == nil {
-			continue
-		}
-		patt.resolveInheritance(resolving)
-		if !nat.Attribute.shouldInherit(patt) {
-			continue
-		}
-		if _, ok := seen[nat.Attribute]; ok {
-			continue
-		}
-		seen[nat.Attribute] = struct{}{}
-		nat.Attribute.resolveInheritedFields(patt, resolving, seen)
-	}
 }
 
 // inheritRecursive recursively copies descriptions, validations, default values,
