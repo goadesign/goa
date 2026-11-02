@@ -438,21 +438,17 @@ func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, s
 
 	if obj := AsObject(at.Type); obj != nil {
 		vobj := AsObject(vat.Attribute.Type)
-		if vobj == nil {
-			return at, nil
-		}
 		for _, cnat := range *obj {
-			var cvnat *NamedAttributeExpr
-			for _, nnat := range *vobj {
-				if nnat.Name == cnat.Name {
-					cvnat = nnat
-					break
+			selected := cnat
+			if vobj != nil {
+				for _, nnat := range *vobj {
+					if nnat.Name == cnat.Name {
+						selected = nnat
+						break
+					}
 				}
 			}
-			if cvnat == nil {
-				continue
-			}
-			pat, err := projectRecursive(cnat.Attribute, cvnat, view, seen)
+			pat, err := projectRecursive(cnat.Attribute, selected, view, seen)
 			if err != nil {
 				return nil, err
 			}

@@ -55,10 +55,11 @@ func (c *AttributeGraphCopier) Copy(attribute *AttributeExpr) *AttributeExpr {
 		return copied
 	}
 	copied := &AttributeExpr{
-		Description: attribute.Description,
-		DSLFunc:     attribute.DSLFunc,
-		finalized:   attribute.finalized,
-		authored:    attribute.AuthoredAttribute(),
+		Description:         attribute.Description,
+		DSLFunc:             attribute.DSLFunc,
+		inheritanceResolved: attribute.inheritanceResolved,
+		finalized:           attribute.finalized,
+		authored:            attribute.AuthoredAttribute(),
 	}
 	c.attributes[attribute] = copied
 	c.originals[copied] = attribute
