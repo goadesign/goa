@@ -144,10 +144,11 @@ execute. Registered plugins and template functions retain their own behavior;
 callers handling untrusted code must still restrict filesystem, process, and
 network access.
 
-The gRPC source operation selects `grpc/codegen.NewSourcePlans`. It copies and
-validates authored compiler commands and include paths without inspecting
-installed programs. Every returned protobuf file still has a real finalizer:
-an explicit `File.Render` resolves and checks the programs before compiling.
+The gRPC source operation selects `grpc/codegen.NewSourcePlans`. It validates
+authored compiler command structure and copies the command and include paths
+without inspecting installed programs. Every returned protobuf file still has a
+real finalizer: an explicit `File.Render` resolves and checks the programs before
+compiling.
 The ordinary `NewPlans` constructor and `generator.Generate` keep their existing
 eager program/version checks and captured absolute paths. Both constructors
 use one wire planner; neither changes the supported protobuf naming rules.
