@@ -22,14 +22,14 @@ func DupForDSL(dataType DataType) DataType {
 
 // DupAtt creates a copy of the given attribute without changing the design.
 func DupAtt(att *AttributeExpr) *AttributeExpr {
-	return newDupper().DupAtt(att)
+	return newDupper().DupAttribute(att)
 }
 
 // DupAttForDSL creates a copy of the given attribute and registers copied
 // result types so Goa evaluates their DSL.
 func DupAttForDSL(att *AttributeExpr) *AttributeExpr {
 	dupper := newDSLDupper()
-	result := dupper.DupAtt(att)
+	result := dupper.DupAttribute(att)
 	dupper.registerResultTypes()
 	return result
 }
@@ -58,13 +58,8 @@ func newDSLDupper() *dupper {
 	return dupper
 }
 
-// DupAtt creates a copy of att and its base attributes with one shared type
-// map so repeated and recursive types remain shared in the copy.
-func (d *dupper) DupAtt(att *AttributeExpr) *AttributeExpr {
-	return d.DupAttribute(att)
-}
-
-// DupAttribute creates a copy of the given attribute.
+// DupAttribute creates a copy of the given attribute with one shared type map
+// so repeated and recursive types remain shared in the copy.
 func (d *dupper) DupAttribute(att *AttributeExpr) *AttributeExpr {
 	if _, ok := d.ats[att]; ok {
 		return att
