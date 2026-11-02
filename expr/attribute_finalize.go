@@ -1,11 +1,11 @@
 // This file implements inheritance resolution and finalization for Goa attributes.
-// It resolves type references and base type merges in dependency order before
-// traversing child value attributes, preventing premature finalization across
-// circular or back-edge type graphs.
+// It applies type references and resolves base type merges in dependency order
+// before traversing child value attributes, preventing premature finalization
+// across circular or back-edge type graphs.
 package expr
 
-// Finalize merges base and reference type attributes in dependency order and
-// finalizes child value attributes.
+// Finalize applies reference type attributes, merges base type attributes in
+// dependency order, and finalizes child value attributes.
 func (a *AttributeExpr) Finalize() {
 	if a.finalized {
 		return // Avoid infinite recursion.
@@ -81,11 +81,11 @@ func (a *AttributeExpr) Inherit(parent *AttributeExpr) {
 	a.inheritRecursive(parent, make(map[*AttributeExpr]struct{}))
 }
 
-// resolveInheritance applies References and Bases in dependency order before
-// Finalize traverses child value attributes. Separating inheritance resolution
-// from value traversal ensures that a base attribute whose fields reference a
-// downstream consumer does not finalize that consumer before intermediate base
-// types have merged their own bases.
+// resolveInheritance applies References and merges Bases in dependency order
+// before Finalize traverses child value attributes. Separating base-type
+// inheritance resolution from value traversal ensures that a base attribute
+// whose fields reference a downstream consumer does not finalize that consumer
+// before intermediate base types have merged their own bases.
 func (a *AttributeExpr) resolveInheritance(resolving map[*AttributeExpr]struct{}) {
 	if a == nil || a.finalized || a.inheritanceResolved {
 		return

@@ -787,9 +787,10 @@ func TestAttributeExprFinalizeMultiLevelInheritanceWithBackEdges(t *testing.T) {
 }
 
 // TestAttributeExprFinalizeReferenceAndExtendPreservesBaseDefault verifies that
-// combining Reference and Extend preserves shared base defaults and keeps
-// Required validations on Extend without propagating Base Required lists into
-// unfinalized Reference targets.
+// combining Reference and Extend at top-level or nested object attributes
+// applies Reference before Extend without mutating shared base defaults, and
+// keeps Required validations on Extend without propagating Base Required lists
+// into unfinalized Reference targets.
 func TestAttributeExprFinalizeReferenceAndExtendPreservesBaseDefault(t *testing.T) {
 	requiredAncestor := &UserTypeExpr{
 		TypeName: "RequiredAncestor",
@@ -857,5 +858,51 @@ func TestAttributeExprFinalizeReferenceAndExtendPreservesBaseDefault(t *testing.
 	require.NotNil(t, extStatus)
 	assert.Equal(t, "active", extStatus.DefaultValue, "extending attribute must inherit default value from base")
 	assert.True(t, extending.IsRequired("status"), "extending attribute must inherit Required from base")
-}
 
+	nestedBase := &UserTypeExpr{
+		TypeName: "NestedBase",
+		AttributeExpr: &AttributeExpr{
+			Type: &Object{
+				{Name: "query", Attribute: &AttributeExpr{Type: String}},
+			},
+		},
+	}
+	nestedParent := &UserTypeExpr{
+		TypeName: "NestedParent",
+		AttributeExpr: &AttributeExpr{
+			Type: &Object{
+				{Name: "settings", Attribute: &AttributeExpr{
+					Type: &Object{
+						{Name: "options", Attribute: &AttributeExpr{
+							Type: &Object{
+								{Name: "query", Attribute: &AttributeExpr{
+									Type:         String,
+									DefaultValue: "reference",
+								}},
+							},
+						}},
+					},
+				}},
+			},
+		},
+	}
+	options := &AttributeExpr{
+		Type: &Object{
+			{Name: "query", Attribute: &AttributeExpr{Type: String}},
+		},
+		Bases: []DataType{nestedBase},
+	}
+	child := &AttributeExpr{
+		Type: &Object{
+			{Name: "settings", Attribute: &AttributeExpr{
+				Type: &Object{
+					{Name: "options", Attribute: options},
+				},
+			}},
+		},
+		References: []DataType{nestedParent},
+	}
+	child.Finalize()
+	assert.Nil(t, nestedBase.Find("query").DefaultValue, "nested Reference must not contaminate shared Base default")
+	assert.Nil(t, options.Find("query").DefaultValue, "nested Extend must override outer Reference default")
+}
