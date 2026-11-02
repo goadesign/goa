@@ -103,3 +103,36 @@ func TestView(t *testing.T) {
 		})
 	}
 }
+
+// TestRecursiveResultTypeFinalize verifies that a self-referential ResultType
+// finalizes without infinite recursion both with an implicit default view and
+// with an explicit default view.
+func TestRecursiveResultTypeFinalize(t *testing.T) {
+	for _, explicitView := range []bool{false, true} {
+		name := "implicit_default_view"
+		if explicitView {
+			name = "explicit_default_view"
+		}
+		t.Run(name, func(t *testing.T) {
+			var node *expr.ResultTypeExpr
+			expr.RunDSL(t, func() {
+				node = ResultType("application/vnd.review.node", func() {
+					Attribute("next", node)
+					if explicitView {
+						View("default", func() {
+							Attribute("next")
+						})
+					}
+				})
+				Service("tree", func() {
+					Method("show", func() {
+						Result(node)
+					})
+				})
+			})
+			if node.View(expr.DefaultView) == nil {
+				t.Fatal("expected default view to be present on recursive ResultType")
+			}
+		})
+	}
+}

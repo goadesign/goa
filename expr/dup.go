@@ -154,20 +154,8 @@ func (d *dupper) DupType(t DataType) DataType {
 
 		// DSL copies must be evaluated because their DSL may define views
 		// used by the attribute that contains the copy.
-		if rt, ok := dp.(*ResultTypeExpr); ok {
-			actualRT := actual.(*ResultTypeExpr)
-			rt.ContentType = actualRT.ContentType
-			if len(actualRT.Views) > 0 {
-				rt.Views = make([]*ViewExpr, len(actualRT.Views))
-				for i, view := range actualRT.Views {
-					rt.Views[i] = &ViewExpr{
-						AttributeExpr: d.DupAttribute(view.AttributeExpr),
-						Name:          view.Name,
-						Parent:        rt,
-					}
-				}
-			}
-			if d.registerTypes && GeneratedResultType(rt.Identifier) != nil {
+		if rt, ok := dp.(*ResultTypeExpr); d.registerTypes && ok {
+			if GeneratedResultType(rt.Identifier) != nil {
 				d.resultTypeCopies = append(d.resultTypeCopies, rt)
 			}
 		}

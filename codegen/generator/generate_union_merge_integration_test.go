@@ -172,6 +172,9 @@ func TestGenerateInheritedRecursiveResultTypeView(t *testing.T) {
 	}
 }
 
+// inheritedRecursiveHTTPContract verifies that generated HTTP request unmarshaling,
+// validation, and server constructor conversion preserve inherited required fields
+// and defaults on a recursive ResultType view.
 const inheritedRecursiveHTTPContract = `package server
 import("encoding/json";"testing")
 func TestInheritedRecursiveHTTPRequest(t *testing.T){
@@ -187,6 +190,9 @@ func TestInheritedRecursiveHTTPRequest(t *testing.T){
  }
 }`
 
+// inheritedRecursiveRPCContract verifies that generated JSON-RPC request unmarshaling,
+// validation, and server constructor conversion preserve inherited required fields
+// and defaults on a recursive ResultType view.
 const inheritedRecursiveRPCContract = `package server
 import("encoding/json";"testing")
 func TestInheritedRecursiveRPCRequest(t *testing.T){
@@ -202,6 +208,9 @@ func TestInheritedRecursiveRPCRequest(t *testing.T){
  }
 }`
 
+// inheritedRecursiveGRPCContract verifies that generated gRPC protobuf marshaling
+// and server request validation preserve inherited required fields and length
+// constraints on a recursive ResultType view.
 const inheritedRecursiveGRPCContract = `package reviewgrpctest
 import(
  "testing"

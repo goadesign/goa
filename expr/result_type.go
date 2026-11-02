@@ -205,37 +205,22 @@ func (rt *ResultTypeExpr) ViewHasAttribute(view, attr string) bool {
 }
 
 // Finalize builds the default view if not explicitly defined and finalizes
-// the underlying UserTypeExpr and views.
+// the underlying UserTypeExpr.
 func (rt *ResultTypeExpr) Finalize() {
-	rt.finalizeViews()
 	rt.useExplicitView()
 	rt.ensureDefaultView()
 	rt.UserTypeExpr.Finalize()
-	rt.finalizeViews()
 	seen := make(map[string]struct{})
 	walkAttribute(rt.AttributeExpr, func(_ string, att *AttributeExpr) error { // nolint: errcheck
 		if rt, ok := att.Type.(*ResultTypeExpr); ok {
 			if _, ok := seen[rt.Identifier]; !ok {
 				seen[rt.Identifier] = struct{}{}
-				rt.finalizeViews()
 				rt.useExplicitView()
 				rt.ensureDefaultView()
-				rt.finalizeViews()
 			}
 		}
 		return nil
 	})
-}
-
-// finalizeViews finalizes the attribute expression of each view defined on the
-// result type so explicit views copied during DSL evaluation resolve their base
-// and reference types before projection.
-func (rt *ResultTypeExpr) finalizeViews() {
-	for _, v := range rt.Views {
-		if v != nil && v.AttributeExpr != nil {
-			v.AttributeExpr.Finalize()
-		}
-	}
 }
 
 // useExplicitView projects the result type using the view explicitly set on the
@@ -453,21 +438,17 @@ func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, s
 
 	if obj := AsObject(at.Type); obj != nil {
 		vobj := AsObject(vat.Attribute.Type)
-		if vobj == nil {
-			return at, nil
-		}
 		for _, cnat := range *obj {
-			var cvnat *NamedAttributeExpr
-			for _, nnat := range *vobj {
-				if nnat.Name == cnat.Name {
-					cvnat = nnat
-					break
+			selected := cnat
+			if vobj != nil {
+				for _, nnat := range *vobj {
+					if nnat.Name == cnat.Name {
+						selected = nnat
+						break
+					}
 				}
 			}
-			if cvnat == nil {
-				continue
-			}
-			pat, err := projectRecursive(cnat.Attribute, cvnat, view, seen)
+			pat, err := projectRecursive(cnat.Attribute, selected, view, seen)
 			if err != nil {
 				return nil, err
 			}
