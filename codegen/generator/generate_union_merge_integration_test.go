@@ -3,6 +3,7 @@
 package generator
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -145,7 +146,8 @@ func TestGenerateInheritedRecursiveResultTypeView(t *testing.T) {
 		})
 	})
 
-	for range 2 {
+	cases := make([]generatedTestDir, 0, 2)
+	for i := range 2 {
 		registry := testRegistry(
 			"gen",
 			testGenerator(planServiceData, testServiceFiles),
@@ -168,8 +170,12 @@ func TestGenerateInheritedRecursiveResultTypeView(t *testing.T) {
 		writeGeneratedContractTest(t, generated, filepath.Join("http", "copyreview", "server"), inheritedRecursiveHTTPContract)
 		writeGeneratedContractTest(t, generated, filepath.Join("jsonrpc", "copyreview", "server"), inheritedRecursiveRPCContract)
 		writeGeneratedContractTest(t, generated, "reviewgrpctest", inheritedRecursiveGRPCContract)
-		runGeneratedTests(t, generated)
+		cases = append(cases, generatedTestDir{
+			name: fmt.Sprintf("pass-%d", i+1),
+			dir:  generated,
+		})
 	}
+	runGeneratedTestDirs(t, cases)
 }
 
 // inheritedRecursiveHTTPContract verifies that generated HTTP request unmarshaling,
