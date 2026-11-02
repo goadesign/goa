@@ -10,6 +10,7 @@ import (
 
 	cg "goa.design/goa/v3/codegen"
 	d "goa.design/goa/v3/dsl"
+	"goa.design/goa/v3/expr"
 )
 
 // TestGenerateUnionUserTypeSamePathMerged exercises the real service codegen path
@@ -80,3 +81,146 @@ func TestGenerateUnionUserTypeSamePathMerged(t *testing.T) {
 		t.Fatalf("missing struct definition in %s:\n%s", p, content)
 	}
 }
+
+// TestGenerateInheritedRecursiveResultTypeView verifies that an explicit
+// ResultType view selecting a recursive UserType whose inline nested object
+// extends a transitive base chain with a recursive back-edge generates valid
+// HTTP, JSON-RPC, and gRPC transport packages without duplicate body types.
+func TestGenerateInheritedRecursiveResultTypeView(t *testing.T) {
+	var node expr.UserType
+	_ = cg.RunDSL(t, func() {
+		d.API("copyreview", func() {})
+		ancestor := d.Type("Ancestor", func() {
+			d.Field(1, "query", d.String, func() { d.MinLength(2) })
+			d.Field(2, "title", d.String, func() { d.Default("untitled") })
+			d.Field(3, "back", node)
+			d.Required("query")
+		})
+		base := d.Type("Base", func() { d.Extend(ancestor) })
+		derived := d.Type("Derived", func() { d.Extend(base) })
+		node = d.Type("Node", func() {
+			d.Field(1, "self", node)
+			d.Field(2, "nested", func() {
+				d.Extend(derived)
+				d.Field(4, "extra", d.String)
+			})
+			d.Required("nested")
+		})
+		document := d.ResultType("application/vnd.copyreview.document", func() {
+			d.TypeName("Document")
+			d.Attributes(func() {
+				d.Field(1, "node", node)
+				d.Required("node")
+			})
+			d.View("default", func() {
+				d.Attribute("node")
+			})
+		})
+		d.Service("copyreview", func() {
+			d.HTTP(func() {
+				d.BodyFieldName(derived, "query:query")
+			})
+			d.Method("exchange", func() {
+				d.Payload(node)
+				d.Result(document)
+				d.HTTP(func() {
+					d.POST("/copy")
+					d.Response(200)
+				})
+				d.GRPC(func() {})
+			})
+			d.Method("repeat", func() {
+				d.Payload(node)
+				d.Result(document)
+				d.HTTP(func() {
+					d.POST("/repeat")
+					d.Response(200)
+				})
+			})
+			d.Method("rpc", func() {
+				d.Payload(node)
+				d.Result(document)
+				d.JSONRPC(func() {})
+			})
+		})
+	})
+
+	for range 2 {
+		registry := testRegistry(
+			"gen",
+			testGenerator(planServiceData, testServiceFiles),
+			testGenerator(planTransportData, testTransportFiles),
+		)
+		dir := t.TempDir()
+		generated := filepath.Join(dir, cg.Gendir)
+		writeGeneratedModule(t, generated, "generated.local/gen")
+		if _, err := generate(dir, "gen", false, registry); err != nil {
+			t.Fatalf("Generate failed: %v", err)
+		}
+		httpTypesPath := filepath.Join(generated, "http", "copyreview", "server", "types.go")
+		bs, err := os.ReadFile(httpTypesPath)
+		if err != nil {
+			t.Fatalf("failed reading %s: %v", httpTypesPath, err)
+		}
+		if !strings.Contains(string(bs), "type NodeResponseBody struct") {
+			t.Fatalf("missing NodeResponseBody in %s:\n%s", httpTypesPath, string(bs))
+		}
+		writeGeneratedContractTest(t, generated, filepath.Join("http", "copyreview", "server"), inheritedRecursiveHTTPContract)
+		writeGeneratedContractTest(t, generated, filepath.Join("jsonrpc", "copyreview", "server"), inheritedRecursiveRPCContract)
+		writeGeneratedContractTest(t, generated, "reviewgrpctest", inheritedRecursiveGRPCContract)
+		runGeneratedTests(t, generated)
+	}
+}
+
+const inheritedRecursiveHTTPContract = `package server
+import("encoding/json";"testing")
+func TestInheritedRecursiveHTTPRequest(t *testing.T){
+ for _,tc:=range []struct{document string; valid bool}{
+  {` + "`" + `{"nested":{}}` + "`" + `,false},
+  {` + "`" + `{"nested":{"query":"a"}}` + "`" + `,false},
+  {` + "`" + `{"nested":{"query":"ab"}}` + "`" + `,true},
+ }{
+  var body ExchangeRequestBody
+  if err:=json.Unmarshal([]byte(tc.document),&body);err!=nil{t.Fatal(err)}
+  if err:=ValidateExchangeRequestBody(&body);(err==nil)!=tc.valid{t.Fatalf("document=%s valid=%t error=%v",tc.document,tc.valid,err)}
+  if tc.valid { value:=NewExchangeNode(&body);if value.Nested.Query!="ab"||value.Nested.Title!="untitled" {t.Fatalf("lost inherited query or default: %#v",value.Nested)} }
+ }
+}`
+
+const inheritedRecursiveRPCContract = `package server
+import("encoding/json";"testing")
+func TestInheritedRecursiveRPCRequest(t *testing.T){
+ for _,tc:=range []struct{document string; valid bool}{
+  {` + "`" + `{"nested":{}}` + "`" + `,false},
+  {` + "`" + `{"nested":{"query":"a"}}` + "`" + `,false},
+  {` + "`" + `{"nested":{"query":"ab"}}` + "`" + `,true},
+ }{
+  var body RPCRequestBody
+  if err:=json.Unmarshal([]byte(tc.document),&body);err!=nil{t.Fatal(err)}
+  if err:=ValidateRPCRequestBody(&body);(err==nil)!=tc.valid{t.Fatalf("document=%s valid=%t error=%v",tc.document,tc.valid,err)}
+  if tc.valid { value:=NewRPCNode(&body);if value.Nested.Query!="ab"||value.Nested.Title!="untitled" {t.Fatalf("lost inherited query or default: %#v",value.Nested)} }
+ }
+}`
+
+const inheritedRecursiveGRPCContract = `package reviewgrpctest
+import(
+ "testing"
+ "google.golang.org/protobuf/encoding/protojson"
+ "google.golang.org/protobuf/proto"
+ genpb "generated.local/gen/grpc/copyreview/pb"
+ genserver "generated.local/gen/grpc/copyreview/server"
+)
+func TestInheritedRecursiveProtobuf(t *testing.T){
+ for _,tc:=range []struct{document string; valid bool}{
+  {` + "`" + `{"nested":{}}` + "`" + `,false},
+  {` + "`" + `{"nested":{"query":"a"}}` + "`" + `,false},
+  {` + "`" + `{"nested":{"query":"ab"}}` + "`" + `,true},
+ }{
+  var body genpb.ExchangeRequest
+  if err:=protojson.Unmarshal([]byte(tc.document),&body);err!=nil{t.Fatal(err)}
+  data,err:=proto.Marshal(&body);if err!=nil{t.Fatal(err)}
+  var wire genpb.ExchangeRequest
+  if err:=proto.Unmarshal(data,&wire);err!=nil{t.Fatal(err)}
+  if err:=genserver.ValidateExchangeRequest(&wire);(err==nil)!=tc.valid{t.Fatalf("document=%s valid=%t error=%v",tc.document,tc.valid,err)}
+ }
+}`

@@ -195,6 +195,87 @@ func TestProjectDoesNotAliasFieldAttributes(t *testing.T) {
 		assert.Equal(t, "desc rec", rec.Description)
 		assert.Same(t, projected, rec.Type)
 	})
+
+	t.Run("explicit view copied before inheritance finalization unifies recursive user type", func(t *testing.T) {
+		minLen := 2
+		node := &UserTypeExpr{
+			TypeName:      "Node",
+			AttributeExpr: &AttributeExpr{Type: &Object{}},
+		}
+		ancestor := &UserTypeExpr{
+			TypeName: "Ancestor",
+			AttributeExpr: &AttributeExpr{
+				Type: &Object{
+					{Name: "query", Attribute: &AttributeExpr{
+						Type:       String,
+						Validation: &ValidationExpr{MinLength: &minLen},
+					}},
+					{Name: "back", Attribute: &AttributeExpr{Type: node}},
+				},
+				Validation: &ValidationExpr{Required: []string{"query"}},
+			},
+		}
+		base := &UserTypeExpr{
+			TypeName: "Base",
+			AttributeExpr: &AttributeExpr{
+				Type:  &Object{},
+				Bases: []DataType{ancestor},
+			},
+		}
+		derived := &UserTypeExpr{
+			TypeName: "Derived",
+			AttributeExpr: &AttributeExpr{
+				Type:  &Object{},
+				Bases: []DataType{base},
+			},
+		}
+		*AsObject(node.Type) = Object{
+			{Name: "self", Attribute: &AttributeExpr{Type: node}},
+			{Name: "nested", Attribute: &AttributeExpr{
+				Type: &Object{
+					{Name: "extra", Attribute: &AttributeExpr{Type: String}},
+				},
+				Bases: []DataType{derived},
+			}},
+		}
+		rt := &ResultTypeExpr{
+			UserTypeExpr: &UserTypeExpr{
+				TypeName: "Document",
+				AttributeExpr: &AttributeExpr{
+					Type: &Object{
+						{Name: "node", Attribute: &AttributeExpr{Type: node}},
+					},
+				},
+			},
+			Identifier: "application/vnd.test.document",
+		}
+		viewNode := DupAttForDSL(rt.Find("node"))
+		rt.Views = []*ViewExpr{{
+			Name: DefaultView,
+			AttributeExpr: &AttributeExpr{
+				Type: &Object{
+					{Name: "node", Attribute: viewNode},
+				},
+			},
+			Parent: rt,
+		}}
+
+		ancestor.Finalize()
+		base.Finalize()
+		derived.Finalize()
+		node.Finalize()
+		rt.Finalize()
+
+		projected, err := Project(rt, DefaultView)
+		require.NoError(t, err)
+		projNode := AsObject(projected.Type).Attribute("node").Type
+		projSelf := AsObject(projNode).Attribute("self").Type
+		projNested := AsObject(projNode).Attribute("nested")
+		projBack := AsObject(projNested.Type).Attribute("back").Type
+		assert.Same(t, projNode, projSelf)
+		assert.Same(t, projNode, projBack)
+		assert.NotNil(t, AsObject(projNested.Type).Attribute("query"))
+	})
 }
 
 // view is a helper function for building view expressions used in tests. name

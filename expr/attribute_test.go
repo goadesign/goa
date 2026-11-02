@@ -657,6 +657,10 @@ func TestAttributeExprEvalName(t *testing.T) {
 	}
 }
 
+// TestAttributeExprFinalizeMultiLevelInheritanceWithBackEdges verifies that
+// Finalize merges transitive base types (RootBase -> Ancestor -> Base ->
+// Derived) into a child attribute on Node even when Ancestor has a value field
+// referencing Node directly or through an array, map, or union.
 func TestAttributeExprFinalizeMultiLevelInheritanceWithBackEdges(t *testing.T) {
 	shapes := []string{"object", "array", "map", "union"}
 	orders := []bool{false, true} // false: self first, true: nested first
@@ -782,6 +786,9 @@ func TestAttributeExprFinalizeMultiLevelInheritanceWithBackEdges(t *testing.T) {
 	}
 }
 
+// TestAttributeExprFinalizeReferenceAndExtendPreservesBaseDefault verifies that
+// combining Reference and Extend at top-level or nested object attributes
+// applies Reference before Extend without mutating shared base defaults.
 func TestAttributeExprFinalizeReferenceAndExtendPreservesBaseDefault(t *testing.T) {
 	sharedBase := &UserTypeExpr{
 		TypeName: "SharedBase",
@@ -838,8 +845,58 @@ func TestAttributeExprFinalizeReferenceAndExtendPreservesBaseDefault(t *testing.
 	extStatus := AsObject(extending.Type).Attribute("status")
 	require.NotNil(t, extStatus)
 	assert.Equal(t, "active", extStatus.DefaultValue, "extending attribute must inherit default value from base")
+
+	nestedBase := &UserTypeExpr{
+		TypeName: "NestedBase",
+		AttributeExpr: &AttributeExpr{
+			Type: &Object{
+				{Name: "query", Attribute: &AttributeExpr{Type: String}},
+			},
+		},
+	}
+	nestedParent := &UserTypeExpr{
+		TypeName: "NestedParent",
+		AttributeExpr: &AttributeExpr{
+			Type: &Object{
+				{Name: "settings", Attribute: &AttributeExpr{
+					Type: &Object{
+						{Name: "options", Attribute: &AttributeExpr{
+							Type: &Object{
+								{Name: "query", Attribute: &AttributeExpr{
+									Type:         String,
+									DefaultValue: "reference",
+								}},
+							},
+						}},
+					},
+				}},
+			},
+		},
+	}
+	options := &AttributeExpr{
+		Type: &Object{
+			{Name: "query", Attribute: &AttributeExpr{Type: String}},
+		},
+		Bases: []DataType{nestedBase},
+	}
+	child := &AttributeExpr{
+		Type: &Object{
+			{Name: "settings", Attribute: &AttributeExpr{
+				Type: &Object{
+					{Name: "options", Attribute: options},
+				},
+			}},
+		},
+		References: []DataType{nestedParent},
+	}
+	child.Finalize()
+	assert.Nil(t, nestedBase.Find("query").DefaultValue, "nested Reference must not contaminate shared Base default")
+	assert.Nil(t, options.Find("query").DefaultValue, "nested Extend must override outer Reference default")
 }
 
+// TestAttributeExprFinalizeReferenceInheritsUntypedNestedWithExtend verifies
+// that an untyped child field on an attribute using Reference inherits the
+// parent field's resolved object schema when the parent field uses Extend.
 func TestAttributeExprFinalizeReferenceInheritsUntypedNestedWithExtend(t *testing.T) {
 	for _, parentFirst := range []bool{false, true} {
 		name := fmt.Sprintf("parentFirst=%v", parentFirst)
@@ -922,4 +979,3 @@ func TestAttributeExprFinalizeReferenceInheritsUntypedNestedWithExtend(t *testin
 		})
 	}
 }
-

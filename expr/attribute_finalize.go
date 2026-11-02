@@ -126,9 +126,10 @@ func (a *AttributeExpr) resolveInheritance(resolving map[*AttributeExpr]struct{}
 }
 
 // resolveInheritedFields resolves inheritance on matching child object fields
-// of a and parent before a.Inherit(parent) recursively inherits child field
+// of parent before a.Inherit(parent) recursively inherits child field
 // properties. Only fields declared on a are inspected, avoiding traversal of
-// unrelated value fields on parent.
+// unrelated value fields on parent, and target child attributes defer their own
+// Extend merges until after outer Reference inheritance completes.
 func (a *AttributeExpr) resolveInheritedFields(
 	parent *AttributeExpr,
 	resolving map[*AttributeExpr]struct{},
@@ -145,7 +146,6 @@ func (a *AttributeExpr) resolveInheritedFields(
 		if patt == nil {
 			continue
 		}
-		nat.Attribute.resolveInheritance(resolving)
 		patt.resolveInheritance(resolving)
 		if !nat.Attribute.shouldInherit(patt) {
 			continue

@@ -111,6 +111,9 @@ func TestDupSchemeKeepsAuthoredScheme(t *testing.T) {
 	require.Same(t, authored, second.AuthoredScheme())
 }
 
+// TestDupAttFinalizeResolvesTransitiveBasesAndReferences verifies that DupAtt
+// deep-copies transitive Bases and References so finalizing a detached copy
+// resolves inherited fields without mutating the original unfinalized types.
 func TestDupAttFinalizeResolvesTransitiveBasesAndReferences(t *testing.T) {
 	refType := &UserTypeExpr{
 		TypeName: "ReferenceDoc",
