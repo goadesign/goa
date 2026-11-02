@@ -24,13 +24,14 @@ type (
 
 	// Plan stores one design and every gRPC file built from it.
 	Plan struct {
-		generation   *codegen.Generation
-		root         *expr.RootExpr
-		service      *service.Plan
-		cli          *grpcCLIPlan
-		protobuf     map[*expr.GRPCServiceExpr]*protobufServicePlan
-		packages     map[*expr.GRPCServiceExpr]*grpcServicePackage
-		tools        map[*expr.GRPCServiceExpr]*protobufToolPlan
+		generation *codegen.Generation
+		root       *expr.RootExpr
+		service    *service.Plan
+		cli        *grpcCLIPlan
+		protobuf   map[*expr.GRPCServiceExpr]*protobufServicePlan
+		packages   map[*expr.GRPCServiceExpr]*grpcServicePackage
+		// finalizers compile each service with the constructor's captured settings.
+		finalizers   map[*expr.GRPCServiceExpr]protobufFinalizer
 		symbols      map[*expr.GRPCServiceExpr]*grpcSymbols
 		fileImports  map[string]*codegen.GeneratedImportPlan
 		expressions  []*expr.GRPCServiceExpr
@@ -82,6 +83,22 @@ func NewPlans(generation *codegen.Generation, inputs ...PlanInput) ([]*Plan, err
 	return newPlans(generation, systemProtobufTools(), inputs...)
 }
 
+// NewSourcePlans chooses the same gRPC names, types, and source as NewPlans
+// without looking up or running protobuf programs. It copies compiler commands
+// and include paths and rejects invalid command declarations immediately.
+// Source inspection should use codegen.File.Source. Explicitly rendering a
+// protobuf file still resolves and validates its programs before compiling it.
+func NewSourcePlans(generation *codegen.Generation, inputs ...PlanInput) ([]*Plan, error) {
+	if err := validatePlanInputs(generation, inputs); err != nil {
+		return nil, err
+	}
+	finalizers, err := planProtobufSourceFinalizers(inputs)
+	if err != nil {
+		return nil, err
+	}
+	return newWirePlans(generation, finalizers, inputs...)
+}
+
 // NewExamplePlan returns an example renderer only when examples contains the
 // server data copied from transport's service design.
 func NewExamplePlan(transport *Plan, examples *example.Plan) (*ExamplePlan, error) {
@@ -97,6 +114,23 @@ func NewExamplePlan(transport *Plan, examples *example.Plan) (*ExamplePlan, erro
 
 // newPlans lets tests provide fixed protobuf executable paths and versions.
 func newPlans(generation *codegen.Generation, resolver protobufToolResolver, inputs ...PlanInput) ([]*Plan, error) {
+	if err := validatePlanInputs(generation, inputs); err != nil {
+		return nil, err
+	}
+	toolPlans, err := planProtobufTools(inputs, resolver)
+	if err != nil {
+		return nil, err
+	}
+	finalizers := make(map[*expr.GRPCServiceExpr]protobufFinalizer, len(toolPlans))
+	for expression, tools := range toolPlans {
+		finalizers[expression] = capturedProtobufFinalizer(tools)
+	}
+	return newWirePlans(generation, finalizers, inputs...)
+}
+
+// validatePlanInputs requires exactly one matching service plan for every
+// gRPC root owned by this generation before either constructor plans names.
+func validatePlanInputs(generation *codegen.Generation, inputs []PlanInput) error {
 	owned := make(map[*expr.RootExpr]struct{})
 	for _, candidate := range generation.Roots() {
 		if root, ok := candidate.(*expr.RootExpr); ok && len(root.API.GRPC.Services) > 0 {
@@ -104,25 +138,27 @@ func newPlans(generation *codegen.Generation, resolver protobufToolResolver, inp
 		}
 	}
 	if len(inputs) != len(owned) {
-		return nil, fmt.Errorf("gRPC planning requires all %d gRPC roots, got %d", len(owned), len(inputs))
+		return fmt.Errorf("gRPC planning requires all %d gRPC roots, got %d", len(owned), len(inputs))
 	}
 	seen := make(map[*expr.RootExpr]struct{}, len(inputs))
 	for _, input := range inputs {
 		if input.Service == nil || input.Service.Root() != input.Root {
-			return nil, fmt.Errorf("gRPC plan input does not pair a design with its service plan")
+			return fmt.Errorf("gRPC plan input does not pair a design with its service plan")
 		}
 		if _, ok := owned[input.Root]; !ok {
-			return nil, fmt.Errorf("gRPC root %p is not part of this generation", input.Root)
+			return fmt.Errorf("gRPC root %p is not part of this generation", input.Root)
 		}
 		if _, ok := seen[input.Root]; ok {
-			return nil, fmt.Errorf("gRPC root %p is planned more than once", input.Root)
+			return fmt.Errorf("gRPC root %p is planned more than once", input.Root)
 		}
 		seen[input.Root] = struct{}{}
 	}
-	toolPlans, err := planProtobufTools(inputs, resolver)
-	if err != nil {
-		return nil, err
-	}
+	return nil
+}
+
+// newWirePlans owns the shared gRPC naming, layout and conversion planning.
+// Every service already has its complete protobuf finalization operation.
+func newWirePlans(generation *codegen.Generation, finalizers map[*expr.GRPCServiceExpr]protobufFinalizer, inputs ...PlanInput) ([]*Plan, error) {
 	plans := make([]*Plan, len(inputs))
 	for index, input := range inputs {
 		packages, err := planGRPCServicePackages(input)
@@ -133,9 +169,9 @@ func newPlans(generation *codegen.Generation, resolver protobufToolResolver, inp
 		if err != nil {
 			return nil, err
 		}
-		tools := make(map[*expr.GRPCServiceExpr]*protobufToolPlan, len(input.Root.API.GRPC.Services))
+		serviceFinalizers := make(map[*expr.GRPCServiceExpr]protobufFinalizer, len(input.Root.API.GRPC.Services))
 		for _, grpcService := range input.Root.API.GRPC.Services {
-			tools[grpcService] = toolPlans[grpcService]
+			serviceFinalizers[grpcService] = finalizers[grpcService]
 		}
 		plans[index] = &Plan{
 			generation:  generation,
@@ -144,7 +180,7 @@ func newPlans(generation *codegen.Generation, resolver protobufToolResolver, inp
 			cli:         cliPlan,
 			protobuf:    make(map[*expr.GRPCServiceExpr]*protobufServicePlan),
 			packages:    packages,
-			tools:       tools,
+			finalizers:  serviceFinalizers,
 			symbols:     make(map[*expr.GRPCServiceExpr]*grpcSymbols),
 			fileImports: make(map[string]*codegen.GeneratedImportPlan),
 			expressions: append([]*expr.GRPCServiceExpr(nil), input.Root.API.GRPC.Services...),

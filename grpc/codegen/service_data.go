@@ -19,10 +19,11 @@ type (
 	// indexed by service name.
 	ServicesData struct {
 		*service.ServicesData
-		GRPCServices  map[string]*ServiceData
-		cliPlan       *grpcCLIPlan
-		protobuf      map[*expr.GRPCServiceExpr]*protobufServicePlan
-		tools         map[*expr.GRPCServiceExpr]*protobufToolPlan
+		GRPCServices map[string]*ServiceData
+		cliPlan      *grpcCLIPlan
+		protobuf     map[*expr.GRPCServiceExpr]*protobufServicePlan
+		// finalizers retain the selected compilation operation for copied services.
+		finalizers    map[*expr.GRPCServiceExpr]protobufFinalizer
 		symbols       map[*expr.GRPCServiceExpr]*grpcSymbols
 		expressions   []*expr.GRPCServiceExpr
 		servicePlans  []*grpcServicePlan
@@ -673,7 +674,7 @@ func newServicesData(services *service.ServicesData, plan *Plan) *ServicesData {
 		GRPCServices:  make(map[string]*ServiceData),
 		cliPlan:       plan.cli,
 		protobuf:      plan.protobuf,
-		tools:         plan.tools,
+		finalizers:    plan.finalizers,
 		symbols:       plan.symbols,
 		servicePlans:  append([]*grpcServicePlan(nil), plan.servicesPlan...),
 		serviceByExpr: make(map[*expr.GRPCServiceExpr]*ServiceData, len(plan.servicesPlan)),

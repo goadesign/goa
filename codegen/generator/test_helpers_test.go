@@ -10,6 +10,7 @@ import (
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/eval"
+	grpccodegen "goa.design/goa/v3/grpc/codegen"
 )
 
 // mustTestPlan chooses package names, finishes each selected generator, and
@@ -20,6 +21,7 @@ func mustTestPlan(t *testing.T, genpkg string, roots []eval.Root, planners ...fu
 	require.NoError(t, err)
 	plan := &Plan{
 		generation:    generation,
+		grpcPlans:     grpccodegen.NewPlans,
 		preparedRoots: roots,
 		examples:      newExampleGenerators(roots),
 	}
