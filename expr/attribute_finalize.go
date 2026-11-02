@@ -138,7 +138,7 @@ func (a *AttributeExpr) resolveInheritedFields(
 		return
 	}
 	for _, nat := range *AsObject(a.Type) {
-		if nat == nil || nat.Attribute == nil || nat.Attribute.Type == nil {
+		if nat == nil || nat.Attribute == nil {
 			continue
 		}
 		patt := AsObject(parent.Type).Attribute(nat.Name)
