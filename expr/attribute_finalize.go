@@ -1,11 +1,11 @@
 // This file implements inheritance resolution and finalization for Goa attributes.
-// It resolves type references and base type merges in dependency order before
-// traversing child value attributes, preventing premature finalization across
-// circular or back-edge type graphs.
+// It applies type references and resolves base type merges in dependency order
+// before traversing child value attributes, preventing premature finalization
+// across circular or back-edge type graphs.
 package expr
 
-// Finalize merges base and reference type attributes in dependency order and
-// finalizes child value attributes.
+// Finalize applies reference type attributes, merges base type attributes in
+// dependency order, and finalizes child value attributes.
 func (a *AttributeExpr) Finalize() {
 	if a.finalized {
 		return // Avoid infinite recursion.
@@ -81,11 +81,11 @@ func (a *AttributeExpr) Inherit(parent *AttributeExpr) {
 	a.inheritRecursive(parent, make(map[*AttributeExpr]struct{}))
 }
 
-// resolveInheritance applies References and Bases in dependency order before
-// Finalize traverses child value attributes. Separating inheritance resolution
-// from value traversal ensures that a base attribute whose fields reference a
-// downstream consumer does not finalize that consumer before intermediate base
-// types have merged their own bases.
+// resolveInheritance applies References and merges Bases in dependency order
+// before Finalize traverses child value attributes. Separating base-type
+// inheritance resolution from value traversal ensures that a base attribute
+// whose fields reference a downstream consumer does not finalize that consumer
+// before intermediate base types have merged their own bases.
 func (a *AttributeExpr) resolveInheritance(resolving map[*AttributeExpr]struct{}) {
 	if a == nil || a.finalized || a.inheritanceResolved {
 		return
@@ -101,13 +101,9 @@ func (a *AttributeExpr) resolveInheritance(resolving map[*AttributeExpr]struct{}
 	}
 	if IsObject(a.Type) {
 		for _, ref := range a.References {
-			ru, ok := ref.(UserType)
-			if !ok || ru.Attribute() == nil {
-				continue
+			if ru, ok := ref.(UserType); ok {
+				a.Inherit(ru.Attribute())
 			}
-			ru.Attribute().resolveInheritance(resolving)
-			a.resolveInheritedFields(ru.Attribute(), resolving, make(map[*AttributeExpr]struct{}))
-			a.Inherit(ru.Attribute())
 		}
 		for _, base := range a.Bases {
 			ru, ok := base.(UserType)
@@ -123,39 +119,6 @@ func (a *AttributeExpr) resolveInheritance(resolving map[*AttributeExpr]struct{}
 		a.Bases = nil
 	}
 	a.inheritanceResolved = true
-}
-
-// resolveInheritedFields resolves inheritance on matching child object fields
-// of parent before a.Inherit(parent) recursively inherits child field
-// properties. Only fields declared on a are inspected, avoiding traversal of
-// unrelated value fields on parent, and target child attributes defer their own
-// Extend merges until after outer Reference inheritance completes.
-func (a *AttributeExpr) resolveInheritedFields(
-	parent *AttributeExpr,
-	resolving map[*AttributeExpr]struct{},
-	seen map[*AttributeExpr]struct{},
-) {
-	if !a.shouldInherit(parent) {
-		return
-	}
-	for _, nat := range *AsObject(a.Type) {
-		if nat == nil || nat.Attribute == nil {
-			continue
-		}
-		patt := AsObject(parent.Type).Attribute(nat.Name)
-		if patt == nil {
-			continue
-		}
-		patt.resolveInheritance(resolving)
-		if !nat.Attribute.shouldInherit(patt) {
-			continue
-		}
-		if _, ok := seen[nat.Attribute]; ok {
-			continue
-		}
-		seen[nat.Attribute] = struct{}{}
-		nat.Attribute.resolveInheritedFields(patt, resolving, seen)
-	}
 }
 
 // inheritRecursive recursively copies descriptions, validations, default values,

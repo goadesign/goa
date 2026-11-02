@@ -788,10 +788,12 @@ func TestAttributeExprFinalizeMultiLevelInheritanceWithBackEdges(t *testing.T) {
 
 // TestAttributeExprFinalizeReferenceAndExtendPreservesBaseDefault verifies that
 // combining Reference and Extend at top-level or nested object attributes
-// applies Reference before Extend without mutating shared base defaults.
+// applies Reference before Extend without mutating shared base defaults, and
+// keeps Required validations on Extend without propagating Base Required lists
+// into unfinalized Reference targets.
 func TestAttributeExprFinalizeReferenceAndExtendPreservesBaseDefault(t *testing.T) {
-	sharedBase := &UserTypeExpr{
-		TypeName: "SharedBase",
+	requiredAncestor := &UserTypeExpr{
+		TypeName: "RequiredAncestor",
 		AttributeExpr: &AttributeExpr{
 			Type: &Object{
 				{Name: "status", Attribute: &AttributeExpr{
@@ -799,6 +801,15 @@ func TestAttributeExprFinalizeReferenceAndExtendPreservesBaseDefault(t *testing.
 					DefaultValue: "active",
 				}},
 			},
+			Validation: &ValidationExpr{Required: []string{"status"}},
+		},
+	}
+
+	sharedBase := &UserTypeExpr{
+		TypeName: "SharedBase",
+		AttributeExpr: &AttributeExpr{
+			Type:  &Object{},
+			Bases: []DataType{requiredAncestor},
 		},
 	}
 
@@ -841,10 +852,12 @@ func TestAttributeExprFinalizeReferenceAndExtendPreservesBaseDefault(t *testing.
 	refStatus := AsObject(referencing.Type).Attribute("status")
 	require.NotNil(t, refStatus)
 	assert.Equal(t, "custom", refStatus.DefaultValue, "referencing attribute must keep its authored default value")
+	assert.False(t, referencing.IsRequired("status"), "referencing attribute must not inherit Required from unfinalized Extend base")
 
 	extStatus := AsObject(extending.Type).Attribute("status")
 	require.NotNil(t, extStatus)
 	assert.Equal(t, "active", extStatus.DefaultValue, "extending attribute must inherit default value from base")
+	assert.True(t, extending.IsRequired("status"), "extending attribute must inherit Required from base")
 
 	nestedBase := &UserTypeExpr{
 		TypeName: "NestedBase",
@@ -892,90 +905,4 @@ func TestAttributeExprFinalizeReferenceAndExtendPreservesBaseDefault(t *testing.
 	child.Finalize()
 	assert.Nil(t, nestedBase.Find("query").DefaultValue, "nested Reference must not contaminate shared Base default")
 	assert.Nil(t, options.Find("query").DefaultValue, "nested Extend must override outer Reference default")
-}
-
-// TestAttributeExprFinalizeReferenceInheritsUntypedNestedWithExtend verifies
-// that an untyped child field on an attribute using Reference inherits the
-// parent field's resolved object schema when the parent field uses Extend.
-func TestAttributeExprFinalizeReferenceInheritsUntypedNestedWithExtend(t *testing.T) {
-	for _, parentFirst := range []bool{false, true} {
-		name := fmt.Sprintf("parentFirst=%v", parentFirst)
-		t.Run(name, func(t *testing.T) {
-			minLen := 2
-			ancestor := &UserTypeExpr{
-				TypeName: "Ancestor",
-				AttributeExpr: &AttributeExpr{
-					Type: &Object{
-						{Name: "query", Attribute: &AttributeExpr{
-							Type:       String,
-							Validation: &ValidationExpr{MinLength: &minLen},
-						}},
-					},
-					Validation: &ValidationExpr{Required: []string{"query"}},
-				},
-			}
-
-			base := &UserTypeExpr{
-				TypeName: "Base",
-				AttributeExpr: &AttributeExpr{
-					Type:  &Object{},
-					Bases: []DataType{ancestor},
-				},
-			}
-
-			derived := &UserTypeExpr{
-				TypeName: "Derived",
-				AttributeExpr: &AttributeExpr{
-					Type:  &Object{},
-					Bases: []DataType{base},
-				},
-			}
-
-			parent := &UserTypeExpr{
-				TypeName: "Parent",
-				AttributeExpr: &AttributeExpr{
-					Type: &Object{
-						{Name: "nested", Attribute: &AttributeExpr{
-							Type:  &Object{},
-							Bases: []DataType{derived},
-						}},
-					},
-				},
-			}
-
-			child := &UserTypeExpr{
-				TypeName: "Child",
-				AttributeExpr: &AttributeExpr{
-					Type: &Object{
-						{Name: "nested", Attribute: &AttributeExpr{
-							Type: nil,
-						}},
-					},
-					References: []DataType{parent},
-				},
-			}
-
-			if parentFirst {
-				parent.Finalize()
-				child.Finalize()
-			} else {
-				child.Finalize()
-				parent.Finalize()
-			}
-
-			nestedAtt := child.Find("nested")
-			require.NotNil(t, nestedAtt)
-			require.NotNil(t, nestedAtt.Type)
-			nestedObj := AsObject(nestedAtt.Type)
-			require.NotNil(t, nestedObj)
-
-			queryAtt := nestedObj.Attribute("query")
-			require.NotNil(t, queryAtt, "child's nested attribute must inherit query field from Ancestor via Parent")
-			assert.Equal(t, String, queryAtt.Type)
-			require.NotNil(t, queryAtt.Validation)
-			require.NotNil(t, queryAtt.Validation.MinLength)
-			assert.Equal(t, 2, *queryAtt.Validation.MinLength)
-			assert.True(t, nestedAtt.IsRequired("query"), "child's nested attribute must inherit Required('query')")
-		})
-	}
 }
