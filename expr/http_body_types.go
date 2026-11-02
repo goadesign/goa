@@ -474,25 +474,10 @@ func extendBodyAttribute(body *MappedAttributeExpr) {
 	if isEmpty(att) {
 		return
 	}
-	for _, ref := range att.References {
-		ru, ok := ref.(UserType)
-		if !ok {
-			continue
-		}
-		att.Inherit(ru.Attribute())
-	}
-	// unset references so that they don't get added back to the body type during
-	// finalize
+	att.resolveInheritance(make(map[*AttributeExpr]struct{}))
+	// unset references and bases so that they don't get added back to the
+	// body type during finalize
 	att.References = nil
-	for _, base := range att.Bases {
-		ru, ok := base.(UserType)
-		if !ok {
-			continue
-		}
-		att.Merge(ru.Attribute())
-	}
-	// unset bases so that they don't get added back to the body type during
-	// finalize
 	att.Bases = nil
 }
 

@@ -61,13 +61,7 @@ func newDSLDupper() *dupper {
 // DupAtt creates a copy of att and its base attributes with one shared type
 // map so repeated and recursive types remain shared in the copy.
 func (d *dupper) DupAtt(att *AttributeExpr) *AttributeExpr {
-	duppedBases := make([]DataType, len(att.Bases))
-	for i, b := range att.Bases {
-		duppedBases[i] = d.DupType(b)
-	}
-	res := d.DupAttribute(att)
-	res.Bases = duppedBases
-	return res
+	return d.DupAttribute(att)
 }
 
 // DupAttribute creates a copy of the given attribute.
@@ -83,18 +77,33 @@ func (d *dupper) DupAttribute(att *AttributeExpr) *AttributeExpr {
 	if att.Meta != nil {
 		metaDup = att.Meta.Dup()
 	}
+	var duppedBases []DataType
+	if len(att.Bases) > 0 {
+		duppedBases = make([]DataType, len(att.Bases))
+		for i, b := range att.Bases {
+			duppedBases[i] = d.DupType(b)
+		}
+	}
+	var duppedRefs []DataType
+	if len(att.References) > 0 {
+		duppedRefs = make([]DataType, len(att.References))
+		for i, r := range att.References {
+			duppedRefs[i] = d.DupType(r)
+		}
+	}
 	dup := AttributeExpr{
-		Type:         d.DupType(att.Type),
-		Description:  att.Description,
-		References:   att.References,
-		Bases:        att.Bases,
-		Validation:   valDup,
-		Meta:         metaDup,
-		DefaultValue: att.DefaultValue,
-		DSLFunc:      att.DSLFunc,
-		UserExamples: att.UserExamples,
-		finalized:    att.finalized,
-		authored:     att.AuthoredAttribute(),
+		Type:                d.DupType(att.Type),
+		Description:         att.Description,
+		References:          duppedRefs,
+		Bases:               duppedBases,
+		Validation:          valDup,
+		Meta:                metaDup,
+		DefaultValue:        att.DefaultValue,
+		DSLFunc:             att.DSLFunc,
+		UserExamples:        att.UserExamples,
+		inheritanceResolved: att.inheritanceResolved,
+		finalized:           att.finalized,
+		authored:            att.AuthoredAttribute(),
 	}
 	d.ats[&dup] = struct{}{}
 	return &dup
