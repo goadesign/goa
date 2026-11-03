@@ -138,6 +138,15 @@ same-path merging, and prepared-root audit as disk generation. For example, a
 gRPC design can return its exact `.proto` definition with no protobuf programs
 installed. It does not return protoc-generated `.pb.go` files.
 
+`generator.CompleteSources(genpkg, roots)` runs the same lifecycle for
+callers that publish the bytes instead of inspecting them. Before rendering,
+it fails if any planned file has a `FinalizeFunc` or `SkipExist`, naming each
+such path, because the `gen` command would rewrite or skip that file after
+rendering. So when it succeeds, its bytes are the complete content the `gen`
+command writes for those paths, apart from `gen/goa.json`. A gRPC design fails,
+because protoc compiles its `.proto` files in a finalizer. `Sources` keeps
+returning those unfinished bytes for inspection.
+
 `codegen.File.Source` owns the template execution and formatting shared with
 `File.Render`. Source inspection completes the mutation audit after templates
 execute. Registered plugins and template functions retain their own behavior;
