@@ -92,17 +92,15 @@ func protoFile(svc *expr.GRPCServiceExpr, services *ServicesData) *codegen.File 
 		})
 	}
 
-	tools := services.tools[svc]
-	if tools == nil {
-		panic(fmt.Sprintf("protobuf tools for service %q were not planned", svc.Name()))
+	finalize := services.finalizers[svc]
+	if finalize == nil {
+		panic(fmt.Sprintf("protobuf finalizer for service %q was not planned", svc.Name()))
 	}
 
 	return &codegen.File{
 		Path:             path,
 		SectionTemplates: sections,
-		FinalizeFunc: func(path string) error {
-			return runProtoc(tools, path)
-		},
+		FinalizeFunc:     finalize,
 	}
 }
 

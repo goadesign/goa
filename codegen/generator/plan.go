@@ -33,9 +33,11 @@ type (
 		jsonrpcHTTP         map[*expr.RootExpr]*httpcodegen.Plan
 		jsonrpc             map[*expr.RootExpr]*jsonrpccodegen.Plan
 		grpc                map[*expr.RootExpr]*grpccodegen.Plan
-		transports          []*transportPlanEntry
-		transportDone       bool
-		design              *designSnapshot
+		// grpcPlans is selected once by the operation that constructs this plan.
+		grpcPlans     grpcPlanConstructor
+		transports    []*transportPlanEntry
+		transportDone bool
+		design        *designSnapshot
 	}
 
 	// transportPlanEntry keeps the transport plans for one service design in

@@ -7,6 +7,7 @@ import (
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/eval"
+	grpccodegen "goa.design/goa/v3/grpc/codegen"
 )
 
 type (
@@ -14,7 +15,13 @@ type (
 	generationRun struct {
 		cores   []coreGenerator
 		plugins []runPlugin
+		// grpcPlans fixes whether this operation needs installed protobuf tools.
+		grpcPlans grpcPlanConstructor
 	}
+
+	// grpcPlanConstructor supplies the one gRPC planning operation chosen at
+	// generation entry. Both operations share the same wire planner.
+	grpcPlanConstructor func(*codegen.Generation, ...grpccodegen.PlanInput) ([]*grpccodegen.Plan, error)
 
 	// runPlugin stores one plugin's registered name and its Prepare, Plan, and
 	// Generate functions for this run.
@@ -56,7 +63,7 @@ func newGenerationRun(command string, registry *registry) (*generationRun, error
 	for i, descriptor := range pluginDescriptors {
 		plugins[i] = runPlugin{name: descriptor.name, Plugin: descriptor.factory()}
 	}
-	return &generationRun{cores: cores, plugins: plugins}, nil
+	return &generationRun{cores: cores, plugins: plugins, grpcPlans: grpccodegen.NewPlans}, nil
 }
 
 // execute prepares the supplied designs, chooses names, and builds files.
@@ -78,6 +85,7 @@ func (r *generationRun) execute(genpkg string, roots []eval.Root) (*generationRe
 	}
 	plan := &Plan{
 		generation:    generation,
+		grpcPlans:     r.grpcPlans,
 		preparedRoots: roots,
 		examples:      newExampleGenerators(roots),
 		design:        design,

@@ -84,7 +84,7 @@ func planTransportData(plan *Plan) error {
 			inputs = append(inputs, grpccodegen.PlanInput{Root: root, Service: plan.Service(root)})
 			plannedRoots = append(plannedRoots, root)
 		}
-		grpcPlans, err := grpccodegen.NewPlans(generation, inputs...)
+		grpcPlans, err := plan.grpcPlans(generation, inputs...)
 		if err != nil {
 			return err
 		}
