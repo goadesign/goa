@@ -116,3 +116,99 @@ func TestSourcesPreservesPluginVersionNamedOutput(t *testing.T) {
 		})
 	}
 }
+
+// TestCompleteSourcesRejectsFilesTheGenCommandWouldChange checks that
+// CompleteSources returns bytes only when no planned file has a finalizer or
+// SkipExist, naming each such file, and otherwise returns what Sources returns.
+func TestCompleteSourcesRejectsFilesTheGenCommandWouldChange(t *testing.T) {
+	cases := []struct {
+		name string
+		// definition is the evaluated design.
+		definition func()
+		// extra is a file a plugin adds, or nil.
+		extra *codegen.File
+		// want names the rejected paths; empty means the call succeeds.
+		want []string
+	}{
+		{name: "http only", definition: httpSourceDefinition},
+		{
+			name: "plugin file with a finalizer", definition: httpSourceDefinition,
+			extra: &codegen.File{
+				Path:             "gen/probe/value.go",
+				SectionTemplates: []*codegen.SectionTemplate{{Name: "probe", Source: "package probe\n"}},
+				FinalizeFunc:     func(string) error { return nil },
+			},
+			want: []string{"gen/probe/value.go (finalizer)"},
+		},
+		{
+			name: "plugin file skipped when it exists", definition: httpSourceDefinition,
+			extra: &codegen.File{
+				Path:             "gen/probe/value.go",
+				SectionTemplates: []*codegen.SectionTemplate{{Name: "probe", Source: "package probe\n"}},
+				SkipExist:        true,
+			},
+			want: []string{"gen/probe/value.go (skipped if it exists)"},
+		},
+		{name: "grpc protobuf compiled by a finalizer", definition: sourceDefinition, want: []string{".proto (finalizer)"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			complete, err := completeSources("source.test/gen", []eval.Root{codegen.RunDSL(t, tc.definition)}, sourceRegistry(tc.extra))
+			if len(tc.want) > 0 {
+				require.Error(t, err)
+				for _, w := range tc.want {
+					require.ErrorContains(t, err, w)
+				}
+				require.Nil(t, complete)
+				return
+			}
+			require.NoError(t, err)
+			inspected, err := sources("source.test/gen", []eval.Root{codegen.RunDSL(t, tc.definition)}, sourceRegistry(tc.extra))
+			require.NoError(t, err)
+			require.Equal(t, inspected, complete)
+		})
+	}
+}
+
+// TestSourcesStillReturnsFilesWithFinalizers checks that inspection keeps
+// returning unfinished bytes, including .proto sources, that CompleteSources
+// rejects.
+func TestSourcesStillReturnsFilesWithFinalizers(t *testing.T) {
+	output, err := sources("source.test/gen", []eval.Root{codegen.RunDSL(t, sourceDefinition)}, sourceRegistry(nil))
+	require.NoError(t, err)
+	foundProto := false
+	for path := range output {
+		if len(path) > 6 && path[len(path)-6:] == ".proto" {
+			foundProto = true
+		}
+	}
+	require.True(t, foundProto)
+}
+
+// httpSourceDefinition exposes one operation over HTTP only, so the gen
+// command plans no file with a finalizer.
+func httpSourceDefinition() {
+	d.API("sources", func() {})
+	d.Service("source", func() {
+		d.Method("read", func() {
+			d.Payload(func() { d.Attribute("id", d.String) })
+			d.Result(func() { d.Attribute("value", d.String) })
+			d.HTTP(func() { d.GET("/source"); d.Response(d.StatusOK) })
+		})
+	})
+}
+
+// sourceRegistry returns the gen command's generators plus, when extra is
+// set, a plugin that adds that file.
+func sourceRegistry(extra *codegen.File) *registry {
+	registry := newRegistry()
+	registry.addCommand("gen", genGeneratorFactories()...)
+	if extra != nil {
+		registry.registerPlugin("extra-file", "gen", pluginNormal, func() Plugin {
+			return Plugin{Generate: func(_ *Plan, files []*codegen.File) ([]*codegen.File, error) {
+				return append(files, extra), nil
+			}}
+		})
+	}
+	return registry
+}
