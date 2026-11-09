@@ -48,15 +48,16 @@ func selectTransformView(attribute *expr.AttributeExpr, selected map[viewTransfo
 		view = explicit
 	}
 	key := viewTransformType{origin: result.Origin(), view: view}
-	copied := expr.NewAttributeGraphCopier().Copy(attribute)
 	if existing := selected[key]; existing != nil {
+		copied := expr.DupAtt(attribute)
 		copied.Type = existing
 		return copied
 	}
+	copied := expr.NewAttributeGraphCopier().Copy(attribute)
 	narrowed := copied.Type.(*expr.ResultTypeExpr)
 	selected[key] = narrowed
 	if array := expr.AsArray(narrowed); array != nil {
-		applyCascadedView(array.ElemType, view, make(map[expr.UserType]struct{}))
+		applyCascadedView(array.ElemType, view)
 		return copied
 	}
 	object := &expr.Object{}
@@ -86,23 +87,19 @@ func selectTransformView(attribute *expr.AttributeExpr, selected map[viewTransfo
 }
 
 // propagateSelectedView returns a detached copy of attribute where view is
-// recorded on every result type reached directly or through collection
-// containers. Copying the field subgraph first prevents sibling fields that
-// share a named collection type from overwriting each other's selected view.
+// recorded on every result type reached directly or through anonymous array
+// and map containers.
 func propagateSelectedView(attribute *expr.AttributeExpr, view string) *expr.AttributeExpr {
 	copied := expr.NewAttributeGraphCopier().Copy(attribute)
-	applyCascadedView(copied, view, make(map[expr.UserType]struct{}))
+	applyCascadedView(copied, view)
 	return copied
 }
 
-// applyCascadedView attaches view to result-type occurrences reached directly
-// or through array, map, and named collection containers, matching expr.Project.
-// Object and union fields select their own nested views and are left unchanged.
-func applyCascadedView(
-	attribute *expr.AttributeExpr,
-	view string,
-	seen map[expr.UserType]struct{},
-) {
+// applyCascadedView attaches view to result-type occurrences (including
+// CollectionOf result collections) reached directly or through anonymous array
+// and map containers. Named non-result user types, objects, and unions own
+// their own field definitions and stop the cascade, matching view validation.
+func applyCascadedView(attribute *expr.AttributeExpr, view string) {
 	if attribute == nil || attribute.Type == expr.Empty {
 		return
 	}
@@ -110,73 +107,9 @@ func applyCascadedView(
 	case *expr.ResultTypeExpr:
 		attribute.AddMeta(expr.ViewMetaKey, view)
 	case *expr.Array:
-		applyCascadedView(actual.ElemType, view, seen)
+		applyCascadedView(actual.ElemType, view)
 	case *expr.Map:
-		applyCascadedView(actual.KeyType, view, seen)
-		applyCascadedView(actual.ElemType, view, seen)
-	case expr.UserType:
-		if !expr.IsArray(actual) && !expr.IsMap(actual) {
-			return
-		}
-		if _, exists := seen[actual]; exists {
-			return
-		}
-		seen[actual] = struct{}{}
-		applyCascadedView(actual.Attribute(), view, seen)
-	}
-}
-
-// validationAttributeWithViews returns a detached copy of attribute in which
-// every nested result-type occurrence records the view that governs its checks.
-// When view is non-empty (from a parent view's field), it cascades through
-// array and map containers; otherwise each nested result-type occurrence keeps
-// its own explicit view or falls back to DefaultView.
-func validationAttributeWithViews(attribute *expr.AttributeExpr, view string) *expr.AttributeExpr {
-	copied := expr.NewAttributeGraphCopier().Copy(attribute)
-	assignValidationViews(copied, view, make(map[expr.UserType]struct{}))
-	return copied
-}
-
-// assignValidationViews populates explicit view metadata on nested result-type
-// occurrences inside a copied validation attribute graph. Named non-result user
-// types emit a single view-independent validator in the views package, so any
-// parent view cascade stops at their boundary while unannotated result types
-// inside them resolve to DefaultView.
-func assignValidationViews(
-	attribute *expr.AttributeExpr,
-	cascadedView string,
-	seen map[expr.UserType]struct{},
-) {
-	if attribute == nil || attribute.Type == expr.Empty {
-		return
-	}
-	switch actual := attribute.Type.(type) {
-	case *expr.ResultTypeExpr:
-		if cascadedView != "" {
-			attribute.AddMeta(expr.ViewMetaKey, cascadedView)
-			return
-		}
-		if _, ok := attribute.Meta.Last(expr.ViewMetaKey); !ok {
-			attribute.AddMeta(expr.ViewMetaKey, expr.DefaultView)
-		}
-	case *expr.Array:
-		assignValidationViews(actual.ElemType, cascadedView, seen)
-	case *expr.Map:
-		assignValidationViews(actual.KeyType, cascadedView, seen)
-		assignValidationViews(actual.ElemType, cascadedView, seen)
-	case *expr.Object:
-		for _, field := range *actual {
-			assignValidationViews(field.Attribute, "", seen)
-		}
-	case *expr.Union:
-		for _, branch := range actual.Values {
-			assignValidationViews(branch.Attribute, "", seen)
-		}
-	case expr.UserType:
-		if _, exists := seen[actual]; exists {
-			return
-		}
-		seen[actual] = struct{}{}
-		assignValidationViews(actual.Attribute(), "", seen)
+		applyCascadedView(actual.KeyType, view)
+		applyCascadedView(actual.ElemType, view)
 	}
 }

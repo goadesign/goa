@@ -19,7 +19,7 @@ import (
 
 // TestCascadedResultViews verifies generated service conversions and view
 // validators when parent views select nested views on ArrayOf, MapOf, and
-// named collection attributes.
+// CollectionOf attributes.
 func TestCascadedResultViews(t *testing.T) {
 	for _, tc := range []struct {
 		name               string
@@ -171,7 +171,7 @@ func TestCascadedResultViews(t *testing.T) {
 			},
 		},
 		{
-			name: "shared named collection user type across sibling fields with distinct views",
+			name: "shared CollectionOf result type across sibling fields with distinct views",
 			dsl: func() {
 				item := dsl.ResultType("application/vnd.test.item", func() {
 					dsl.TypeName("Item")
@@ -186,12 +186,12 @@ func TestCascadedResultViews(t *testing.T) {
 						dsl.Attribute("detail")
 					})
 				})
-				itemList := dsl.Type("ItemList", dsl.ArrayOf(item))
+				itemCollection := dsl.CollectionOf(item)
 				order := dsl.ResultType("application/vnd.test.order", func() {
 					dsl.TypeName("Order")
 					dsl.Attributes(func() {
-						dsl.Attribute("summary_items", itemList)
-						dsl.Attribute("detailed_items", itemList)
+						dsl.Attribute("summary_items", itemCollection)
+						dsl.Attribute("detailed_items", itemCollection)
 					})
 					dsl.View("default", func() {
 						dsl.Attribute("summary_items")
@@ -209,18 +209,20 @@ func TestCascadedResultViews(t *testing.T) {
 				})
 			},
 			wantServiceSubstrs: []string{
-				"vres.SummaryItems = transformItemListToOrdersviewsItemListView2(res.SummaryItems)",
-				"vres.DetailedItems = transformItemListToOrdersviewsItemListView(res.DetailedItems)",
-				"vres.SummaryItems = transformItemListToOrdersviewsItemListView4(res.SummaryItems)",
-				"vres.DetailedItems = transformItemListToOrdersviewsItemListView3(res.DetailedItems)",
-				"func transformItemListToOrdersviewsItemListView2(v ItemList) ordersviews.ItemListView {\n\tres := make([]*ordersviews.ItemView, len(v))\n\tfor i, val := range v {\n\t\tif val == nil {\n\t\t\tres[i] = nil\n\t\t\tcontinue\n\t\t}\n\t\tres[i] = newItemView(val)",
-				"func transformItemListToOrdersviewsItemListView(v ItemList) ordersviews.ItemListView {\n\tres := make([]*ordersviews.ItemView, len(v))\n\tfor i, val := range v {\n\t\tif val == nil {\n\t\t\tres[i] = nil\n\t\t\tcontinue\n\t\t}\n\t\tres[i] = newItemViewExtended(val)",
-				"func transformItemListToOrdersviewsItemListView4(v ItemList) ordersviews.ItemListView {\n\tres := make([]*ordersviews.ItemView, len(v))\n\tfor i, val := range v {\n\t\tif val == nil {\n\t\t\tres[i] = nil\n\t\t\tcontinue\n\t\t}\n\t\tres[i] = newItemViewExtended(val)",
-				"func transformItemListToOrdersviewsItemListView3(v ItemList) ordersviews.ItemListView {\n\tres := make([]*ordersviews.ItemView, len(v))\n\tfor i, val := range v {\n\t\tif val == nil {\n\t\t\tres[i] = nil\n\t\t\tcontinue\n\t\t}\n\t\tres[i] = newItemView(val)",
+				"vres.SummaryItems = newItemCollectionView(res.SummaryItems)",
+				"vres.DetailedItems = newItemCollectionViewExtended(res.DetailedItems)",
+				"vres.SummaryItems = newItemCollectionViewExtended(res.SummaryItems)",
+				"vres.DetailedItems = newItemCollectionView(res.DetailedItems)",
+				"res.SummaryItems = newItemCollection(vres.SummaryItems)",
+				"res.DetailedItems = newItemCollectionExtended(vres.DetailedItems)",
+				"res.SummaryItems = newItemCollectionExtended(vres.SummaryItems)",
+				"res.DetailedItems = newItemCollection(vres.DetailedItems)",
 			},
 			wantViewsSubstrs: []string{
-				"func ValidateItemListView(",
-				"ValidateItemView(e)",
+				"ValidateItemCollectionView(result.SummaryItems)",
+				"ValidateItemCollectionViewExtended(result.DetailedItems)",
+				"ValidateItemCollectionViewExtended(result.SummaryItems)",
+				"ValidateItemCollectionView(result.DetailedItems)",
 			},
 		},
 		{

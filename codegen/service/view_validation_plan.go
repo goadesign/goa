@@ -252,3 +252,58 @@ func planServiceValidations(facts *serviceFacts, rootTypes *rootTypeSet, generat
 	}
 	return nil
 }
+
+// validationAttributeWithViews returns a detached copy of attribute in which
+// every nested result-type occurrence records the view that governs its checks.
+// When view is non-empty (from a parent view's field), it cascades through
+// anonymous array and map containers; otherwise each nested result-type
+// occurrence keeps its own explicit view or falls back to DefaultView.
+func validationAttributeWithViews(attribute *expr.AttributeExpr, view string) *expr.AttributeExpr {
+	copied := expr.NewAttributeGraphCopier().Copy(attribute)
+	assignValidationViews(copied, view, make(map[expr.UserType]struct{}))
+	return copied
+}
+
+// assignValidationViews populates explicit view metadata on nested result-type
+// occurrences inside a copied validation attribute graph. Named non-result user
+// types emit a single view-independent validator in the views package, so any
+// parent view cascade stops at their boundary while unannotated result types
+// inside them resolve to DefaultView.
+func assignValidationViews(
+	attribute *expr.AttributeExpr,
+	cascadedView string,
+	seen map[expr.UserType]struct{},
+) {
+	if attribute == nil || attribute.Type == expr.Empty {
+		return
+	}
+	switch actual := attribute.Type.(type) {
+	case *expr.ResultTypeExpr:
+		if cascadedView != "" {
+			attribute.AddMeta(expr.ViewMetaKey, cascadedView)
+			return
+		}
+		if _, ok := attribute.Meta.Last(expr.ViewMetaKey); !ok {
+			attribute.AddMeta(expr.ViewMetaKey, expr.DefaultView)
+		}
+	case *expr.Array:
+		assignValidationViews(actual.ElemType, cascadedView, seen)
+	case *expr.Map:
+		assignValidationViews(actual.KeyType, cascadedView, seen)
+		assignValidationViews(actual.ElemType, cascadedView, seen)
+	case *expr.Object:
+		for _, field := range *actual {
+			assignValidationViews(field.Attribute, "", seen)
+		}
+	case *expr.Union:
+		for _, branch := range actual.Values {
+			assignValidationViews(branch.Attribute, "", seen)
+		}
+	case expr.UserType:
+		if _, exists := seen[actual]; exists {
+			return
+		}
+		seen[actual] = struct{}{}
+		assignValidationViews(actual.Attribute(), "", seen)
+	}
+}
