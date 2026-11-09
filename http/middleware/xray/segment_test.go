@@ -11,6 +11,7 @@ import (
 
 	"github.com/pkg/errors"
 	"goa.design/goa/v3/middleware/xray"
+	"goa.design/goa/v3/middleware/xray/xraytest"
 )
 
 func TestRecordError(t *testing.T) {
@@ -193,10 +194,16 @@ func TestRace(t *testing.T) {
 		resp   = httptest.NewRecorder().Result()
 	)
 
-	conn, err := net.Dial("udp", udplisten)
+	daemon := xraytest.NewDaemon(t)
+	conn, err := net.Dial("udp", daemon.Addr)
 	if err != nil {
 		t.Fatalf("failed to connect to daemon - %s", err)
 	}
+	defer func() {
+		if closeErr := conn.Close(); closeErr != nil {
+			t.Fatal(closeErr)
+		}
+	}()
 	s := &HTTPSegment{
 		Segment: xray.NewSegment("hello", xray.NewTraceID(), xray.NewID(), conn),
 	}

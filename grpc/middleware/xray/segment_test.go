@@ -1,5 +1,3 @@
-//go:build !windows
-
 package xray
 
 import (
@@ -13,6 +11,7 @@ import (
 
 	"github.com/pkg/errors"
 	"goa.design/goa/v3/middleware/xray"
+	"goa.design/goa/v3/middleware/xray/xraytest"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
@@ -150,10 +149,16 @@ func TestRace(t *testing.T) {
 	ctx = metadata.NewIncomingContext(ctx, metadata.MD{"user-agent": []string{"user agent"}})
 	ctx = peer.NewContext(ctx, &peer.Peer{Addr: &mockAddr{"127.0.0.1"}})
 
-	conn, err := net.Dial("udp", udplisten)
+	daemon := xraytest.NewDaemon(t)
+	conn, err := net.Dial("udp", daemon.Addr)
 	if err != nil {
 		t.Fatalf("failed to connect to daemon - %s", err)
 	}
+	defer func() {
+		if closeErr := conn.Close(); closeErr != nil {
+			t.Fatal(closeErr)
+		}
+	}()
 	s := &GRPCSegment{
 		Segment: xray.NewSegment("hello", xray.NewTraceID(), xray.NewID(), conn),
 	}

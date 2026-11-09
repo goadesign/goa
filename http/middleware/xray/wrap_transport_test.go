@@ -36,10 +36,16 @@ func TestTransportExample(t *testing.T) {
 		}))
 	defer server.Close()
 
-	conn, err := net.Dial("udp", udplisten)
+	daemon := xraytest.NewDaemon(t)
+	conn, err := net.Dial("udp", daemon.Addr)
 	if err != nil {
 		t.Fatalf("failed to connect to daemon - %s", err)
 	}
+	defer func() {
+		if closeErr := conn.Close(); closeErr != nil {
+			t.Fatal(closeErr)
+		}
+	}()
 
 	// Wrap http client's Transport with xray tracing
 	httpClient := &http.Client{
@@ -59,7 +65,7 @@ func TestTransportExample(t *testing.T) {
 	// Setting context on request
 	req = req.WithContext(ctx)
 
-	messages := xraytest.ReadUDP(t, udplisten, 2, func() {
+	messages := daemon.Read(t, 2, func() {
 		resp, err := httpClient.Do(req)
 		if err != nil {
 			t.Fatalf("failed to make request - %s", err)
@@ -176,10 +182,16 @@ func TestTransport(t *testing.T) {
 	}
 	for k, c := range cases {
 		t.Run(k, func(t *testing.T) {
-			conn, err := net.Dial("udp", udplisten)
+			daemon := xraytest.NewDaemon(t)
+			conn, err := net.Dial("udp", daemon.Addr)
 			if err != nil {
 				t.Fatalf("failed to connect to daemon - %s", err)
 			}
+			defer func() {
+				if closeErr := conn.Close(); closeErr != nil {
+					t.Fatal(closeErr)
+				}
+			}()
 
 			var (
 				parent = xray.NewSegment(k, c.Trace.TraceID, c.Trace.SpanID, conn)
@@ -222,7 +234,7 @@ func TestTransport(t *testing.T) {
 				req.Host = c.Request.Host
 			}
 
-			messages := xraytest.ReadUDP(t, udplisten, 2, func() {
+			messages := daemon.Read(t, 2, func() {
 				resp, err := WrapTransport(rt).RoundTrip(req)
 				if resp != nil && resp.Body != nil {
 					defer func() { _ = resp.Body.Close() }()
