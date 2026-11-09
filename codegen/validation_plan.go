@@ -163,7 +163,7 @@ func NewValidationPlan(attribute *expr.AttributeExpr, layout *GoTypePlan, option
 // NeedsValidation reports whether Goa would generate at least one validation
 // check for attribute with the given Go field layout.
 func NeedsValidation(attribute *expr.AttributeExpr, policy GoLayoutPolicy) bool {
-	return attributeNeedsValidation(attribute, policy, make(map[expr.UserType]struct{}))
+	return attributeNeedsValidation(attribute, policy, false, make(map[expr.UserType]struct{}))
 }
 
 // ValidationRuntimeImports returns the Goa and standard library packages used
@@ -311,21 +311,17 @@ func (p *validationPlanner) plan(attribute *expr.AttributeExpr, layout *GoTypePl
 	}
 	policy := layout.Policy()
 	if userType, named := attribute.Type.(expr.UserType); named && !alias && nested {
-		validatedType := userType
-		view := ""
-		if result, ok := userType.(*expr.ResultTypeExpr); ok {
-			if selected, ok := attribute.Meta.Last(expr.ViewMetaKey); ok {
-				projected, err := expr.Project(result, selected)
-				if err != nil {
-					return nil, fmt.Errorf("plan validation for %s: %w", path, err)
-				}
-				validatedType = projected
-				if selected != expr.DefaultView {
-					view = selected
-				}
-			}
+		view, needed, err := nestedUserTypeNeedsValidation(
+			attribute,
+			userType,
+			policy,
+			false,
+			make(map[expr.UserType]struct{}),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("plan validation for %s: %w", path, err)
 		}
-		if !userTypeNeedsValidation(validatedType, policy, make(map[expr.UserType]struct{})) {
+		if !needed {
 			return &validationPlanNode{occurrence: attribute, layout: layout}, nil
 		}
 		if p.bind == nil {
@@ -578,21 +574,61 @@ func generatedRequiredValidationNames(attribute *expr.AttributeExpr, validation 
 	return names
 }
 
+// nestedUserTypeNeedsValidation resolves any explicit result view on attribute,
+// returning the non-default view name for validator binding and whether the
+// nested user type emits at least one validation check.
+func nestedUserTypeNeedsValidation(
+	attribute *expr.AttributeExpr,
+	userType expr.UserType,
+	policy GoLayoutPolicy,
+	viewSelected bool,
+	seen map[expr.UserType]struct{},
+) (string, bool, error) {
+	view := ""
+	if !viewSelected {
+		if result, ok := userType.(*expr.ResultTypeExpr); ok {
+			if selected, ok := attribute.Meta.Last(expr.ViewMetaKey); ok {
+				narrowed, err := expr.Project(result, selected)
+				if err != nil {
+					return "", false, err
+				}
+				if selected != expr.DefaultView {
+					view = selected
+				}
+				return view, userTypeNeedsValidation(narrowed, policy, true, seen), nil
+			}
+		}
+	}
+	return view, userTypeNeedsValidation(userType, policy, viewSelected, seen), nil
+}
+
 // userTypeNeedsValidation reports whether a user-defined type or any value
-// inside it needs a generated check. seen stops recursive types.
-func userTypeNeedsValidation(userType expr.UserType, policy GoLayoutPolicy, seen map[expr.UserType]struct{}) bool {
+// inside it needs a generated check. viewSelected reports whether userType
+// already contains only the fields of a chosen result view; seen stops
+// recursive types.
+func userTypeNeedsValidation(
+	userType expr.UserType,
+	policy GoLayoutPolicy,
+	viewSelected bool,
+	seen map[expr.UserType]struct{},
+) bool {
 	origin := userType.Origin()
 	if _, exists := seen[origin]; exists {
 		return false
 	}
 	seen[origin] = struct{}{}
 	defer delete(seen, origin)
-	return attributeNeedsValidation(userType.Attribute(), policy, seen)
+	return attributeNeedsValidation(userType.Attribute(), policy, viewSelected, seen)
 }
 
 // attributeNeedsValidation reports whether Goa would generate a check for the
 // attribute or a value inside it.
-func attributeNeedsValidation(attribute *expr.AttributeExpr, policy GoLayoutPolicy, seen map[expr.UserType]struct{}) bool {
+func attributeNeedsValidation(
+	attribute *expr.AttributeExpr,
+	policy GoLayoutPolicy,
+	viewSelected bool,
+	seen map[expr.UserType]struct{},
+) bool {
 	validation := expr.EffectiveValidation(attribute)
 	if validation != nil {
 		if len(validation.Values) > 0 || validation.Pattern != "" ||
@@ -611,12 +647,13 @@ func attributeNeedsValidation(attribute *expr.AttributeExpr, policy GoLayoutPoli
 		}
 	}
 	if nested, ok := attribute.Type.(expr.UserType); ok && !expr.IsAlias(nested) {
-		return userTypeNeedsValidation(nested, policy, seen)
+		_, needed, err := nestedUserTypeNeedsValidation(attribute, nested, policy, viewSelected, seen)
+		return err == nil && needed
 	}
 	switch {
 	case expr.IsObject(attribute.Type):
 		for _, field := range *expr.AsObject(attribute.Type) {
-			if attributeNeedsValidation(field.Attribute, policy, seen) {
+			if attributeNeedsValidation(field.Attribute, policy, viewSelected, seen) {
 				return true
 			}
 		}
@@ -626,7 +663,7 @@ func attributeNeedsValidation(attribute *expr.AttributeExpr, policy GoLayoutPoli
 			(IsNilable(array.ElemType.Type) || arrayElementIsPointer(array, policy.ArrayElementPointer)) {
 			return true
 		}
-		return attributeNeedsValidation(array.ElemType, policy, seen)
+		return attributeNeedsValidation(array.ElemType, policy, viewSelected, seen)
 	case expr.IsMap(attribute.Type):
 		mapping := expr.AsMap(attribute.Type)
 		keyPolicy := policy
@@ -635,8 +672,8 @@ func attributeNeedsValidation(attribute *expr.AttributeExpr, policy GoLayoutPoli
 		if expr.IsPrimitive(mapping.ElemType.Type) {
 			valuePolicy.Pointer = false
 		}
-		return attributeNeedsValidation(mapping.KeyType, keyPolicy, seen) ||
-			attributeNeedsValidation(mapping.ElemType, valuePolicy, seen)
+		return attributeNeedsValidation(mapping.KeyType, keyPolicy, viewSelected, seen) ||
+			attributeNeedsValidation(mapping.ElemType, valuePolicy, viewSelected, seen)
 	case expr.IsUnion(attribute.Type):
 		if policy.SumType {
 			return true
@@ -644,7 +681,7 @@ func attributeNeedsValidation(attribute *expr.AttributeExpr, policy GoLayoutPoli
 		for _, branch := range expr.AsUnion(attribute.Type).Values {
 			branchPolicy := policy
 			branchPolicy.Pointer = policy.Pointer && expr.IsObject(branch.Attribute.Type)
-			if attributeNeedsValidation(branch.Attribute, branchPolicy, seen) {
+			if attributeNeedsValidation(branch.Attribute, branchPolicy, viewSelected, seen) {
 				return true
 			}
 		}

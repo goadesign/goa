@@ -11,8 +11,10 @@ import (
 type (
 	// viewTransformType identifies one retained result type and selected view.
 	viewTransformType struct {
+		// origin is the root result declaration shared by all copies of the type.
 		origin expr.UserType
-		view   string
+		// view is the result view selected for this conversion step.
+		view string
 	}
 )
 
@@ -46,15 +48,16 @@ func selectTransformView(attribute *expr.AttributeExpr, selected map[viewTransfo
 		view = explicit
 	}
 	key := viewTransformType{origin: result.Origin(), view: view}
-	copied := expr.DupAtt(attribute)
 	if existing := selected[key]; existing != nil {
+		copied := expr.DupAtt(attribute)
 		copied.Type = existing
 		return copied
 	}
+	copied := expr.NewAttributeGraphCopier().Copy(attribute)
 	narrowed := copied.Type.(*expr.ResultTypeExpr)
 	selected[key] = narrowed
 	if array := expr.AsArray(narrowed); array != nil {
-		array.ElemType.AddMeta(expr.ViewMetaKey, view)
+		applyCascadedView(array.ElemType, view)
 		return copied
 	}
 	object := &expr.Object{}
@@ -66,7 +69,7 @@ func selectTransformView(attribute *expr.AttributeExpr, selected map[viewTransfo
 		}
 		value := field.Attribute
 		if explicit, ok := viewField.Meta.Last(expr.ViewMetaKey); ok {
-			value.AddMeta(expr.ViewMetaKey, explicit)
+			value = propagateSelectedView(value, explicit)
 		}
 		object.Set(field.Name, value)
 	}
@@ -81,4 +84,32 @@ func selectTransformView(attribute *expr.AttributeExpr, selected map[viewTransfo
 		narrowed.Validation.Required = required
 	}
 	return copied
+}
+
+// propagateSelectedView returns a detached copy of attribute where view is
+// recorded on every result type reached directly or through anonymous array
+// and map containers.
+func propagateSelectedView(attribute *expr.AttributeExpr, view string) *expr.AttributeExpr {
+	copied := expr.NewAttributeGraphCopier().Copy(attribute)
+	applyCascadedView(copied, view)
+	return copied
+}
+
+// applyCascadedView attaches view to result-type occurrences (including
+// CollectionOf result collections) reached directly or through anonymous array
+// and map containers. Named non-result user types, objects, and unions own
+// their own field definitions and stop the cascade, matching view validation.
+func applyCascadedView(attribute *expr.AttributeExpr, view string) {
+	if attribute == nil || attribute.Type == expr.Empty {
+		return
+	}
+	switch actual := attribute.Type.(type) {
+	case *expr.ResultTypeExpr:
+		attribute.AddMeta(expr.ViewMetaKey, view)
+	case *expr.Array:
+		applyCascadedView(actual.ElemType, view)
+	case *expr.Map:
+		applyCascadedView(actual.KeyType, view)
+		applyCascadedView(actual.ElemType, view)
+	}
 }
