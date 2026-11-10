@@ -9,16 +9,17 @@ import (
 	"goa.design/goa/v3/middleware/xray/xraytest"
 )
 
-const (
-	// udp host:port used to run test server
-	udplisten = "127.0.0.1:62111"
-)
-
 func TestSegment_NewSubsegment(t *testing.T) {
-	conn, err := net.Dial("udp", udplisten)
+	daemon := xraytest.NewDaemon(t)
+	conn, err := net.Dial("udp", daemon.Addr)
 	if err != nil {
 		t.Fatalf("failed to connect to daemon - %s", err)
 	}
+	defer func() {
+		if closeErr := conn.Close(); closeErr != nil {
+			t.Errorf("close connection: %v", closeErr)
+		}
+	}()
 	var (
 		name   = "sub"
 		s      = xray.NewSegment("", "", "", conn)
@@ -47,15 +48,21 @@ func TestSegment_NewSubsegment(t *testing.T) {
 
 func TestSegment_SubmitInProgress(t *testing.T) {
 	t.Run("call twice then close -- second call is ignored", func(t *testing.T) {
-		conn, err := net.Dial("udp", udplisten)
+		daemon := xraytest.NewDaemon(t)
+		conn, err := net.Dial("udp", daemon.Addr)
 		if err != nil {
 			t.Fatalf("failed to connect to daemon - %s", err)
 		}
+		defer func() {
+			if closeErr := conn.Close(); closeErr != nil {
+				t.Errorf("close connection: %v", closeErr)
+			}
+		}()
 
 		segment := xray.NewSegment("hello", xray.NewTraceID(), xray.NewID(), conn)
 
 		// call SubmitInProgress() twice, then Close it
-		messages := xraytest.ReadUDP(t, udplisten, 2, func() {
+		messages := daemon.Read(t, 2, func() {
 			segment.Namespace = "1"
 			segment.SubmitInProgress()
 			segment.Namespace = "2"
@@ -63,10 +70,6 @@ func TestSegment_SubmitInProgress(t *testing.T) {
 			segment.Namespace = "3"
 			segment.Close()
 		})
-
-		if err := conn.Close(); err != nil {
-			t.Fatal(err)
-		}
 
 		// verify the In-Progress segment
 		s := xraytest.ExtractSegment(t, messages[0])
@@ -88,24 +91,26 @@ func TestSegment_SubmitInProgress(t *testing.T) {
 	})
 
 	t.Run("calling after already Closed -- no effect", func(t *testing.T) {
-		conn, err := net.Dial("udp", udplisten)
+		daemon := xraytest.NewDaemon(t)
+		conn, err := net.Dial("udp", daemon.Addr)
 		if err != nil {
 			t.Fatalf("failed to connect to daemon - %s", err)
 		}
+		defer func() {
+			if closeErr := conn.Close(); closeErr != nil {
+				t.Errorf("close connection: %v", closeErr)
+			}
+		}()
 
 		segment := xray.NewSegment("hello", xray.NewTraceID(), xray.NewID(), conn)
 
 		// Close(), then call SubmitInProgress(), only expect 1 segment written
-		messages := xraytest.ReadUDP(t, udplisten, 1, func() {
+		messages := daemon.Read(t, 1, func() {
 			segment.Namespace = "1"
 			segment.Close()
 			segment.Namespace = "2"
 			segment.SubmitInProgress() // should have no effect
 		})
-
-		if err := conn.Close(); err != nil {
-			t.Fatal(err)
-		}
 
 		// verify the In-Progress segment
 		s := xraytest.ExtractSegment(t, messages[0])

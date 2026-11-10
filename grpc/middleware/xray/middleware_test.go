@@ -1,5 +1,3 @@
-//go:build !windows
-
 package xray
 
 import (
@@ -59,18 +57,14 @@ type (
 	}
 )
 
-const (
-	// udp host:port used to run test server
-	udplisten = "127.0.0.1:62113"
-)
-
 func TestNewUnaryServer(t *testing.T) {
+	daemon := xraytest.NewDaemon(t)
 	cases := []struct {
 		Name    string
 		Daemon  string
 		Success bool
 	}{
-		{"ok", udplisten, true},
+		{"ok", daemon.Addr, true},
 		{"not-ok", "foo:bar", false},
 	}
 	for _, c := range cases {
@@ -83,12 +77,13 @@ func TestNewUnaryServer(t *testing.T) {
 }
 
 func TestNewStreamServer(t *testing.T) {
+	daemon := xraytest.NewDaemon(t)
 	cases := []struct {
 		Name    string
 		Daemon  string
 		Success bool
 	}{
-		{"ok", udplisten, true},
+		{"ok", daemon.Addr, true},
 		{"not-ok", "foo:bar", false},
 	}
 	for _, c := range cases {
@@ -149,7 +144,8 @@ func TestUnaryServerMiddleware(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			m, err := NewUnaryServer("service", udplisten)
+			daemon := xraytest.NewDaemon(t)
+			m, err := NewUnaryServer("service", daemon.Addr)
 			require.NoError(t, err)
 			handler := func(_ context.Context, _ any) (any, error) {
 				if c.Segment.Error {
@@ -173,7 +169,7 @@ func TestUnaryServerMiddleware(t *testing.T) {
 				ctx = peer.NewContext(ctx, &peer.Peer{Addr: &mockAddr{c.Request.RemoteAddr}})
 			}
 
-			messages := xraytest.ReadUDP(t, udplisten, expMsgs, func() {
+			messages := daemon.Read(t, expMsgs, func() {
 				_, err := m(ctx, &wrapperspb.StringValue{Value: "request"}, unary, handler)
 				if !c.Segment.Error {
 					assert.NoError(t, err)
@@ -263,7 +259,8 @@ func TestStreamServerMiddleware(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			m, err := NewStreamServer("service", udplisten)
+			daemon := xraytest.NewDaemon(t)
+			m, err := NewStreamServer("service", daemon.Addr)
 			if err != nil {
 				t.Fatalf("failed to create middleware: %s", err)
 			}
@@ -290,7 +287,7 @@ func TestStreamServerMiddleware(t *testing.T) {
 			}
 			wss := grpcm.NewWrappedServerStream(ctx, &testServerStream{})
 
-			messages := xraytest.ReadUDP(t, udplisten, expMsgs, func() {
+			messages := daemon.Read(t, expMsgs, func() {
 				if err := m(nil, wss, streamInfo, handler); err != nil && !c.Segment.Error {
 					t.Fatalf("unexpected error %s", err)
 				}
@@ -389,6 +386,7 @@ func TestUnaryClient(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
+			daemon := xraytest.NewDaemon(t)
 			invoker := func(_ context.Context, _ string, _, _ any, _ *grpc.ClientConn, _ ...grpc.CallOption) error {
 				if tc.Error {
 					return status.Error(tc.StatusCode, "error")
@@ -400,14 +398,14 @@ func TestUnaryClient(t *testing.T) {
 			expMsgs := 0 // expected number of messages to be sent to X-Ray daemon
 			if tc.Segment {
 				expMsgs = 2
-				xrayConn, err := net.Dial("udp", udplisten)
+				xrayConn, err := net.Dial("udp", daemon.Addr)
 				if err != nil {
 					t.Fatalf("error creating xray daemon connection: %v", err)
 				}
 				defer func() {
 					err := xrayConn.Close()
 					if err != nil {
-						t.Fatalf("error closing xray daemon connection: %v", err)
+						t.Errorf("error closing xray daemon connection: %v", err)
 					}
 				}()
 
@@ -416,7 +414,7 @@ func TestUnaryClient(t *testing.T) {
 				ctx = context.WithValue(ctx, xray.SegKey, segment)
 			}
 
-			messages := xraytest.ReadUDP(t, udplisten, expMsgs, func() {
+			messages := daemon.Read(t, expMsgs, func() {
 				if err := UnaryClient(host)(ctx, "Test.Test", req, resp, nil, invoker); err != nil && !tc.Error {
 					t.Fatalf("unexpected error %s", err)
 				}
@@ -511,6 +509,7 @@ func TestStreamClient(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
+			daemon := xraytest.NewDaemon(t)
 			streamer := func(_ context.Context, _ *grpc.StreamDesc, _ *grpc.ClientConn, _ string, _ ...grpc.CallOption) (grpc.ClientStream, error) {
 				if tc.RequestError {
 					return nil, status.Error(tc.StatusCode, "error")
@@ -528,14 +527,14 @@ func TestStreamClient(t *testing.T) {
 					// In progress message only
 					expMsgs = 1
 				}
-				xrayConn, err := net.Dial("udp", udplisten)
+				xrayConn, err := net.Dial("udp", daemon.Addr)
 				if err != nil {
 					t.Fatalf("error creating xray daemon connection: %v", err)
 				}
 				defer func() {
 					err := xrayConn.Close()
 					if err != nil {
-						t.Fatalf("error closing xray daemon connection: %v", err)
+						t.Errorf("error closing xray daemon connection: %v", err)
 					}
 				}()
 				segment := xray.NewSegment(segmentName, traceID, spanID, xrayConn)
@@ -543,7 +542,7 @@ func TestStreamClient(t *testing.T) {
 				ctx = context.WithValue(ctx, xray.SegKey, segment)
 			}
 
-			messages := xraytest.ReadUDP(t, udplisten, expMsgs, func() {
+			messages := daemon.Read(t, expMsgs, func() {
 				cs, err := StreamClient(host)(ctx, nil, nil, "Test.Test", streamer)
 				errored := err != nil
 				if tc.RequestError != errored {
