@@ -17,7 +17,7 @@ func TestSegment_NewSubsegment(t *testing.T) {
 	}
 	defer func() {
 		if closeErr := conn.Close(); closeErr != nil {
-			t.Fatal(closeErr)
+			t.Errorf("close connection: %v", closeErr)
 		}
 	}()
 	var (
@@ -53,6 +53,11 @@ func TestSegment_SubmitInProgress(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to connect to daemon - %s", err)
 		}
+		defer func() {
+			if closeErr := conn.Close(); closeErr != nil {
+				t.Errorf("close connection: %v", closeErr)
+			}
+		}()
 
 		segment := xray.NewSegment("hello", xray.NewTraceID(), xray.NewID(), conn)
 
@@ -65,10 +70,6 @@ func TestSegment_SubmitInProgress(t *testing.T) {
 			segment.Namespace = "3"
 			segment.Close()
 		})
-
-		if err := conn.Close(); err != nil {
-			t.Fatal(err)
-		}
 
 		// verify the In-Progress segment
 		s := xraytest.ExtractSegment(t, messages[0])
@@ -95,6 +96,11 @@ func TestSegment_SubmitInProgress(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to connect to daemon - %s", err)
 		}
+		defer func() {
+			if closeErr := conn.Close(); closeErr != nil {
+				t.Errorf("close connection: %v", closeErr)
+			}
+		}()
 
 		segment := xray.NewSegment("hello", xray.NewTraceID(), xray.NewID(), conn)
 
@@ -105,10 +111,6 @@ func TestSegment_SubmitInProgress(t *testing.T) {
 			segment.Namespace = "2"
 			segment.SubmitInProgress() // should have no effect
 		})
-
-		if err := conn.Close(); err != nil {
-			t.Fatal(err)
-		}
 
 		// verify the In-Progress segment
 		s := xraytest.ExtractSegment(t, messages[0])

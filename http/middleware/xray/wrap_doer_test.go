@@ -58,7 +58,7 @@ func TestWrapDoer(t *testing.T) {
 				}
 				defer func() {
 					if closeErr := xrayConn.Close(); closeErr != nil {
-						t.Fatal(closeErr)
+						t.Errorf("close connection: %v", closeErr)
 					}
 				}()
 				segment := xray.NewSegment(segmentName, traceID, spanID, xrayConn)

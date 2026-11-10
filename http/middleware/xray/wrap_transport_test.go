@@ -43,7 +43,7 @@ func TestTransportExample(t *testing.T) {
 	}
 	defer func() {
 		if closeErr := conn.Close(); closeErr != nil {
-			t.Fatal(closeErr)
+			t.Errorf("close connection: %v", closeErr)
 		}
 	}()
 
@@ -189,7 +189,7 @@ func TestTransport(t *testing.T) {
 			}
 			defer func() {
 				if closeErr := conn.Close(); closeErr != nil {
-					t.Fatal(closeErr)
+					t.Errorf("close connection: %v", closeErr)
 				}
 			}()
 

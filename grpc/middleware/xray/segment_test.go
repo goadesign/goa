@@ -156,7 +156,7 @@ func TestRace(t *testing.T) {
 	}
 	defer func() {
 		if closeErr := conn.Close(); closeErr != nil {
-			t.Fatal(closeErr)
+			t.Errorf("close connection: %v", closeErr)
 		}
 	}()
 	s := &GRPCSegment{

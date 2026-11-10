@@ -47,12 +47,6 @@ func NewDaemon(t *testing.T) *Daemon {
 	}
 }
 
-// Read runs sender and verifies that expectedMessages UDP datagrams arrive on d.
-func (d *Daemon) Read(t *testing.T, expectedMessages int, sender func()) []string {
-	t.Helper()
-	return readUDPConn(t, d.listener, expectedMessages, sender)
-}
-
 // ReadUDP verifies that exactly the expected number of messages are received
 // on udplisten. Prefer NewDaemon so the OS assigns an unreserved port and keeps
 // the socket bound for the duration of the test.
@@ -99,12 +93,19 @@ func ExtractSegment(t *testing.T, js string) *xray.Segment {
 	return s
 }
 
+// Read runs sender and verifies that expectedMessages UDP datagrams arrive on d.
+func (d *Daemon) Read(t *testing.T, expectedMessages int, sender func()) []string {
+	t.Helper()
+	return readUDPConn(t, d.listener, expectedMessages, sender)
+}
+
 // readUDPConn invokes sender while reading up to expectedMessages datagrams
-// from listener.
+// from listener. If sender exits early via t.Fatal or panic, the deferred
+// drain cancels the read deadline and joins the reader goroutine before t exits.
 func readUDPConn(t *testing.T, listener *net.UDPConn, expectedMessages int, sender func()) []string {
 	t.Helper()
 	var (
-		readChan = make(chan []string)
+		readChan = make(chan []string, 1)
 		msg      = make([]byte, 1024*32)
 	)
 	go func() {
@@ -116,7 +117,9 @@ func readUDPConn(t *testing.T, listener *net.UDPConn, expectedMessages int, send
 		for {
 			n, _, err := listener.ReadFrom(msg)
 			if err != nil {
-				if !errors.Is(err, os.ErrDeadlineExceeded) && !strings.HasSuffix(err.Error(), "i/o timeout") {
+				if !errors.Is(err, os.ErrDeadlineExceeded) &&
+					!errors.Is(err, net.ErrClosed) &&
+					!strings.HasSuffix(err.Error(), "i/o timeout") {
 					t.Errorf("expected final timeout error but got: %s", err)
 				}
 				break
@@ -126,17 +129,25 @@ func readUDPConn(t *testing.T, listener *net.UDPConn, expectedMessages int, send
 				break
 			}
 		}
-		if len(messages) != expectedMessages {
+		if len(messages) != expectedMessages && !t.Failed() {
 			t.Errorf("unexpected number of messages, expected %d got %d. All messages:\n%s",
 				expectedMessages, len(messages), strings.Join(messages, "\n"))
 		}
 		readChan <- messages
 	}()
 
+	completed := false
+	defer func() {
+		if !completed {
+			if err := listener.SetReadDeadline(time.Now()); err != nil && !errors.Is(err, net.ErrClosed) {
+				t.Errorf("cancel UDP read deadline: %v", err)
+			}
+			<-readChan
+		}
+	}()
+
 	sender()
 	res := <-readChan
-	if err := listener.SetReadDeadline(time.Time{}); err != nil {
-		t.Error(err)
-	}
+	completed = true
 	return res
 }
