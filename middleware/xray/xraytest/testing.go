@@ -48,8 +48,10 @@ func NewDaemon(t *testing.T) *Daemon {
 }
 
 // ReadUDP verifies that exactly the expected number of messages are received
-// on udplisten. Prefer NewDaemon so the OS assigns an unreserved port and keeps
-// the socket bound for the duration of the test.
+// on udplisten.
+//
+// Deprecated: Use NewDaemon and (*Daemon).Read so the OS assigns an unreserved
+// port and keeps the socket bound for the duration of the test.
 func ReadUDP(t *testing.T, udplisten string, expectedMessages int, sender func()) []string {
 	t.Helper()
 	resAddr, err := net.ResolveUDPAddr("udp", udplisten)
@@ -67,14 +69,15 @@ func ReadUDP(t *testing.T, udplisten string, expectedMessages int, sender func()
 	if listener == nil || err != nil {
 		t.Fatal(err)
 	}
-	res := readUDPConn(t, listener, expectedMessages, sender)
-	if err := listener.Close(); err != nil {
-		t.Fatal(err)
-	}
-	return res
+	defer func() {
+		if closeErr := listener.Close(); closeErr != nil && !errors.Is(closeErr, net.ErrClosed) {
+			t.Errorf("close UDP listener: %v", closeErr)
+		}
+	}()
+	return readUDPConn(t, listener, expectedMessages, sender)
 }
 
-// ExtractSegment returns the unmarshalled segment JSON from a ReadUDP response.
+// ExtractSegment returns the unmarshalled segment JSON from an X-Ray UDP datagram.
 func ExtractSegment(t *testing.T, js string) *xray.Segment {
 	t.Helper()
 
@@ -100,19 +103,20 @@ func (d *Daemon) Read(t *testing.T, expectedMessages int, sender func()) []strin
 }
 
 // readUDPConn invokes sender while reading up to expectedMessages datagrams
-// from listener. If sender exits early via t.Fatal or panic, the deferred
-// drain cancels the read deadline and joins the reader goroutine before t exits.
+// from listener. Setting the read deadline before spawning the reader goroutine
+// guarantees that an early t.Fatal or panic inside sender can cancel the
+// deadline and join the reader without racing its initialization.
 func readUDPConn(t *testing.T, listener *net.UDPConn, expectedMessages int, sender func()) []string {
 	t.Helper()
+	if err := listener.SetReadDeadline(time.Now().Add(100 * time.Millisecond)); err != nil {
+		t.Fatalf("set UDP read deadline: %v", err)
+	}
 	var (
 		readChan = make(chan []string, 1)
 		msg      = make([]byte, 1024*32)
 	)
 	go func() {
 		defer close(readChan)
-		if err := listener.SetReadDeadline(time.Now().Add(100 * time.Millisecond)); err != nil {
-			t.Error(err)
-		}
 		var messages []string
 		for {
 			n, _, err := listener.ReadFrom(msg)
@@ -129,10 +133,6 @@ func readUDPConn(t *testing.T, listener *net.UDPConn, expectedMessages int, send
 				break
 			}
 		}
-		if len(messages) != expectedMessages && !t.Failed() {
-			t.Errorf("unexpected number of messages, expected %d got %d. All messages:\n%s",
-				expectedMessages, len(messages), strings.Join(messages, "\n"))
-		}
 		readChan <- messages
 	}()
 
@@ -147,7 +147,11 @@ func readUDPConn(t *testing.T, listener *net.UDPConn, expectedMessages int, send
 	}()
 
 	sender()
-	res := <-readChan
+	messages := <-readChan
 	completed = true
-	return res
+	if len(messages) != expectedMessages {
+		t.Fatalf("unexpected number of messages, expected %d got %d. All messages:\n%s",
+			expectedMessages, len(messages), strings.Join(messages, "\n"))
+	}
+	return messages
 }
