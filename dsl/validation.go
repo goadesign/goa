@@ -35,6 +35,13 @@ const (
 	FormatIP = expr.FormatIP
 
 	// FormatURI describes RFC3986 URI values.
+	//
+	// Note: values are checked with Go's url.ParseRequestURI, which is more
+	// lenient than RFC3986 and accepts some values that are not RFC3986 URIs,
+	// such as absolute paths without a scheme ("/users/123"), spaces, non-ASCII
+	// characters, or malformed percent-encoding in the query. Use
+	// FormatURIReference for strict RFC3986 validation of URIs and relative
+	// references.
 	FormatURI = expr.FormatURI
 
 	// FormatURIReference describes RFC3986 URI-reference values: either a URI or
