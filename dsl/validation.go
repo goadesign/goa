@@ -37,6 +37,12 @@ const (
 	// FormatURI describes RFC3986 URI values.
 	FormatURI = expr.FormatURI
 
+	// FormatURIReference describes RFC3986 URI-reference values: either a URI or
+	// a relative reference such as "/users/123", "../a", "?q=1" or "#frag".
+	// The empty string is a valid (same-document) reference, so combine it with
+	// MinLength(1) to require a non-empty value.
+	FormatURIReference = expr.FormatURIReference
+
 	// FormatMAC describes IEEE 802 MAC-48, EUI-48 or EUI-64 MAC address values.
 	FormatMAC = expr.FormatMAC
 
@@ -130,6 +136,9 @@ func Enum(vals ...any) {
 // FormatIPv4, FormatIPv6, FormatIP: RFC2373 IPv4, IPv6 address or either
 //
 // FormatURI: RFC3986 URI
+//
+// FormatURIReference: RFC3986 URI-reference (URI or relative reference). The
+// empty string is a valid reference; add MinLength(1) to reject it.
 //
 // FormatMAC: IEEE 802 MAC-48, EUI-48 or EUI-64 MAC address
 //

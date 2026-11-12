@@ -155,6 +155,10 @@ const (
 	// FormatURI describes RFC3986 URI values.
 	FormatURI = "uri"
 
+	// FormatURIReference describes RFC3986 URI-reference values: either a URI or
+	// a relative reference such as "/users/123", "../a", "?q=1" or "#frag".
+	FormatURIReference = "uri-reference"
+
 	// FormatMAC describes IEEE 802 MAC-48, EUI-48 or EUI-64 MAC address values.
 	FormatMAC = "mac"
 
@@ -848,6 +852,8 @@ func (*AttributeExpr) IsSupportedValidationFormat(vf ValidationFormat) bool {
 	case FormatIP:
 		return true
 	case FormatURI:
+		return true
+	case FormatURIReference:
 		return true
 	case FormatMAC:
 		return true
