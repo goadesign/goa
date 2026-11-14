@@ -56,14 +56,6 @@ paths:
                             description: Seconds until a build slot frees up
                             type: integer
                             format: int64
-                    examples:
-                        application/vnd.goa.error:
-                            fault: false
-                            id: 123abc
-                            message: parameter 'p' must be an integer
-                            name: conflict
-                            temporary: false
-                            timeout: false
             schemes:
                 - http
 definitions:

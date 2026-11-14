@@ -29,8 +29,7 @@ func TestSameStatusErrorResponses(t *testing.T) {
 	assert.Equal(t, "#/definitions/BuildOpen", conflict.Schema.Ref, "first declared error schema")
 	assert.Empty(t, conflict.Schema.AnyOf, "Swagger 2.0 schemas cannot use anyOf")
 	assert.Contains(t, conflict.Headers, "X-Retry-After")
-	require.Contains(t, conflict.Examples, "application/vnd.goa.error")
-	assert.Equal(t, "conflict", conflict.Examples["application/vnd.goa.error"].(map[string]any)["name"])
+	assert.Empty(t, conflict.Examples, "examples come from the error whose schema is used, and BuildOpen has none")
 
 	notFound := responses["404"]
 	assert.Equal(t, "not_found: Project not found\n\ngone: Project deleted", notFound.Description)
@@ -38,5 +37,5 @@ func TestSameStatusErrorResponses(t *testing.T) {
 	assert.Equal(t, "#/definitions/BuildsStartNotFoundResponseBody", notFound.Schema.Ref, "first declared error schema")
 	assert.Empty(t, notFound.Schema.AnyOf, "Swagger 2.0 schemas cannot use anyOf")
 	require.Contains(t, notFound.Examples, "application/vnd.goa.error")
-	assert.Equal(t, "not_found", notFound.Examples["application/vnd.goa.error"].(map[string]any)["name"], "first declared error example")
+	assert.Equal(t, "not_found", notFound.Examples["application/vnd.goa.error"].(map[string]any)["name"], "example of the error whose schema is used")
 }

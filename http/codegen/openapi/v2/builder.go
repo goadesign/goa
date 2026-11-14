@@ -412,10 +412,10 @@ func responseSpecFromExpr(_ *V2, root *expr.RootExpr, r *expr.HTTPResponseExpr, 
 // order. Swagger allows a single response per status so the errors share it:
 // its description lists each error description and its headers are the union
 // of the errors' headers. A Swagger 2.0 schema cannot express alternative
-// bodies (it has no anyOf or oneOf), so the response uses the schema of the
-// first declared error with a body; Swagger also keeps one example per content
-// type, so the first declared error's example wins. A status used by a single
-// error keeps that error's response unchanged.
+// bodies (it has no anyOf or oneOf), so the response documents the body of the
+// first declared error with a body: its schema and its examples, so that the
+// examples always match the schema. A status used by a single error keeps that
+// error's response unchanged.
 func mergeErrorResponses(rs []*Response) *Response {
 	if len(rs) == 1 {
 		return rs[0]
@@ -424,11 +424,11 @@ func mergeErrorResponses(rs []*Response) *Response {
 	merged := &Response{}
 	for i, r := range rs {
 		descriptions[i] = r.Description
-		if merged.Schema == nil {
+		if merged.Schema == nil && r.Schema != nil {
 			merged.Schema = r.Schema
+			merged.Examples = r.Examples
 		}
 		merged.Headers = mergeFirstWins(merged.Headers, r.Headers)
-		merged.Examples = mergeFirstWins(merged.Examples, r.Examples)
 		merged.Extensions = mergeFirstWins(merged.Extensions, r.Extensions)
 	}
 	merged.Description = strings.Join(descriptions, "\n\n")

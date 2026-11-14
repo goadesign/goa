@@ -257,16 +257,6 @@
           },
           "409": {
             "description": "build_open: Another build is open\n\nconflict: Request conflicts with the current state\n\nquota_exceeded: Build quota reached",
-            "examples": {
-              "application/vnd.goa.error": {
-                "fault": false,
-                "id": "123abc",
-                "message": "parameter 'p' must be an integer",
-                "name": "conflict",
-                "temporary": false,
-                "timeout": false
-              }
-            },
             "headers": {
               "X-Retry-After": {
                 "description": "Seconds until a build slot frees up",
