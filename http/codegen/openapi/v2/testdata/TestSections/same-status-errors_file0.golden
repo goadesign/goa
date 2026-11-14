@@ -252,14 +252,7 @@
               }
             },
             "schema": {
-              "anyOf": [
-                {
-                  "$ref": "#/definitions/BuildsStartNotFoundResponseBody"
-                },
-                {
-                  "$ref": "#/definitions/BuildsStartGoneResponseBody"
-                }
-              ]
+              "$ref": "#/definitions/BuildsStartNotFoundResponseBody"
             }
           },
           "409": {
@@ -282,25 +275,11 @@
               }
             },
             "schema": {
-              "anyOf": [
-                {
-                  "$ref": "#/definitions/BuildOpen",
-                  "required": [
-                    "name",
-                    "message",
-                    "build_id"
-                  ]
-                },
-                {
-                  "$ref": "#/definitions/BuildsStartConflictResponseBody"
-                },
-                {
-                  "$ref": "#/definitions/QuotaExceeded",
-                  "required": [
-                    "name",
-                    "limit"
-                  ]
-                }
+              "$ref": "#/definitions/BuildOpen",
+              "required": [
+                "name",
+                "message",
+                "build_id"
               ]
             }
           }

@@ -29,9 +29,7 @@ paths:
 
                         gone: Project deleted
                     schema:
-                        anyOf:
-                            - $ref: '#/definitions/BuildsStartNotFoundResponseBody'
-                            - $ref: '#/definitions/BuildsStartGoneResponseBody'
+                        $ref: '#/definitions/BuildsStartNotFoundResponseBody'
                     examples:
                         application/vnd.goa.error:
                             fault: false
@@ -48,17 +46,11 @@ paths:
 
                         quota_exceeded: Build quota reached
                     schema:
-                        anyOf:
-                            - $ref: '#/definitions/BuildOpen'
-                              required:
-                                - name
-                                - message
-                                - build_id
-                            - $ref: '#/definitions/BuildsStartConflictResponseBody'
-                            - $ref: '#/definitions/QuotaExceeded'
-                              required:
-                                - name
-                                - limit
+                        $ref: '#/definitions/BuildOpen'
+                        required:
+                            - name
+                            - message
+                            - build_id
                     headers:
                         X-Retry-After:
                             description: Seconds until a build slot frees up

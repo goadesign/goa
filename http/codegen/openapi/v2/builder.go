@@ -7,7 +7,6 @@ import (
 	"maps"
 	"net/http"
 	"net/url"
-	"reflect"
 	"slices"
 	"strconv"
 	"strings"
@@ -411,37 +410,28 @@ func responseSpecFromExpr(_ *V2, root *expr.RootExpr, r *expr.HTTPResponseExpr, 
 // mergeErrorResponses returns the response documenting every error an endpoint
 // maps to one HTTP status code, given the errors' responses in declaration
 // order. Swagger allows a single response per status so the errors share it:
-// its description lists each error description, identical body schemas are
-// listed once and different ones become anyOf alternatives, and the headers
-// are the union of the errors' headers. Swagger keeps one example per content
-// type, so the error declared first wins. A status used by a single error
-// keeps that error's response unchanged.
+// its description lists each error description and its headers are the union
+// of the errors' headers. A Swagger 2.0 schema cannot express alternative
+// bodies (it has no anyOf or oneOf), so the response uses the schema of the
+// first declared error with a body; Swagger also keeps one example per content
+// type, so the first declared error's example wins. A status used by a single
+// error keeps that error's response unchanged.
 func mergeErrorResponses(rs []*Response) *Response {
 	if len(rs) == 1 {
 		return rs[0]
 	}
-	var (
-		descriptions = make([]string, len(rs))
-		schemas      []*openapi.Schema
-		merged       = &Response{}
-	)
+	descriptions := make([]string, len(rs))
+	merged := &Response{}
 	for i, r := range rs {
 		descriptions[i] = r.Description
-		if r.Schema != nil && !slices.ContainsFunc(schemas, func(s *openapi.Schema) bool { return reflect.DeepEqual(s, r.Schema) }) {
-			schemas = append(schemas, r.Schema)
+		if merged.Schema == nil {
+			merged.Schema = r.Schema
 		}
 		merged.Headers = mergeFirstWins(merged.Headers, r.Headers)
 		merged.Examples = mergeFirstWins(merged.Examples, r.Examples)
 		merged.Extensions = mergeFirstWins(merged.Extensions, r.Extensions)
 	}
 	merged.Description = strings.Join(descriptions, "\n\n")
-	switch len(schemas) {
-	case 0:
-	case 1:
-		merged.Schema = schemas[0]
-	default:
-		merged.Schema = &openapi.Schema{AnyOf: schemas}
-	}
 	return merged
 }
 

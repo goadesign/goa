@@ -3,6 +3,8 @@
 package openapiv3
 
 import (
+	"maps"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -34,7 +36,7 @@ func TestSameStatusErrorResponses(t *testing.T) {
 			assert.Equal(t, "#/components/schemas/BuildOpen", typed.Schema.AnyOf[0].Ref)
 			assert.Equal(t, "#/components/schemas/QuotaExceeded", typed.Schema.AnyOf[1].Ref)
 			assert.Nil(t, typed.Example)
-			assert.ElementsMatch(t, []string{"build_open", "quota_exceeded"}, keys(typed.Examples))
+			assert.ElementsMatch(t, []string{"build_open", "quota_exceeded"}, slices.Collect(maps.Keys(typed.Examples)))
 			standard := conflict.Content["application/vnd.goa.error"]
 			require.NotNil(t, standard)
 			assert.Equal(t, "#/components/schemas/Error", standard.Schema.Ref)
@@ -98,13 +100,4 @@ func TestMergeErrorResponsesHeaderRequired(t *testing.T) {
 			}
 		})
 	}
-}
-
-// keys returns the keys of examples.
-func keys(examples map[string]*ExampleRef) []string {
-	res := make([]string, 0, len(examples))
-	for key := range examples {
-		res = append(res, key)
-	}
-	return res
 }

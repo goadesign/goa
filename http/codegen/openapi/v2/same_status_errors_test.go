@@ -25,19 +25,18 @@ func TestSameStatusErrorResponses(t *testing.T) {
 			"quota_exceeded: Build quota reached",
 		conflict.Description,
 	)
-	require.Len(t, conflict.Schema.AnyOf, 3)
-	assert.Equal(t, "#/definitions/BuildOpen", conflict.Schema.AnyOf[0].Ref)
-	assert.Equal(t, "#/definitions/BuildsStartConflictResponseBody", conflict.Schema.AnyOf[1].Ref)
-	assert.Equal(t, "#/definitions/QuotaExceeded", conflict.Schema.AnyOf[2].Ref)
+	require.NotNil(t, conflict.Schema)
+	assert.Equal(t, "#/definitions/BuildOpen", conflict.Schema.Ref, "first declared error schema")
+	assert.Empty(t, conflict.Schema.AnyOf, "Swagger 2.0 schemas cannot use anyOf")
 	assert.Contains(t, conflict.Headers, "X-Retry-After")
 	require.Contains(t, conflict.Examples, "application/vnd.goa.error")
 	assert.Equal(t, "conflict", conflict.Examples["application/vnd.goa.error"].(map[string]any)["name"])
 
 	notFound := responses["404"]
 	assert.Equal(t, "not_found: Project not found\n\ngone: Project deleted", notFound.Description)
-	require.Len(t, notFound.Schema.AnyOf, 2)
-	assert.Equal(t, "#/definitions/BuildsStartNotFoundResponseBody", notFound.Schema.AnyOf[0].Ref)
-	assert.Equal(t, "#/definitions/BuildsStartGoneResponseBody", notFound.Schema.AnyOf[1].Ref)
+	require.NotNil(t, notFound.Schema)
+	assert.Equal(t, "#/definitions/BuildsStartNotFoundResponseBody", notFound.Schema.Ref, "first declared error schema")
+	assert.Empty(t, notFound.Schema.AnyOf, "Swagger 2.0 schemas cannot use anyOf")
 	require.Contains(t, notFound.Examples, "application/vnd.goa.error")
 	assert.Equal(t, "not_found", notFound.Examples["application/vnd.goa.error"].(map[string]any)["name"], "first declared error example")
 }

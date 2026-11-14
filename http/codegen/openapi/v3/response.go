@@ -123,8 +123,9 @@ func responseFromExpr(r *expr.HTTPResponseExpr, body *openapi.Schema, rand *expr
 // order. OpenAPI allows a single response per status so the errors share it:
 // its description lists each error description, each content type lists the
 // distinct body schemas of the errors using it, and a header is required only
-// when every error requires it. A status used by a single error keeps that
-// error's response unchanged.
+// when every error requires it. The content comes from the errors that define
+// a body, so it is documented even when another error of the status has none.
+// A status used by a single error keeps that error's response unchanged.
 func mergeErrorResponses(ers []*errorResponse) *Response {
 	if len(ers) == 1 {
 		return ers[0].response
