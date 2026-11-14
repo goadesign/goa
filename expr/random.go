@@ -53,6 +53,8 @@ type (
 		IPv6Address() net.IP
 		// URL generates a URL example.
 		URL() string
+		// URIReference generates an RFC 3986 URI-reference example.
+		URIReference() string
 		// Characters generates a string containing n characters.
 		Characters(n int) string
 		// UUID generates a random version 4 UUID.
@@ -299,6 +301,16 @@ func (r *FakerRandomizer) URL() string {
 	return r.faker.URL()
 }
 
+// URIReference returns the next URI-reference: either a full URI such as
+// "http://example.com/jdoe" or an absolute-path relative reference such as
+// "/jdoe", chosen with equal probability.
+func (r *FakerRandomizer) URIReference() string {
+	if r.rand.Intn(2) == 0 {
+		return r.faker.URL()
+	}
+	return "/" + r.faker.UserName()
+}
+
 // Characters returns the next string containing n characters.
 func (r *FakerRandomizer) Characters(n int) string {
 	return r.faker.Characters(n)
@@ -368,6 +380,9 @@ func (DeterministicRandomizer) IPv6Address() net.IP { return net.IPv6zero }
 
 // URL returns a fixed URL.
 func (DeterministicRandomizer) URL() string { return "https://example.com/foo" }
+
+// URIReference returns a fixed relative reference.
+func (DeterministicRandomizer) URIReference() string { return "/foo" }
 
 // Characters returns n copies of "a".
 func (DeterministicRandomizer) Characters(n int) string { return strings.Repeat("a", n) }

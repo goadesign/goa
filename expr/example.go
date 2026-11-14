@@ -213,11 +213,12 @@ func byFormat(a *AttributeExpr, r *ExampleGenerator) any {
 			}
 			return patgen(res, r)
 		}(),
-		FormatCIDR:    "192.168.100.14/24",
-		FormatRegexp:  r.Characters(3) + ".*",
-		FormatRFC1123: time.Unix(int64(r.Int())%1454957045, 0).UTC().Format(time.RFC1123), // to obtain a "fixed" rand
-		FormatUUID:    r.UUID(),
-		FormatJSON:    `{"name":"example","email":"mail@example.com"}`,
+		FormatCIDR:         "192.168.100.14/24",
+		FormatRegexp:       r.Characters(3) + ".*",
+		FormatRFC1123:      time.Unix(int64(r.Int())%1454957045, 0).UTC().Format(time.RFC1123), // to obtain a "fixed" rand
+		FormatUUID:         r.UUID(),
+		FormatJSON:         `{"name":"example","email":"mail@example.com"}`,
+		FormatURIReference: r.URIReference(),
 	}[format]; ok {
 		return res
 	}

@@ -35,7 +35,20 @@ const (
 	FormatIP = expr.FormatIP
 
 	// FormatURI describes RFC3986 URI values.
+	//
+	// Note: values are checked with Go's url.ParseRequestURI, which is more
+	// lenient than RFC3986 and accepts some values that are not RFC3986 URIs,
+	// such as absolute paths without a scheme ("/users/123"), spaces, non-ASCII
+	// characters, or malformed percent-encoding in the query. Use
+	// FormatURIReference for strict RFC3986 validation of URIs and relative
+	// references.
 	FormatURI = expr.FormatURI
+
+	// FormatURIReference describes RFC3986 URI-reference values: either a URI or
+	// a relative reference such as "/users/123", "../a", "?q=1" or "#frag".
+	// The empty string is a valid (same-document) reference, so combine it with
+	// MinLength(1) to require a non-empty value.
+	FormatURIReference = expr.FormatURIReference
 
 	// FormatMAC describes IEEE 802 MAC-48, EUI-48 or EUI-64 MAC address values.
 	FormatMAC = expr.FormatMAC
@@ -130,6 +143,9 @@ func Enum(vals ...any) {
 // FormatIPv4, FormatIPv6, FormatIP: RFC2373 IPv4, IPv6 address or either
 //
 // FormatURI: RFC3986 URI
+//
+// FormatURIReference: RFC3986 URI-reference (URI or relative reference). The
+// empty string is a valid reference; add MinLength(1) to reject it.
 //
 // FormatMAC: IEEE 802 MAC-48, EUI-48 or EUI-64 MAC address
 //

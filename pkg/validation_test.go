@@ -8,6 +8,8 @@ import (
 	"regexp/syntax"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestValidateFormat(t *testing.T) {
@@ -102,6 +104,47 @@ func TestValidateFormat(t *testing.T) {
 				t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
 			}
 		}
+	}
+}
+
+func TestValidateFormatURIReference(t *testing.T) {
+	cases := []struct {
+		name  string
+		val   string
+		valid bool
+	}{
+		{"absolute uri", "https://example.com/a?b=c", true},
+		{"urn", "urn:isbn:0451450523", true},
+		{"empty", "", true},
+		{"absolute path", "/users/123", true},
+		{"network path", "//example.com/a", true},
+		{"relative path", "users/123", true},
+		{"dot segments", "../a", true},
+		{"query only", "?q=1", true},
+		{"fragment only", "#frag", true},
+		{"ipv6 host", "http://[::1]:8080/a", true},
+		{"pct-encoded", "/a%20b", true},
+		{"sub-delims", "/a;b=c,d!$&'()*+", true},
+		{"space", "/a b", false},
+		{"non-ascii", "/caf\u00e9", false},
+		{"control character", "/a\x7f", false},
+		{"backslash", `a\b`, false},
+		{"invalid pct-encoding", "/a%zz", false},
+		{"empty scheme", ":a", false},
+		{"colon in first relative segment", "1a:b", false},
+		{"unclosed ipv6 host", "http://[::1/a", false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := ValidateFormat("ref", tc.val, FormatURIReference)
+			if tc.valid {
+				require.NoError(t, err)
+				return
+			}
+			var se *ServiceError
+			require.ErrorAs(t, err, &se)
+			require.Equal(t, InvalidFormat, se.Name)
+		})
 	}
 }
 
