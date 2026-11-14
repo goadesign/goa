@@ -1,0 +1,180 @@
+openapi: 3.0.3
+info:
+    title: Goa API
+    version: 0.0.1
+servers:
+    - url: http://localhost:80
+      description: Default server for test api
+paths:
+    /builds:
+        post:
+            tags:
+                - builds
+            summary: start builds
+            operationId: builds#start
+            responses:
+                "201":
+                    description: Created response.
+                    content:
+                        application/json:
+                            schema:
+                                type: string
+                                example: b-18
+                            example: b-18
+                "404":
+                    description: |-
+                        not_found: Project not found
+
+                        gone: Project deleted
+                    content:
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            examples:
+                                gone:
+                                    value:
+                                        fault: false
+                                        id: 123abc
+                                        message: parameter 'p' must be an integer
+                                        name: gone
+                                        temporary: false
+                                        timeout: false
+                                not_found:
+                                    value:
+                                        fault: false
+                                        id: 123abc
+                                        message: parameter 'p' must be an integer
+                                        name: not_found
+                                        temporary: false
+                                        timeout: false
+                "409":
+                    description: |-
+                        build_open: Another build is open
+
+                        conflict: Request conflicts with the current state
+
+                        quota_exceeded: Build quota reached
+                    headers:
+                        X-Retry-After:
+                            description: Seconds until a build slot frees up
+                            schema:
+                                type: integer
+                                description: Seconds until a build slot frees up
+                                example: 60
+                                format: int64
+                            example: 60
+                    content:
+                        application/json:
+                            schema:
+                                anyOf:
+                                    - $ref: '#/components/schemas/BuildOpen'
+                                    - $ref: '#/components/schemas/QuotaExceeded'
+                            examples:
+                                build_open:
+                                    value:
+                                        build_id: b-17
+                                        message: another build is open
+                                        name: Odit autem quia ullam delectus aut.
+                                quota_exceeded:
+                                    value:
+                                        limit: 3
+                                        name: Aut repellendus asperiores.
+                        application/vnd.goa.error:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                            example:
+                                fault: false
+                                id: 123abc
+                                message: parameter 'p' must be an integer
+                                name: conflict
+                                temporary: false
+                                timeout: false
+components:
+    schemas:
+        BuildOpen:
+            type: object
+            properties:
+                build_id:
+                    type: string
+                    description: Open build
+                    example: b-17
+                message:
+                    type: string
+                    description: Refusal reason
+                    example: another build is open
+                name:
+                    type: string
+                    description: Error name
+                    example: Odit autem quia ullam delectus aut.
+            description: BuildOpen reports the build that blocks a new one.
+            example:
+                build_id: b-17
+                message: another build is open
+                name: Odit autem quia ullam delectus aut.
+            required:
+                - name
+                - message
+                - build_id
+        Error:
+            type: object
+            properties:
+                fault:
+                    type: boolean
+                    description: Is the error a server-side fault?
+                    example: false
+                id:
+                    type: string
+                    description: ID is a unique identifier for this particular occurrence of the problem.
+                    example: 123abc
+                message:
+                    type: string
+                    description: Message is a human-readable explanation specific to this occurrence of the problem.
+                    example: parameter 'p' must be an integer
+                name:
+                    type: string
+                    description: Name is the name of this class of errors.
+                    example: bad_request
+                temporary:
+                    type: boolean
+                    description: Is the error temporary?
+                    example: false
+                timeout:
+                    type: boolean
+                    description: Is the error a timeout?
+                    example: false
+            description: Error response result type
+            example:
+                fault: false
+                id: 123abc
+                message: parameter 'p' must be an integer
+                name: bad_request
+                temporary: false
+                timeout: false
+            required:
+                - name
+                - id
+                - message
+                - temporary
+                - timeout
+                - fault
+        QuotaExceeded:
+            type: object
+            properties:
+                limit:
+                    type: integer
+                    description: Maximum number of builds
+                    example: 3
+                    format: int64
+                name:
+                    type: string
+                    description: Error name
+                    example: Aut repellendus asperiores.
+            description: QuotaExceeded reports the build quota that was reached.
+            example:
+                limit: 3
+                name: Aut repellendus asperiores.
+            required:
+                - name
+                - limit
+tags:
+    - name: builds

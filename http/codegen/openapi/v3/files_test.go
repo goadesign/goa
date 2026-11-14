@@ -73,6 +73,7 @@ func TestFiles(t *testing.T) {
 		// Error examples
 		{"error-examples", testdata.ErrorExamplesDSL},
 		{"shared-error-description", testdata.SharedErrorDescriptionDSL},
+		{"same-status-errors", testdata.SameStatusErrorsDSL},
 		// Streaming endpoints: OpenAPI 3.2 constructs must not leak into
 		// 3.0 documents.
 		{"sse-string", testdata.SSEStringDSL},
@@ -140,6 +141,7 @@ func TestFilesV32(t *testing.T) {
 		{"websocket", testdata.StreamingResultDSL},
 		{"alias-type", testdata.AliasTypeDSL},
 		{"shared-error-description", testdata.SharedErrorDescriptionDSL},
+		{"same-status-errors", testdata.SameStatusErrorsDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
