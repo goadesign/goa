@@ -1,0 +1,324 @@
+{
+  "consumes": [
+    "application/json",
+    "application/xml",
+    "application/gob"
+  ],
+  "definitions": {
+    "BuildOpen": {
+      "description": "BuildOpen reports the build that blocks a new one.",
+      "example": {
+        "build_id": "b-17",
+        "message": "another build is open",
+        "name": "Odit autem quia ullam delectus aut."
+      },
+      "properties": {
+        "build_id": {
+          "description": "Open build",
+          "example": "b-17",
+          "type": "string"
+        },
+        "message": {
+          "description": "Refusal reason",
+          "example": "another build is open",
+          "type": "string"
+        },
+        "name": {
+          "description": "Error name",
+          "example": "Odit autem quia ullam delectus aut.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "message",
+        "build_id"
+      ],
+      "title": "BuildOpen",
+      "type": "object"
+    },
+    "BuildsStartConflictResponseBody": {
+      "description": "Error response result type (default view)",
+      "example": {
+        "fault": false,
+        "id": "123abc",
+        "message": "parameter 'p' must be an integer",
+        "name": "bad_request",
+        "temporary": false,
+        "timeout": false
+      },
+      "properties": {
+        "fault": {
+          "description": "Is the error a server-side fault?",
+          "example": false,
+          "type": "boolean"
+        },
+        "id": {
+          "description": "ID is a unique identifier for this particular occurrence of the problem.",
+          "example": "123abc",
+          "type": "string"
+        },
+        "message": {
+          "description": "Message is a human-readable explanation specific to this occurrence of the problem.",
+          "example": "parameter 'p' must be an integer",
+          "type": "string"
+        },
+        "name": {
+          "description": "Name is the name of this class of errors.",
+          "example": "bad_request",
+          "type": "string"
+        },
+        "temporary": {
+          "description": "Is the error temporary?",
+          "example": false,
+          "type": "boolean"
+        },
+        "timeout": {
+          "description": "Is the error a timeout?",
+          "example": false,
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "id",
+        "message",
+        "temporary",
+        "timeout",
+        "fault"
+      ],
+      "title": "Mediatype identifier: application/vnd.goa.error; view=default",
+      "type": "object"
+    },
+    "BuildsStartGoneResponseBody": {
+      "description": "Error response result type (default view)",
+      "example": {
+        "fault": false,
+        "id": "123abc",
+        "message": "parameter 'p' must be an integer",
+        "name": "bad_request",
+        "temporary": true,
+        "timeout": false
+      },
+      "properties": {
+        "fault": {
+          "description": "Is the error a server-side fault?",
+          "example": false,
+          "type": "boolean"
+        },
+        "id": {
+          "description": "ID is a unique identifier for this particular occurrence of the problem.",
+          "example": "123abc",
+          "type": "string"
+        },
+        "message": {
+          "description": "Message is a human-readable explanation specific to this occurrence of the problem.",
+          "example": "parameter 'p' must be an integer",
+          "type": "string"
+        },
+        "name": {
+          "description": "Name is the name of this class of errors.",
+          "example": "bad_request",
+          "type": "string"
+        },
+        "temporary": {
+          "description": "Is the error temporary?",
+          "example": true,
+          "type": "boolean"
+        },
+        "timeout": {
+          "description": "Is the error a timeout?",
+          "example": false,
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "id",
+        "message",
+        "temporary",
+        "timeout",
+        "fault"
+      ],
+      "title": "Mediatype identifier: application/vnd.goa.error; view=default",
+      "type": "object"
+    },
+    "BuildsStartNotFoundResponseBody": {
+      "description": "Error response result type (default view)",
+      "example": {
+        "fault": true,
+        "id": "123abc",
+        "message": "parameter 'p' must be an integer",
+        "name": "bad_request",
+        "temporary": true,
+        "timeout": false
+      },
+      "properties": {
+        "fault": {
+          "description": "Is the error a server-side fault?",
+          "example": true,
+          "type": "boolean"
+        },
+        "id": {
+          "description": "ID is a unique identifier for this particular occurrence of the problem.",
+          "example": "123abc",
+          "type": "string"
+        },
+        "message": {
+          "description": "Message is a human-readable explanation specific to this occurrence of the problem.",
+          "example": "parameter 'p' must be an integer",
+          "type": "string"
+        },
+        "name": {
+          "description": "Name is the name of this class of errors.",
+          "example": "bad_request",
+          "type": "string"
+        },
+        "temporary": {
+          "description": "Is the error temporary?",
+          "example": true,
+          "type": "boolean"
+        },
+        "timeout": {
+          "description": "Is the error a timeout?",
+          "example": false,
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "id",
+        "message",
+        "temporary",
+        "timeout",
+        "fault"
+      ],
+      "title": "Mediatype identifier: application/vnd.goa.error; view=default",
+      "type": "object"
+    },
+    "QuotaExceeded": {
+      "description": "QuotaExceeded reports the build quota that was reached.",
+      "example": {
+        "limit": 3,
+        "name": "Aut repellendus asperiores."
+      },
+      "properties": {
+        "limit": {
+          "description": "Maximum number of builds",
+          "example": 3,
+          "format": "int64",
+          "type": "integer"
+        },
+        "name": {
+          "description": "Error name",
+          "example": "Aut repellendus asperiores.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "limit"
+      ],
+      "title": "QuotaExceeded",
+      "type": "object"
+    }
+  },
+  "host": "localhost:80",
+  "info": {
+    "title": "",
+    "version": "0.0.1"
+  },
+  "paths": {
+    "/builds": {
+      "post": {
+        "operationId": "builds#start",
+        "responses": {
+          "201": {
+            "description": "Created response.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          "404": {
+            "description": "not_found: Project not found\n\ngone: Project deleted",
+            "examples": {
+              "application/vnd.goa.error": {
+                "fault": false,
+                "id": "123abc",
+                "message": "parameter 'p' must be an integer",
+                "name": "not_found",
+                "temporary": false,
+                "timeout": false
+              }
+            },
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/BuildsStartNotFoundResponseBody"
+                },
+                {
+                  "$ref": "#/definitions/BuildsStartGoneResponseBody"
+                }
+              ]
+            }
+          },
+          "409": {
+            "description": "build_open: Another build is open\n\nconflict: Request conflicts with the current state\n\nquota_exceeded: Build quota reached",
+            "examples": {
+              "application/vnd.goa.error": {
+                "fault": false,
+                "id": "123abc",
+                "message": "parameter 'p' must be an integer",
+                "name": "conflict",
+                "temporary": false,
+                "timeout": false
+              }
+            },
+            "headers": {
+              "X-Retry-After": {
+                "description": "Seconds until a build slot frees up",
+                "format": "int64",
+                "type": "integer"
+              }
+            },
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/BuildOpen",
+                  "required": [
+                    "name",
+                    "message",
+                    "build_id"
+                  ]
+                },
+                {
+                  "$ref": "#/definitions/BuildsStartConflictResponseBody"
+                },
+                {
+                  "$ref": "#/definitions/QuotaExceeded",
+                  "required": [
+                    "name",
+                    "limit"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        "schemes": [
+          "http"
+        ],
+        "summary": "start builds",
+        "tags": [
+          "builds"
+        ]
+      }
+    }
+  },
+  "produces": [
+    "application/json",
+    "application/xml",
+    "application/gob"
+  ],
+  "swagger": "2.0"
+}

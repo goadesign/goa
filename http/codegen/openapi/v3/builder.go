@@ -344,6 +344,10 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 		}
 		responses[strconv.Itoa(r.StatusCode)] = &ResponseRef{Value: resp}
 	}
+	// Several errors may share a status code. OpenAPI allows one response per
+	// status, so the responses built for the errors of each status are merged
+	// in declaration order once every error has been visited.
+	errorResponses := make(map[int][]*errorResponse)
 	for _, er := range e.HTTPErrors {
 		var body *openapi.Schema
 		if er.Response.Body.Type != expr.Empty {
@@ -365,7 +369,11 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 				content.Example = example
 			}
 		}
-		responses[strconv.Itoa(er.Response.StatusCode)] = &ResponseRef{Value: resp}
+		status := er.Response.StatusCode
+		errorResponses[status] = append(errorResponses[status], &errorResponse{name: er.Name, response: resp})
+	}
+	for status, ers := range errorResponses {
+		responses[strconv.Itoa(status)] = &ResponseRef{Value: mergeErrorResponses(ers)}
 	}
 
 	// tag names

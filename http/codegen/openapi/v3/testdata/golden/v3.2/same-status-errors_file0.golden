@@ -1,0 +1,245 @@
+{
+  "components": {
+    "schemas": {
+      "BuildOpen": {
+        "description": "BuildOpen reports the build that blocks a new one.",
+        "example": {
+          "build_id": "b-17",
+          "message": "another build is open",
+          "name": "Odit autem quia ullam delectus aut."
+        },
+        "properties": {
+          "build_id": {
+            "description": "Open build",
+            "example": "b-17",
+            "type": "string"
+          },
+          "message": {
+            "description": "Refusal reason",
+            "example": "another build is open",
+            "type": "string"
+          },
+          "name": {
+            "description": "Error name",
+            "example": "Odit autem quia ullam delectus aut.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "message",
+          "build_id"
+        ],
+        "type": "object"
+      },
+      "Error": {
+        "description": "Error response result type",
+        "example": {
+          "fault": false,
+          "id": "123abc",
+          "message": "parameter 'p' must be an integer",
+          "name": "bad_request",
+          "temporary": false,
+          "timeout": false
+        },
+        "properties": {
+          "fault": {
+            "description": "Is the error a server-side fault?",
+            "example": false,
+            "type": "boolean"
+          },
+          "id": {
+            "description": "ID is a unique identifier for this particular occurrence of the problem.",
+            "example": "123abc",
+            "type": "string"
+          },
+          "message": {
+            "description": "Message is a human-readable explanation specific to this occurrence of the problem.",
+            "example": "parameter 'p' must be an integer",
+            "type": "string"
+          },
+          "name": {
+            "description": "Name is the name of this class of errors.",
+            "example": "bad_request",
+            "type": "string"
+          },
+          "temporary": {
+            "description": "Is the error temporary?",
+            "example": false,
+            "type": "boolean"
+          },
+          "timeout": {
+            "description": "Is the error a timeout?",
+            "example": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "id",
+          "message",
+          "temporary",
+          "timeout",
+          "fault"
+        ],
+        "type": "object"
+      },
+      "QuotaExceeded": {
+        "description": "QuotaExceeded reports the build quota that was reached.",
+        "example": {
+          "limit": 3,
+          "name": "Aut repellendus asperiores."
+        },
+        "properties": {
+          "limit": {
+            "description": "Maximum number of builds",
+            "example": 3,
+            "format": "int64",
+            "type": "integer"
+          },
+          "name": {
+            "description": "Error name",
+            "example": "Aut repellendus asperiores.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "limit"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "Goa API",
+    "version": "0.0.1"
+  },
+  "openapi": "3.2.0",
+  "paths": {
+    "/builds": {
+      "post": {
+        "operationId": "builds#start",
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "example": "b-18",
+                "schema": {
+                  "example": "b-18",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Created response."
+          },
+          "404": {
+            "content": {
+              "application/vnd.goa.error": {
+                "examples": {
+                  "gone": {
+                    "value": {
+                      "fault": false,
+                      "id": "123abc",
+                      "message": "parameter 'p' must be an integer",
+                      "name": "gone",
+                      "temporary": false,
+                      "timeout": false
+                    }
+                  },
+                  "not_found": {
+                    "value": {
+                      "fault": false,
+                      "id": "123abc",
+                      "message": "parameter 'p' must be an integer",
+                      "name": "not_found",
+                      "temporary": false,
+                      "timeout": false
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "not_found: Project not found\n\ngone: Project deleted"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "build_open": {
+                    "value": {
+                      "build_id": "b-17",
+                      "message": "another build is open",
+                      "name": "Odit autem quia ullam delectus aut."
+                    }
+                  },
+                  "quota_exceeded": {
+                    "value": {
+                      "limit": 3,
+                      "name": "Aut repellendus asperiores."
+                    }
+                  }
+                },
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/BuildOpen"
+                    },
+                    {
+                      "$ref": "#/components/schemas/QuotaExceeded"
+                    }
+                  ]
+                }
+              },
+              "application/vnd.goa.error": {
+                "example": {
+                  "fault": false,
+                  "id": "123abc",
+                  "message": "parameter 'p' must be an integer",
+                  "name": "conflict",
+                  "temporary": false,
+                  "timeout": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "build_open: Another build is open\n\nconflict: Request conflicts with the current state\n\nquota_exceeded: Build quota reached",
+            "headers": {
+              "X-Retry-After": {
+                "description": "Seconds until a build slot frees up",
+                "example": 60,
+                "schema": {
+                  "description": "Seconds until a build slot frees up",
+                  "example": 60,
+                  "format": "int64",
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "summary": "start builds",
+        "tags": [
+          "builds"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "description": "Default server for test api",
+      "name": "test api",
+      "url": "http://localhost:80"
+    }
+  ],
+  "tags": [
+    {
+      "name": "builds"
+    }
+  ]
+}

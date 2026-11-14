@@ -7,6 +7,7 @@ import (
 	"maps"
 	"net/http"
 	"net/url"
+	"reflect"
 	"slices"
 	"strconv"
 	"strings"
@@ -407,6 +408,57 @@ func responseSpecFromExpr(_ *V2, root *expr.RootExpr, r *expr.HTTPResponseExpr, 
 	}
 }
 
+// mergeErrorResponses returns the response documenting every error an endpoint
+// maps to one HTTP status code, given the errors' responses in declaration
+// order. Swagger allows a single response per status so the errors share it:
+// its description lists each error description, identical body schemas are
+// listed once and different ones become anyOf alternatives, and the headers
+// are the union of the errors' headers. Swagger keeps one example per content
+// type, so the error declared first wins. A status used by a single error
+// keeps that error's response unchanged.
+func mergeErrorResponses(rs []*Response) *Response {
+	if len(rs) == 1 {
+		return rs[0]
+	}
+	var (
+		descriptions = make([]string, len(rs))
+		schemas      []*openapi.Schema
+		merged       = &Response{}
+	)
+	for i, r := range rs {
+		descriptions[i] = r.Description
+		if r.Schema != nil && !slices.ContainsFunc(schemas, func(s *openapi.Schema) bool { return reflect.DeepEqual(s, r.Schema) }) {
+			schemas = append(schemas, r.Schema)
+		}
+		merged.Headers = mergeFirstWins(merged.Headers, r.Headers)
+		merged.Examples = mergeFirstWins(merged.Examples, r.Examples)
+		merged.Extensions = mergeFirstWins(merged.Extensions, r.Extensions)
+	}
+	merged.Description = strings.Join(descriptions, "\n\n")
+	switch len(schemas) {
+	case 0:
+	case 1:
+		merged.Schema = schemas[0]
+	default:
+		merged.Schema = &openapi.Schema{AnyOf: schemas}
+	}
+	return merged
+}
+
+// mergeFirstWins returns dst with the entries of src it does not define yet so
+// the error declared first wins when two errors set the same key.
+func mergeFirstWins[V any](dst, src map[string]V) map[string]V {
+	for key, value := range src {
+		if dst == nil {
+			dst = make(map[string]V, len(src))
+		}
+		if _, ok := dst[key]; !ok {
+			dst[key] = value
+		}
+	}
+	return dst
+}
+
 func headersFromExpr(headers *expr.MappedAttributeExpr, values openapi.Values) map[string]*Header {
 	if headers == nil {
 		return nil
@@ -578,6 +630,10 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 				}
 			}
 		}
+		// Several errors may share a status code. Swagger allows one response
+		// per status, so the responses built for the errors of each status are
+		// merged in declaration order once every error has been visited.
+		errorResponses := make(map[int][]*Response)
 		for _, er := range endpoint.HTTPErrors {
 			responseGenerator := generator.At(expr.ErrorResponseBodyExampleIdentity(endpoint, er))
 			errorDescription := values.Description(er.ErrorExpr, er.Description)
@@ -586,7 +642,11 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 			if example, ok := openapi.ErrorResponseExample(er.ErrorExpr, er.Response.Body, responseGenerator, values); ok {
 				resp.Examples = map[string]any{openapi.ResponseContentType(er.Response): example}
 			}
-			responses[strconv.Itoa(er.Response.StatusCode)] = resp
+			status := er.Response.StatusCode
+			errorResponses[status] = append(errorResponses[status], resp)
+		}
+		for status, rs := range errorResponses {
+			responses[strconv.Itoa(status)] = mergeErrorResponses(rs)
 		}
 
 		var consumes []string
