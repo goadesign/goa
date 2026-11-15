@@ -58,6 +58,7 @@ func TestSections(t *testing.T) {
 		{"additional-properties-embedded-payload-result", testdata.AdditionalPropertiesPayloadResultDSL},
 		{"error-examples", testdata.ErrorExamplesDSL},
 		{"shared-error-description", testdata.SharedErrorDescriptionDSL},
+		{"same-status-errors", testdata.SameStatusErrorsDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
