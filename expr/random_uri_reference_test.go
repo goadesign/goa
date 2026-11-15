@@ -21,11 +21,11 @@ func TestFakerRandomizerURIReference(t *testing.T) {
 		{"full uri", "http://"},
 		{"relative reference", "/"},
 	}
-	var refs []string
-	for i := range 64 {
+	refs := make([]string, 64)
+	for i := range refs {
 		ref := expr.NewFakerRandomizer("seed" + strconv.Itoa(i)).URIReference()
 		require.NoError(t, goa.ValidateFormat("ref", ref, goa.FormatURIReference), ref)
-		refs = append(refs, ref)
+		refs[i] = ref
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
