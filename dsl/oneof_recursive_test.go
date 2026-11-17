@@ -75,6 +75,7 @@ func TestOneOfAnonymousBranchAttributeProperties(t *testing.T) {
 	union := expr.AsUnion(container.Attribute().Find("choice").Type)
 	branch := union.Values[0].Attribute
 	definition := branch.Type.(expr.UserType).Attribute()
+	require.Same(t, branch.AuthoredAttribute(), definition.AuthoredAttribute())
 	require.Equal(t, "start", definition.DefaultValue)
 	require.Equal(t, 1, *definition.Validation.MinLength)
 	require.Equal(t, []string{"value"}, definition.Meta["example"])

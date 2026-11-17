@@ -170,15 +170,8 @@ func Attribute(name string, args ...any) {
 	}
 	union := parent.Type.(*expr.Union)
 	if _, ok := attr.Type.(expr.UserType); !ok {
-		// Keep named references live while their DSL is still being evaluated.
-		att := *attr
-		if attr.Meta != nil {
-			att.Meta = attr.Meta.Dup()
-		}
-		if attr.Validation != nil {
-			att.Validation = attr.Validation.Dup()
-		}
-		attr.Type = &expr.UserTypeExpr{AttributeExpr: &att, TypeName: union.TypeName + expr.Title(name)}
+		att := expr.DupAttShallow(attr)
+		attr.Type = &expr.UserTypeExpr{AttributeExpr: att, TypeName: union.TypeName + expr.Title(name)}
 	}
 	union.Values = append(union.Values, &expr.NamedAttributeExpr{Name: name, Attribute: attr})
 }

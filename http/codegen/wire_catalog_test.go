@@ -473,6 +473,7 @@ func TestBindCopiedUnionOccurrencesRejectsDifferentGraphs(t *testing.T) {
 			err := catalog.bindCopiedUnionOccurrences(
 				test.planned,
 				test.rendered,
+				wireUnionUse{},
 				"body",
 				make(map[wireAttributePair]struct{}),
 			)

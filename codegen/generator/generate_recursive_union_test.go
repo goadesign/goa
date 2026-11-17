@@ -15,33 +15,33 @@ import (
 )
 
 func TestGenerateRecursiveUnion(t *testing.T) {
+	var cases []generatedTestDir
 	for _, location := range []string{"", "types"} {
 		name := location
 		if name == "" {
 			name = "local"
 		}
-		t.Run(name, func(t *testing.T) {
-			registry := testRegistry("gen",
-				testGenerator(planServiceData, testServiceFiles),
-				testGenerator(planTransportData, testTransportFiles),
-				testGenerator(planOpenAPIData, testOpenAPIFiles))
-			root := codegen.RunDSL(t, func() { recursiveUnionDSL(location) })
-			first, err := sources("generated.local/gen", []eval.Root{root}, registry)
-			require.NoError(t, err)
-			root = codegen.RunDSL(t, func() { recursiveUnionDSL(location) })
-			second, err := sources("generated.local/gen", []eval.Root{root}, registry)
-			require.NoError(t, err)
-			require.Equal(t, first, second)
-			directory := t.TempDir()
-			writeGeneratedModule(t, directory, "generated.local")
-			codegen.RunDSL(t, func() { recursiveUnionDSL(location) })
-			_, err = generate(directory, "gen", false, registry)
-			require.NoError(t, err)
-			writeGeneratedContractTest(t, directory, "gen/http/values/server", strings.ReplaceAll(recursiveUnionHTTPTest, "DOCUMENT", strconv.Quote(recursiveUnionDocument)))
-			writeGeneratedContractTest(t, directory, "checks", strings.ReplaceAll(recursiveUnionGRPCTest, "DOCUMENT", strconv.Quote(recursiveUnionDocument)))
-			runGeneratedTests(t, directory)
-		})
+		registry := testRegistry("gen",
+			testGenerator(planServiceData, testServiceFiles),
+			testGenerator(planTransportData, testTransportFiles),
+			testGenerator(planOpenAPIData, testOpenAPIFiles))
+		root := codegen.RunDSL(t, func() { recursiveUnionDSL(location) })
+		first, err := sources("generated.local/gen", []eval.Root{root}, registry)
+		require.NoError(t, err)
+		root = codegen.RunDSL(t, func() { recursiveUnionDSL(location) })
+		second, err := sources("generated.local/gen", []eval.Root{root}, registry)
+		require.NoError(t, err)
+		require.Equal(t, first, second)
+		directory := t.TempDir()
+		writeGeneratedModule(t, directory, "generated.local")
+		codegen.RunDSL(t, func() { recursiveUnionDSL(location) })
+		_, err = generate(directory, "gen", false, registry)
+		require.NoError(t, err)
+		writeGeneratedContractTest(t, directory, "gen/http/values/server", strings.ReplaceAll(recursiveUnionHTTPTest, "DOCUMENT", strconv.Quote(recursiveUnionDocument)))
+		writeGeneratedContractTest(t, directory, "checks", strings.ReplaceAll(recursiveUnionGRPCTest, "DOCUMENT", strconv.Quote(recursiveUnionDocument)))
+		cases = append(cases, generatedTestDir{name: name, dir: directory})
 	}
+	runGeneratedTestDirs(t, cases)
 }
 
 func recursiveUnionDSL(location string) {
@@ -63,6 +63,10 @@ func recursiveUnionDSL(location string) {
 			d.Field(5, "object", d.MapOf(d.String, "JSONValue"))
 			d.Field(6, "null", null)
 			d.Field(7, "entry", entry)
+			d.Field(8, "inline", func() {
+				d.Field(1, "value", "JSONValue")
+				d.Required("value")
+			})
 		})
 		d.Required("value")
 	})
@@ -152,6 +156,19 @@ const recursiveUnionDocument = `{
 												"value": {
 													"type": "text",
 													"value": "through mutual reference"
+												}
+											}
+										}
+									}
+								},
+								{
+									"value": {
+										"type": "inline",
+										"value": {
+											"value": {
+												"value": {
+													"type": "text",
+													"value": "through inline reference"
 												}
 											}
 										}
