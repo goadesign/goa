@@ -15,8 +15,9 @@ import (
 )
 
 func TestGenerateRecursiveUnion(t *testing.T) {
-	var cases []generatedTestDir
-	for _, location := range []string{"", "types"} {
+	locations := []string{"", "types"}
+	cases := make([]generatedTestDir, 0, len(locations))
+	for _, location := range locations {
 		name := location
 		if name == "" {
 			name = "local"
