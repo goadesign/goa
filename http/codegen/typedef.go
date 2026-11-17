@@ -57,7 +57,7 @@ func goTypeDefForContext(att *expr.AttributeExpr, ctx *codegen.AttributeContext)
 	case *expr.Object:
 		var ss []string
 		ss = append(ss, "struct {")
-		ma := expr.NewMappedAttributeExpr(att)
+		ma := expr.NewShallowMappedAttributeExpr(att)
 		codegen.WalkMappedAttr(ma, func(name, elem string, _ bool, at *expr.AttributeExpr) error { // nolint: errcheck
 			var (
 				fn   string

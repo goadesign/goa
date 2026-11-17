@@ -1367,9 +1367,8 @@ func (c *wireTypeCatalog) collectRecursive(attribute *expr.AttributeExpr, role w
 	case *expr.Union:
 		nestedPolicy := policy
 		nestedPolicy.view = ""
-		unionAttribute := expr.DupAtt(attribute)
 		c.unionOccurrences = append(c.unionOccurrences, wireUnionOccurrence{
-			attribute: unionAttribute,
+			attribute: attribute,
 			use:       use,
 			role:      role,
 			policy:    policy,
@@ -1523,12 +1522,13 @@ func (c *wireTypeCatalog) unionIdentity(attribute *expr.AttributeExpr, use wireU
 			use:      use,
 		},
 	}
-	c.collectUnionDeclarations(attribute, role, policy, &identity.declarations, make(map[expr.UserType]struct{}))
+	c.collectUnionDeclarations(attribute, role, policy, &identity.declarations)
 	return identity
 }
 
-// collectUnionDeclarations records generated branch types in branch order.
-func (c *wireTypeCatalog) collectUnionDeclarations(attribute *expr.AttributeExpr, role wireTypeRole, policy wireTypePolicy, declarations *[]*wireTypeRecord, seen map[expr.UserType]struct{}) {
+// collectUnionDeclarations records the named types referenced by each branch.
+// Named definitions own their fields and are collected separately.
+func (c *wireTypeCatalog) collectUnionDeclarations(attribute *expr.AttributeExpr, role wireTypeRole, policy wireTypePolicy, declarations *[]*wireTypeRecord) {
 	if attribute.Type == expr.Empty {
 		return
 	}
@@ -1539,15 +1539,6 @@ func (c *wireTypeCatalog) collectUnionDeclarations(attribute *expr.AttributeExpr
 			panic(fmt.Sprintf("HTTP union branch type %q was not submitted before package names were assigned", preferred))
 		}
 		*declarations = append(*declarations, record)
-		origin := userType.Origin()
-		if _, ok := seen[origin]; ok {
-			return
-		}
-		seen[origin] = struct{}{}
-		nestedPolicy := policy
-		nestedPolicy.view = ""
-		c.collectUnionDeclarations(userType.Attribute(), wireAttribute, nestedPolicy, declarations, seen)
-		delete(seen, origin)
 		return
 	}
 	nestedPolicy := policy
@@ -1555,38 +1546,36 @@ func (c *wireTypeCatalog) collectUnionDeclarations(attribute *expr.AttributeExpr
 	switch actual := attribute.Type.(type) {
 	case *expr.Object:
 		for _, named := range *actual {
-			c.collectUnionDeclarations(named.Attribute, wireAttribute, nestedPolicy, declarations, seen)
+			c.collectUnionDeclarations(named.Attribute, wireAttribute, nestedPolicy, declarations)
 		}
 	case *expr.Array:
-		c.collectUnionDeclarations(actual.ElemType, wireAttribute, nestedPolicy, declarations, seen)
+		c.collectUnionDeclarations(actual.ElemType, wireAttribute, nestedPolicy, declarations)
 	case *expr.Map:
-		c.collectUnionDeclarations(actual.KeyType, wireAttribute, nestedPolicy, declarations, seen)
-		c.collectUnionDeclarations(actual.ElemType, wireAttribute, nestedPolicy, declarations, seen)
+		c.collectUnionDeclarations(actual.KeyType, wireAttribute, nestedPolicy, declarations)
+		c.collectUnionDeclarations(actual.ElemType, wireAttribute, nestedPolicy, declarations)
 	case *expr.Union:
 		for _, named := range actual.Values {
-			c.collectUnionDeclarations(named.Attribute, wireAttribute, nestedPolicy, declarations, seen)
+			c.collectUnionDeclarations(named.Attribute, wireAttribute, nestedPolicy, declarations)
 		}
 	}
 }
 
-// applyUnionRecord gives one copied union the exact branch type names stored in
-// record.
+// applyUnionRecord binds a union and its branches to the declarations in record.
 func (c *wireTypeCatalog) applyUnionRecord(attribute *expr.AttributeExpr, record *wireUnionRecord) {
 	union := attribute.Type.(*expr.Union)
 	c.unionBindings[union] = record
 	index := 0
-	seen := make(map[expr.UserType]struct{})
 	for _, branch := range union.Values {
-		c.applyResolvedDeclarations(branch.Attribute, record.identity.owner.use, record.identity.declarations, &index, seen)
+		c.applyResolvedDeclarations(branch.Attribute, record.identity.owner.use, record.identity.declarations, &index)
 	}
 	if index != len(record.identity.declarations) {
 		panic(fmt.Sprintf("HTTP union %q did not use every submitted branch name", record.name))
 	}
 }
 
-// applyResolvedDeclarations gives each named branch its previously chosen Go
-// type in the same order those types were recorded.
-func (c *wireTypeCatalog) applyResolvedDeclarations(attribute *expr.AttributeExpr, use wireUnionUse, declarations []*wireTypeRecord, index *int, seen map[expr.UserType]struct{}) {
+// applyResolvedDeclarations binds each named branch to its declaration in the
+// same order those declarations were recorded.
+func (c *wireTypeCatalog) applyResolvedDeclarations(attribute *expr.AttributeExpr, use wireUnionUse, declarations []*wireTypeRecord, index *int) {
 	if attribute.Type == expr.Empty {
 		return
 	}
@@ -1597,29 +1586,22 @@ func (c *wireTypeCatalog) applyResolvedDeclarations(attribute *expr.AttributeExp
 		record := declarations[*index]
 		(*index)++
 		c.bindOccurrence(attribute, record)
-		origin := userType.Origin()
-		if _, ok := seen[origin]; ok {
-			return
-		}
-		seen[origin] = struct{}{}
-		c.applyResolvedDeclarations(userType.Attribute(), use, declarations, index, seen)
-		delete(seen, origin)
 		return
 	}
 	switch actual := attribute.Type.(type) {
 	case *expr.Object:
 		for _, named := range *actual {
-			c.applyResolvedDeclarations(named.Attribute, use, declarations, index, seen)
+			c.applyResolvedDeclarations(named.Attribute, use, declarations, index)
 		}
 	case *expr.Array:
-		c.applyResolvedDeclarations(actual.ElemType, use, declarations, index, seen)
+		c.applyResolvedDeclarations(actual.ElemType, use, declarations, index)
 	case *expr.Map:
-		c.applyResolvedDeclarations(actual.KeyType, use, declarations, index, seen)
-		c.applyResolvedDeclarations(actual.ElemType, use, declarations, index, seen)
+		c.applyResolvedDeclarations(actual.KeyType, use, declarations, index)
+		c.applyResolvedDeclarations(actual.ElemType, use, declarations, index)
 	case *expr.Union:
 		start := *index
 		for _, branch := range actual.Values {
-			c.applyResolvedDeclarations(branch.Attribute, use, declarations, index, seen)
+			c.applyResolvedDeclarations(branch.Attribute, use, declarations, index)
 		}
 		identity := wireUnionIdentity{
 			declaration: codegen.NewUnionDeclarationID(attribute),
