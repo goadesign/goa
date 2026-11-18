@@ -1075,9 +1075,11 @@ func (e *HTTPEndpointExpr) validateHeadersAndCookies() *eval.ValidationErrors {
 	switch e.MethodExpr.Payload.Type.(type) {
 	case *Object, UserType:
 		hasBasicAuth := TaggedAttribute(e.MethodExpr.Payload, "security:username") != ""
-		WalkMappedAttr(headers, func(name, elem string, _ *AttributeExpr) error { // nolint: errcheck
+		WalkMappedAttr(headers, func(name, elem string, a *AttributeExpr) error { // nolint: errcheck
 			if e.MethodExpr.Payload.Find(name) == nil {
 				verr.Add(e, "header %q not found in payload.", name)
+			} else {
+				e.validateMappedDefault(verr, "header", name, a)
 			}
 			if elem == "Authorization" && hasBasicAuth {
 				// BasicAuth security implicitly sets the Authorization header. If any
@@ -1087,9 +1089,11 @@ func (e *HTTPEndpointExpr) validateHeadersAndCookies() *eval.ValidationErrors {
 			}
 			return nil
 		})
-		WalkMappedAttr(cookies, func(name, _ string, _ *AttributeExpr) error { // nolint: errcheck
+		WalkMappedAttr(cookies, func(name, _ string, a *AttributeExpr) error { // nolint: errcheck
 			if e.MethodExpr.Payload.Find(name) == nil {
 				verr.Add(e, "cookie %q not found in payload.", name)
+			} else {
+				e.validateMappedDefault(verr, "cookie", name, a)
 			}
 			return nil
 		})

@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"goa.design/goa/v3/eval"
 )
 
 func TestHTTPEndpointValidateParams(t *testing.T) {
@@ -55,6 +57,65 @@ func TestHTTPEndpointValidateParams(t *testing.T) {
 			}
 			require.Equal(t, String, endpoint.Params.Find("domain_id").Type)
 			require.Equal(t, "url_id", endpoint.Params.ElemName("domain_id"))
+		})
+	}
+}
+
+func TestHTTPEndpointMappedDefaults(t *testing.T) {
+	cases := []struct {
+		name           string
+		kind           string
+		mappedDefault  any
+		payloadDefault any
+		want           string
+	}{
+		{name: "query without defaults", kind: "query"},
+		{name: "query default from payload only", kind: "query", payloadDefault: "a"},
+		{name: "query same default", kind: "query", mappedDefault: "a", payloadDefault: "a"},
+		{name: "query default only", kind: "query", mappedDefault: "a", want: `query parameter "value" defines a default value but payload attribute "value" does not`},
+		{name: "query different default", kind: "query", mappedDefault: "a", payloadDefault: "b", want: `query parameter "value" default value "a" differs from payload attribute "value" default value "b"`},
+		{name: "path default only", kind: "path", mappedDefault: "a", want: `path parameter "value" defines a default value but payload attribute "value" does not`},
+		{name: "header default only", kind: "header", mappedDefault: "a", want: `header "value" defines a default value but payload attribute "value" does not`},
+		{name: "header different default", kind: "header", mappedDefault: "a", payloadDefault: "b", want: `header "value" default value "a" differs from payload attribute "value" default value "b"`},
+		{name: "cookie default only", kind: "cookie", mappedDefault: "a", want: `cookie "value" defines a default value but payload attribute "value" does not`},
+		{name: "cookie same default", kind: "cookie", mappedDefault: "a", payloadDefault: "a"},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			payload := &Object{{Name: "value", Attribute: &AttributeExpr{Type: String, DefaultValue: test.payloadDefault}}}
+			mapped := NewMappedAttributeExpr(&AttributeExpr{Type: &Object{
+				{Name: "value", Attribute: &AttributeExpr{Type: String, DefaultValue: test.mappedDefault}},
+			}})
+			empty := func() *MappedAttributeExpr {
+				return NewMappedAttributeExpr(&AttributeExpr{Type: &Object{}})
+			}
+			endpoint := &HTTPEndpointExpr{
+				MethodExpr: &MethodExpr{Name: "read", Payload: &AttributeExpr{Type: payload}},
+				Params:     empty(),
+				Headers:    empty(),
+				Cookies:    empty(),
+			}
+			path := "//records"
+			switch test.kind {
+			case "path":
+				endpoint.Params = mapped
+				path += "/{value}"
+			case "query":
+				endpoint.Params = mapped
+			case "header":
+				endpoint.Headers = mapped
+			case "cookie":
+				endpoint.Cookies = mapped
+			}
+			endpoint.Routes = []*RouteExpr{{Method: "GET", Path: path, Endpoint: endpoint}}
+			verr := new(eval.ValidationErrors)
+			verr.Merge(endpoint.ValidateParams())
+			verr.Merge(endpoint.validateHeadersAndCookies())
+			if test.want == "" {
+				require.Empty(t, verr.Errors)
+				return
+			}
+			require.Contains(t, verr.Error(), test.want)
 		})
 	}
 }
