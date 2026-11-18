@@ -245,13 +245,12 @@ type (
 
 	// wireAttributeScope chooses the Go type name for each copied HTTP field.
 	wireAttributeScope struct {
-		catalog         *wireTypeCatalog
-		base            codegen.Attributor
-		pkg             string
-		policy          wireTypePolicy
-		use             wireUnionUse
-		viewRoot        *wireTypeRecord
-		exactOccurrence bool
+		catalog  *wireTypeCatalog
+		base     codegen.Attributor
+		pkg      string
+		policy   wireTypePolicy
+		use      wireUnionUse
+		viewRoot *wireTypeRecord
 	}
 )
 
@@ -394,21 +393,24 @@ func (c *wireTypeCatalog) Declare() error {
 		}
 	}
 	for _, occurrence := range c.unionOccurrences {
-		if err := validateHTTPUnionBranchGoNames(occurrence.attribute.Type.(*expr.Union)); err != nil {
+		actual := occurrence.attribute.Type.(*expr.Union)
+		if err := validateHTTPUnionBranchGoNames(actual); err != nil {
 			return err
 		}
 		identity := c.unionIdentity(occurrence.attribute, occurrence.use, occurrence.role, occurrence.policy)
-		if record := c.findUnion(identity); record != nil {
-			continue
+		record := c.findUnion(identity)
+		if record == nil {
+			if c.findUnionOwner(identity.owner) != nil {
+				return fmt.Errorf(
+					"HTTP OneOf %q produces different %s definitions; use separate OneOf declarations",
+					occurrence.attribute.Type.Name(),
+					occurrence.use.description(),
+				)
+			}
+			record = &wireUnionRecord{identity: identity, policy: occurrence.policy, attribute: occurrence.attribute}
+			c.unions = append(c.unions, record)
 		}
-		if record := c.findUnionOwner(identity.owner); record != nil {
-			return fmt.Errorf(
-				"HTTP OneOf %q produces different %s definitions; use separate OneOf declarations",
-				occurrence.attribute.Type.Name(),
-				occurrence.use.description(),
-			)
-		}
-		c.unions = append(c.unions, &wireUnionRecord{identity: identity, policy: occurrence.policy, attribute: occurrence.attribute})
+		c.unionBindings[wireUnionBinding{union: actual, use: occurrence.use}] = record
 	}
 	for _, union := range c.unions {
 		actual := union.attribute.Type.(*expr.Union)
@@ -1639,12 +1641,6 @@ func (c *wireTypeCatalog) applyResolvedDeclarations(attribute *expr.AttributeExp
 	}
 }
 
-// resolver returns the chosen HTTP type names. The supplied name list is used
-// only to keep local variable names unique.
-func (c *wireTypeCatalog) resolver(scope *codegen.NameScope, policy wireTypePolicy) codegen.Attributor {
-	return &wireAttributeScope{catalog: c, base: codegen.NewAttributeScope(scope), policy: policy}
-}
-
 // resolverForUse names unions from copies made while rendering one exact HTTP
 // body role and response view.
 func (c *wireTypeCatalog) resolverForUse(scope *codegen.NameScope, policy wireTypePolicy, use wireUnionUse) codegen.Attributor {
@@ -1850,13 +1846,12 @@ func (s *wireAttributeScope) Enter(attribute *expr.AttributeExpr) codegen.Attrib
 		viewRoot = nil
 	}
 	return &wireAttributeScope{
-		catalog:         s.catalog,
-		base:            s.base.Enter(attribute),
-		pkg:             pkg,
-		policy:          policy,
-		use:             s.use,
-		viewRoot:        viewRoot,
-		exactOccurrence: s.exactOccurrence,
+		catalog:  s.catalog,
+		base:     s.base.Enter(attribute),
+		pkg:      pkg,
+		policy:   policy,
+		use:      s.use,
+		viewRoot: viewRoot,
 	}
 }
 
@@ -1886,9 +1881,6 @@ func (s *wireAttributeScope) record(attribute *expr.AttributeExpr) *wireTypeReco
 	userType, ok := attribute.Type.(expr.UserType)
 	if !ok {
 		return nil
-	}
-	if s.exactOccurrence {
-		return s.catalog.bindings[attribute]
 	}
 	preferred := wireTypePreferredName(userType, s.policy)
 	if s.viewRoot != nil {

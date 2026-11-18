@@ -280,7 +280,6 @@ func (sds *ServicesData) initSSEData(ed *EndpointData, e *expr.HTTPEndpointExpr,
 			clientCode = "result := body"
 		case transforms.clientDecode.record != nil:
 			transformContext := jsonBodyContext(sd.clientWireTypes, sd.clientWireTypes.scope, false, false)
-			transformContext.Scope = sd.clientWireTypes.resolver(sd.clientWireTypes.scope, jsonBodyPolicy(false, false, true, ""))
 			serviceContext := sds.serviceTypeContext(sd, "client").Enter(eventAttr)
 			var helpers []*codegen.TransformFunctionData
 			var err error
