@@ -41,6 +41,9 @@ type (
 		*service.ServicesData
 		Expressions *expr.HTTPExpr
 		HTTPData    map[string]*ServiceData
+		// generation owns the frozen package import names used when formatting
+		// retained Go type plans into starter files.
+		generation *codegen.Generation
 		// jsonrpc is true when files are written under gen/jsonrpc and their
 		// headings use the JSON-RPC name.
 		jsonrpc bool
@@ -849,9 +852,9 @@ type (
 		// FormFields selects generated form codecs for this request body. Fields
 		// retain the body layout already chosen by the native HTTP planner.
 		FormFields []*formFieldData
-		// attribute is the copied HTTP type whose generated names produced Def and
-		// Ref. Example generators use it to qualify nested request body types.
-		attribute *expr.AttributeExpr
+		// bodyPlan retains the planned Go layout for this request body so starter
+		// multipart helpers can format it in the root package with exact qualifiers.
+		bodyPlan *codegen.GoTypePlan
 	}
 
 	// MultipartData contains the data needed to render multipart
@@ -3316,10 +3319,10 @@ func (sds *ServicesData) buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceDa
 
 		if needInit(v.Type) {
 			var (
-				name     string
-				desc     string
-				isObject bool
-				args     []*InitArgData
+				name    string
+				desc    string
+				pointer bool
+				args    []*InitArgData
 			)
 			declaration := sds.errorConstructors[v]
 			if declaration == nil {
@@ -3336,10 +3339,13 @@ func (sds *ServicesData) buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceDa
 			}
 			args = make([]*InitArgData, 0, argsCap)
 			if body != expr.Empty {
-				isObject = expr.IsObject(body)
+				if origin != "" {
+					pointer = errctx.IsPrimitivePointer(origin, errorAttribute)
+				}
 				ref := "body"
-				if isObject {
+				if expr.IsObject(body) || expr.IsUnion(body) {
 					ref = "&body"
+					pointer = false
 				}
 				policy := jsonBodyPolicy(false, false, true, "")
 				bodyRecord := sd.clientWireTypes.lookupUser(respBody, wireResponseBody, policy)
@@ -3390,16 +3396,18 @@ func (sds *ServicesData) buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceDa
 			}
 
 			init = &InitData{
-				Declaration:         declaration,
-				Name:                name,
-				Description:         desc,
-				ClientArgs:          args,
-				ReturnTypeName:      errctx.Scope.Name(errorAttribute, errctx.Pkg(errorAttribute), false, true),
-				ReturnTypeRef:       errctx.Scope.Ref(errorAttribute, errctx.Pkg(errorAttribute)),
-				ReturnIsStruct:      expr.IsObject(v.Type),
-				ReturnTypeAttribute: codegen.Goify(origin, true),
-				ReturnTypePkg:       errctx.Pkg(errorAttribute),
-				ClientCode:          code,
+				Declaration:              declaration,
+				Name:                     name,
+				Description:              desc,
+				ClientArgs:               args,
+				ReturnTypeName:           errctx.Scope.Name(errorAttribute, errctx.Pkg(errorAttribute), false, true),
+				ReturnTypeRef:            errctx.Scope.Ref(errorAttribute, errctx.Pkg(errorAttribute)),
+				ReturnIsStruct:           expr.IsObject(v.Type),
+				ReturnTypeAttribute:      codegen.Goify(origin, true),
+				ReturnTypePkg:            errctx.Pkg(errorAttribute),
+				ReturnIsPrimitivePointer: pointer,
+				ReturnIsUnion:            origin != "" && expr.IsUnion(errorAttribute.Find(origin).Type) && !errctx.IsFieldPointer(origin, errorAttribute),
+				ClientCode:               code,
 			}
 		}
 
@@ -3533,13 +3541,14 @@ func (sds *ServicesData) buildRequestBodyType(body, att *expr.AttributeExpr, e *
 	addMarshalTags(body)
 	record := catalog.lookupUser(body, role, policy)
 	catalog.applyNames(body, role, policy)
-	httpctx.Scope = catalog.resolverForUse(catalog.scope, policy, wireUnionUse{role: role})
-	layoutResolver := httpctx.Scope.(codegen.GoTypeLayoutResolver)
-	bodyLayout, layoutErr := layoutResolver.GoTypeLayout(body, httpctx.LayoutPolicy())
+	scope := catalog.resolverForUse(catalog.scope, policy, wireUnionUse{role: role}).(*wireAttributeScope)
+	httpctx.Scope = scope
+	bodyPlan, layoutErr := scope.planGoType(body, httpctx.LayoutPolicy(), false)
 	if layoutErr != nil {
 		sds.recordLinkError(layoutErr)
 		return nil
 	}
+	bodyLayout := bodyPlan.Link(catalog.pkg.ImportPath(), catalog.pkg.ImportName)
 	name = body.Type.Name()
 	if record != nil {
 		name = record.name
@@ -3658,7 +3667,7 @@ func (sds *ServicesData) buildRequestBodyType(body, att *expr.AttributeExpr, e *
 		ValidateRef:       validateRef,
 		ValidationTarget:  validationTarget,
 		Example:           sds.Example(body, bodyOwner),
-		attribute:         body,
+		bodyPlan:          bodyPlan,
 	}
 	if e.FormRequest {
 		formContext, err := httpctx.WithGoTypeLayout(bodyLayout)
@@ -4483,11 +4492,15 @@ func httpContext(scope *codegen.NameScope, request, svr bool) *codegen.Attribute
 // that particular request or response.
 func wireHTTPContext(catalog *wireTypeCatalog, scope *codegen.NameScope, request, server bool) *codegen.AttributeContext {
 	context := httpContext(scope, request, server)
-	context.Scope = catalog.resolver(scope, wireTypePolicy{
+	role := wireResponseBody
+	if request {
+		role = wireRequestBody
+	}
+	context.Scope = catalog.resolverForUse(scope, wireTypePolicy{
 		request:    request,
 		pointer:    context.Pointer,
 		useDefault: context.UseDefault,
-	})
+	}, wireUnionUse{role: role})
 	return context
 }
 
@@ -4497,12 +4510,16 @@ func jsonBodyContext(catalog *wireTypeCatalog, scope *codegen.NameScope, request
 	context := wireHTTPContext(catalog, scope, request, server)
 	decode := request == server
 	context.ArrayElementPointer = decode
-	context.Scope = catalog.resolver(scope, wireTypePolicy{
+	role := wireResponseBody
+	if request {
+		role = wireRequestBody
+	}
+	context.Scope = catalog.resolverForUse(scope, wireTypePolicy{
 		request:             request,
 		pointer:             context.Pointer,
 		useDefault:          context.UseDefault,
 		arrayElementPointer: context.ArrayElementPointer,
-	})
+	}, wireUnionUse{role: role})
 	return context
 }
 

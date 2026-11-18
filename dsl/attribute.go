@@ -170,7 +170,7 @@ func Attribute(name string, args ...any) {
 	}
 	union := parent.Type.(*expr.Union)
 	if _, ok := attr.Type.(expr.UserType); !ok {
-		att := expr.DupAttForDSL(attr)
+		att := expr.DupAttShallow(attr)
 		attr.Type = &expr.UserTypeExpr{AttributeExpr: att, TypeName: union.TypeName + expr.Title(name)}
 	}
 	union.Values = append(union.Values, &expr.NamedAttributeExpr{Name: name, Attribute: attr})

@@ -328,7 +328,7 @@ func dummyMultipartFile(svc *expr.HTTPServiceExpr, services *ServicesData) *code
 			}
 			decoderData[endpoint.MultipartRequestDecoder] = &exampleMultipartDecoderData{
 				MultipartData: endpoint.MultipartRequestDecoder,
-				BodyType:      exampleMultipartBodyType(svc, endpoint, services, outputPackage),
+				BodyType:      exampleMultipartBodyType(endpoint, services, outputPackage),
 			}
 		}
 
@@ -365,28 +365,7 @@ func dummyMultipartFile(svc *expr.HTTPServiceExpr, services *ServicesData) *code
 
 // exampleMultipartBodyType returns the request body type visible from the
 // starter service package.
-func exampleMultipartBodyType(svc *expr.HTTPServiceExpr, endpoint *EndpointData, services *ServicesData, outputPackage string) string {
-	serverBody := endpoint.Payload.Request.ServerBody
-	service := services.Get(svc.Name())
-	serverPath := path.Join(services.GenPkg(), "http", service.Service.PathName, "server")
-	serverImport := services.PackageImport(outputPackage, serverPath)
-	if serverBody.Declaration != nil {
-		return serverImport.Name + "." + serverBody.Declaration.Name()
-	}
-	body := serverBody.attribute
-	usesServerType := false
-	collectUserTypes(body.Type, func(expr.UserType) {
-		usesServerType = true
-	})
-	if usesServerType {
-		resolver := &wireAttributeScope{
-			catalog:         service.serverWireTypes,
-			base:            codegen.NewAttributeScope(service.serverWireTypes.scope),
-			pkg:             serverImport.Name,
-			policy:          jsonBodyPolicy(true, true, true, ""),
-			exactOccurrence: true,
-		}
-		return resolver.Name(body, serverImport.Name, true, false)
-	}
-	return serverBody.VarName
+func exampleMultipartBodyType(endpoint *EndpointData, services *ServicesData, outputPackage string) string {
+	output := services.generation.Package(outputPackage)
+	return endpoint.Payload.Request.ServerBody.bodyPlan.Link(outputPackage, output.ImportName).RefWithPointer(false)
 }

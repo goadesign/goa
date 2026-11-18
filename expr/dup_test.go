@@ -228,3 +228,33 @@ func TestDupAttFinalizeResolvesTransitiveBasesAndReferences(t *testing.T) {
 	assert.Len(t, derived.Attribute().Bases, 1)
 	assert.Len(t, AsObject(node.Type).Attribute("nested").Bases, 1)
 }
+
+func TestDupAttShallow(t *testing.T) {
+	t.Parallel()
+	named := &UserTypeExpr{TypeName: "Node", AttributeExpr: &AttributeExpr{Type: &Object{}}}
+	base := &UserTypeExpr{TypeName: "Base", AttributeExpr: &AttributeExpr{Type: &Object{}}}
+	original := &AttributeExpr{
+		Type:         named,
+		Bases:        []DataType{base},
+		References:   []DataType{base},
+		UserExamples: []*ExampleExpr{{Value: "original"}},
+		Meta:         MetaExpr{"key": {"original"}},
+		Validation:   &ValidationExpr{Required: []string{"label"}},
+	}
+	copied := DupAttShallow(original)
+	require.Same(t, original, copied.AuthoredAttribute())
+	require.Same(t, original, DupAttShallow(copied).AuthoredAttribute())
+	require.Same(t, named, copied.Type)
+	named.Attribute().Type.(*Object).Set("label", &AttributeExpr{Type: String})
+	require.NotNil(t, copied.Find("label"))
+	copied.Bases[0] = String
+	copied.References[0] = String
+	copied.UserExamples[0] = &ExampleExpr{Value: "changed"}
+	copied.Meta["key"] = []string{"changed"}
+	copied.Validation.Required[0] = "changed"
+	require.Same(t, base, original.Bases[0])
+	require.Same(t, base, original.References[0])
+	require.Equal(t, "original", original.UserExamples[0].Value)
+	require.Equal(t, []string{"original"}, original.Meta["key"])
+	require.Equal(t, []string{"label"}, original.Validation.Required)
+}

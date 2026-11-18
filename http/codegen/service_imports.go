@@ -483,7 +483,7 @@ func httpGeneratedImportPlan(service *expr.HTTPServiceExpr, client bool, kind ht
 func httpTypesUseService(service *expr.HTTPServiceExpr) bool {
 	for _, endpoint := range service.HTTPEndpoints {
 		method := endpoint.MethodExpr
-		if len(method.Errors) > 0 {
+		if len(endpoint.HTTPErrors) > 0 {
 			return true
 		}
 		for _, attribute := range []*expr.AttributeExpr{method.Payload, method.StreamingPayload, method.Result, method.StreamingResult} {
@@ -506,7 +506,7 @@ func httpCodecUsesService(service *expr.HTTPServiceExpr) bool {
 			}
 		}
 		_, viewed := method.Result.Type.(*expr.ResultTypeExpr)
-		if len(method.Errors) > 0 || viewed ||
+		if len(endpoint.HTTPErrors) > 0 || viewed ||
 			endpoint.SkipRequestBodyEncodeDecode || endpoint.SkipResponseBodyEncodeDecode {
 			return true
 		}
@@ -595,6 +595,16 @@ func httpServiceHasUnion(service *expr.HTTPServiceExpr) bool {
 			endpoint.MethodExpr.StreamingPayload,
 			endpoint.MethodExpr.Result,
 			endpoint.MethodExpr.StreamingResult,
+			endpoint.Body,
+			endpoint.StreamingBody,
+		}
+		for _, response := range httpEndpointResponses(endpoint) {
+			attributes = append(attributes, response.Body)
+		}
+		for _, httpError := range endpoint.HTTPErrors {
+			if designError := endpoint.MethodExpr.Error(httpError.Name); designError != nil {
+				attributes = append(attributes, designError.AttributeExpr)
+			}
 		}
 		for _, attribute := range attributes {
 			if attributeContainsUnion(attribute, make(map[expr.UserType]struct{})) {
@@ -1139,8 +1149,10 @@ func serviceReferenceAttributes(endpoints ...*expr.HTTPEndpointExpr) []*expr.Att
 				attributes = append(attributes, object.Attribute(endpoint.SSE.DataField))
 			}
 		}
-		for _, methodError := range method.Errors {
-			attributes = append(attributes, methodError.AttributeExpr)
+		for _, httpError := range endpoint.HTTPErrors {
+			if designError := method.Error(httpError.Name); designError != nil {
+				attributes = append(attributes, designError.AttributeExpr)
+			}
 		}
 	}
 	return attributes
@@ -1185,11 +1197,11 @@ func httpCLIPayloadBuilderReferenceAttributes(service *expr.HTTPServiceExpr) []*
 }
 
 // httpTransportReferenceAttributes returns values named directly by raw-body
-// client and server sections instead of by generated codecs.
+// and multipart client and server sections instead of by generated codecs.
 func httpTransportReferenceAttributes(service *expr.HTTPServiceExpr) []*expr.AttributeExpr {
 	var endpoints []*expr.HTTPEndpointExpr
 	for _, endpoint := range service.HTTPEndpoints {
-		if endpoint.SkipRequestBodyEncodeDecode || endpoint.SkipResponseBodyEncodeDecode {
+		if endpoint.SkipRequestBodyEncodeDecode || endpoint.SkipResponseBodyEncodeDecode || endpoint.MultipartRequest {
 			endpoints = append(endpoints, endpoint)
 		}
 	}
