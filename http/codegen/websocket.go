@@ -144,8 +144,7 @@ func (sds *ServicesData) initWebSocketData(ed *EndpointData, e *expr.HTTPEndpoin
 				var svcode string
 				if ut, ok := body.(expr.UserType); ok {
 					if val := ut.Attribute().Validation; val != nil {
-						httpctx := jsonBodyContext(sd.serverWireTypes, sd.serverWireTypes.scope, true, true)
-						svcode = codegen.ValidationCode(ut.Attribute(), ut, httpctx, true, expr.IsAlias(ut), false, "body")
+						svcode = svrPayload.ValidateDef
 					}
 				}
 				serverArgs = []*InitArgData{{

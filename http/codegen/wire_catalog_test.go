@@ -55,7 +55,7 @@ func TestWireTypeCatalogRecursiveIdentityTerminates(t *testing.T) {
 func TestOptionalWireTypeRefUsesLinkedLayout(t *testing.T) {
 	catalog, generation := testWireTypeCatalog(t)
 	linkTestWireTypeCatalog(t, generation, catalog)
-	resolver := catalog.resolver(catalog.scope, wireTypePolicy{}).(*wireAttributeScope)
+	resolver := catalog.resolverForUse(catalog.scope, wireTypePolicy{}, wireUnionUse{role: wireAttribute}).(*wireAttributeScope)
 
 	tests := []struct {
 		name        string
@@ -108,7 +108,7 @@ func TestWireAttributeScopeUsesFinalImportAliases(t *testing.T) {
 	require.NoError(t, catalog.pkg.ReserveGeneratedImport(codegen.NewImport("types", generatedPath)))
 	require.NoError(t, catalog.pkg.RequireImport(codegen.NewImport("types", "example.com/fixed/types")))
 	linkTestWireTypeCatalog(t, generation, catalog)
-	resolver := catalog.resolver(catalog.scope, wireTypePolicy{}).(*wireAttributeScope)
+	resolver := catalog.resolverForUse(catalog.scope, wireTypePolicy{}, wireUnionUse{role: wireAttribute}).(*wireAttributeScope)
 
 	custom := &expr.AttributeExpr{
 		Type: expr.String,
@@ -355,8 +355,8 @@ func TestWireTypeCatalogBindingUsesCurrentLayoutPolicy(t *testing.T) {
 	pointerRecord := catalog.lookupUser(attribute, wireAttribute, pointerPolicy)
 	require.NotSame(t, valueRecord, pointerRecord)
 
-	valueScope := catalog.resolver(catalog.scope, valuePolicy)
-	pointerScope := catalog.resolver(catalog.scope, pointerPolicy)
+	valueScope := catalog.resolverForUse(catalog.scope, valuePolicy, wireUnionUse{role: wireAttribute})
+	pointerScope := catalog.resolverForUse(catalog.scope, pointerPolicy, wireUnionUse{role: wireAttribute})
 	require.Equal(t, valueRecord.name, valueScope.Name(attribute, "", false, false))
 	require.Equal(t, pointerRecord.name, pointerScope.Name(attribute, "", true, false))
 }
@@ -473,6 +473,7 @@ func TestBindCopiedUnionOccurrencesRejectsDifferentGraphs(t *testing.T) {
 			err := catalog.bindCopiedUnionOccurrences(
 				test.planned,
 				test.rendered,
+				wireUnionUse{},
 				"body",
 				make(map[wireAttributePair]struct{}),
 			)
