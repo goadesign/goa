@@ -5,6 +5,7 @@ package expr
 
 import (
 	"fmt"
+	"reflect"
 
 	"goa.design/goa/v3/eval"
 )
@@ -67,16 +68,20 @@ func (e *HTTPEndpointExpr) ValidateParams() *eval.ValidationErrors {
 	if e.MethodExpr.Payload != nil {
 		switch e.MethodExpr.Payload.Type.(type) {
 		case *Object, UserType:
-			WalkMappedAttr(pparams, func(name, _ string, _ *AttributeExpr) error { // nolint: errcheck
+			WalkMappedAttr(pparams, func(name, _ string, a *AttributeExpr) error { // nolint: errcheck
 				if e.MethodExpr.Payload.Find(name) == nil {
 					verr.Add(e, "Path parameter %q not found in payload.", name)
+					return nil
 				}
+				e.validateMappedDefault(verr, "path parameter", name, a)
 				return nil
 			})
-			WalkMappedAttr(qparams, func(name, _ string, _ *AttributeExpr) error { // nolint: errcheck
+			WalkMappedAttr(qparams, func(name, _ string, a *AttributeExpr) error { // nolint: errcheck
 				if e.MethodExpr.Payload.Find(name) == nil {
 					verr.Add(e, "Query string parameter %q not found in payload.", name)
+					return nil
 				}
+				e.validateMappedDefault(verr, "query parameter", name, a)
 				return nil
 			})
 		case *Array:
@@ -90,4 +95,23 @@ func (e *HTTPEndpointExpr) ValidateParams() *eval.ValidationErrors {
 		}
 	}
 	return verr
+}
+
+// validateMappedDefault reports a default authored on an HTTP path parameter,
+// query parameter, header or cookie that differs from the default of the
+// object payload attribute it maps. Object payloads own field defaults:
+// generated decoders apply the payload default, so a different transport
+// default would be ignored at runtime while still appearing in OpenAPI.
+func (e *HTTPEndpointExpr) validateMappedDefault(verr *eval.ValidationErrors, kind, name string, a *AttributeExpr) {
+	if a.DefaultValue == nil {
+		return
+	}
+	payloadDefault := e.MethodExpr.Payload.GetDefault(name)
+	if payloadDefault == nil {
+		verr.Add(e, "%s %q defines a default value but payload attribute %q does not; object payloads own field defaults, so define the Default on the payload attribute instead.", kind, name, name)
+		return
+	}
+	if !reflect.DeepEqual(a.DefaultValue, payloadDefault) {
+		verr.Add(e, "%s %q default value %#v differs from payload attribute %q default value %#v; object payloads own field defaults, so define the Default on the payload attribute only.", kind, name, a.DefaultValue, name, payloadDefault)
+	}
 }
