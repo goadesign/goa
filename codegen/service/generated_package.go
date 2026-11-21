@@ -836,7 +836,7 @@ func collectValidationFacts(projected *expr.AttributeExpr) []*validationFacts {
 			attribute = projected
 		}
 		return []*validationFacts{{
-			attribute: attribute,
+			attribute: validationAttributeWithViews(attribute, ""),
 			alias:     expr.IsAlias(userType),
 			pointer:   !expr.IsPrimitive(projected.Type),
 		}}
@@ -865,7 +865,8 @@ func collectValidationFacts(projected *expr.AttributeExpr) []*validationFacts {
 				})
 				return
 			}
-			object.Set(name, attribute)
+			cascadedView, _ := viewAttribute.Meta.Last(expr.ViewMetaKey)
+			object.Set(name, validationAttributeWithViews(attribute, cascadedView))
 		})
 		validation.attribute = &expr.AttributeExpr{Type: object, Validation: resultType.Validation}
 		facts = append(facts, validation)

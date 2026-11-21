@@ -1997,6 +1997,7 @@ func (p *Plan) link() error {
 	}
 	expressions := transportExpressions(p.root, p.transport)
 	services := newServicesData(serviceData, expressions)
+	services.generation = p.generation
 	services.jsonrpc = p.transport == jsonrpcTransport
 	services.viewedResultConstructors = p.constructors
 	services.payloadConstructors = p.payloads

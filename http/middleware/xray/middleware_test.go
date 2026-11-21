@@ -13,17 +13,13 @@ import (
 	"goa.design/goa/v3/middleware/xray/xraytest"
 )
 
-const (
-	// udp host:port used to run test server
-	udplisten = "127.0.0.1:62112"
-)
-
 func TestNew(t *testing.T) {
+	daemon := xraytest.NewDaemon(t)
 	cases := map[string]struct {
 		Daemon  string
 		Success bool
 	}{
-		"ok":     {udplisten, true},
+		"ok":     {daemon.Addr, true},
 		"not-ok": {"foo:bar", false},
 	}
 	for k, c := range cases {
@@ -124,7 +120,8 @@ func TestMiddleware(t *testing.T) {
 	}
 	for k, c := range cases {
 		t.Run(k, func(t *testing.T) {
-			m, err := New("service", udplisten)
+			daemon := xraytest.NewDaemon(t)
+			m, err := New("service", daemon.Addr)
 			if err != nil {
 				t.Fatalf("failed to create middleware: %s", err)
 			}
@@ -158,7 +155,7 @@ func TestMiddleware(t *testing.T) {
 				req.Host = c.Request.Host
 			}
 			req = req.WithContext(ctx)
-			messages := xraytest.ReadUDP(t, udplisten, 2, func() {
+			messages := daemon.Read(t, 2, func() {
 				m(h).ServeHTTP(rw, req)
 			})
 

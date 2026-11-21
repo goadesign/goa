@@ -4,6 +4,7 @@ package expr
 
 import (
 	"fmt"
+	"slices"
 )
 
 // Dup creates a copy the given data type.
@@ -23,6 +24,26 @@ func DupForDSL(dataType DataType) DataType {
 // DupAtt creates a copy of the given attribute without changing the design.
 func DupAtt(att *AttributeExpr) *AttributeExpr {
 	return newDupper().DupAttribute(att)
+}
+
+// DupAttShallow copies an attribute's properties and preserves its authored
+// declaration without copying its Type or the declarations in Bases and
+// References. Use it while referenced types may still be running their DSL.
+// Metadata, validation, and the Bases, References, and UserExamples slice
+// containers can be changed independently on the returned attribute.
+func DupAttShallow(att *AttributeExpr) *AttributeExpr {
+	duplicate := *att
+	duplicate.authored = att.AuthoredAttribute()
+	duplicate.Bases = slices.Clone(att.Bases)
+	duplicate.References = slices.Clone(att.References)
+	duplicate.UserExamples = slices.Clone(att.UserExamples)
+	if att.Meta != nil {
+		duplicate.Meta = att.Meta.Dup()
+	}
+	if att.Validation != nil {
+		duplicate.Validation = att.Validation.Dup()
+	}
+	return &duplicate
 }
 
 // DupAttForDSL creates a copy of the given attribute and registers copied
