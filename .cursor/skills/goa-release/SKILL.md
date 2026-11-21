@@ -137,7 +137,9 @@ For each repository:
 
    The JSON-RPC integration tests are a nested Go module; update and tidy it before rerunning
    `make` so `integration-test` does not fail on stale module metadata. `go get` should only update
-   `go.mod` and `go.sum`. If other files changed in any repository, review why before committing.
+   `go.mod` and `go.sum`. Verify root `go.mod` and `jsonrpc/integration_tests/go.mod` keep Goa's
+   intended `go` directive with no `toolchain` directive (`make release-goa` enforces this before
+   tagging). If other files changed in any repository, review why before committing.
 
 4. In the examples repository, run:
 
@@ -149,7 +151,17 @@ For each repository:
    ```
 
    The examples repository has no root `go.mod`; each example listed in `go.work` owns its own
-   module. Update and tidy every example module before running `make`. If files changed, commit them
+   module. Update and tidy every example module before running `make`. During a release that lowers
+   Goa's `go` directive, companion repositories still pin the previous Goa tag until `make release`
+   runs (so use a toolchain that satisfies the previous Goa tag during preparation), and ensure
+   `go get -u` does not pull in dependencies—especially `goa.design/examples/basic` in
+   `tracing/go.mod` from a prior higher-Go release—that require a Go version newer than Goa's
+   target `go` directive. If Goa's supported Go versions in `.github/workflows/test.yml` changed
+   since the previous release, update `examples/.github/workflows/ci.yaml` to match (it is pushed
+   together with the release commit). Because `go mod tidy` never lowers an existing `go` directive,
+   `make release-examples` sets every example `go.mod` and `go.work` to Goa's `go` version (without
+   a `toolchain` line) and tidies with `-go=<version>` before running `make`, then verifies every
+   `go.mod` and `go.work` still matches before committing and tagging. If files changed, commit them
    with `Prepare v3.x.y`. Do not push; `make release-examples` pushes the branch.
 
 5. In the plugins repository, run:
@@ -160,8 +172,18 @@ For each repository:
    make
    ```
 
-   If files changed, commit them with `Prepare v3.x.y`. Do not push; `make release-plugins`
-   pushes the branch.
+   The plugins repository also contains nested `testing/examples/*` modules and `go.work` files
+   (`testing/examples/{calculator,httpgrpc,jsonrpc}/{go.mod,go.work}`); if a dependency update
+   raises the root `go` directive during preparation, update those nested modules and workspaces
+   before running `make`. During a release that lowers Goa's `go` directive, ensure `go get -u`
+   does not pull in non-Goa dependencies requiring a Go version newer than Goa's target `go`
+   directive. If Goa's supported Go versions in `.github/workflows/test.yml` changed since the
+   previous release, update `plugins/.github/workflows/ci.yml` to match (it is pushed together with
+   the release commit). `make release-plugins` updates the root and nested `go.mod` files and every
+   `go.work` file (`testing/examples/*/go.work`) to Goa's `go` version (without a `toolchain` line),
+   tidies root before nested modules with `-go=<version>` before running `make`, and verifies every
+   `go.mod` and `go.work` still matches before committing and tagging. If files changed, commit them
+   with `Prepare v3.x.y`. Do not push; `make release-plugins` pushes the branch.
 
 6. In the Goa repository, edit only `MINOR`, `BUILD`, and the preview marker in `Makefile` for the
    target version. Leave `MAJOR=3`. For a stable release, `PREVIEW_NUMBER` must be empty. The stable
@@ -201,7 +223,9 @@ command that can create commits, tags, and pushes. Before running it:
    explicitly approves the recovery plan.
 5. Fix the root cause, verify the affected repository is in the expected state, then rerun the
    narrowest safe target or command.
-6. When release completes, report the released version and the branch/tag pushes that succeeded.
+6. When release completes, verify the released `go.mod` and `go.work` files in all three
+   repositories kept the expected `go` directive and report the released version and the branch/tag
+   pushes that succeeded.
 
 ## GitHub Release Notes
 
