@@ -197,6 +197,11 @@ func byFormat(a *AttributeExpr, r *ExampleGenerator) any {
 		return nil
 	}
 	format := a.Validation.Format
+	// Handle uri-reference before evaluating the eager map literal below so
+	// existing formats do not consume extra RNG state across retry attempts.
+	if format == FormatURIReference {
+		return r.uriReference()
+	}
 	if res, ok := map[ValidationFormat]any{
 		FormatEmail:    r.Email(),
 		FormatHostname: r.Hostname(),
@@ -213,12 +218,11 @@ func byFormat(a *AttributeExpr, r *ExampleGenerator) any {
 			}
 			return patgen(res, r)
 		}(),
-		FormatCIDR:         "192.168.100.14/24",
-		FormatRegexp:       r.Characters(3) + ".*",
-		FormatRFC1123:      time.Unix(int64(r.Int())%1454957045, 0).UTC().Format(time.RFC1123), // to obtain a "fixed" rand
-		FormatUUID:         r.UUID(),
-		FormatJSON:         `{"name":"example","email":"mail@example.com"}`,
-		FormatURIReference: r.URIReference(),
+		FormatCIDR:    "192.168.100.14/24",
+		FormatRegexp:  r.Characters(3) + ".*",
+		FormatRFC1123: time.Unix(int64(r.Int())%1454957045, 0).UTC().Format(time.RFC1123), // to obtain a "fixed" rand
+		FormatUUID:    r.UUID(),
+		FormatJSON:    `{"name":"example","email":"mail@example.com"}`,
 	}[format]; ok {
 		return res
 	}
