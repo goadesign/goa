@@ -34,7 +34,7 @@ PROTOC_DEST=$(GOBIN_DIR)/$(PROTOC_BIN)
 PROTOC_INCLUDE_DEST=$(GOPATH)/include
 
 .PHONY: all all-tests ci depend lint test test-release integration-test build-goa
-.PHONY: release stable-release-check release-preflight warm-proxy release-goa release-examples release-plugins
+.PHONY: release stable-release-check release-preflight warm-proxy check-go-version release-goa release-examples release-plugins
 .PHONY: preview-version preview-check preview-preflight prepare-preview release-preview
 .NOTPARALLEL: release warm-proxy release-goa release-examples release-plugins prepare-preview release-preview
 
@@ -248,6 +248,25 @@ warm-proxy:
 	curl -fsSL "https://proxy.golang.org/goa.design/goa/v$(MAJOR)/@v/$$tag.info" >/dev/null 2>&1 || true; \
 	GOPROXY=https://proxy.golang.org,direct GOSUMDB=sum.golang.org go mod download "goa.design/goa/v$(MAJOR)@$$tag"
 
+check-go-version:
+	@test -n "$(DIR)" || (echo "error: DIR is required"; exit 1)
+	@test -n "$(GO_VERSION)" || (echo "error: GO_VERSION is required"; exit 1)
+	@cd "$(DIR)" && \
+		files="$$(git ls-files --cached --others --exclude-standard -- 'go.mod' '*/go.mod' 'go.work' '*/go.work')" && \
+		test -n "$$files" && \
+		printf '%s\n' "$$files" | LC_ALL=C sort -u | while IFS= read -r file; do \
+			actual_go="$$(awk '/^go[[:space:]]/ { print $$2; exit }' "$$file")"; \
+			actual_tc="$$(awk '/^toolchain[[:space:]]/ { print $$2; exit }' "$$file")"; \
+			if [ "$$actual_go" != "$(GO_VERSION)" ]; then \
+				echo "error: $$file has go $${actual_go:-<missing>}, expected $(GO_VERSION)"; \
+				exit 1; \
+			fi; \
+			if [ -n "$$actual_tc" ]; then \
+				echo "error: $$file has unexpected toolchain $$actual_tc"; \
+				exit 1; \
+			fi; \
+		done
+
 release-goa:
 	# First make sure all is clean
 	@test "$$(git branch --show-current)" = "v$(MAJOR)"
@@ -276,6 +295,7 @@ release-goa:
 		fi && \
 		git pull --ff-only origin v$(MAJOR)
 	go mod tidy 
+	@$(MAKE) check-go-version DIR="$(CURDIR)" GO_VERSION="$$(GOWORK=off go list -m -f '{{.GoVersion}}')"
 	# Bump version number, commit and push
 	sed 's/Major = .*/Major = $(MAJOR)/' pkg/version.go > _tmp && mv _tmp pkg/version.go
 	sed 's/Minor = .*/Minor = $(MINOR)/' pkg/version.go > _tmp && mv _tmp pkg/version.go
@@ -292,8 +312,26 @@ release-goa:
 	@$(MAKE) warm-proxy RELEASE_TAG=v$(MAJOR).$(MINOR).$(BUILD)
 
 release-examples:
+	go_version="$$(GOWORK=off go list -m -f '{{.GoVersion}}')" && \
+	test -n "$$go_version" && \
 	cd $(GOPATH)/src/goa.design/examples && \
-		make GOA_VERSION=v$(MAJOR).$(MINOR).$(BUILD)&& \
+		modules="$$(git ls-files --cached --others --exclude-standard -- 'go.mod' '*/go.mod')" && \
+		test -n "$$modules" && \
+		printf '%s\n' "$$modules" | LC_ALL=C sort -u | while IFS= read -r module; do \
+			(cd "$$(dirname "$$module")" && \
+				GOWORK=off go mod edit -require=goa.design/goa/v$(MAJOR)@v$(MAJOR).$(MINOR).$(BUILD) -go="$$go_version" -toolchain=none && \
+				GOWORK=off go mod tidy -go="$$go_version") || exit 1; \
+		done && \
+		works="$$(git ls-files --cached --others --exclude-standard -- 'go.work' '*/go.work')" && \
+		if [ -n "$$works" ]; then \
+			printf '%s\n' "$$works" | LC_ALL=C sort -u | while IFS= read -r work; do \
+				(cd "$$(dirname "$$work")" && \
+					GOWORK="$$PWD/go.work" go work edit -go="$$go_version" -toolchain=none && \
+					GOWORK="$$PWD/go.work" go work use) || exit 1; \
+			done; \
+		fi && \
+		make GOA_VERSION=v$(MAJOR).$(MINOR).$(BUILD) && \
+		$(MAKE) -C "$(CURDIR)" check-go-version DIR="$(GOPATH)/src/goa.design/examples" GO_VERSION="$$go_version" && \
 		git add . && \
 		git commit -m "Release v$(MAJOR).$(MINOR).$(BUILD)" && \
 		git tag v$(MAJOR).$(MINOR).$(BUILD) && \
@@ -301,13 +339,32 @@ release-examples:
 		git push origin v$(MAJOR).$(MINOR).$(BUILD)
 
 release-plugins:
+	go_version="$$(GOWORK=off go list -m -f '{{.GoVersion}}')" && \
+	test -n "$$go_version" && \
 	cd $(GOPATH)/src/goa.design/plugins && \
-		for module in $$(find . -name go.mod -not -path './.git/*'); do \
+		modules="$$(git ls-files --cached --others --exclude-standard -- 'go.mod' '*/go.mod')" && \
+		test -n "$$modules" && \
+		printf '%s\n' "$$modules" | LC_ALL=C sort -u | while IFS= read -r module; do \
 			(cd "$$(dirname "$$module")" && \
-				go mod edit -require=goa.design/goa/v$(MAJOR)@v$(MAJOR).$(MINOR).$(BUILD) && \
-				go mod tidy) || exit 1; \
+				GOWORK=off go mod edit -require=goa.design/goa/v$(MAJOR)@v$(MAJOR).$(MINOR).$(BUILD) -go="$$go_version" -toolchain=none) || exit 1; \
 		done && \
+		GOWORK=off go mod tidy -go="$$go_version" && \
+		nested="$$(git ls-files --cached --others --exclude-standard -- '*/go.mod')" && \
+		if [ -n "$$nested" ]; then \
+			printf '%s\n' "$$nested" | LC_ALL=C sort -u | while IFS= read -r module; do \
+				(cd "$$(dirname "$$module")" && GOWORK=off go mod tidy -go="$$go_version") || exit 1; \
+			done; \
+		fi && \
+		works="$$(git ls-files --cached --others --exclude-standard -- 'go.work' '*/go.work')" && \
+		if [ -n "$$works" ]; then \
+			printf '%s\n' "$$works" | LC_ALL=C sort -u | while IFS= read -r work; do \
+				(cd "$$(dirname "$$work")" && \
+					GOWORK="$$PWD/go.work" go work edit -go="$$go_version" -toolchain=none && \
+					GOWORK="$$PWD/go.work" go work use) || exit 1; \
+			done; \
+		fi && \
 		make && \
+		$(MAKE) -C "$(CURDIR)" check-go-version DIR="$(GOPATH)/src/goa.design/plugins" GO_VERSION="$$go_version" && \
 		git add . && \
 		git commit -m "Release v$(MAJOR).$(MINOR).$(BUILD)" && \
 		git tag v$(MAJOR).$(MINOR).$(BUILD) && \
