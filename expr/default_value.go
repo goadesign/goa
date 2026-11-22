@@ -4,6 +4,7 @@
 package expr
 
 import (
+	"bytes"
 	"fmt"
 	"math"
 	"reflect"
@@ -270,6 +271,79 @@ func defaultEnumValueEqual(dataType DataType, value reflect.Value, allowed any) 
 		return false
 	}
 	return reflect.DeepEqual(value.Convert(target).Interface(), allowedValue.Convert(target).Interface())
+}
+
+// defaultValuesEqual reports whether two authored defaults describe the same
+// value of dataType. Default accepts several Go representations of one design
+// value, such as int or int64 for Int64 and string or []byte for Bytes, so
+// numbers are compared after conversion to the design primitive, bytes by
+// content, and collections element by element.
+func defaultValuesEqual(dataType DataType, left, right reflect.Value) bool {
+	left, leftOK := concreteDefaultValue(left)
+	right, rightOK := concreteDefaultValue(right)
+	if !leftOK || !rightOK {
+		return leftOK == rightOK
+	}
+	switch {
+	case defaultPrimitive(dataType) == Bytes:
+		leftBytes, leftOK := defaultBytesValue(left)
+		rightBytes, rightOK := defaultBytesValue(right)
+		return leftOK && rightOK && bytes.Equal(leftBytes, rightBytes)
+	case IsArray(dataType):
+		if !isDefaultList(left) || !isDefaultList(right) || left.Len() != right.Len() {
+			return false
+		}
+		elem := AsArray(dataType).ElemType.Type
+		for i := range left.Len() {
+			if !defaultValuesEqual(elem, left.Index(i), right.Index(i)) {
+				return false
+			}
+		}
+		return true
+	case IsMap(dataType):
+		if left.Kind() != reflect.Map || right.Kind() != reflect.Map || left.Len() != right.Len() {
+			return false
+		}
+		mapped := AsMap(dataType)
+		for _, entry := range sortedDefaultMap(left) {
+			if !defaultMapContains(mapped, right, entry) {
+				return false
+			}
+		}
+		return true
+	default:
+		return defaultEnumValueEqual(dataType, left, right.Interface())
+	}
+}
+
+// defaultMapContains reports whether value holds a key equal to entry.key
+// whose element equals entry.value under the map's design types.
+func defaultMapContains(mapped *Map, value reflect.Value, entry defaultMapEntry) bool {
+	iterator := value.MapRange()
+	for iterator.Next() {
+		if defaultValuesEqual(mapped.KeyType.Type, entry.key, iterator.Key()) {
+			return defaultValuesEqual(mapped.ElemType.Type, entry.value, iterator.Value())
+		}
+	}
+	return false
+}
+
+// defaultBytesValue returns the content of a Bytes default authored as a
+// string or a byte slice.
+func defaultBytesValue(value reflect.Value) ([]byte, bool) {
+	switch {
+	case value.Kind() == reflect.String:
+		return []byte(value.String()), true
+	case value.Kind() == reflect.Slice && value.Type().Elem().Kind() == reflect.Uint8:
+		return value.Bytes(), true
+	default:
+		return nil, false
+	}
+}
+
+// isDefaultList reports whether value is an authored array default.
+func isDefaultList(value reflect.Value) bool {
+	return value.Kind() == reflect.Slice || value.Kind() == reflect.Array
 }
 
 // validateArray applies the element contract to every authored element.
