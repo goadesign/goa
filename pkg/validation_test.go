@@ -6,9 +6,11 @@ import (
 	"net"
 	"net/url"
 	"regexp/syntax"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -71,7 +73,7 @@ func TestValidateFormat(t *testing.T) {
 		// "invalid email":      {"invalidEmail", invalidEmail, FormatEmail, InvalidFormatError("invalidEmail", invalidEmail, FormatEmail, errors.New("mail: missing '@' or angle-addr"))},
 
 		"valid hostname":     {"validHostname", validHostname, FormatHostname, nil},
-		"invalid hostname":   {"invalidHostname", invalidHostname, FormatHostname, InvalidFormatError("invalidHostname", invalidHostname, FormatHostname, fmt.Errorf("hostname value '%s' does not match %s", invalidHostname, `^[[:alnum:]][[:alnum:]\-]{0,61}[[:alnum:]]|[[:alpha:]]$`))},
+		"invalid hostname":   {"invalidHostname", invalidHostname, FormatHostname, InvalidFormatError("invalidHostname", invalidHostname, FormatHostname, fmt.Errorf("hostname contains invalid character '_'"))},
 		"valid ipv4":         {"validIPv4", validIPv4, FormatIPv4, nil},
 		"valid ipv6 as ipv4": {"validIPv6", validIPv6, FormatIPv4, InvalidFormatError("validIPv6", validIPv6, FormatIPv4, fmt.Errorf("\"%s\" is an invalid %s value", validIPv6, FormatIPv4))},
 		"invalid ipv4":       {"invalidIPv4", invalidIPv4, FormatIPv4, InvalidFormatError("invalidIPv4", invalidIPv4, FormatIPv4, fmt.Errorf("\"%s\" is an invalid %s value", invalidIPv4, FormatIPv4))},
@@ -173,5 +175,89 @@ func TestValidatePattern(t *testing.T) {
 				t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
 			}
 		}
+	}
+}
+
+func TestValidateFormatHostname(t *testing.T) {
+	label63 := strings.Repeat("a", 63)
+	label64 := strings.Repeat("a", 64)
+	host253 := label63 + "." + label63 + "." + label63 + "." + strings.Repeat("b", 61)
+	host254 := label63 + "." + label63 + "." + label63 + "." + strings.Repeat("b", 62)
+
+	cases := []struct {
+		name    string
+		val     string
+		wantErr string
+	}{
+		{name: "two labels", val: "goa.design"},
+		{name: "three labels", val: "api.example.com"},
+		{name: "mixed case", val: "API.Example.COM"},
+		{name: "single label word", val: "localhost"},
+		{name: "single letter", val: "a"},
+		{name: "single uppercase letter", val: "Z"},
+		{name: "single label with hyphen and digit", val: "db-1"},
+		{name: "single label starting with digit", val: "1a"},
+		{name: "single label digits with hyphen", val: "1-2"},
+		{name: "digit-leading label", val: "0.pool.ntp.org"},
+		{name: "all-numeric non-final labels", val: "123.456.com"},
+		{name: "interior hyphens", val: "my-service-01.prod-us-east-1.internal"},
+		{name: "punycode first label", val: "xn--nxasmq6b.com"},
+		{name: "punycode top-level label", val: "example.xn--p1ai"},
+		{name: "max 63-char single label", val: label63},
+		{name: "max 63-char first label", val: label63 + ".com"},
+		{name: "max 253-char hostname", val: host253},
+
+		{name: "empty", val: "", wantErr: "hostname cannot be empty"},
+		{name: "254-char hostname", val: host254, wantErr: "hostname exceeds 253 characters"},
+		{name: "64-char single label", val: label64, wantErr: "hostname label exceeds 63 characters"},
+		{name: "64-char first label", val: label64 + ".com", wantErr: "hostname label exceeds 63 characters"},
+		{name: "64-char final label", val: "example." + label64, wantErr: "hostname label exceeds 63 characters"},
+		{name: "root dot", val: ".", wantErr: "hostname cannot contain empty label"},
+		{name: "leading dot", val: ".example.com", wantErr: "hostname cannot contain empty label"},
+		{name: "consecutive dots", val: "example..com", wantErr: "hostname cannot contain empty label"},
+		{name: "trailing dot single label", val: "example.", wantErr: "hostname cannot end with '.'"},
+		{name: "trailing dot multi label", val: "example.com.", wantErr: "hostname cannot end with '.'"},
+		{name: "hyphen only", val: "-", wantErr: "hostname label cannot start with '-'"},
+		{name: "leading hyphen first label", val: "-example.com", wantErr: "hostname label cannot start with '-'"},
+		{name: "leading hyphen inner label", val: "api.-example.com", wantErr: "hostname label cannot start with '-'"},
+		{name: "trailing hyphen single label", val: "a-", wantErr: "hostname label cannot end with '-'"},
+		{name: "trailing hyphen first label", val: "example-.com", wantErr: "hostname label cannot end with '-'"},
+		{name: "trailing hyphen final label", val: "example.com-", wantErr: "hostname label cannot end with '-'"},
+		{name: "single digit", val: "1", wantErr: "hostname top-level label cannot be all-numeric"},
+		{name: "multiple digits", val: "123", wantErr: "hostname top-level label cannot be all-numeric"},
+		{name: "ipv4 literal", val: "127.0.0.1", wantErr: "hostname top-level label cannot be all-numeric"},
+		{name: "all-numeric final label", val: "example.123", wantErr: "hostname top-level label cannot be all-numeric"},
+		{name: "underscore", val: "_hi_", wantErr: "hostname contains invalid character '_'"},
+		{name: "srv record underscore", val: "_sip._tcp.example.com", wantErr: "hostname contains invalid character '_'"},
+		{name: "space path and query after alnum prefix", val: "ab internal-admin/secret?x=1", wantErr: "hostname contains invalid character ' '"},
+		{name: "crlf injection after alnum prefix", val: "ab\r\nX-Injected: evil", wantErr: "hostname contains invalid character '\\r'"},
+		{name: "special chars ending in letter", val: "@#$%^&*()_+=letMeIn/../../etc/passwdX", wantErr: "hostname contains invalid character '@'"},
+		{name: "digit followed by at", val: "1@", wantErr: "hostname contains invalid character '@'"},
+		{name: "host with port", val: "example.com:8080", wantErr: "hostname contains invalid character ':'"},
+		{name: "scheme prefix", val: "https://example.com", wantErr: "hostname contains invalid character ':'"},
+		{name: "userinfo prefix", val: "user@example.com", wantErr: "hostname contains invalid character '@'"},
+		{name: "ipv6 literal", val: "::1", wantErr: "hostname contains invalid character ':'"},
+		{name: "nul byte", val: "ab\x00cd.com", wantErr: "hostname contains invalid character '\\x00'"},
+		{name: "del byte", val: "ab\x7fcd.com", wantErr: "hostname contains invalid character '\\x7f'"},
+		{name: "non-ascii rune", val: "caf\u00e9.example.com", wantErr: "hostname contains invalid character 'é'"},
+		{name: "invalid utf8 byte", val: "bad\xff.example.com", wantErr: "hostname contains non-ASCII byte 0xff"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := ValidateFormat("host", tc.val, FormatHostname)
+			if tc.wantErr == "" {
+				assert.NoError(t, err)
+				return
+			}
+			var se *ServiceError
+			if assert.ErrorAs(t, err, &se) {
+				assert.Equal(t, InvalidFormat, se.Name)
+				if assert.NotNil(t, se.Field) {
+					assert.Equal(t, "host", *se.Field)
+				}
+			}
+			assert.ErrorContains(t, err, tc.wantErr)
+		})
 	}
 }

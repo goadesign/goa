@@ -140,7 +140,7 @@ const (
 	// FormatEmail describes RFC5322 email addresses.
 	FormatEmail = "email"
 
-	// FormatHostname describes RFC1035 Internet hostnames.
+	// FormatHostname describes RFC1123 Internet hostnames.
 	FormatHostname = "hostname"
 
 	// FormatIPv4 describes RFC2373 IPv4 address values.

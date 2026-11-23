@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	googleuuid "github.com/google/uuid"
 )
@@ -29,7 +30,7 @@ const (
 	// FormatEmail describes RFC5322 email addresses.
 	FormatEmail = "email"
 
-	// FormatHostname describes RFC1035 Internet hostnames.
+	// FormatHostname describes RFC1123 Internet hostnames.
 	FormatHostname = "hostname"
 
 	// FormatIPv4 describes RFC2373 IPv4 address values.
@@ -62,12 +63,17 @@ const (
 
 	// FormatRFC1123 describes RFC1123 date time values.
 	FormatRFC1123 = "rfc1123"
+
+	// maxHostnameLength is the maximum presentation length of an Internet
+	// hostname without a trailing root dot (RFC 1035 section 2.3.4).
+	maxHostnameLength = 253
+
+	// maxHostnameLabelLength is the maximum length of a single dot-separated
+	// hostname label (RFC 1035 section 2.3.4).
+	maxHostnameLabelLength = 63
 )
 
-var (
-	hostnameRegex = regexp.MustCompile(`^[[:alnum:]][[:alnum:]\-]{0,61}[[:alnum:]]|[[:alpha:]]$`)
-	ipv4Regex     = regexp.MustCompile(`^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$`)
-)
+var ipv4Regex = regexp.MustCompile(`^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$`)
 
 // ValidateFormat validates val against f. It returns nil if the string conforms
 // to the format, an error otherwise. name is the name of the variable used in
@@ -79,7 +85,7 @@ var (
 //   - "date": RFC3339 date value
 //   - "date-time": RFC3339 date time value
 //   - "email": RFC5322 email address
-//   - "hostname": RFC1035 Internet host name
+//   - "hostname": RFC1123 Internet host name
 //   - "ipv4", "ipv6", "ip": RFC2673 and RFC2373 IP address values
 //   - "uri": RFC3986 URI value
 //   - "uri-reference": RFC3986 URI-reference value (URI or relative reference);
@@ -100,10 +106,7 @@ func ValidateFormat(name string, val string, f Format) error {
 	case FormatEmail:
 		_, err = mail.ParseAddress(val)
 	case FormatHostname:
-		if !hostnameRegex.MatchString(val) {
-			err = fmt.Errorf("hostname value '%s' does not match %s",
-				val, hostnameRegex.String())
-		}
+		err = validateHostname(val)
 	case FormatIPv4, FormatIPv6, FormatIP:
 		ip := net.ParseIP(val)
 		if ip == nil {
@@ -186,5 +189,68 @@ func validateUUID(uuid string) error {
 		return fmt.Errorf("uuid: expected RFC4122 format, but got %s", u.Variant().String())
 	}
 
+	return nil
+}
+
+// validateHostname enforces RFC 1123 section 2.1 syntax on presentation-form
+// Internet hostnames (1..253 ASCII bytes, dot-separated 1..63-byte LDH labels
+// with no leading or trailing dots or hyphens) and RFC 3696 section 2's rule
+// that the rightmost label is not all-numeric.
+func validateHostname(val string) error {
+	if len(val) == 0 {
+		return fmt.Errorf("hostname cannot be empty")
+	}
+	if len(val) > maxHostnameLength {
+		return fmt.Errorf("hostname exceeds %d characters", maxHostnameLength)
+	}
+	labelLen := 0
+	labelNonNumeric := false
+	prev := byte('.')
+	for i := 0; i < len(val); i++ {
+		c := val[i]
+		switch {
+		case 'a' <= c && c <= 'z' || 'A' <= c && c <= 'Z':
+			labelLen++
+			labelNonNumeric = true
+		case '0' <= c && c <= '9':
+			labelLen++
+		case c == '-':
+			if prev == '.' {
+				return fmt.Errorf("hostname label cannot start with '-'")
+			}
+			labelLen++
+			labelNonNumeric = true
+		case c == '.':
+			if prev == '.' {
+				return fmt.Errorf("hostname cannot contain empty label")
+			}
+			if prev == '-' {
+				return fmt.Errorf("hostname label cannot end with '-'")
+			}
+			labelLen = 0
+			labelNonNumeric = false
+			prev = c
+			continue
+		default:
+			r, width := utf8.DecodeRuneInString(val[i:])
+			if r == utf8.RuneError && width == 1 {
+				return fmt.Errorf("hostname contains non-ASCII byte 0x%02x", c)
+			}
+			return fmt.Errorf("hostname contains invalid character %q", r)
+		}
+		if labelLen > maxHostnameLabelLength {
+			return fmt.Errorf("hostname label exceeds %d characters", maxHostnameLabelLength)
+		}
+		prev = c
+	}
+	if prev == '.' {
+		return fmt.Errorf("hostname cannot end with '.'")
+	}
+	if prev == '-' {
+		return fmt.Errorf("hostname label cannot end with '-'")
+	}
+	if !labelNonNumeric {
+		return fmt.Errorf("hostname top-level label cannot be all-numeric")
+	}
 	return nil
 }
