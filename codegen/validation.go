@@ -663,6 +663,8 @@ func constant(formatName string) string {
 		return "FormatIP"
 	case "uri":
 		return "FormatURI"
+	case "uri-reference":
+		return "FormatURIReference"
 	case "mac":
 		return "FormatMAC"
 	case "cidr":

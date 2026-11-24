@@ -44,6 +44,10 @@ const (
 	// FormatURI describes RFC3986 URI values.
 	FormatURI = "uri"
 
+	// FormatURIReference describes RFC3986 URI-reference values: either a URI or
+	// a relative reference such as "/users/123", "../a", "?q=1" or "#frag".
+	FormatURIReference = "uri-reference"
+
 	// FormatMAC describes IEEE 802 MAC-48, EUI-48 or EUI-64 MAC address values.
 	FormatMAC = "mac"
 
@@ -78,6 +82,8 @@ var (
 //   - "hostname": RFC1035 Internet host name
 //   - "ipv4", "ipv6", "ip": RFC2673 and RFC2373 IP address values
 //   - "uri": RFC3986 URI value
+//   - "uri-reference": RFC3986 URI-reference value (URI or relative reference);
+//     the empty string is a valid reference
 //   - "mac": IEEE 802 MAC-48, EUI-48 or EUI-64 MAC address value
 //   - "cidr": RFC4632 and RFC4291 CIDR notation IP address value
 //   - "regexp": Regular expression syntax accepted by RE2
@@ -115,6 +121,8 @@ func ValidateFormat(name string, val string, f Format) error {
 		}
 	case FormatURI:
 		_, err = url.ParseRequestURI(val)
+	case FormatURIReference:
+		err = validateURIReference(val)
 	case FormatMAC:
 		_, err = net.ParseMAC(val)
 	case FormatCIDR:
