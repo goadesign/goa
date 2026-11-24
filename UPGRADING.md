@@ -43,10 +43,10 @@ pulled to a patch-level `go` directive.
 
 Goa no longer enforces a patched toolchain through its `go` directive, so the
 toolchain a service builds with is the service's choice. Build with the latest
-patch release of your Go version (CI tests Go 1.26.11 and Go 1.27.4), pin it in
-your own `go.mod` `toolchain` line or build image if you need a floor, and run
-`govulncheck` to catch standard-library vulnerabilities. A Go 1.27 toolchain
-older than 1.27.3 still lacks the fixes listed above.
+patch release of your Go version (CI tests the two supported Go releases), pin
+it in your own `go.mod` `toolchain` line or build image if you need a floor,
+and run `govulncheck` to catch standard-library vulnerabilities. A Go 1.27
+toolchain older than 1.27.3 still lacks the fixes listed above.
 
 ## v3.36.0: strict Internet hostname validation (`GHSA-hpx2-h3qx-xjh9`)
 
