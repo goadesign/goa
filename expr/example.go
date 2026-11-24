@@ -197,6 +197,11 @@ func byFormat(a *AttributeExpr, r *ExampleGenerator) any {
 		return nil
 	}
 	format := a.Validation.Format
+	// Handle uri-reference before evaluating the eager map literal below so
+	// existing formats do not consume extra RNG state across retry attempts.
+	if format == FormatURIReference {
+		return r.uriReference()
+	}
 	if res, ok := map[ValidationFormat]any{
 		FormatEmail:    r.Email(),
 		FormatHostname: r.Hostname(),

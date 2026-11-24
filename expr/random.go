@@ -107,6 +107,13 @@ type (
 
 	// deterministicRandomizerFactory needs no settings.
 	deterministicRandomizerFactory struct{}
+
+	// uriReferenceRandomizer is an optional interface implemented by randomizers
+	// that generate dedicated URI-reference examples without expanding the
+	// exported v3 Randomizer interface.
+	uriReferenceRandomizer interface {
+		URIReference() string
+	}
 )
 
 // NewExampleGenerator returns a generator with no selected example sequence and
@@ -299,6 +306,16 @@ func (r *FakerRandomizer) URL() string {
 	return r.faker.URL()
 }
 
+// URIReference returns the next URI-reference: either a full URI such as
+// "http://example.com/jdoe" or an absolute-path relative reference such as
+// "/jdoe", chosen with equal probability.
+func (r *FakerRandomizer) URIReference() string {
+	if r.rand.Intn(2) == 0 {
+		return r.faker.URL()
+	}
+	return "/" + r.faker.UserName()
+}
+
 // Characters returns the next string containing n characters.
 func (r *FakerRandomizer) Characters(n int) string {
 	return r.faker.Characters(n)
@@ -369,6 +386,9 @@ func (DeterministicRandomizer) IPv6Address() net.IP { return net.IPv6zero }
 // URL returns a fixed URL.
 func (DeterministicRandomizer) URL() string { return "https://example.com/foo" }
 
+// URIReference returns a fixed relative reference.
+func (DeterministicRandomizer) URIReference() string { return "/foo" }
+
 // Characters returns n copies of "a".
 func (DeterministicRandomizer) Characters(n int) string { return strings.Repeat("a", n) }
 
@@ -429,4 +449,14 @@ func (r *ExampleGenerator) structural(identity ExampleIdentity) *ExampleGenerato
 		panic("example generator must be anchored before structural descent")
 	}
 	return r.At(identity)
+}
+
+// uriReference returns a URI-reference example from the underlying randomizer
+// when it implements uriReferenceRandomizer, falling back to URL for custom
+// Randomizer implementations that only implement the base interface.
+func (r *ExampleGenerator) uriReference() string {
+	if u, ok := r.exampleRandomizer.(uriReferenceRandomizer); ok {
+		return u.URIReference()
+	}
+	return r.URL()
 }
