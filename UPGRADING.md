@@ -1,11 +1,11 @@
-# Upgrading to Goa v3.35.0
+# Upgrading to Goa v3.36.0
 
 Select the exact versions below only after their tags are available. Publication
 of the Goa tag does not itself publish the plugins or examples tags.
 
 Goa's root and nested JSON-RPC module files require **Go 1.27.3**, without a
 toolchain directive. Because Go modules select the maximum required `go`
-version across the dependency graph, upgrading to Goa v3.35.0 ensures
+version across the dependency graph, upgrading to Goa v3.36.0 ensures
 downstream services build with Go 1.27.3 or later, incorporating:
 
 - **Go 1.27.3 (`CVE-2026-111943` in `crypto/x509`):** blocks trust in eight
@@ -24,14 +24,129 @@ downstream services build with Go 1.27.3 or later, incorporating:
   `CVE-2026-97030`), `os.Root` junction traversal (`CVE-2026-56857`), and
   `cmd/go` checksum database checks (`CVE-2026-94444`, `CVE-2026-94447`).
 
-The code changes merged for v3.35.0 passed CI on Go 1.27.3 on Ubuntu and
+The code changes merged for v3.36.0 passed CI on Go 1.27.3 on Ubuntu and
 Windows; Windows does not run the nested JSON-RPC suite. A declared minimum is
 not a claim that every dependency graph was tested on that version.
 
-The v3.35.0 sections below describe the current upgrade. The v3.34.0 and
-v3.33.0 sections and the earlier v3.31/v3.32 migrations are retained as
+The v3.36.0 sections below describe the current upgrade. The v3.35.0, v3.34.0,
+and v3.33.0 sections and the earlier v3.31/v3.32 migrations are retained as
 historical guidance; the installation and regeneration sections select the
 current target after publication.
+
+## v3.36.0: strict Internet hostname validation (`GHSA-hpx2-h3qx-xjh9`)
+
+`goa.ValidateFormat(..., goa.FormatHostname)` now validates Internet hostnames
+against RFC 1123 section 2.1 and RFC 3696 section 2: values must be 1 to 253
+ASCII bytes of dot-separated labels (1 to 63 bytes each, with no empty labels or
+trailing root dot), where each label contains only ASCII letters, digits, and
+interior hyphens, and the rightmost label is not all-numeric. Previously, a
+mis-anchored regular expression accepted any string starting with two
+alphanumeric characters or ending with an ASCII letter, allowing whitespace,
+control characters, slashes, queries, or path-traversal sequences through
+`Format(FormatHostname)`.
+
+Upgrading `goa.design/goa/v3` protects existing generated HTTP, gRPC, and
+JSON-RPC validators immediately without re-running `goa gen`; design-time
+`Default` validation also enforces the stricter rule. Single-label hostnames
+(`"localhost"`), digit-leading labels (`"0.pool.ntp.org"`), and Punycode
+A-labels (`"example.xn--p1ai"`) continue to pass. Callers that previously passed
+underscores, trailing dots, ports, bare digits, IPv4 addresses, or full URIs to
+a `Format(FormatHostname)` field now receive an `invalid_format` error; fields
+intended to accept IP addresses or URIs should declare `FormatIP` or
+`FormatURI` / `FormatURIReference`.
+
+## v3.36.0: RFC 3986 URI-reference validation (`FormatURIReference`)
+
+Add `Format(FormatURIReference)` (`"uri-reference"`) to validate strings that
+may be either a full RFC 3986 URI or a relative reference such as `"/users/123"`,
+`"../a"`, `"?q=1"`, or `"#frag"`. Generated validators call
+`goa.ValidateFormat(..., goa.FormatURIReference)`, and OpenAPI 2 and 3 documents
+emit `"format": "uri-reference"`. Unlike `FormatURI` (which delegates to Go's
+`url.ParseRequestURI`), `FormatURIReference` checks the RFC 3986 grammar
+directly, including scheme characters, percent-encoded triplets, IP-literal
+hosts, and colon-free first relative path segments.
+
+Under RFC 3986, the empty string `""` is a valid same-document reference; pair
+`Format(FormatURIReference)` with `MinLength(1)` when empty values should be
+rejected. Custom `expr.Randomizer` implementations remain source-compatible and
+may optionally implement `URIReference() string` to customize generated example
+values.
+
+## v3.36.0: HTTP mapping defaults checked against payload defaults
+
+Generated HTTP server decoders and CLI flags read field defaults on object
+payloads from the payload attribute, whereas OpenAPI generation and pointer
+shaping also inspect defaults written inside HTTP `Param`, `Header`, and
+`Cookie` blocks. `goa gen` now rejects HTTP path parameter, query parameter,
+header, and cookie `Default` declarations on object payloads when the mapped
+payload attribute has no `Default` or declares a different value.
+
+If generation fails with a mismatched HTTP default diagnostic, move the
+`Default` onto the corresponding attribute in `Payload` (or keep identical
+values in both places) before regenerating. Matching defaults continue to work
+unchanged.
+
+## v3.36.0: cascaded collection views, OpenAPI shared error statuses, and in-memory source generation
+
+- **Cascaded result views on collections:** Setting `View(...)` on an `ArrayOf`,
+  `MapOf`, or named collection attribute inside a `ResultType` view now applies
+  that view to nested element conversions and view validators instead of falling
+  back to `"default"`. If an existing design sets a non-default `View(...)` on a
+  collection attribute whose nested element fields or required checks differ
+  from `"default"` (whether omitting default-view fields or adding/requiring
+  fields from a wider view), regenerate, deploy, and roll back clients and
+  servers together so both peers project and validate the same element view.
+- **Union branch selection validation:** Generated union validators and HTTP /
+  JSON-RPC union-body decoders now call the union's `Validate()` method before
+  checking branch fields—including when no branch declares field constraints.
+  Previously, switching on `Kind()` without calling `Validate()` allowed
+  uninitialized required or pointer unions (`Kind() == ""`), unknown `Kind`
+  discriminators, or selected `nil` object and collection branches to pass
+  validation silently. Callers or tests passing those invalid union values now
+  receive a selection error; absent optional value unions (`Kind() == ""`) and
+  `nil` optional union pointers remain valid.
+- **Shared HTTP error status codes in OpenAPI:** When multiple errors on an
+  endpoint map to the same HTTP status code, OpenAPI 3 documents now preserve
+  every error description, distinct body schema (`anyOf`), and per-error example
+  instead of overwriting earlier errors with the last declared one; Swagger 2
+  lists all descriptions and merged headers while keeping the first body schema
+  and matching example. Review expected OpenAPI diffs on endpoints that share
+  error status codes.
+- **In-memory generated source (`codegen/generator`):** Tooling authors can call
+  `generator.Sources` to render formatted generated files in memory without
+  writing to disk, or `generator.CompleteSources` when publishing generated
+  trees from sandboxes (`CompleteSources` rejects designs whose planned files
+  rely on `SkipExist` or filesystem finalizers such as `protoc`).
+- **Additional codegen fixes:** Preserves nullable named objects in gRPC
+  collections, reuses stream item wrapper messages in gRPC stream envelopes,
+  imports `context` in HTTP server codecs for WebSocket-only services with
+  mapped errors, resolves transitive `Extend`/`Reference` inheritance and
+  recursive `ResultType` views in dependency order, and fixes recursive union
+  generation across HTTP (including `OneOf` error and multipart bodies) and
+  gRPC.
+
+## v3.36.0: upgrade order and rollback
+
+1. Ensure your build environment has **Go 1.27.3 or later** installed. To pick
+   up the `FormatHostname` security fix (`GHSA-hpx2-h3qx-xjh9`) alone without
+   regenerating code, run `go get goa.design/goa/v3@v3.36.0` and rebuild; verify
+   that no caller sends non-hostname values (such as underscores, trailing dots,
+   ports, or IPv4 literals) to `Format(FormatHostname)` fields.
+2. For full code-generation upgrades after publication, install `v3.36.0` of
+   both the Goa module and the `goa` command as shown in the installation
+   section below, update `goa.design/plugins/v3` to `v3.36.0` in the same change
+   when used, and run `goa gen`.
+3. If `goa gen` reports a transport-only or mismatched HTTP `Param`, `Header`,
+   or `Cookie` default on an object payload, move or align that `Default` on the
+   payload attribute and regenerate. Check tests and handwritten callers that
+   construct generated `OneOf` values to ensure required or pointer unions select
+   a valid non-nil branch.
+4. Regenerate, deploy, and roll back clients and servers together if an existing
+   `ResultType` view declares a non-default `View(...)` on a collection attribute
+   whose element fields or required checks differ from `"default"` view (whether
+   narrower or wider). All other v3.36.0 runtime and generator changes roll back
+   by restoring the previous module version and generated tree, with no
+   stored-data migration.
 
 ## v3.35.0: forwarding existing gRPC errors
 
@@ -801,7 +916,7 @@ preview.
 | Required gRPC scalar fields | Regenerate protobuf code and update direct message literals. Coordinate peers when required zero or empty values matter. |
 | JSON-RPC errors, selected views, or server streams | Update both generated peers and custom clients for the changed envelopes and stream lifecycle. JSON-RPC WebSocket generation has been removed. |
 | Dynamic gRPC views or optional primitive HTTP SSE data | Regenerate and deploy both peers together for the cases listed under coordinated deployment. |
-| Code-generation plugins | Upgrade `goa.design/plugins/v3` to v3.35.0 and migrate custom plugins that declare names or call removed generator APIs. |
+| Code-generation plugins | Upgrade `goa.design/plugins/v3` to v3.36.0 and migrate custom plugins that declare names or call removed generator APIs. |
 
 There is no persisted-data migration. Keep the previous binaries, dependency
 versions, design, and generated tree available for rollback.
@@ -859,15 +974,15 @@ Review the matching migration sections if your project has any of these characte
 Test ordinary HTTP-only services as well. Review the generated diff even when
 none of the specialized migrations below applies.
 
-## Install v3.35.0 after publication
+## Install v3.36.0 after publication
 
 After the exact tags are published and verified, start from a branch with the
 current generated tree committed. Install both the Goa module and the `goa`
 command from the same release version:
 
 ```bash
-go get goa.design/goa/v3@v3.35.0
-go install goa.design/goa/v3/cmd/goa@v3.35.0
+go get goa.design/goa/v3@v3.36.0
+go install goa.design/goa/v3/cmd/goa@v3.36.0
 goa version
 ```
 
@@ -875,7 +990,7 @@ The Go command records the same release version in `go.mod`. The installed
 command reports the same version:
 
 ```text
-Goa version v3.35.0
+Goa version v3.36.0
 ```
 
 Do not use an older `goa` command with the new module. Also install the
@@ -892,11 +1007,11 @@ If your design imports the official plugins, update that module in the same
 application change:
 
 ```bash
-go get goa.design/plugins/v3@v3.35.0
+go get goa.design/plugins/v3@v3.36.0
 ```
 
 Wait for the matching plugins/examples tags before selecting them; their
-publication is not implied by the Goa tag. Use v3.35.0 when copying examples
+publication is not implied by the Goa tag. Use v3.36.0 when copying examples
 for this target. Custom plugins must complete
 the generator-library migration below before regenerating an application.
 
