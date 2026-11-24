@@ -466,6 +466,9 @@ func (a *AttributeExpr) HasDefaultValue(attName string) bool {
 func (a *AttributeExpr) GetDefault(attName string) any {
 	if o := AsObject(a.Type); o != nil {
 		att := o.Attribute(attName)
+		if att == nil {
+			return nil
+		}
 		if att.DefaultValue != nil {
 			return att.DefaultValue
 		}

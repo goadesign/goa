@@ -1093,6 +1093,8 @@ func (e *HTTPEndpointExpr) validateHeadersAndCookies() *eval.ValidationErrors {
 			}
 			return nil
 		})
+		e.validateMappedDefaults(verr, "header", e.Headers)
+		e.validateMappedDefaults(verr, "cookie", e.Cookies)
 	case *Array:
 		if len(*AsObject(headers.Type)) > 1 {
 			verr.Add(e, "Payload type is array but HTTP endpoint defines multiple headers. At most one header must be defined and it must be an array.")
