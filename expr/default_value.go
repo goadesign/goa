@@ -273,79 +273,6 @@ func defaultEnumValueEqual(dataType DataType, value reflect.Value, allowed any) 
 	return reflect.DeepEqual(value.Convert(target).Interface(), allowedValue.Convert(target).Interface())
 }
 
-// defaultValuesEqual reports whether two authored defaults describe the same
-// value of dataType. Default accepts several Go representations of one design
-// value, such as int or int64 for Int64 and string or []byte for Bytes, so
-// numbers are compared after conversion to the design primitive, bytes by
-// content, and collections element by element.
-func defaultValuesEqual(dataType DataType, left, right reflect.Value) bool {
-	left, leftOK := concreteDefaultValue(left)
-	right, rightOK := concreteDefaultValue(right)
-	if !leftOK || !rightOK {
-		return leftOK == rightOK
-	}
-	switch {
-	case defaultPrimitive(dataType) == Bytes:
-		leftBytes, leftOK := defaultBytesValue(left)
-		rightBytes, rightOK := defaultBytesValue(right)
-		return leftOK && rightOK && bytes.Equal(leftBytes, rightBytes)
-	case IsArray(dataType):
-		if !isDefaultList(left) || !isDefaultList(right) || left.Len() != right.Len() {
-			return false
-		}
-		elem := AsArray(dataType).ElemType.Type
-		for i := range left.Len() {
-			if !defaultValuesEqual(elem, left.Index(i), right.Index(i)) {
-				return false
-			}
-		}
-		return true
-	case IsMap(dataType):
-		if left.Kind() != reflect.Map || right.Kind() != reflect.Map || left.Len() != right.Len() {
-			return false
-		}
-		mapped := AsMap(dataType)
-		for _, entry := range sortedDefaultMap(left) {
-			if !defaultMapContains(mapped, right, entry) {
-				return false
-			}
-		}
-		return true
-	default:
-		return defaultEnumValueEqual(dataType, left, right.Interface())
-	}
-}
-
-// defaultMapContains reports whether value holds a key equal to entry.key
-// whose element equals entry.value under the map's design types.
-func defaultMapContains(mapped *Map, value reflect.Value, entry defaultMapEntry) bool {
-	iterator := value.MapRange()
-	for iterator.Next() {
-		if defaultValuesEqual(mapped.KeyType.Type, entry.key, iterator.Key()) {
-			return defaultValuesEqual(mapped.ElemType.Type, entry.value, iterator.Value())
-		}
-	}
-	return false
-}
-
-// defaultBytesValue returns the content of a Bytes default authored as a
-// string or a byte slice.
-func defaultBytesValue(value reflect.Value) ([]byte, bool) {
-	switch {
-	case value.Kind() == reflect.String:
-		return []byte(value.String()), true
-	case value.Kind() == reflect.Slice && value.Type().Elem().Kind() == reflect.Uint8:
-		return value.Bytes(), true
-	default:
-		return nil, false
-	}
-}
-
-// isDefaultList reports whether value is an authored array default.
-func isDefaultList(value reflect.Value) bool {
-	return value.Kind() == reflect.Slice || value.Kind() == reflect.Array
-}
-
 // validateArray applies the element contract to every authored element.
 func (v *defaultValueValidator) validateArray(attribute *AttributeExpr, value reflect.Value, path string) {
 	element := AsArray(attribute.Type).ElemType
@@ -480,6 +407,180 @@ func (v *defaultValueValidator) addTypeError(path string, value reflect.Value, d
 	v.add("%s has type %s, expected %s", path, value.Type(), dataType.Name())
 }
 
+// defaultValuesEqual reports whether two authored defaults describe the same
+// value for their attributes, and whether both values are compatible with their
+// design types. Default accepts several Go representations of one design value,
+// such as int or int64 for Int64, string or []byte for Bytes, and custom Go
+// types declared with struct:field:type metadata, so primitives are compared
+// after conversion to the design representation and collections element by
+// element.
+func defaultValuesEqual(
+	leftAttr, rightAttr *AttributeExpr,
+	left, right reflect.Value,
+) (equal, comparable bool) {
+	left, leftOK := concreteDefaultValue(left)
+	right, rightOK := concreteDefaultValue(right)
+	if !leftOK || !rightOK {
+		return leftOK == rightOK, true
+	}
+	switch {
+	case defaultPrimitive(leftAttr.Type) == Any:
+		return reflect.DeepEqual(left.Interface(), right.Interface()), true
+	case IsPrimitive(leftAttr.Type):
+		leftVal, leftOK := comparablePrimitiveDefault(leftAttr, left)
+		rightVal, rightOK := comparablePrimitiveDefault(rightAttr, right)
+		if !leftOK || !rightOK {
+			return false, false
+		}
+		if leftBytes, ok := leftVal.([]byte); ok {
+			rightBytes, ok := rightVal.([]byte)
+			return ok && bytes.Equal(leftBytes, rightBytes), true
+		}
+		return reflect.DeepEqual(leftVal, rightVal), true
+	case IsArray(leftAttr.Type):
+		if !isDefaultList(left) || !isDefaultList(right) {
+			return false, false
+		}
+		leftElem := AsArray(leftAttr.Type).ElemType
+		rightElem := AsArray(rightAttr.Type).ElemType
+		if left.Len() != right.Len() {
+			return false, arrayDefaultsComparable(leftElem, left) && arrayDefaultsComparable(rightElem, right)
+		}
+		equal = true
+		for i := range left.Len() {
+			elemEqual, elemComparable := defaultValuesEqual(leftElem, rightElem, left.Index(i), right.Index(i))
+			if !elemComparable {
+				return false, false
+			}
+			if !elemEqual {
+				equal = false
+			}
+		}
+		return equal, true
+	case IsMap(leftAttr.Type):
+		if left.Kind() != reflect.Map || right.Kind() != reflect.Map {
+			return false, false
+		}
+		leftMap := AsMap(leftAttr.Type)
+		rightMap := AsMap(rightAttr.Type)
+		leftEntries := sortedDefaultMap(left)
+		rightEntries := sortedDefaultMap(right)
+		if !mapDefaultsComparable(leftMap, leftEntries) || !mapDefaultsComparable(rightMap, rightEntries) {
+			return false, false
+		}
+		if len(leftEntries) != len(rightEntries) {
+			return false, true
+		}
+		return defaultMapsEqual(leftMap, rightMap, leftEntries, rightEntries), true
+	default:
+		return reflect.DeepEqual(left.Interface(), right.Interface()), true
+	}
+}
+
+// comparablePrimitiveDefault normalizes a valid primitive default into the Go
+// representation used by the design type so equivalent representations compare
+// equal symmetrically.
+func comparablePrimitiveDefault(attribute *AttributeExpr, value reflect.Value) (any, bool) {
+	primitive := defaultPrimitive(attribute.Type)
+	if !attribute.Type.IsCompatible(value.Interface()) {
+		if !hasCustomFieldType(attribute) {
+			return nil, false
+		}
+		var ok bool
+		value, ok = convertCustomPrimitive(primitive, value)
+		if !ok {
+			return nil, false
+		}
+	}
+	switch primitive {
+	case Bytes:
+		return defaultBytesValue(value)
+	case Int, Int32, Int64, UInt, UInt32, UInt64, Float32, Float64:
+		if !defaultPrimitiveValueFits(primitive, value) {
+			return nil, false
+		}
+		target := defaultPrimitiveReflectType(primitive)
+		if !value.Type().ConvertibleTo(target) {
+			return nil, false
+		}
+		return value.Convert(target).Interface(), true
+	default:
+		return value.Interface(), true
+	}
+}
+
+// arrayDefaultsComparable reports whether every element in value is compatible
+// with elemAttr.
+func arrayDefaultsComparable(elemAttr *AttributeExpr, value reflect.Value) bool {
+	for i := range value.Len() {
+		elem := value.Index(i)
+		if _, comparable := defaultValuesEqual(elemAttr, elemAttr, elem, elem); !comparable {
+			return false
+		}
+	}
+	return true
+}
+
+// mapDefaultsComparable reports whether every key and element in entries is
+// compatible with mapped.
+func mapDefaultsComparable(mapped *Map, entries []defaultMapEntry) bool {
+	for _, entry := range entries {
+		if _, keyOK := defaultValuesEqual(mapped.KeyType, mapped.KeyType, entry.key, entry.key); !keyOK {
+			return false
+		}
+		if _, valOK := defaultValuesEqual(mapped.ElemType, mapped.ElemType, entry.value, entry.value); !valOK {
+			return false
+		}
+	}
+	return true
+}
+
+// defaultMapsEqual reports whether left and right hold a one-to-one set of
+// equal map entries under their design key and element attributes.
+func defaultMapsEqual(leftMap, rightMap *Map, left, right []defaultMapEntry) bool {
+	matched := make([]bool, len(right))
+	for _, leftEntry := range left {
+		found := false
+		for i, rightEntry := range right {
+			if matched[i] {
+				continue
+			}
+			keyEqual, _ := defaultValuesEqual(leftMap.KeyType, rightMap.KeyType, leftEntry.key, rightEntry.key)
+			if !keyEqual {
+				continue
+			}
+			valEqual, _ := defaultValuesEqual(leftMap.ElemType, rightMap.ElemType, leftEntry.value, rightEntry.value)
+			if valEqual {
+				matched[i] = true
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
+}
+
+// defaultBytesValue returns the content of a Bytes default authored as a
+// string or a byte slice.
+func defaultBytesValue(value reflect.Value) ([]byte, bool) {
+	switch {
+	case value.Kind() == reflect.String:
+		return []byte(value.String()), true
+	case value.Kind() == reflect.Slice && value.Type().Elem().Kind() == reflect.Uint8:
+		return value.Bytes(), true
+	default:
+		return nil, false
+	}
+}
+
+// isDefaultList reports whether value is an authored array default.
+func isDefaultList(value reflect.Value) bool {
+	return value.Kind() == reflect.Slice || value.Kind() == reflect.Array
+}
+
 // concreteDefaultValue removes interfaces and pointers while preserving the
 // concrete value used for type and validation checks.
 func concreteDefaultValue(value reflect.Value) (reflect.Value, bool) {
@@ -518,7 +619,40 @@ func customPrimitiveDefaultValue(attribute *AttributeExpr, value reflect.Value) 
 	if len(metadata) == 0 || metadata[0] == "" {
 		return reflect.Value{}, false
 	}
-	primitive := defaultPrimitive(attribute.Type)
+	return convertCustomPrimitive(defaultPrimitive(attribute.Type), value)
+}
+
+// hasCustomFieldType reports whether attribute or a named type in its chain
+// declares a custom Go field type via struct:field:type metadata.
+func hasCustomFieldType(attribute *AttributeExpr) bool {
+	if attribute == nil {
+		return false
+	}
+	if metadata := attribute.Meta["struct:field:type"]; len(metadata) > 0 && metadata[0] != "" {
+		return true
+	}
+	seen := make(map[UserType]struct{})
+	dataType := attribute.Type
+	for {
+		userType, ok := dataType.(UserType)
+		if !ok || userType.Attribute() == nil {
+			return false
+		}
+		if _, visited := seen[userType]; visited {
+			return false
+		}
+		seen[userType] = struct{}{}
+		if metadata := userType.Attribute().Meta["struct:field:type"]; len(metadata) > 0 && metadata[0] != "" {
+			return true
+		}
+		dataType = userType.Attribute().Type
+	}
+}
+
+// convertCustomPrimitive converts a custom-typed primitive default to its
+// underlying design primitive representation while keeping numeric values
+// intact for range validation.
+func convertCustomPrimitive(primitive Primitive, value reflect.Value) (reflect.Value, bool) {
 	switch primitive {
 	case Int, Int32, Int64, UInt, UInt32, UInt64, Float32, Float64:
 		switch value.Kind() {

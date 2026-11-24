@@ -533,6 +533,11 @@ func TestAttributeExprHasDefaultValue(t *testing.T) {
 			typ:      object,
 			expected: false,
 		},
+		"missing attribute": {
+			attName:  "missing",
+			typ:      object,
+			expected: false,
+		},
 		"not object": {
 			typ:      Boolean,
 			expected: false,
