@@ -115,7 +115,7 @@ Here, `genhello` is the generated `gen/hello` package. The generated transports 
 
 ### Try it
 
-Start with **Go 1.27.3 or later**:
+Start with **Go 1.26 or later**, on the latest patch release of your Go version:
 
 ```bash
 mkdir hello && cd hello
@@ -193,7 +193,7 @@ You implement the planner and application behavior; Goa-AI generates contracts, 
 
 ## Upgrading to v3.36.0
 
-v3.36.0 enforces RFC 1123 and RFC 3696 Internet hostname rules for `FormatHostname` (`GHSA-hpx2-h3qx-xjh9`), adds RFC 3986 `FormatURIReference` validation, checks HTTP parameter, header, and cookie `Default` values against object payload defaults during generation, exposes formatted generated source in memory (`generator.Sources` and `generator.CompleteSources`), documents every error sharing an HTTP status in OpenAPI, and fixes union branch validation, cascaded collection result views, recursive unions, WebSocket error codec imports, and gRPC stream and collection generation. Goa requires **Go 1.27.3 or later**.
+v3.36.0 enforces RFC 1123 and RFC 3696 Internet hostname rules for `FormatHostname` (`GHSA-hpx2-h3qx-xjh9`), adds RFC 3986 `FormatURIReference` validation, checks HTTP parameter, header, and cookie `Default` values against object payload defaults during generation, exposes formatted generated source in memory (`generator.Sources` and `generator.CompleteSources`), documents every error sharing an HTTP status in OpenAPI, and fixes union branch validation, cascaded collection result views, recursive unions, WebSocket error codec imports, and gRPC stream and collection generation. v3.36.0 requires **Go 1.27.3 or later**.
 
 Projects upgrading from v3.30.x must also account for the intentional source and transport changes introduced in v3.31. Read the **[upgrade guide](UPGRADING.md)** before regenerating; it keeps the current v3.36.0 changes separate from those earlier migrations. The [release notes](https://github.com/goadesign/goa/releases/tag/v3.36.0) explain the benefits and fixes.
 
