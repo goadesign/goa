@@ -261,9 +261,10 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 	setOperationIDFormat(e.Meta)
 	setOperationIDFormat(m.Meta)
 
-	// request body
+	// request body (or WebSocket streaming payload when HTTP body is empty)
 	var requestBody *RequestBodyRef
-	if e.Body.Type != expr.Empty {
+	switch {
+	case e.Body.Type != expr.Empty:
 		ct := "application/json"
 		if e.MultipartRequest {
 			ct = "multipart/form-data"
@@ -277,6 +278,15 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 			Required:    e.RequestBodyRequired(),
 			Content:     map[string]*MediaType{ct: mt},
 			Extensions:  openapi.ExtensionsFromExpr(e.Body.Meta),
+		}}
+	case e.StreamingBody != nil && e.StreamingBody.Type != expr.Empty:
+		mt := &MediaType{Schema: bodies.RequestBody}
+		initExamples(mt, e.StreamingBody, rand.At(expr.MethodStreamingPayloadExampleIdentity(e.MethodExpr)), values)
+		requestBody = &RequestBodyRef{Value: &RequestBody{
+			Description: streamingRequestBodyDescription(e, values),
+			Required:    false,
+			Content:     map[string]*MediaType{"application/json": mt},
+			Extensions:  openapi.ExtensionsFromExpr(e.StreamingBody.Meta),
 		}}
 	}
 
@@ -441,6 +451,31 @@ func requestBodyDescription(e *expr.HTTPEndpointExpr, values openapi.Values) str
 // been projected out.
 func defaultRequestBodyDescription(e *expr.HTTPEndpointExpr) string {
 	return fmt.Sprintf("Request body for %s.", e.Name())
+}
+
+// streamingRequestBodyDescription returns the description authored on an
+// endpoint's WebSocket streaming payload or its referenced user type, falling
+// back to a deterministic default when none was authored.
+func streamingRequestBodyDescription(e *expr.HTTPEndpointExpr, values openapi.Values) string {
+	if description := values.Description(e.StreamingBody.AuthoredAttribute(), e.StreamingBody.Description); description != "" {
+		return description
+	}
+	if ut, ok := e.StreamingBody.Type.(expr.UserType); ok {
+		if desc := values.Description(ut.Attribute().AuthoredAttribute(), ut.Attribute().Description); desc != "" {
+			return desc
+		}
+	}
+	if e.MethodExpr.StreamingPayload != nil {
+		if desc := values.Description(e.MethodExpr.StreamingPayload.AuthoredAttribute(), e.MethodExpr.StreamingPayload.Description); desc != "" {
+			return desc
+		}
+		if ut, ok := e.MethodExpr.StreamingPayload.Type.(expr.UserType); ok {
+			if desc := values.Description(ut.Attribute().AuthoredAttribute(), ut.Attribute().Description); desc != "" {
+				return desc
+			}
+		}
+	}
+	return fmt.Sprintf("Streaming payload for %s.", e.Name())
 }
 
 // buildFileServerOperation builds the OpenAPI Operation object for the given file server.

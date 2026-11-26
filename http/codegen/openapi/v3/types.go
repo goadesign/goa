@@ -174,7 +174,7 @@ func buildBodyTypes(api *expr.APIExpr, types []expr.UserType, resultTypes []*exp
 			}
 			req := sf.at(expr.RequestBodyExampleIdentity(e)).schemafy(reqBody)
 			if e.StreamingBody != nil {
-				sreq := sf.at(expr.MethodStreamingPayloadExampleIdentity(e.MethodExpr)).schemafy(e.StreamingBody)
+				sreq := sf.at(expr.MethodStreamingPayloadExampleIdentity(e.MethodExpr)).schemafy(streamingBodySchemaAttribute(e.StreamingBody))
 				var note string
 				if sreq.Ref != "" {
 					note = sreq.Ref
@@ -183,10 +183,12 @@ func buildBodyTypes(api *expr.APIExpr, types []expr.UserType, resultTypes []*exp
 				}
 				if req == nil {
 					req = sreq
-					if req.Description != "" {
-						req.Description += "\n"
+					if req.Ref == "" {
+						if req.Description != "" {
+							req.Description += "\n"
+						}
+						req.Description += "Streaming body."
 					}
-					req.Description += "Streaming body."
 				} else {
 					if req.Description != "" {
 						req.Description += "\n"
@@ -306,6 +308,18 @@ func (sf *schemafier) buildSSEItemSchema(e *expr.HTTPEndpointExpr) *openapi.Sche
 // design expression tree is read-only for the generators.
 func staticViewBody(resp *expr.HTTPResponseExpr) *expr.AttributeExpr {
 	body, _ := responseBodyProjection(resp)
+	return body
+}
+
+// streamingBodySchemaAttribute unwraps the generated endpoint StreamingBody
+// wrapper when the method's streaming payload already names a user type,
+// keeping the authored component name without an intermediate $ref alias.
+func streamingBodySchemaAttribute(body *expr.AttributeExpr) *expr.AttributeExpr {
+	if ut, ok := body.Type.(expr.UserType); ok {
+		if _, innerNamed := ut.Attribute().Type.(expr.UserType); innerNamed {
+			return ut.Attribute()
+		}
+	}
 	return body
 }
 

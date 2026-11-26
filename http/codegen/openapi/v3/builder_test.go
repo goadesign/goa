@@ -3,10 +3,12 @@
 package openapiv3
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"testing"
 
+	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/stretchr/testify/require"
 	"goa.design/goa/v3/codegen"
 	dsl "goa.design/goa/v3/dsl"
@@ -221,6 +223,78 @@ func TestStreamingResponseStatusCodes(t *testing.T) {
 	websocketResponses := spec.Paths["/websocket"].Get.Responses
 	require.Contains(t, websocketResponses, "101")
 	require.NotContains(t, websocketResponses, "200")
+	require.Nil(t, spec.Paths["/websocket"].Get.RequestBody)
+}
+
+func TestWebSocketStreamingPayload(t *testing.T) {
+	cases := []struct {
+		name    string
+		version openapi.Version
+	}{
+		{name: "openapi_3.0", version: openapi.Version30},
+		{name: "openapi_3.2", version: openapi.Version32},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			root := codegen.RunDSL(t, func() {
+				clientFrame := dsl.Type("ClientFrame", func() {
+					dsl.Description("Client-to-server WebSocket frame.")
+					dsl.Attribute("input", dsl.Bytes, "Raw terminal input bytes.")
+					dsl.Required("input")
+				})
+				serverFrame := dsl.Type("ServerFrame", func() {
+					dsl.Description("Server-to-client WebSocket frame.")
+					dsl.Attribute("output", dsl.Bytes, "Raw terminal output bytes.")
+					dsl.Required("output")
+				})
+				dsl.Service("terminal", func() {
+					dsl.Method("attach", func() {
+						dsl.Payload(func() {
+							dsl.Attribute("role", dsl.String)
+							dsl.Required("role")
+						})
+						dsl.StreamingPayload(clientFrame)
+						dsl.StreamingResult(serverFrame)
+						dsl.HTTP(func() {
+							dsl.GET("/roles/{role}/terminal")
+							dsl.Response(dsl.StatusOK)
+						})
+					})
+				})
+			})
+			spec := New(root, tc.version)
+			op := spec.Paths["/roles/{role}/terminal"].Get
+			require.NotNil(t, op)
+			require.NotNil(t, op.RequestBody)
+			require.NotNil(t, op.RequestBody.Value)
+			require.False(t, op.RequestBody.Value.Required)
+			require.Equal(t, "Client-to-server WebSocket frame.", op.RequestBody.Value.Description)
+			reqMedia := op.RequestBody.Value.Content["application/json"]
+			require.NotNil(t, reqMedia)
+			require.NotNil(t, reqMedia.Schema)
+			require.Equal(t, "#/components/schemas/ClientFrame", reqMedia.Schema.Ref)
+			require.Empty(t, reqMedia.Schema.Description)
+			require.NotContains(t, spec.Components.Schemas, "AttachStreamingBody")
+			require.Contains(t, spec.Components.Schemas, "ClientFrame")
+			require.Equal(t, "string", string(spec.Components.Schemas["ClientFrame"].Properties["input"].Type))
+			require.Equal(t, "binary", spec.Components.Schemas["ClientFrame"].Properties["input"].Format)
+
+			resp101 := op.Responses["101"]
+			require.NotNil(t, resp101)
+			respMedia := resp101.Value.Content["application/json"]
+			require.NotNil(t, respMedia)
+			require.Equal(t, "#/components/schemas/ServerFrame", respMedia.Schema.Ref)
+			require.Contains(t, spec.Components.Schemas, "ServerFrame")
+
+			raw, err := json.Marshal(spec)
+			require.NoError(t, err)
+			if tc.version == openapi.Version30 {
+				doc, err := openapi3.NewLoader().LoadFromData(raw)
+				require.NoError(t, err)
+				require.NoError(t, doc.Validate(context.Background()))
+			}
+		})
+	}
 }
 
 // TestSSEItemSchemaMatchesDataContract verifies OpenAPI describes the same
