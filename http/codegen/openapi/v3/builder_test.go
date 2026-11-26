@@ -265,15 +265,11 @@ func TestWebSocketStreamingPayload(t *testing.T) {
 			spec := New(root, tc.version)
 			op := spec.Paths["/roles/{role}/terminal"].Get
 			require.NotNil(t, op)
-			require.NotNil(t, op.RequestBody)
-			require.NotNil(t, op.RequestBody.Value)
-			require.False(t, op.RequestBody.Value.Required)
-			require.Equal(t, "Client-to-server WebSocket frame.", op.RequestBody.Value.Description)
-			reqMedia := op.RequestBody.Value.Content["application/json"]
-			require.NotNil(t, reqMedia)
-			require.NotNil(t, reqMedia.Schema)
-			require.Equal(t, "#/components/schemas/ClientFrame", reqMedia.Schema.Ref)
-			require.Empty(t, reqMedia.Schema.Description)
+			require.Nil(t, op.RequestBody)
+			ext, ok := op.Extensions["x-goa-streaming-payload"].(*openapi.Schema)
+			require.True(t, ok)
+			require.Equal(t, "#/components/schemas/ClientFrame", ext.Ref)
+			require.Empty(t, ext.Description)
 			require.NotContains(t, spec.Components.Schemas, "AttachStreamingBody")
 			require.Contains(t, spec.Components.Schemas, "ClientFrame")
 			require.Equal(t, "string", string(spec.Components.Schemas["ClientFrame"].Properties["input"].Type))
@@ -288,6 +284,11 @@ func TestWebSocketStreamingPayload(t *testing.T) {
 
 			raw, err := json.Marshal(spec)
 			require.NoError(t, err)
+			var docMap map[string]any
+			require.NoError(t, json.Unmarshal(raw, &docMap))
+			getOp := docMap["paths"].(map[string]any)["/roles/{role}/terminal"].(map[string]any)["get"].(map[string]any)
+			require.NotContains(t, getOp, "requestBody")
+			require.Equal(t, map[string]any{"$ref": "#/components/schemas/ClientFrame"}, getOp["x-goa-streaming-payload"])
 			if tc.version == openapi.Version30 {
 				doc, err := openapi3.NewLoader().LoadFromData(raw)
 				require.NoError(t, err)
