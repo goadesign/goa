@@ -405,9 +405,7 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 		if extensions == nil {
 			extensions = make(map[string]any)
 		}
-		if _, exists := extensions["x-goa-streaming-payload"]; !exists {
-			extensions["x-goa-streaming-payload"] = bodies.StreamingPayload
-		}
+		extensions["x-goa-streaming-payload"] = bodies.StreamingPayload
 	}
 	return &Operation{
 		Tags:         tagNames,
