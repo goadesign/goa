@@ -400,6 +400,13 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 	if expr.HasNoSecurity(e.MethodExpr.Requirements) {
 		security = SecurityRequirements{}
 	}
+	extensions := openapi.ExtensionsFromMethod(m)
+	if bodies.StreamingPayload != nil {
+		if extensions == nil {
+			extensions = make(map[string]any)
+		}
+		extensions["x-goa-streaming-payload"] = bodies.StreamingPayload
+	}
 	return &Operation{
 		Tags:         tagNames,
 		Summary:      summary,
@@ -411,7 +418,7 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 		Security:     security,
 		Deprecated:   deprecated,
 		ExternalDocs: openapi.DocsFromExprWithValues(m.Docs, m.Meta, values),
-		Extensions:   openapi.ExtensionsFromMethod(m),
+		Extensions:   extensions,
 	}
 }
 
