@@ -33,6 +33,21 @@ and v3.33.0 sections and the earlier v3.31/v3.32 migrations are retained as
 historical guidance; the installation and regeneration sections select the
 current target after publication.
 
+## Next release: Go 1.26.0 minimum
+
+The next release lowers the `go` directive in Goa's root and nested JSON-RPC
+module files to **Go 1.26.0**, still without a toolchain directive. That is
+the minimum Goa's own dependencies need, so services on a patched Go 1.26
+toolchain can upgrade again, and modules that depend on Goa are no longer
+pulled to a patch-level `go` directive.
+
+Goa no longer enforces a patched toolchain through its `go` directive, so the
+toolchain a service builds with is the service's choice. Build with the latest
+patch release of your Go version (CI tests the two supported Go releases), pin
+it in your own `go.mod` `toolchain` line or build image if you need a floor,
+and run `govulncheck` to catch standard-library vulnerabilities. A Go 1.27
+toolchain older than 1.27.3 still lacks the fixes listed above.
+
 ## v3.36.0: strict Internet hostname validation (`GHSA-hpx2-h3qx-xjh9`)
 
 `goa.ValidateFormat(..., goa.FormatHostname)` now validates Internet hostnames
