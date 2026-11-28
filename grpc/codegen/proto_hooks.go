@@ -102,6 +102,7 @@ func protoHooks(proto bool) *codegen.TransformHooks {
 		FieldPairAttrs: func(src, tgt *expr.AttributeExpr) (*expr.AttributeExpr, *expr.AttributeExpr) {
 			return unAlias(src), unAlias(tgt)
 		},
+		ImplicitPresence: isExternalMessage,
 		ConvertPrimitive: func(src, tgt *expr.AttributeExpr, srcVar string, srcPtr, tgtPtr bool, ta *codegen.TransformAttrs) (string, bool) {
 			exp := convertType(src, tgt, srcPtr, tgtPtr, srcVar, proto, ta)
 			if _, isSrcUT := src.Type.(expr.UserType); isSrcUT && !proto {

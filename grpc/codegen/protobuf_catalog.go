@@ -440,6 +440,12 @@ func (s *protobufValidationScope) ValidationAcceptsNil(attribute *expr.Attribute
 	return s.catalog.collectionWrapperField(attribute) != nil
 }
 
+// ValidationSkipsExternal reports whether attribute maps to a message whose Go
+// type Goa does not generate, so no validator exists for it.
+func (s *protobufValidationScope) ValidationSkipsExternal(attribute *expr.AttributeExpr) bool {
+	return isExternalMessage(attribute)
+}
+
 // collectMessageRecursive records messages and oneofs. Existing message
 // records stop recursive user types.
 func (c *protobufPackageCatalog) collectMessageRecursive(attribute *expr.AttributeExpr, source protobufMessageSource, root bool, owner *protobufMessageRecord, fieldName string) error {
@@ -578,6 +584,9 @@ func (c *protobufPackageCatalog) collectValidationRecursive(attribute *expr.Attr
 	switch actual := attribute.Type.(type) {
 	case expr.UserType:
 		if expr.IsPrimitive(actual) {
+			return
+		}
+		if isExternalMessage(attribute) {
 			return
 		}
 		policy := codegen.GoLayoutPolicy{Pointer: true}
