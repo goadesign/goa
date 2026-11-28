@@ -937,6 +937,8 @@ func wrappedPrimitivePointer(wrapper *expr.AttributeExpr, context *AttributeCont
 // object.
 func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar string, newVar bool, ta *TransformAttrs) (string, error) {
 	matches := newTransformObjectMatches(source, target)
+	srcImplicit := ta.SourceCtx.Pointer && hasImplicitPresence(ta.Hooks, source)
+	tgtImplicit := ta.TargetCtx.Pointer && hasImplicitPresence(ta.Hooks, target)
 	var (
 		initCode     string
 		postInitCode string
@@ -962,8 +964,8 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 				condition  string
 				hasGuard   bool
 
-				srcPtr     = ta.SourceCtx.IsPrimitivePointer(n, srcMatt.AttributeExpr)
-				tgtPtr     = ta.TargetCtx.IsPrimitivePointer(n, tgtMatt.AttributeExpr)
+				srcPtr     = ta.SourceCtx.IsPrimitivePointer(n, srcMatt.AttributeExpr) && !srcImplicit
+				tgtPtr     = ta.TargetCtx.IsPrimitivePointer(n, tgtMatt.AttributeExpr) && !tgtImplicit
 				srcField   = sourceVar + "." + ta.SourceCtx.Scope.Field(srcc, srcMatt.ElemName(n), true)
 				tgtField   = ta.TargetCtx.Scope.Field(tgtc, tgtMatt.ElemName(n), true)
 				_, isSrcUT = srcc.Type.(expr.UserType)
@@ -1175,8 +1177,9 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 
 		// Default value handling. We need to handle default values if the target
 		// type uses default values (i.e. attributes with default values are
-		// non-pointers) and has a default value set.
-		if tdef := tgtMatt.GetDefault(n); tdef != nil && ta.TargetCtx.UseDefault && !ta.TargetCtx.Pointer && !srcMatt.IsRequired(n) {
+		// non-pointers) and has a default value set. A primitive source field
+		// with implicit presence was already copied as is.
+		if tdef := tgtMatt.GetDefault(n); tdef != nil && ta.TargetCtx.UseDefault && !ta.TargetCtx.Pointer && !srcMatt.IsRequired(n) && !(srcImplicit && expr.IsPrimitive(srcc.Type)) {
 			switch {
 			case transformFieldUsesNilPresence(ta.SourceCtx, n, srcMatt.AttributeExpr):
 				// A nil source means the field was omitted. This includes
@@ -1748,4 +1751,10 @@ func (m transformObjectMatches) walk(walker func(src, tgt *expr.MappedAttributeE
 			walker(m.source, m.target, m.sourceFields[field.Name], m.targetFields[field.Name], field.Name)
 		}
 	}
+}
+
+// hasImplicitPresence reports whether hooks mark the primitive fields of att as
+// plain values.
+func hasImplicitPresence(hooks *TransformHooks, att *expr.AttributeExpr) bool {
+	return hooks != nil && hooks.ImplicitPresence != nil && hooks.ImplicitPresence(att)
 }
