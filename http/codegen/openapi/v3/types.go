@@ -30,6 +30,11 @@ type (
 	EndpointBodies struct {
 		RequestBody    *openapi.Schema
 		ResponseBodies map[int][]*openapi.Schema
+		// StreamingPayload describes a single client-to-server message sent
+		// after a WebSocket upgrade when the endpoint defines a StreamingBody.
+		// OpenAPI operations expose it as x-goa-streaming-payload rather than
+		// requestBody so GET upgrade routes never claim an HTTP request body.
+		StreamingPayload *openapi.Schema
 		// SSEItemSchema describes a single event streamed by a server-sent
 		// events endpoint. It is only computed for OpenAPI 3.2 documents
 		// which render it as the itemSchema of the text/event-stream media
@@ -173,8 +178,10 @@ func buildBodyTypes(api *expr.APIExpr, types []expr.UserType, resultTypes []*exp
 				}
 			}
 			req := sf.at(expr.RequestBodyExampleIdentity(e)).schemafy(reqBody)
+			var streamingPayload *openapi.Schema
 			if e.StreamingBody != nil {
 				sreq := sf.at(expr.MethodStreamingPayloadExampleIdentity(e.MethodExpr)).schemafy(e.StreamingBody)
+				streamingPayload = sreq.Dup()
 				var note string
 				if sreq.Ref != "" {
 					note = sreq.Ref
@@ -206,7 +213,11 @@ func buildBodyTypes(api *expr.APIExpr, types []expr.UserType, resultTypes []*exp
 				js := sf.at(identity).schemafy(staticViewBody(resp))
 				res[resp.StatusCode] = append(res[resp.StatusCode], js)
 			}
-			eb := &EndpointBodies{RequestBody: req, ResponseBodies: res}
+			eb := &EndpointBodies{
+				RequestBody:      req,
+				ResponseBodies:   res,
+				StreamingPayload: streamingPayload,
+			}
 			if ver == openapi.Version32 && e.UsesSSE() {
 				eb.SSEItemSchema = sf.buildSSEItemSchema(e)
 			}
